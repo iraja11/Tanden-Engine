@@ -222,7 +222,11 @@ function calcDecos(state: EditorState, fresh: Fresh): DecorationSet {
     if (r.kind === 'assign' && r.trivial) continue;
     const line = doc.line(n + 1);
     if (r.kind === 'error' && !line.text.trim()) continue;
-    out.push(Decoration.widget({ widget: new ResultWidget(r, !cursorLines.has(n)), side: 1 }).range(line.to));
+    const showError = !cursorLines.has(n);
+    // o resultado fica à direita, por cima do recuo que a linha reserva para ele
+    const len = r.kind === 'error' ? (showError ? Math.min(48, (r.error ?? '').length) : 1) : r.kind === 'function' ? 1 : Math.min(60, (r.text ?? '').length);
+    out.push(Decoration.line({ class: 'cm-calc-row', attributes: { style: `padding-right: calc(${len}ch + 2.5em)` } }).range(line.from));
+    out.push(Decoration.widget({ widget: new ResultWidget(r, showError), side: 1 }).range(line.to));
   }
   for (const p of calc.plots) {
     lineDeco(p.start, 'cm-calc-fence');
@@ -325,14 +329,15 @@ const mathDeco = StateField.define<DecorationSet>({
 const theme = EditorView.baseTheme({
   '.cm-calc-line': { fontFamily: 'var(--f-mono)', fontSize: '13.5px', backgroundColor: 'color-mix(in srgb, var(--ink) 3.5%, transparent)', paddingLeft: '12px !important', borderLeft: '2px solid color-mix(in srgb, var(--ember) 45%, transparent)' },
   '.cm-calc-fence': { fontFamily: 'var(--f-mono)', fontSize: '11px', color: 'var(--muted)', opacity: '.6' },
-  '.cm-calc-out': { float: 'right', clear: 'right', marginLeft: '1.5em', padding: '0 8px', borderRadius: '6px', color: 'var(--ember-soft)', fontFamily: 'var(--f-mono)', fontSize: '13px', cursor: 'copy', transition: 'background .2s, color .2s', whiteSpace: 'nowrap', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis' },
+  '.cm-calc-row': { position: 'relative' },
+  '.cm-calc-out': { position: 'absolute', right: '4px', top: '0', padding: '0 8px', borderRadius: '6px', color: 'var(--ember-soft)', fontFamily: 'var(--f-mono)', fontSize: '13px', cursor: 'copy', transition: 'background .2s, color .2s', whiteSpace: 'nowrap', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 'inherit' },
   '.cm-calc-out:hover': { backgroundColor: 'color-mix(in srgb, var(--ember) 14%, transparent)' },
   '.cm-calc-out.copied': { backgroundColor: 'color-mix(in srgb, var(--ok) 22%, transparent)', color: 'var(--ok)' },
   '.cm-calc-out.symbolic, .cm-calc-out.solutions': { color: 'var(--ink)' },
-  '.cm-calc-out .tex': { fontSize: '1.05em' },
+  '.cm-calc-out .tex': { fontSize: '.95em' },
   '.cm-calc-out .katex-display': { margin: '0' },
-  '.cm-calc-err': { float: 'right', clear: 'right', marginLeft: '1.5em', color: 'color-mix(in srgb, var(--crit) 80%, var(--muted))', fontFamily: 'var(--f-mono)', fontSize: '11.5px', opacity: '.85', maxWidth: '55%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  '.cm-calc-fn': { float: 'right', clear: 'right', marginLeft: '1.5em', color: 'var(--muted)', fontStyle: 'italic', fontFamily: 'serif', fontSize: '15px', cursor: 'help' },
+  '.cm-calc-err': { position: 'absolute', right: '4px', top: '0', color: 'color-mix(in srgb, var(--crit) 80%, var(--muted))', fontFamily: 'var(--f-mono)', fontSize: '11.5px', opacity: '.85', maxWidth: '55%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  '.cm-calc-fn': { position: 'absolute', right: '8px', top: '0', color: 'var(--muted)', fontStyle: 'italic', fontFamily: 'serif', fontSize: '15px', cursor: 'help' },
   '.cm-calc-chip': { display: 'inline-block', margin: '4px 0', padding: '2px 10px', borderRadius: '999px', border: '1px solid var(--line)', color: 'var(--muted)', fontFamily: 'var(--f-mono)', fontSize: '11px', cursor: 'pointer' },
   '.cm-plot': { margin: '6px 0 14px' },
   '.cm-math-src': { fontFamily: 'var(--f-mono)', fontSize: '.92em', color: 'var(--ember-soft)' },
