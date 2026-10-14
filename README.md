@@ -92,6 +92,20 @@ Enquanto o app estiver em modo "Teste", o Google pede para entrar de novo a cada
 
 Opcional: para não colar as credenciais em cada aparelho, crie os secrets `TANDEN_GOOGLE_CLIENT_ID` e `TANDEN_GOOGLE_CLIENT_SECRET` no GitHub; o build já as embute. Para um app de computador, o Google não considera essa "chave secreta" confidencial.
 
+## Quadros (mapas mentais, workflow e desenho)
+
+Módulo **Quadros** na barra lateral. Cada quadro é um arquivo `.canvas` no formato JSON Canvas, o mesmo do Obsidian: caixas, notas, links, grupos e setas abrem lá também. O tipo do quadro e os traços de desenho vão no campo `x-tanden`, que o Obsidian ignora; se o Obsidian regravar o arquivo sem esse campo, o desenho continua no Tanden.
+
+- **Mapa mental:** Tab cria um filho, Enter cria um irmão, as setas do teclado navegam e o mapa se organiza sozinho, dividido entre os dois lados. Cada galho da raiz ganha uma cor, e os netos herdam.
+- **Workflow:** caixas ligadas por setas. Selecione uma caixa e arraste um dos pontos laterais até outra caixa, ou até o vazio para criar a próxima já ligada. Dois cliques numa seta dão um rótulo a ela.
+- **Desenho:** caneta com pressão (mesa digitalizadora), linha, seta, retângulo, elipse e borracha. Com **Ajuste** ligado, um rabisco reto vira linha e um contorno fechado vira retângulo ou elipse. Shift trava ângulos e proporções; **Grade** (G) encaixa tudo em passos de 20.
+- **Notas no quadro:** arraste uma nota da lista para o quadro, ou use **+ Nota**. Dois cliques abrem a nota. `[[links]]` dentro das caixas também abrem.
+- Atalhos: V, T, P, L, A, R, O, E trocam de ferramenta; 1 a 6 colorem; Delete apaga; Ctrl+Z/Ctrl+Shift+Z; Ctrl+G agrupa; F enquadra tudo. Ctrl+roda aproxima, roda passeia. No celular, um dedo arrasta e dois aproximam; com caneta ativa, a palma da mão é ignorada.
+
+O merge é por campo: um aparelho move a caixa enquanto outro muda o texto, e as duas mudanças ficam. Edições feitas no Obsidian entram por diferença de três vias, então apagar uma caixa lá apaga aqui sem levar junto o que outro aparelho criou no meio tempo. Estado em `.tanden/board/`; casos em `packages/core/test/board.test.ts`.
+
+As veias só se mexem quando há dado viajando: um pulso corre pela seta quando um tópico nasce do outro, e uma caixa brilha um instante quando chega mudança de outro aparelho.
+
 ## IA
 
 A aba **IA** tem quatro painéis:

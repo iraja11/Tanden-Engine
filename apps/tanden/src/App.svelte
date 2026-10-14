@@ -9,6 +9,7 @@
   import AiPanel from './lib/AiPanel.svelte';
   import RemindersPanel from './lib/RemindersPanel.svelte';
   import { reminders } from './lib/reminders.svelte';
+  import Quadro from './lib/quadro/Quadro.svelte';
 
   let host = $state<HTMLElement>();
   let orbWrap = $state<HTMLElement>();
@@ -18,7 +19,7 @@
   let drawer = $state(false);
   let drivePanel = $state(false);
   let error = $state('');
-  let view = $state<'notas' | 'ia' | 'lembretes'>('notas');
+  let view = $state<'notas' | 'ia' | 'lembretes' | 'quadros'>('notas');
   /** o painel de IA fica montado depois de aberto, para não matar as sessões */
   let aiOpened = $state(false);
 
@@ -26,6 +27,7 @@
     { id: 'notas', label: 'Notas', ready: true },
     { id: 'ia', label: 'IA', ready: true },
     { id: 'lembretes', label: 'Lembretes', ready: true },
+    { id: 'quadros', label: 'Quadros', ready: true },
     { id: 'agenda', label: 'Agenda', ready: false },
     { id: 'planilhas', label: 'Planilhas', ready: false },
   ];
@@ -73,7 +75,8 @@
     <ul>
       {#each engine.notes as path (path)}
         <li>
-          <button class:active={path === engine.active} onclick={() => { engine.open(path); drawer = false; view = 'notas'; }}>
+          <button class:active={path === engine.active} draggable="true"
+            ondragstart={(e) => e.dataTransfer?.setData('text/tanden-note', path)} onclick={() => { engine.open(path); drawer = false; view = 'notas'; }}>
             <b>{title(path)}</b>{#if folder(path)}<small>{folder(path)}</small>{/if}
           </button>
         </li>
@@ -101,6 +104,8 @@
       <!-- o painel de IA ocupa a área -->
     {:else if view === 'lembretes' && engine.ready}
       <RemindersPanel onopen={(p) => { engine.open(p); view = 'notas'; }} />
+    {:else if view === 'quadros' && engine.ready}
+      <Quadro onOpenNote={(p) => { engine.open(p); view = 'notas'; }} />
     {:else if error}
       <p class="err">Não consegui abrir o cofre: {error}</p>
     {:else if !engine.ready}

@@ -1,4 +1,4 @@
-import { DriveRemote, EventBus, Replicator, Vault, fullSync, type Storage, type TandenEvent } from '@tanden/core';
+import { BoardStore, DriveRemote, EventBus, Replicator, Vault, fullSync, type Storage, type TandenEvent } from '@tanden/core';
 import { listen } from '@tauri-apps/api/event';
 import { google } from './google.svelte';
 import { BrowserStorage } from './storage-browser';
@@ -34,6 +34,10 @@ Edições feitas no celular e no PC ao mesmo tempo se fundem sozinhas.
 class Engine {
   readonly bus = new EventBus();
   vault!: Vault;
+  boards!: BoardStore;
+  /** quadros (.canvas) e um contador que sobe quando chega mudança de fora */
+  boardList = $state<string[]>([]);
+  boardRev = $state(0);
   private storage!: Storage;
   private replicator: Replicator | null = null;
   /** última falha ao falar com o Drive; o app segue funcionando offline */
@@ -70,10 +74,12 @@ class Engine {
     }
     this.storage = storage;
     this.vault = new Vault(storage, deviceId(), this.bus);
+    this.boards = new BoardStore(storage, this.vault.deviceId, this.bus);
     await google.refresh();
     this.connectDrive();
     this.bus.on('*', (e) => this.onEvent(e));
     await this.vault.sync();
+    await this.boards.sync();
     if (this.vault.list().length === 0) {
       this.vault.create('Bem-vinda.md', WELCOME);
       await this.vault.sync();
@@ -85,7 +91,7 @@ class Engine {
     if (isTauri()) {
       // outro programa (Claude Code, Gemini CLI, Obsidian) mexeu numa nota
       await listen<string[]>('vault-changed', (e) => {
-        if (!e.payload.some((p) => p.endsWith('.md'))) return;
+        if (!e.payload.some((p) => p.endsWith('.md') || p.endsWith('.canvas'))) return;
         if (this.watchTimer) clearTimeout(this.watchTimer);
         this.watchTimer = setTimeout(() => void this.syncNow(), 400);
       });
@@ -114,6 +120,15 @@ class Engine {
       case 'note.created':
         this.refresh();
         this.pulse('notes', 'out');
+        break;
+      case 'board.created':
+        this.boardList = this.boards.list();
+        break;
+      case 'board.changed':
+        if (e.origin !== 'local') {
+          this.boardRev++;
+          this.pulse('editor', 'out');
+        }
         break;
       case 'sync.finished':
         this.lastSync = new Date();
@@ -160,6 +175,15 @@ class Engine {
     void this.syncNow();
   }
 
+  /** Um quadro foi editado aqui: avisa as veias e sincroniza depois de uma pausa. */
+  boardEdited(): void {
+    if (this.syncTimer) clearTimeout(this.syncTimer);
+    this.syncTimer = setTimeout(() => {
+      this.pulse('editor', 'in');
+      void this.syncNow();
+    }, 1500);
+  }
+
   newNote(): void {
     let n = 1;
     let path = 'Nova nota.md';
@@ -197,15 +221,17 @@ class Engine {
   private async syncOnce(): Promise<void> {
     if (!this.replicator) {
       await this.vault.sync();
+      await this.boards.sync();
       return;
     }
     try {
-      await fullSync(this.vault, this.replicator);
+      await fullSync(this.vault, this.replicator, [this.boards]);
       this.driveError = '';
     } catch (e) {
       // sem internet ou token vencido: o cofre local continua íntegro
       this.driveError = String(e);
       await this.vault.sync();
+      await this.boards.sync();
     }
   }
 }
