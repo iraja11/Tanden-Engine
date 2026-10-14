@@ -38,3 +38,5 @@ export { pdfTextToMarkdown, type PdfTextItem } from './convert/pdf-text';
 export { safeFileName, decodeDataUrl, extForMime, AssetBag, type Asset, type Converted, type ConvertOptions } from './convert/types';
 export type { ParseHtml } from './convert/dom';
 export * from './caderno';
+export { parseFeed, discoverFeeds, looksLikeFeed, type Feed, type FeedItem } from './feed';
+export * from './plugins';
