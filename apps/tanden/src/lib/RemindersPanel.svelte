@@ -3,6 +3,10 @@
   import { reminders, repeatLabel, whenLabel } from './reminders.svelte';
   import { desktop } from './platform';
   import { isTauri } from './storage-tauri';
+  import { feel } from './feel.svelte';
+  import { sound } from './sound.svelte';
+  import { pop, rise } from './motion';
+  import { flip } from 'svelte/animate';
 
   // Tela de lembretes: captura rápida em português, lista por dia e ações.
   let { onopen }: { onopen: (path: string) => void } = $props();
@@ -32,7 +36,10 @@
 
   function submit(e: SubmitEvent) {
     e.preventDefault();
-    if (reminders.add(input)) input = '';
+    if (feel.local(() => reminders.add(input))) {
+      input = '';
+      sound.play('create');
+    }
   }
 
   const tomorrow9 = () => {
@@ -80,8 +87,8 @@
         <h3 class:late={b === 'atrasados'}>{label} <span>{list.length}</span></h3>
         <ul>
           {#each list as r (r.key + r.line)}
-            <li class:late={b === 'atrasados'} class:prio={r.priority >= 3}>
-              <button class="check" onclick={() => reminders.complete(r)}
+            <li class:late={b === 'atrasados'} class:prio={r.priority >= 3} animate:flip={{ duration: 260 }} in:rise={{ y: -6 }}>
+              <button class="check" onclick={() => { if (feel.local(() => reminders.complete(r))) sound.play('complete'); }}
                 title={r.repeat ? 'Feito: vai para a próxima vez' : 'Feito'} aria-label="Marcar como feito"></button>
               <div class="body">
                 <b>{r.text}</b>
@@ -96,9 +103,9 @@
               <div class="snooze">
                 <button class="ghost" onclick={() => (menuFor = menuFor === r.key ? null : r.key)} aria-label="Adiar">⏱</button>
                 {#if menuFor === r.key}
-                  <div class="menu">
+                  <div class="menu" transition:pop>
                     {#each snoozes as [l, when] (l)}
-                      <button onclick={() => { reminders.snooze(r, when()); menuFor = null; }}>{l}</button>
+                      <button onclick={() => { feel.local(() => reminders.snooze(r, when())); sound.play('tick'); menuFor = null; }}>{l}</button>
                     {/each}
                   </div>
                 {/if}
@@ -120,7 +127,7 @@
         <ul class="done">
           {#each byBucket.get('feitos') ?? [] as r (r.key + r.line)}
             <li>
-              <button class="check on" onclick={() => reminders.reopen(r)} aria-label="Desmarcar"></button>
+              <button class="check on" onclick={() => { feel.local(() => reminders.reopen(r)); sound.play('tick'); }} aria-label="Desmarcar"></button>
               <div class="body"><b>{r.text}</b><small>{whenLabel(r.at, reminders.now)}</small></div>
             </li>
           {/each}
@@ -155,7 +162,7 @@
   .quick input { flex: 1; min-width: 0; padding: 11px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface);
     color: var(--ink); font: 15px var(--f-body); outline: none; transition: border-color .2s, box-shadow .2s; }
   .quick input:focus { border-color: var(--ember); box-shadow: 0 0 0 3px var(--ember-glow); }
-  .quick button { width: 44px; border-radius: 12px; border: 0; background: var(--ember); color: #160b03; font-size: 22px; font-weight: 600; }
+  .quick button { width: 44px; border-radius: 12px; border: 0; background: var(--ember); color: var(--on-ember); font-size: 22px; font-weight: 600; }
   .quick button:disabled { background: var(--surface-2); color: var(--muted); }
   .preview { margin: 8px 2px 14px; min-height: 1.3em; font: 12px var(--f-mono); color: var(--ember-soft); }
   .preview.warn, .err { color: var(--crit); }
@@ -173,7 +180,11 @@
   .check { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--muted); background: none; padding: 0;
     transition: border-color .15s, background .15s; }
   .check:hover { border-color: var(--ember); background: var(--ember-glow); }
+  .check:active { transform: scale(.85); }
   .check.on { background: var(--ember); border-color: var(--ember); }
+  .check { position: relative; transition: border-color .15s, background .15s, transform var(--dur) var(--spring); }
+  .check.on::after { content: ''; position: absolute; left: 6px; top: 2.5px; width: 5px; height: 10px; border: solid var(--on-ember);
+    border-width: 0 2px 2px 0; transform: rotate(45deg); }
   .body { flex: 1; min-width: 0; display: grid; gap: 2px; }
   .body b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .body small { display: flex; gap: 10px; flex-wrap: wrap; font: 11px var(--f-mono); color: var(--muted); }
@@ -185,7 +196,7 @@
   .ghost { border: 0; background: none; color: var(--muted); font-size: 15px; padding: 4px 6px; border-radius: 8px; }
   .ghost:hover { color: var(--ember); background: var(--surface-2); }
   .menu { position: absolute; right: 0; top: 100%; z-index: 3; display: grid; min-width: 120px; padding: 4px; border-radius: 10px;
-    background: var(--surface-2); border: 1px solid var(--line); box-shadow: 0 8px 24px #0008; }
+    background: var(--surface-2); border: 1px solid var(--line); box-shadow: 0 8px 24px var(--shadow); }
   .menu button { border: 0; background: none; text-align: left; padding: 7px 10px; border-radius: 7px; color: var(--ink); font-size: 13px; }
   .menu button:hover { background: var(--surface); color: var(--ember); }
 

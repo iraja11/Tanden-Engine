@@ -127,6 +127,6 @@
   form { display: flex; gap: 8px; padding: 10px 14px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
   form textarea { flex: 1; resize: none; font: 14px var(--f-body); padding: 8px 10px; }
   form textarea:focus { outline: none; border-color: var(--ember); }
-  form button { border: 0; border-radius: 9px; padding: 0 16px; background: var(--ember); color: #160b03; font-weight: 600; }
+  form button { border: 0; border-radius: 9px; padding: 0 16px; background: var(--ember); color: var(--on-ember); font-weight: 600; }
   form button:disabled { opacity: .4; }
 </style>
