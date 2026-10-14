@@ -90,6 +90,13 @@ O arranjo de cada slide sai do conteúdo: só um `#` vira capa, só um `##` vira
 - **Exportar:** `.pptx` (PowerPoint, Google Slides, Impress) com as notas do apresentador, PDF com o tema do app e PDF claro para imprimir. Ficam em `Exportados/`.
 
 O código fica em `packages/core/src/slides/` (testes em `test/slides.test.ts`) e `apps/tanden/src/lib/slides/`.
+## Plugins
+
+Um plugin é uma página HTML (um artefato do Claude serve) que roda isolada e só faz o que você permitir, em cada aparelho. Na tela **Plugins** dá para ligar, desligar, instalar um `.html` ou colar um artefato. Os instalados ficam em `Plugins/<id>.html` no cofre e chegam aos outros aparelhos pelo sync, desligados até você permitir lá também.
+
+O primeiro plugin, que vem com o app, é o **Notícias**: lê feeds RSS, Atom e JSON Feed (basta colar o endereço do site), avisa quando chega notícia nova e salva um artigo como nota, com as imagens, em `Notícias/`. As fontes ficam na nota `Notícias/Fontes.md`.
+
+A API, as permissões e um exemplo de manifesto estão em [docs/plugins.md](docs/plugins.md).
 
 ## Eventos (sistema nervoso)
 

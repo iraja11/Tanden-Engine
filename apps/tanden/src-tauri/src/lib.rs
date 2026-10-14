@@ -6,6 +6,7 @@
 mod background;
 mod google;
 mod ollama;
+mod plugin;
 #[cfg(desktop)]
 mod pty;
 mod release;
@@ -26,6 +27,12 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
         .manage(google::GoogleState::default())
+        .manage(plugin::Plugins::default())
+        // janelas dos plugins, fora da origem do app
+        .register_uri_scheme_protocol(plugin::SCHEME, |ctx, request| {
+            use tauri::Manager;
+            plugin::serve(&ctx.app_handle().state::<plugin::Plugins>(), &request)
+        })
         .setup(|app| {
             // atualização automática pelas releases do GitHub (só desktop)
             #[cfg(desktop)]
@@ -72,6 +79,8 @@ pub fn run() {
             vault::vault_stat,
             web::web_fetch,
             web::web_open,
+            plugin::plugin_stage,
+            plugin::plugin_unstage,
             google::google_status,
             google::google_set_credentials,
             google::google_sign_in,

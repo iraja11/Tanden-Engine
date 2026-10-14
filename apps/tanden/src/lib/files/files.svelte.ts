@@ -310,7 +310,12 @@ class Files {
    * Página web → nota em Web/ (texto e imagens, para ler offline) ou só um
    * cartão com o link. Nos dois casos, a nota aberta ganha o cartão.
    */
-  async clip(input: string, mode: 'note' | 'card', attachTo: string | null): Promise<string | null> {
+  async clip(
+    input: string,
+    mode: 'note' | 'card',
+    attachTo: string | null,
+    opts: { folder?: string; open?: boolean; allowPrivate?: boolean } = {},
+  ): Promise<string | null> {
     const url = normalizeUrl(input);
     if (!url) {
       this.say('Esse endereço não parece uma página (comece com https://).', { error: true });
@@ -319,7 +324,7 @@ class Files {
     try {
       return await engine.bus.process(`clip:${url}`, 'Baixando a página', async () => {
         this.busy = 'Baixando a página…';
-        const page = await fetchUrl(url, true);
+        const page = await fetchUrl(url, opts.allowPrivate ?? true);
         // link direto para um PDF ou imagem: vira arquivo, não recorte
         const kind = page.type.includes('pdf') ? 'pdf' : page.type.startsWith('image/') ? 'image' : null;
         if (kind) {
@@ -338,8 +343,9 @@ class Files {
           return null;
         }
         const title = safeFileName(clip.meta.title) || 'Página';
-        const notePath = freePath(this.exists, FOLDERS.web, title, 'md');
-        const dir = `${FOLDERS.attachments}/${FOLDERS.web}/${stem(notePath)}`;
+        const folder = opts.folder ?? FOLDERS.web;
+        const notePath = freePath(this.exists, folder, title, 'md');
+        const dir = `${FOLDERS.attachments}/${folder}/${stem(notePath)}`;
         const images = new Map<string, string>();
         let n = 0;
         const queue = clip.images.slice(0, 40);
@@ -362,8 +368,8 @@ class Files {
         this.createNote(notePath, clipToMarkdown(clip, { parse, images }));
         engine.bus.emit({ type: 'file.imported', path: notePath, from: url });
         if (attachTo) this.insertInto(attachTo, linkCard(clip.meta, { note: notePath.replace(/\.md$/, '') }));
-        this.say(`"${clip.meta.title}" salva em ${notePath}${images.size ? ` com ${images.size} imagens` : ''}.`, { path: notePath });
-        if (!attachTo) this.openPath(notePath);
+        this.say(`"${clip.meta.title}" salva em ${notePath}${images.size ? ` com ${images.size} ${images.size === 1 ? 'imagem' : 'imagens'}` : ''}.`, { path: notePath });
+        if (!attachTo && opts.open !== false) this.openPath(notePath);
         return notePath;
       });
     } catch (e) {
