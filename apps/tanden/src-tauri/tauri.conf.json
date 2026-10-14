@@ -21,7 +21,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost https://www.googleapis.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:"
+      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost https://www.googleapis.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob:; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:"
     }
   },
   "bundle": {

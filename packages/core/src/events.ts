@@ -9,7 +9,9 @@ export type TandenEvent =
   | { type: 'process.finished'; id: string; ok: boolean }
   | { type: 'sync.finished'; merged: number; external: number; written: number }
   | { type: 'reminder.fired'; path: string; text: string; at: number }
-  | { type: 'sheet.changed'; path: string; origin: 'local' | 'remote' | 'external' };
+  | { type: 'sheet.changed'; path: string; origin: 'local' | 'remote' | 'external' }
+  | { type: 'annot.changed'; path: string; origin: 'local' | 'remote' }
+  | { type: 'file.imported'; path: string; from: string };
 
 export type EventType = TandenEvent['type'];
 type Handler<E extends TandenEvent = TandenEvent> = (e: E) => void;

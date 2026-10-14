@@ -82,3 +82,30 @@ describe('DriveRemote (API simulada)', () => {
     expect(drive.textByPath('a.md')).toBe('ção');
   });
 });
+
+describe('arquivos grandes', () => {
+  it('envia PDFs acima de 5 MB pelo envio resumable, criando e atualizando', async () => {
+    const drive = new FakeDrive();
+    const disk = new MemoryStorage();
+    const remote = new DriveRemote({ getToken: async () => 't', fetch: drive.fetch });
+    const rep = new Replicator(disk, remote, 'arch');
+    const big = new Uint8Array(6 * 1024 * 1024).map((_, i) => i % 251);
+    await disk.write('PDFs/livro.pdf', big);
+    await rep.sync();
+    expect(drive.requests.filter((r) => r.startsWith('PUT'))).toHaveLength(1);
+    const f = [...drive.files.values()].find((x) => x.appProperties.tandenPath === 'PDFs/livro.pdf')!;
+    expect(f.mimeType).toBe('application/pdf');
+    expect(f.data.length).toBe(big.length);
+
+    big[10] = 99;
+    await disk.write('PDFs/livro.pdf', big);
+    await rep.sync();
+    expect(f.data[10]).toBe(99);
+    expect(f.revisions).toHaveLength(2);
+
+    // outro aparelho baixa igual
+    const other = new MemoryStorage();
+    await new Replicator(other, new DriveRemote({ getToken: async () => 't', fetch: drive.fetch }), 'redmi').sync();
+    expect((await other.read('PDFs/livro.pdf'))!.length).toBe(big.length);
+  });
+});

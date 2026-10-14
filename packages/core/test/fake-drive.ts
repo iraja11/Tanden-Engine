@@ -23,6 +23,8 @@ export class FakeDrive {
   throttle = 0;
   pageSize = 3; // páginas pequenas para exercitar a paginação
   private seq = 0;
+  /** sessões de envio resumable abertas: endereço → o que fazer com o conteúdo */
+  private sessions = new Map<string, { method: string; fileId?: string; meta?: Partial<FakeFile> }>();
 
   fetch = async (input: string | URL | Request, init: RequestInit = {}): Promise<Response> => {
     const url = new URL(String(input));
@@ -35,6 +37,8 @@ export class FakeDrive {
     }
     const path = url.pathname.replace(/^\/(upload\/)?drive\/v3/, '');
     const body: Uint8Array = init.body instanceof Uint8Array ? init.body : typeof init.body === "string" ? new TextEncoder().encode(init.body) : new Uint8Array();
+    if (body.length > 5 * 1024 * 1024 && url.searchParams.get('uploadType') !== null && url.searchParams.get('uploadType') !== 'resumable')
+      return new Response('arquivo grande demais para envio simples', { status: 413 });
     let m: RegExpMatchArray | null;
 
     if (path === '/files' && method === 'GET') {
@@ -45,6 +49,36 @@ export class FakeDrive {
         nextPageToken: start + this.pageSize < all.length ? String(start + this.pageSize) : undefined,
         files: page.map((f) => ({ id: f.id, mimeType: f.mimeType, md5Checksum: f.mimeType.includes('folder') ? undefined : md5(f.data), appProperties: f.appProperties })),
       });
+    }
+    if (url.searchParams.get('uploadType') === 'resumable' && (method === 'POST' || method === 'PATCH')) {
+      const id = `s${++this.seq}`;
+      const fileId = path.match(/^\/files\/([^/]+)$/)?.[1];
+      this.sessions.set(id, { method, fileId, meta: body.length ? JSON.parse(new TextDecoder().decode(body)) : {} });
+      return new Response(null, { status: 200, headers: { Location: `https://www.googleapis.com/upload/drive/v3/sessao/${id}` } });
+    }
+    if ((m = path.match(/^\/sessao\/([^/]+)$/)) && method === 'PUT') {
+      const s = this.sessions.get(m[1]!);
+      if (!s) return new Response('sessão expirada', { status: 404 });
+      this.sessions.delete(m[1]!);
+      const data = body.slice();
+      if (s.fileId) {
+        const f = this.files.get(s.fileId)!;
+        f.data = data;
+        f.revisions.push({ id: `r${++this.seq}`, data });
+        return Response.json({ id: f.id, md5Checksum: md5(data) });
+      }
+      const f: FakeFile = {
+        id: `f${++this.seq}`,
+        name: s.meta!.name!,
+        mimeType: s.meta!.mimeType ?? 'application/octet-stream',
+        parents: s.meta!.parents ?? ['root'],
+        appProperties: s.meta!.appProperties ?? {},
+        data,
+        revisions: [{ id: `r${++this.seq}`, data }],
+        trashed: false,
+      };
+      this.files.set(f.id, f);
+      return Response.json({ id: f.id, md5Checksum: md5(data) });
     }
     if (path === '/files' && method === 'POST') {
       let meta: Partial<FakeFile>;

@@ -1,6 +1,9 @@
 use std::fs;
 use std::io::ErrorKind;
+use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
+use std::time::UNIX_EPOCH;
+use tauri::ipc::{InvokeBody, Request, Response};
 use tauri::State;
 
 pub struct VaultRoot(pub PathBuf);
@@ -62,6 +65,37 @@ pub fn remove(root: &Path, path: &str) -> Result<(), String> {
     }
 }
 
+/// Tamanho e data de modificação de cada arquivo: (assinatura, data em ms).
+/// O replicador usa isso para não reler PDFs e imagens que não mudaram.
+pub fn stat(root: &Path) -> Result<HashMap<String, (String, u64)>, String> {
+    let mut out = HashMap::new();
+    for rel in list(root, "")? {
+        let Ok(meta) = fs::metadata(root.join(&rel)) else { continue };
+        let modified = meta.modified().ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok()).unwrap_or_default();
+        let sig = format!("{}:{}.{:09}", meta.len(), modified.as_secs(), modified.subsec_nanos());
+        out.insert(rel, (sig, modified.as_millis() as u64));
+    }
+    Ok(out)
+}
+
+/// Desfaz o %XX do cabeçalho (o caminho vai codificado porque cabeçalhos só aceitam ASCII).
+fn percent_decode(s: &str) -> Result<String, String> {
+    let bytes = s.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            let hex = std::str::from_utf8(&bytes[i + 1..i + 3]).map_err(|e| e.to_string())?;
+            out.push(u8::from_str_radix(hex, 16).map_err(|_| format!("caminho mal codificado: {s}"))?);
+            i += 3;
+        } else {
+            out.push(bytes[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8(out).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub fn vault_root(root: State<VaultRoot>) -> String {
     root.0.to_string_lossy().into_owned()
@@ -80,6 +114,44 @@ pub fn vault_read(root: State<VaultRoot>, path: String) -> Result<Option<Vec<u8>
 #[tauri::command]
 pub fn vault_write(root: State<VaultRoot>, path: String, data: Vec<u8>) -> Result<(), String> {
     write(&root.0, &path, &data)
+}
+
+/// Leitura binária direta (sem passar os bytes por JSON): rápida para PDFs grandes.
+#[tauri::command]
+pub fn vault_read_raw(root: State<VaultRoot>, path: String) -> Result<Response, String> {
+    match read(&root.0, &path)? {
+        Some(b) => Ok(Response::new(b)),
+        None => Err("ENOENT".into()),
+    }
+}
+
+/// Gravação binária direta: o conteúdo vai no corpo e o caminho no cabeçalho `path`.
+#[tauri::command]
+pub fn vault_write_raw(root: State<VaultRoot>, request: Request<'_>) -> Result<(), String> {
+    let path = request
+        .headers()
+        .get("path")
+        .and_then(|v| v.to_str().ok())
+        .ok_or("faltou o caminho")
+        .and_then(|p| percent_decode(p).map_err(|_| "caminho mal codificado"))?;
+    match request.body() {
+        InvokeBody::Raw(data) => write(&root.0, &path, data),
+        InvokeBody::Json(_) => Err("esperava bytes".into()),
+    }
+}
+
+/// Abre um arquivo do cofre no programa padrão do sistema (Word, LibreOffice...).
+#[cfg(desktop)]
+#[tauri::command]
+pub fn vault_open_external(app: tauri::AppHandle, root: State<VaultRoot>, path: String) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    let full = resolve(&root.0, &path)?;
+    app.opener().open_path(full.to_string_lossy(), None::<&str>).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn vault_stat(root: State<VaultRoot>) -> Result<HashMap<String, (String, u64)>, String> {
+    stat(&root.0)
 }
 
 #[tauri::command]
@@ -103,6 +175,25 @@ mod tests {
         remove(root, "mundo/aurath.md").unwrap();
         assert_eq!(read(root, "mundo/aurath.md").unwrap(), None);
         remove(root, "mundo/aurath.md").unwrap();
+    }
+
+    #[test]
+    fn assinatura_muda_quando_o_arquivo_muda() {
+        let dir = tempfile::tempdir().unwrap();
+        write(dir.path(), "PDFs/livro.pdf", b"%PDF-1.7 um").unwrap();
+        let a = stat(dir.path()).unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        write(dir.path(), "PDFs/livro.pdf", b"%PDF-1.7 dois").unwrap();
+        let b = stat(dir.path()).unwrap();
+        assert_ne!(a["PDFs/livro.pdf"].0, b["PDFs/livro.pdf"].0);
+        assert!(b["PDFs/livro.pdf"].0.starts_with("13:"));
+    }
+
+    #[test]
+    fn decodifica_o_caminho_do_cabecalho() {
+        assert_eq!(percent_decode("Anexos%2FRelat%C3%B3rio%20final.pdf").unwrap(), "Anexos/Relatório final.pdf");
+        assert_eq!(percent_decode("a%").unwrap(), "a%");
+        assert!(percent_decode("%ZZ").is_err());
     }
 
     #[test]

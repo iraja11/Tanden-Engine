@@ -109,3 +109,33 @@ describe('Replicator + Vault com o Drive', () => {
     expect([...drive.files.keys()].some((p) => p.startsWith('.tanden/local/'))).toBe(false);
   });
 });
+
+describe('Replicator com arquivos grandes', () => {
+  it('não relê arquivos que não mudaram desde o último sync', async () => {
+    const drive = new MemoryRemote();
+    const disk = new MemoryStorage();
+    const rep = new Replicator(disk, drive, 'arch');
+    await disk.write('PDFs/a.pdf', new Uint8Array(1000).fill(7));
+    await disk.write('n.md', toBytes('oi'));
+    await rep.sync();
+    disk.reads.clear();
+    await rep.sync();
+    expect(disk.reads.get('PDFs/a.pdf')).toBeUndefined();
+
+    // mudou: relê e envia
+    await disk.write('PDFs/a.pdf', new Uint8Array(1000).fill(8));
+    const r = await rep.sync();
+    expect(r.uploaded).toEqual(['PDFs/a.pdf']);
+    expect(drive.files.get('PDFs/a.pdf')!.data[0]).toBe(8);
+
+    // chegou do Drive: grava e relê uma vez só no sync seguinte
+    await drive.upload('PDFs/a.pdf', new Uint8Array(10).fill(9));
+    expect((await rep.sync()).downloaded).toEqual(['PDFs/a.pdf']);
+    disk.reads.clear();
+    expect(await rep.sync()).toEqual({ uploaded: [], downloaded: [] });
+    expect(disk.reads.get('PDFs/a.pdf')).toBe(1);
+    disk.reads.clear();
+    await rep.sync();
+    expect(disk.reads.get('PDFs/a.pdf')).toBeUndefined();
+  });
+});

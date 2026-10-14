@@ -40,6 +40,8 @@ A pasta é um cofre comum do Obsidian: pode abrir a mesma pasta nele.
 **/*.md                                 suas notas
 .tanden/crdt/<nota>/<aparelho>.bin      histórico de edição de cada aparelho
 .tanden/crdt/<nota>/<aparelho>.json     o que cada aparelho escreveu no .md
+.tanden/annot/<pdf>/<aparelho>.bin      anotações de PDF de cada aparelho
+PDFs/  Importados/  Anexos/  Web/       arquivos, conversões e páginas salvas
 ```
 
 ## Como o merge funciona
@@ -153,8 +155,25 @@ Como os lembretes moram nas notas, eles sincronizam pelo mesmo merge do cofre: m
 
 Cada aparelho lembra quais avisos já mostrou, então um lembrete não repete no mesmo aparelho. Adiar cria um aviso novo. O código está em `packages/core/src/reminders.ts` (formato e agenda), `packages/core/src/quick-reminder.ts` (português) e `apps/tanden/src/lib/reminders.svelte.ts` (avisos).
 
+## Arquivos, PDFs e páginas web
+
+A aba **Arquivos** lista tudo no cofre que não é nota: PDFs, documentos, imagens, áudio e vídeo. **Importar** (ou arrastar para a janela) leva cada arquivo para o lugar dele:
+
+- **PDF** vai para `PDFs/` e abre no leitor.
+- **Word (.docx), PowerPoint (.pptx), LibreOffice (.odt), ePub, HTML e texto** viram nota em `Importados/`, com títulos, listas, tabelas, links, notas de rodapé e imagens. O original e as imagens ficam em `Anexos/<título>/`, e a nota aponta para o original no campo `original`. Em apresentações, cada slide vira uma seção e as notas do apresentador viram um bloco `[!note]`. Os formatos antigos `.doc` e `.ppt` não entram: salve como `.docx`/`.pptx` antes.
+- **Planilhas** vão para a aba Planilhas, como antes.
+- O resto fica em `Anexos/`.
+
+**Leitor de PDF.** Abre livros grandes sem travar (só as páginas visíveis são desenhadas), com zoom (Ctrl + roda, pinça no celular), sumário, busca no documento inteiro e posição lembrada. As ferramentas são realçar, sublinhar, riscar, nota, caneta, retângulo e borracha, em seis cores, com Ctrl+Z. Selecionar um trecho mostra um menu para realçar, comentar ou copiar. As anotações não alteram o PDF: ficam em `.tanden/annot/` e sincronizam entre aparelhos pelo mesmo merge das notas. Em **Exportar** dá para gerar uma nota com todos os realces e comentários (com links `[[livro.pdf#page=12]]` que abrem o PDF na página), um PDF anotado que outros leitores entendem, ou uma nota com o texto do PDF.
+
+**Nas notas.** O botão **Anexar** coloca um arquivo ou uma página web na nota aberta; arrastar ou colar um arquivo no editor faz o mesmo. Imagens aparecem dentro da nota e PDFs viram um cartão. Ctrl+clique (Cmd no Mac) em um link abre a nota, o arquivo ou o site. **Exportar** gera um `.docx` (abre no Word, Google Docs e LibreOffice) ou uma página `.html`, com as imagens dentro.
+
+**Páginas web.** Cole um endereço em **Página web**. *Salvar como nota* guarda o texto do artigo e as imagens em `Web/`, com título, site, autor e data no topo, no mesmo formato do Obsidian Web Clipper. *Só o link* coloca um cartão com título e resumo na nota aberta. Um link direto para um PDF ou imagem vira arquivo do cofre.
+
+Arquivos grandes sobem para o Drive em partes, e o sync só relê um arquivo quando ele muda. O código está em `packages/core/src/convert/` (conversões), `files.ts`, `webclip.ts`, `annotations.ts`, `pdf-export.ts` e em `apps/tanden/src/lib/files/` e `apps/tanden/src/lib/pdf/`.
+
 ## Próximos passos (fase 1)
 
 1. Agenda com Google Agenda.
 2. Ferramentas do Tanden para a IA via MCP (buscar, criar e ligar notas, mexer na agenda).
-3. Links `[[ ]]` clicáveis, busca e grafo.
+3. Busca e grafo (os links `[[ ]]` já abrem com Ctrl+clique).

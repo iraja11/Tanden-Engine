@@ -12,6 +12,9 @@
   import Quadro from './lib/quadro/Quadro.svelte';
   import SheetsView from './lib/sheets/SheetsView.svelte';
   import { sheets } from './lib/sheets/sheets.svelte';
+  import FilesView from './lib/files/FilesView.svelte';
+  import NoteTools from './lib/files/NoteTools.svelte';
+  import { files } from './lib/files/files.svelte';
 
   let host = $state<HTMLElement>();
   let orbWrap = $state<HTMLElement>();
@@ -21,7 +24,7 @@
   let drawer = $state(false);
   let drivePanel = $state(false);
   let error = $state('');
-  let view = $state<'notas' | 'ia' | 'lembretes' | 'quadros' | 'planilhas'>('notas');
+  let view = $state<'notas' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'arquivos'>('notas');
   /** o painel de IA fica montado depois de aberto, para não matar as sessões */
   let aiOpened = $state(false);
 
@@ -32,10 +35,14 @@
     { id: 'quadros', label: 'Quadros', ready: true },
     { id: 'agenda', label: 'Agenda', ready: false },
     { id: 'planilhas', label: 'Planilhas', ready: true },
+    { id: 'arquivos', label: 'Arquivos', ready: true },
   ];
 
   $effect(() => { if (engine.ready) void reminders.start(); });
   $effect(() => { if (engine.ready) sheets.start(); });
+  $effect(() => { if (engine.ready) files.start(); });
+  // links e importações pedem para trocar de tela
+  $effect(() => { if (files.goto) view = files.goto.view; });
   // clicar num aviso de lembrete abre a tela de lembretes
   $effect(() => { if (reminders.openRequests) view = 'lembretes'; });
 
@@ -109,6 +116,8 @@
       <RemindersPanel onopen={(p) => { engine.open(p); view = 'notas'; }} />
     {:else if view === 'planilhas' && engine.ready}
       <SheetsView />
+    {:else if view === 'arquivos' && engine.ready}
+      <FilesView />
     {:else if view === 'quadros' && engine.ready}
       <Quadro onOpenNote={(p) => { engine.open(p); view = 'notas'; }} />
     {:else if error}
@@ -116,12 +125,28 @@
     {:else if !engine.ready}
       <p class="loading">Abrindo o cofre…</p>
     {:else if engine.active}
-      <div class="crumb">{engine.active}</div>
-      <Editor value={engine.content} docKey={engine.active} onchange={(v) => engine.edit(v)} />
+      <div class="crumb"><span>{engine.active}</span><NoteTools path={engine.active} /></div>
+      <Editor value={engine.content} docKey={engine.active} onchange={(v) => engine.edit(v)}
+        host={files.host} onfiles={(f) => void files.importFiles(f, { attach: true })} />
     {:else}
       <p class="loading">Nenhuma nota aberta.</p>
     {/if}
   </main>
+
+  {#if files.notice || files.busy}
+    <div class="toast" class:error={files.notice?.error} role="status" aria-live="polite">
+      {#if files.notice}
+        <span>{files.notice.text}</span>
+        {#if files.notice.path}
+          {@const p = files.notice.path}
+          <button onclick={() => { files.openPath(p); files.notice = null; }}>Abrir</button>
+        {/if}
+        <button class="x" aria-label="Fechar" onclick={() => (files.notice = null)}>×</button>
+      {:else}
+        <i></i><span>{files.busy}</span>
+      {/if}
+    </div>
+  {/if}
 
   <footer class="status" bind:this={statusEl}>
     <span class="dot" class:busy={engine.busy}></span>
@@ -176,7 +201,7 @@
   .side small { color: var(--muted); font: 11px var(--f-mono); }
 
   .main { grid-area: main; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
-  .crumb { padding: 14px 24px 0; font: 11px var(--f-mono); color: var(--muted); max-width: 808px; width: 100%; margin: 0 auto; }
+  .crumb { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 24px 0; font: 11px var(--f-mono); color: var(--muted); max-width: 808px; width: 100%; margin: 0 auto; }
   .main :global(.editor) { flex: 1; }
   .update { display: flex; align-items: center; gap: 12px; justify-content: space-between; margin: 12px 24px 0;
     padding: 10px 14px; border: 1px solid var(--ember); border-radius: 12px; background: color-mix(in srgb, var(--ember) 8%, var(--surface));
@@ -210,4 +235,14 @@
     .side.open { transform: none; }
     .status { padding-bottom: max(6px, env(safe-area-inset-bottom)); }
   }
+  .toast { position: fixed; z-index: 70; left: 50%; bottom: 44px; transform: translateX(-50%); max-width: min(560px, calc(100vw - 32px));
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 14px; border-radius: 12px; font-size: 13px;
+    background: var(--surface); border: 1px solid var(--line); box-shadow: 0 18px 40px -16px #000, 0 0 0 1px var(--ember-glow); animation: toast .2s ease-out; }
+  .toast.error { border-color: color-mix(in srgb, #e5484d 60%, var(--line)); }
+  .toast span { overflow: hidden; text-overflow: ellipsis; }
+  .toast button { border: 1px solid var(--line); background: var(--surface-2); color: var(--ember); border-radius: 8px; padding: 3px 10px; font-size: 12px; white-space: nowrap; }
+  .toast button.x { border: none; background: none; color: var(--muted); font-size: 16px; padding: 0 4px; }
+  .toast i { width: 8px; height: 8px; border-radius: 50%; background: var(--ember); animation: pulse 1s ease-in-out infinite; flex: none; }
+  @keyframes toast { from { opacity: 0; transform: translate(-50%, 8px); } }
+  @keyframes pulse { 50% { opacity: .3; } }
 </style>

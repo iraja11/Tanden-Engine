@@ -11,6 +11,7 @@ mod pty;
 mod release;
 mod vault;
 mod watch;
+mod web;
 
 use std::path::PathBuf;
 use tauri::Manager;
@@ -66,6 +67,11 @@ pub fn run() {
             vault::vault_read,
             vault::vault_write,
             vault::vault_remove,
+            vault::vault_read_raw,
+            vault::vault_write_raw,
+            vault::vault_stat,
+            web::web_fetch,
+            web::web_open,
             google::google_status,
             google::google_set_credentials,
             google::google_sign_in,
@@ -78,6 +84,8 @@ pub fn run() {
             ollama::ollama_chat,
             #[cfg(desktop)]
             background::background_set,
+            #[cfg(desktop)]
+            vault::vault_open_external,
             #[cfg(desktop)]
             pty::pty_spawn,
             #[cfg(desktop)]

@@ -14,6 +14,8 @@ import type { RemoteFile, RemoteStore } from './replicator';
 const API = 'https://www.googleapis.com/drive/v3';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3';
 const FOLDER = 'application/vnd.google-apps.folder';
+/** Acima disso o Drive pede envio "resumable" (PDFs, imagens, livros). */
+const SIMPLE_LIMIT = 5 * 1024 * 1024;
 
 export interface DriveOptions {
   /** devolve um access token válido (o app cuida de renovar) */
@@ -114,6 +116,11 @@ export class DriveRemote implements RemoteStore {
     const index = await this.entries();
     const existing = index.get(path);
     if (existing && !existing.folder) {
+      if (data.length > SIMPLE_LIMIT) {
+        const r = await this.resumable(`${UPLOAD}/files/${existing.id}?uploadType=resumable&fields=md5Checksum,modifiedTime`, 'PATCH', {}, data);
+        existing.rev = r.md5Checksum ?? r.modifiedTime ?? '';
+        return existing.rev;
+      }
       const r = await this.json<{ md5Checksum?: string; modifiedTime?: string }>(
         `${UPLOAD}/files/${existing.id}?uploadType=media&fields=md5Checksum,modifiedTime`,
         { method: 'PATCH', headers: { 'Content-Type': 'application/octet-stream' }, body: data as BodyInit },
@@ -177,12 +184,42 @@ export class DriveRemote implements RemoteStore {
     return r.id;
   }
 
+  /** Envio em duas etapas: abre a sessão (metadados) e manda o conteúdo no endereço devolvido. */
+  private async resumable(
+    url: string,
+    method: 'POST' | 'PATCH',
+    meta: Record<string, unknown>,
+    data: Uint8Array,
+  ): Promise<{ id?: string; md5Checksum?: string; modifiedTime?: string }> {
+    const start = await this.call(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json; charset=UTF-8',
+        'X-Upload-Content-Type': 'application/octet-stream',
+        'X-Upload-Content-Length': String(data.length),
+      },
+      body: JSON.stringify(meta),
+    });
+    const session = start.headers.get('Location');
+    if (!session) throw new DriveError(0, 'O Drive não devolveu o endereço do envio (resumable).');
+    return this.json(session, { method: 'PUT', headers: { 'Content-Type': 'application/octet-stream' }, body: data as BodyInit });
+  }
+
   private async createFile(name: string, parent: string, path: string, data: Uint8Array): Promise<{ id: string; rev: string }> {
+    if (data.length > SIMPLE_LIMIT) {
+      const r = await this.resumable(
+        `${UPLOAD}/files?uploadType=resumable&fields=id,md5Checksum,modifiedTime`,
+        'POST',
+        { name, parents: [parent], mimeType: mimeFor(path), appProperties: { tandenVault: this.vaultId, tandenPath: path } },
+        data,
+      );
+      return { id: r.id!, rev: r.md5Checksum ?? r.modifiedTime ?? '' };
+    }
     const boundary = `tanden${Math.random().toString(36).slice(2)}`;
     const meta = JSON.stringify({
       name,
       parents: [parent],
-      mimeType: path.endsWith('.md') ? 'text/markdown' : 'application/octet-stream',
+      mimeType: mimeFor(path),
       appProperties: { tandenVault: this.vaultId, tandenPath: path },
     });
     const enc = new TextEncoder();
@@ -200,4 +237,29 @@ export class DriveRemote implements RemoteStore {
     );
     return { id: r.id, rev: r.md5Checksum ?? r.modifiedTime ?? '' };
   }
+}
+
+/** Tipo do arquivo no Drive: deixa o Drive mostrar a prévia de PDFs, imagens e planilhas. */
+function mimeFor(path: string): string {
+  const ext = path.split('.').pop()!.toLowerCase();
+  return (
+    {
+      md: 'text/markdown',
+      pdf: 'application/pdf',
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      gif: 'image/gif',
+      webp: 'image/webp',
+      svg: 'image/svg+xml',
+      xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      epub: 'application/epub+zip',
+      html: 'text/html',
+      txt: 'text/plain',
+      mp3: 'audio/mpeg',
+      mp4: 'video/mp4',
+    } as Record<string, string>
+  )[ext] ?? 'application/octet-stream';
 }

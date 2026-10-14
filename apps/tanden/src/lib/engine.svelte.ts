@@ -1,4 +1,4 @@
-import { BoardStore, DriveRemote, EventBus, Replicator, SheetStore, Vault, fullSync, type Storage, type TandenEvent } from '@tanden/core';
+import { AnnotationStore, BoardStore, DriveRemote, EventBus, Replicator, SheetStore, Vault, fullSync, type Storage, type TandenEvent } from '@tanden/core';
 import { listen } from '@tauri-apps/api/event';
 import { google } from './google.svelte';
 import { BrowserStorage } from './storage-browser';
@@ -40,7 +40,9 @@ class Engine {
   boardRev = $state(0);
   /** planilhas (.xlsx); o módulo de planilhas cuida do estado da tela */
   sheets!: SheetStore;
-  private storage!: Storage;
+  /** anotações dos PDFs (o PDF em si nunca é reescrito) */
+  annots!: AnnotationStore;
+  storage!: Storage;
   private replicator: Replicator | null = null;
   /** última falha ao falar com o Drive; o app segue funcionando offline */
   driveError = $state('');
@@ -78,12 +80,14 @@ class Engine {
     this.vault = new Vault(storage, deviceId(), this.bus);
     this.boards = new BoardStore(storage, this.vault.deviceId, this.bus);
     this.sheets = new SheetStore(storage, this.vault.deviceId, this.bus);
+    this.annots = new AnnotationStore(storage, this.vault.deviceId, this.bus);
     await google.refresh();
     this.connectDrive();
     this.bus.on('*', (e) => this.onEvent(e));
     await this.vault.sync();
     await this.boards.sync();
     await this.sheets.sync();
+    await this.annots.sync();
     if (this.vault.list().length === 0) {
       this.vault.create('Bem-vinda.md', WELCOME);
       await this.vault.sync();
@@ -227,10 +231,11 @@ class Engine {
       await this.vault.sync();
       await this.boards.sync();
       await this.sheets.sync();
+      await this.annots.sync();
       return;
     }
     try {
-      await fullSync(this.vault, this.replicator, [this.boards, this.sheets]);
+      await fullSync(this.vault, this.replicator, [this.boards, this.sheets, this.annots]);
       this.driveError = '';
     } catch (e) {
       // sem internet ou token vencido: o cofre local continua íntegro
@@ -238,6 +243,7 @@ class Engine {
       await this.vault.sync();
       await this.boards.sync();
       await this.sheets.sync();
+      await this.annots.sync();
     }
   }
 }
