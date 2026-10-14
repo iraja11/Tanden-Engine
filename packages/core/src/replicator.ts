@@ -6,8 +6,8 @@ import { fromBytes, readText, toBytes, type Storage } from './storage';
  * em dia, arquivo por arquivo. Não entende de notas; quem funde conteúdo é o Vault.
  *
  * Regras, pensadas para nunca perder dados:
- * - Arquivos deste aparelho em .tanden/crdt/ só sobem (só ele os escreve).
- * - Arquivos de outros aparelhos em .tanden/crdt/ só descem.
+ * - Arquivos deste aparelho em .tanden/<tipo>/ (crdt, board...) só sobem (só ele os escreve).
+ * - Arquivos de outros aparelhos ali só descem.
  * - Notas .md são espelhos compartilhados. Se só um lado mudou, ele vence.
  *   Se os dois mudaram, desce a versão remota: o histórico CRDT já guarda o
  *   que este aparelho escreveu, e o Vault absorve a remota no próximo sync.
@@ -55,7 +55,7 @@ export class Replicator {
   }
 
   private isOwn(path: string): boolean {
-    return path.startsWith('.tanden/crdt/') && /\/([^/]+)\.(bin|json)$/.exec(path)?.[1] === this.deviceId;
+    return path.startsWith('.tanden/') && !path.startsWith(LOCAL_DIR) && /\/([^/]+)\.(bin|json)$/.exec(path)?.[1] === this.deviceId;
   }
 
   private async loadState(): Promise<ReplicaState> {
