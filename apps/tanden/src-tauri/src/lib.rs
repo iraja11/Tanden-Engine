@@ -11,6 +11,12 @@ use tauri::Manager;
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
+            // atualização automática pelas releases do GitHub (só desktop)
+            #[cfg(desktop)]
+            {
+                app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+                app.handle().plugin(tauri_plugin_process::init())?;
+            }
             // TANDEN_VAULT aponta para outra pasta (ex.: uma pasta sincronizada do Drive).
             let root = match std::env::var("TANDEN_VAULT") {
                 Ok(p) => PathBuf::from(p),

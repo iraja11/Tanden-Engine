@@ -52,6 +52,23 @@ Se você editar um `.md` fora do Tanden (Obsidian, editor do Drive), a diferenç
 
 Tudo passa pelo `EventBus` do núcleo (`note.created`, `note.changed`, `process.started`, `sync.finished`...). A interface usa esses eventos para as veias: fluxo contínuo enquanto um processo roda, um pulso quando um dado viaja. As automações vão escutar os mesmos eventos.
 
+## Atualização automática
+
+Cada push na branch `main` do GitHub dispara `.github/workflows/release.yml`, que testa, compila para Linux (AppImage) e Windows e publica uma release com o `latest.json`. O app instalado verifica ao abrir e a cada 6 horas; quando há versão nova, mostra **Atualizar e reiniciar**.
+
+Configuração, uma vez só:
+
+1. Gere a chave de assinatura no seu computador (dentro de `apps/tanden`):
+   `pnpm tauri signer generate -w ~/.tauri/tanden.key`
+2. No GitHub, em *Settings → Secrets and variables → Actions*, crie:
+   - `TAURI_SIGNING_PRIVATE_KEY` com o conteúdo de `~/.tauri/tanden.key`
+   - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` com a senha que você escolheu
+3. Em `apps/tanden/src-tauri/tauri.conf.json`, troque `PREENCHER_COM_A_CHAVE_PUBLICA` pelo conteúdo de `~/.tauri/tanden.key.pub` e `PREENCHER_USUARIO/PREENCHER_REPOSITORIO` pelo seu repositório.
+4. Em *Settings → Actions → General → Workflow permissions*, marque *Read and write permissions*.
+5. Faça push. Instale a primeira versão pela página de Releases; dali em diante ela se atualiza sozinha.
+
+O repositório precisa ser público para o app baixar as atualizações sem senha. Nunca coloque a chave privada no repositório.
+
 ## Próximos passos (fase 1)
 
 1. Sync direto com o Google Drive (API), com a pasta visível no seu Drive.

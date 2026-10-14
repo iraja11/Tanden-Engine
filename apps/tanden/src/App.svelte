@@ -4,6 +4,7 @@
   import Orb from './lib/Orb.svelte';
   import Veins from './lib/Veins.svelte';
   import Editor from './lib/Editor.svelte';
+  import { updater } from './lib/updater.svelte';
 
   let host = $state<HTMLElement>();
   let orbWrap = $state<HTMLElement>();
@@ -22,6 +23,7 @@
 
   onMount(() => {
     engine.start().catch((e) => (error = String(e)));
+    updater.start();
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') { e.preventDefault(); engine.newNote(); }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); void engine.syncNow(); }
@@ -66,6 +68,18 @@
   </aside>
 
   <main class="main" bind:this={editorEl}>
+    {#if updater.available}
+      <div class="update" role="status">
+        {#if updater.error}
+          <span>{updater.error}</span>
+        {:else if updater.progress !== null}
+          <span>Baixando a versão {updater.available.version}… {Math.round(updater.progress * 100)}%</span>
+        {:else}
+          <span>Versão <b>{updater.available.version}</b> disponível</span>
+          <button onclick={() => updater.install()}>Atualizar e reiniciar</button>
+        {/if}
+      </div>
+    {/if}
     {#if error}
       <p class="err">Não consegui abrir o cofre: {error}</p>
     {:else if !engine.ready}
@@ -124,6 +138,11 @@
   .main { grid-area: main; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
   .crumb { padding: 14px 24px 0; font: 11px var(--f-mono); color: var(--muted); max-width: 808px; width: 100%; margin: 0 auto; }
   .main :global(.editor) { flex: 1; }
+  .update { display: flex; align-items: center; gap: 12px; justify-content: space-between; margin: 12px 24px 0;
+    padding: 10px 14px; border: 1px solid var(--ember); border-radius: 12px; background: color-mix(in srgb, var(--ember) 8%, var(--surface));
+    box-shadow: 0 0 24px -12px var(--ember); }
+  .update b { color: var(--ember-soft); }
+  .update button { border: 0; border-radius: 9px; padding: 6px 12px; background: var(--ember); color: #160b03; font-weight: 600; }
   .loading, .err { margin: auto; color: var(--muted); }
   .err { color: var(--crit); }
 

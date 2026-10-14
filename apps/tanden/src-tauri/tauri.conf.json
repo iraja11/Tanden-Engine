@@ -26,7 +26,12 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["deb", "appimage", "rpm", "nsis"],
+    "targets": [
+      "deb",
+      "appimage",
+      "rpm",
+      "nsis"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -34,5 +39,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "PREENCHER_COM_A_CHAVE_PUBLICA",
+      "endpoints": [
+        "https://github.com/PREENCHER_USUARIO/PREENCHER_REPOSITORIO/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

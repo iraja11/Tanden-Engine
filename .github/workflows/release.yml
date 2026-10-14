@@ -1,0 +1,89 @@
+# Cada push na main gera uma release nova (Linux e Windows) com o arquivo
+# latest.json que o app instalado consulta para se atualizar sozinho.
+# Versão: major.minor do tauri.conf.json + número da execução (ex.: 0.1.7).
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: |
+          base=$(node -p "require('./apps/tanden/src-tauri/tauri.conf.json').version.split('.').slice(0,2).join('.')")
+          echo "version=$base.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: version
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-22.04, windows-latest]
+    runs-on: ${{ matrix.platform }}
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/tanden/src-tauri -> target
+
+      - name: Bibliotecas do Linux
+        if: startsWith(matrix.platform, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm test
+
+      - name: Configuração desta versão
+        shell: bash
+        run: |
+          node -e "
+            const fs = require('fs');
+            const rel = JSON.parse(fs.readFileSync('apps/tanden/src-tauri/tauri.release.conf.json', 'utf8'));
+            rel.version = process.env.VERSION;
+            fs.writeFileSync('apps/tanden/src-tauri/tauri.ci.conf.json', JSON.stringify(rel));
+          "
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: apps/tanden
+          tauriScript: pnpm tauri
+          args: --config src-tauri/tauri.ci.conf.json
+          tagName: v${{ env.VERSION }}
+          releaseName: Tanden Engine v${{ env.VERSION }}
+          releaseBody: Versão gerada automaticamente a partir de ${{ github.sha }}. O app instalado se atualiza sozinho.
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true
