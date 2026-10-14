@@ -1,0 +1,148 @@
+import { EventBus, Vault, type Storage, type TandenEvent } from '@tanden/core';
+import { BrowserStorage } from './storage-browser';
+import { TauriStorage, isTauri, vaultRoot } from './storage-tauri';
+
+// Estado vivo do app. Os componentes leem daqui; o núcleo fala por eventos.
+
+export type Pulse = { id: number; target: 'notes' | 'editor' | 'status'; dir: 'in' | 'out' };
+
+function deviceId(): string {
+  try {
+    const saved = localStorage.getItem('tanden.device');
+    if (saved) return saved;
+    const id = `dev-${Math.random().toString(36).slice(2, 8)}`;
+    localStorage.setItem('tanden.device', id);
+    return id;
+  } catch {
+    return `dev-${Math.random().toString(36).slice(2, 8)}`;
+  }
+}
+
+const WELCOME = `# Bem-vinda ao Tanden Engine
+
+Este é o seu cofre. Cada nota é um arquivo **.md** comum, então o Obsidian abre a mesma pasta.
+
+- Crie notas no botão **+** ou com **Ctrl+N**
+- Use [[links]] entre notas, como no Obsidian
+- O tanden gira enquanto trabalha; as veias mostram dados viajando
+
+Edições feitas no celular e no PC ao mesmo tempo se fundem sozinhas.
+`;
+
+class Engine {
+  readonly bus = new EventBus();
+  vault!: Vault;
+  ready = $state(false);
+  location = $state('');
+  notes = $state<string[]>([]);
+  active = $state<string | null>(null);
+  /** conteúdo da nota ativa; muda quando chega edição de outro aparelho */
+  content = $state('');
+  /** processos em andamento (sync, IA...). Enquanto > 0, as veias fluem. */
+  running = $state<Record<string, string>>({});
+  lastSync = $state<Date | null>(null);
+  pulses = $state<Pulse[]>([]);
+  private pulseSeq = 0;
+  private syncTimer: ReturnType<typeof setTimeout> | null = null;
+
+  get busy(): boolean {
+    return Object.keys(this.running).length > 0;
+  }
+
+  async start(): Promise<void> {
+    let storage: Storage;
+    if (isTauri()) {
+      storage = new TauriStorage();
+      this.location = await vaultRoot();
+    } else {
+      storage = new BrowserStorage();
+      this.location = 'navegador (IndexedDB)';
+    }
+    this.vault = new Vault(storage, deviceId(), this.bus);
+    this.bus.on('*', (e) => this.onEvent(e));
+    await this.vault.sync();
+    if (this.vault.list().length === 0) {
+      this.vault.create('Bem-vinda.md', WELCOME);
+      await this.vault.sync();
+    }
+    this.refresh();
+    this.open(this.notes[0] ?? null);
+    this.ready = true;
+    setInterval(() => void this.syncNow(), 30_000);
+  }
+
+  private onEvent(e: TandenEvent): void {
+    switch (e.type) {
+      case 'process.started':
+        this.running = { ...this.running, [e.id]: e.label };
+        break;
+      case 'process.finished': {
+        const { [e.id]: _, ...rest } = this.running;
+        this.running = rest;
+        break;
+      }
+      case 'note.changed':
+        if (e.origin !== 'local') {
+          this.pulse('notes', 'out');
+          if (e.path === this.active) {
+            this.content = this.vault.read(e.path);
+            this.pulse('editor', 'out');
+          }
+        }
+        break;
+      case 'note.created':
+        this.refresh();
+        this.pulse('notes', 'out');
+        break;
+      case 'sync.finished':
+        this.lastSync = new Date();
+        this.refresh();
+        break;
+    }
+  }
+
+  pulse(target: Pulse['target'], dir: Pulse['dir']): void {
+    const p = { id: ++this.pulseSeq, target, dir };
+    this.pulses = [...this.pulses, p];
+    setTimeout(() => (this.pulses = this.pulses.filter((x) => x.id !== p.id)), 1200);
+  }
+
+  refresh(): void {
+    this.notes = this.vault.list();
+  }
+
+  open(path: string | null): void {
+    this.active = path;
+    this.content = path ? this.vault.read(path) : '';
+  }
+
+  /** O editor chama isto a cada digitação. O sync espera uma pausa. */
+  edit(text: string): void {
+    if (!this.active || text === this.content) return;
+    this.content = text;
+    this.vault.write(this.active, text);
+    if (this.syncTimer) clearTimeout(this.syncTimer);
+    this.syncTimer = setTimeout(() => {
+      this.pulse('editor', 'in');
+      void this.syncNow();
+    }, 1500);
+  }
+
+  newNote(): void {
+    let n = 1;
+    let path = 'Nova nota.md';
+    while (this.vault.has(path)) path = `Nova nota ${++n}.md`;
+    this.vault.create(path, `# ${path.replace(/\.md$/, '')}\n\n`);
+    this.refresh();
+    this.open(path);
+    this.pulse('notes', 'in');
+    void this.syncNow();
+  }
+
+  async syncNow(): Promise<void> {
+    if (this.running[`sync:${this.vault.deviceId}`]) return;
+    await this.vault.sync();
+  }
+}
+
+export const engine = new Engine();

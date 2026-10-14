@@ -1,0 +1,13 @@
+{
+  "name": "tanden-engine",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "test": "pnpm -r test",
+    "dev": "pnpm --filter @tanden/app dev",
+    "build": "pnpm --filter @tanden/app build",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "packageManager": "pnpm@10.28.0"
+}

@@ -1,0 +1,18 @@
+/* Tokens do tema Núcleo. Fontes vêm empacotadas no app, para funcionar offline. */
+:root {
+  --void: #0c0c0e; --surface: #151518; --surface-2: #1c1c20; --line: #2b2a31;
+  --ink: #ecebf0; --muted: #8c8a96; --silver: #c8c7cf;
+  --ember: #ff8a3d; --ember-soft: #ffc08a; --ember-glow: rgba(255, 138, 61, .35);
+  --ok: #7fd1a8; --crit: #ff6b6b;
+  --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body, #app { height: 100%; margin: 0; }
+body { background: var(--void); color: var(--ink); font: 14px/1.5 var(--f-body); overflow: hidden; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+::selection { background: color-mix(in srgb, var(--ember) 35%, transparent); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
