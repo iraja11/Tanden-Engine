@@ -4,3 +4,4 @@ export { MemoryStorage, readText, toBytes, fromBytes, type Storage } from './sto
 export { hashHex } from './hash';
 export { Replicator, MemoryRemote, type RemoteStore, type RemoteFile, type ReplicaReport } from './replicator';
 export { fullSync } from './sync';
+export { DriveRemote, DriveError, type DriveOptions } from './drive';

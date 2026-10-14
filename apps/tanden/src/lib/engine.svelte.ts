@@ -1,4 +1,5 @@
-import { EventBus, Vault, type Storage, type TandenEvent } from '@tanden/core';
+import { DriveRemote, EventBus, Replicator, Vault, fullSync, type Storage, type TandenEvent } from '@tanden/core';
+import { google } from './google.svelte';
 import { BrowserStorage } from './storage-browser';
 import { TauriStorage, isTauri, vaultRoot } from './storage-tauri';
 
@@ -32,6 +33,11 @@ Edições feitas no celular e no PC ao mesmo tempo se fundem sozinhas.
 class Engine {
   readonly bus = new EventBus();
   vault!: Vault;
+  private storage!: Storage;
+  private replicator: Replicator | null = null;
+  /** última falha ao falar com o Drive; o app segue funcionando offline */
+  driveError = $state('');
+  driveOn = $state(false);
   ready = $state(false);
   location = $state('');
   notes = $state<string[]>([]);
@@ -58,7 +64,10 @@ class Engine {
       storage = new BrowserStorage();
       this.location = 'navegador (IndexedDB)';
     }
+    this.storage = storage;
     this.vault = new Vault(storage, deviceId(), this.bus);
+    await google.refresh();
+    this.connectDrive();
     this.bus.on('*', (e) => this.onEvent(e));
     await this.vault.sync();
     if (this.vault.list().length === 0) {
@@ -139,9 +148,28 @@ class Engine {
     void this.syncNow();
   }
 
+  /** Liga o sync com o Drive se a conta Google estiver conectada. */
+  connectDrive(): void {
+    this.replicator = google.status.signed_in
+      ? new Replicator(this.storage, new DriveRemote({ getToken: google.token }), this.vault.deviceId)
+      : null;
+    this.driveOn = this.replicator !== null;
+  }
+
   async syncNow(): Promise<void> {
-    if (this.running[`sync:${this.vault.deviceId}`]) return;
-    await this.vault.sync();
+    if (Object.keys(this.running).some((k) => k.includes('sync:'))) return;
+    if (!this.replicator) {
+      await this.vault.sync();
+      return;
+    }
+    try {
+      await fullSync(this.vault, this.replicator);
+      this.driveError = '';
+    } catch (e) {
+      // sem internet ou token vencido: o cofre local continua íntegro
+      this.driveError = String(e);
+      await this.vault.sync();
+    }
   }
 }
 

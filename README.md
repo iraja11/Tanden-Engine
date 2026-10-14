@@ -69,10 +69,25 @@ Configuração, uma vez só:
 
 O repositório precisa ser público para o app baixar as atualizações sem senha. Nunca coloque a chave privada no repositório.
 
+## Sync com o Google Drive
+
+As notas vão para uma pasta **Tanden** visível no seu Drive, com a mesma árvore da pasta local. O app usa o escopo `drive.file`: ele só enxerga os arquivos que ele mesmo criou, nada além disso no seu Drive. O sync roda ao abrir, 1,5 s depois de você parar de digitar e a cada 30 s. Sem internet, tudo continua funcionando e sobe quando a conexão voltar.
+
+Configuração, uma vez só (é gratuito):
+
+1. Entre em https://console.cloud.google.com e crie um projeto (ex.: "Tanden").
+2. Em *APIs e serviços → Biblioteca*, ative a **Google Drive API**.
+3. Em *APIs e serviços → Tela de consentimento OAuth* (ou *Google Auth Platform*), escolha **Externo**, preencha nome e e-mail, e em *Público-alvo / Usuários de teste* adicione o seu próprio e-mail.
+4. Em *Credenciais → Criar credenciais → ID do cliente OAuth*, escolha o tipo **App para computador**. Copie o *ID do cliente* e a *Chave secreta*.
+5. No Tanden, clique em **Conectar Google Drive** na barra de baixo, cole os dois campos e entre com a sua conta.
+
+Enquanto o app estiver em modo "Teste", o Google pede para entrar de novo a cada 7 dias. Para evitar isso, publique o app na tela de consentimento (*Publicar app*); como é só para você, não precisa de verificação, e o Google só mostra um aviso de "app não verificado" no login.
+
+Opcional: para não colar as credenciais em cada aparelho, crie os secrets `TANDEN_GOOGLE_CLIENT_ID` e `TANDEN_GOOGLE_CLIENT_SECRET` no GitHub; o build já as embute. Para um app de computador, o Google não considera essa "chave secreta" confidencial.
+
 ## Próximos passos (fase 1)
 
-1. Sync direto com o Google Drive (API), com a pasta visível no seu Drive.
-2. Build para Android.
-3. Painel de IA: Claude Code e Gemini CLI no PC (pelas suas assinaturas), Ollama local.
-4. Agenda com Google Agenda.
-5. Links `[[ ]]` clicáveis, busca e grafo.
+1. Build para Android (com login Google e atualização do APK).
+2. Painel de IA: Claude Code e Gemini CLI no PC (pelas suas assinaturas), Ollama local.
+3. Agenda com Google Agenda.
+4. Links `[[ ]]` clicáveis, busca e grafo.

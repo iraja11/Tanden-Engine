@@ -2,6 +2,7 @@
 //! A lógica de notas e merge vive em TypeScript (`@tanden/core`); aqui só
 //! há leitura e escrita de arquivos, sempre presas dentro da pasta do cofre.
 
+mod google;
 mod vault;
 
 use std::path::PathBuf;
@@ -10,6 +11,8 @@ use tauri::Manager;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .manage(google::GoogleState::default())
         .setup(|app| {
             // atualização automática pelas releases do GitHub (só desktop)
             #[cfg(desktop)]
@@ -31,7 +34,12 @@ pub fn run() {
             vault::vault_list,
             vault::vault_read,
             vault::vault_write,
-            vault::vault_remove
+            vault::vault_remove,
+            google::google_status,
+            google::google_set_credentials,
+            google::google_sign_in,
+            google::google_access_token,
+            google::google_sign_out
         ])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o Tanden Engine");

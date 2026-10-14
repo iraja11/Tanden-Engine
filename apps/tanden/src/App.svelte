@@ -5,6 +5,7 @@
   import Veins from './lib/Veins.svelte';
   import Editor from './lib/Editor.svelte';
   import { updater } from './lib/updater.svelte';
+  import DrivePanel from './lib/DrivePanel.svelte';
 
   let host = $state<HTMLElement>();
   let orbWrap = $state<HTMLElement>();
@@ -12,6 +13,7 @@
   let editorEl = $state<HTMLElement>();
   let statusEl = $state<HTMLElement>();
   let drawer = $state(false);
+  let drivePanel = $state(false);
   let error = $state('');
 
   const modules = [
@@ -101,9 +103,15 @@
     {:else}
       Aguardando
     {/if}
+    <span class="sep">·</span>
+    <button class="drive" class:on={engine.driveOn} class:warn={!!engine.driveError} onclick={() => (drivePanel = !drivePanel)}>
+      {engine.driveOn ? (engine.driveError ? 'Drive: sem conexão' : 'Drive conectado') : 'Conectar Google Drive'}
+    </button>
     <span class="sep">·</span> {engine.vault?.deviceId ?? ''}
     <span class="sep">·</span> <span class="loc">{engine.location}</span>
   </footer>
+
+  {#if drivePanel}<DrivePanel onclose={() => (drivePanel = false)} />{/if}
 </div>
 
 <style>
@@ -149,6 +157,9 @@
   .status { grid-area: status; display: flex; align-items: center; gap: 8px; padding: 6px 16px; border-top: 1px solid var(--line);
     font: 11px var(--f-mono); color: var(--muted); white-space: nowrap; overflow: hidden; }
   .loc { overflow: hidden; text-overflow: ellipsis; }
+  .drive { border: 0; background: none; padding: 0; font: inherit; color: var(--ember-soft); text-decoration: underline dotted; }
+  .drive.on { color: var(--ok); text-decoration: none; }
+  .drive.warn { color: var(--crit); }
   .sep { opacity: .5; }
   .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
   .dot.busy { background: var(--ember); }
