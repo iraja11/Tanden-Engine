@@ -46,7 +46,7 @@
   /** marcador que desliza até o módulo ativo na barra */
   let mark = $state<{ x: number; y: number; w: number; h: number } | null>(null);
   let error = $state('');
-  type View = 'notas' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'arquivos' | 'luta' | 'mundos' | 'slides' | 'plugins' | `plugin:${string}`;
+  type View = 'notas' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'calculo' | 'arquivos' | 'luta' | 'mundos' | 'slides' | 'plugins' | `plugin:${string}`;
   let view = $state<View>('notas');
   /** id do plugin cuja tela está aberta */
   const pluginView = $derived(view.startsWith('plugin:') ? view.slice(7) : null);
@@ -60,6 +60,7 @@
     { id: 'quadros', label: 'Quadros', ready: true },
     { id: 'agenda', label: 'Agenda', ready: false },
     { id: 'planilhas', label: 'Planilhas', ready: true },
+    { id: 'calculo', label: 'Cálculo', ready: true },
     { id: 'slides', label: 'Slides', ready: true },
     { id: 'mundos', label: 'Mundos', ready: true },
     { id: 'luta', label: 'Luta', ready: true },
@@ -227,6 +228,11 @@
           <RemindersPanel onopen={(p) => { engine.open(p); go('notas'); }} />
         {:else if view === 'planilhas' && engine.ready}
           <SheetsView />
+        {:else if view === 'calculo' && engine.ready}
+          <!-- o cálculo (mathjs, KaTeX) carrega só quando a aba abre -->
+          {#await import('./lib/calc/CalcView.svelte') then m}
+            <m.default onOpenNote={(p: string) => { engine.open(p); go('notas'); }} />
+          {/await}
         {:else if view === 'slides' && engine.ready}
           <SlidesView />
         {:else if view === 'arquivos' && engine.ready}

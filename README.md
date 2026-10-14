@@ -173,6 +173,20 @@ O merge segue o das notas, por célula: duas edições em células diferentes nu
 .tanden/sheet/<planilha>/<aparelho>.bin histórico de edição de cada aparelho
 ```
 
+## Cálculo, fórmulas e gráficos
+
+Funciona em qualquer nota, e o Obsidian continua lendo tudo como texto (os blocos aparecem como código). O botão **∑ Inserir** da nota coloca cada tipo de bloco.
+
+- **Blocos de cálculo** (` ```calc `): uma conta por linha, com o resultado à direita (clique copia). Vírgula decimal (`2,5`), milhar com ponto ou espaço (`1.234,56`), `;` entre argumentos, `Rótulo: conta`, variáveis (`L = 6 m`), funções (`f(x) = x^2 - 3x + 2`), `total` (soma desde o último título) e `ans`. As variáveis passam de um bloco para o próximo.
+- **Unidades:** `100 km/h em m/s`, `25 °C para °F`, `5 kN/m * (4 m)^2 / 8 em kN*m`, `12 V / 4 kΩ em mA`. Valem as do mathjs mais cv, kgf, tf, mca, rpm, ha, cal e Ah, e constantes curtas (`g0`, `c0`, `NA`, `kB`, `qe`, `Rgas`, `eps0`, `mu0`).
+- **Funções em português:** `sen`, `cos`, `tg`, `arcsen`, `raiz`, `log` (base 10), `ln`, `arred`, `media`… Matrizes (`[1, 2; 3, 4]`, `det`, `inv`) e complexos (`raiz(-4)` dá `2i`).
+- **Simbólico:** `derivada(f(x); x)`, `integral(x^2; x)` (inclusive por partes simples), `simplificar`, `expandir`, `taylor(sen(x); x; 0; 7)`. **Numérico:** `integral(f(x); x; 0; 2)` (aceita `inf`), `resolver(x^2 = 4; x)` (polinômios exatos, o resto por varredura), `limite(sen(x)/x; x; 0)`, `somatorio(k^2; k; 1; 10)`. `v(t) = derivada(s(t); t)` guarda a derivada como função.
+- **Gráficos** (` ```grafico `): `y = sen(x)`, `Nome: f(x)`, paramétrica `(cos(t); sen(t))`, polar `r = 1 + cos(θ)`, `pontos: (1; 2) (3; 4)`, `x = 2`, e intervalos `x: 0..2pi`. Usam o que foi definido nas contas acima. Arrastar move, Ctrl+roda ou pinça aproxima, dois cliques voltam.
+- **Fórmulas LaTeX:** `$E = mc^2$` no texto e `$$ … $$` em destaque, desenhadas com o KaTeX quando o cursor sai delas.
+- **Aba Cálculo:** folhas em `Cálculo/` (notas com `tipo: cálculo`, onde toda linha é conta, sem precisar de bloco), um gráfico grande com as funções da folha mais uma curva livre, e uma cola de sintaxe que insere o exemplo com um clique.
+
+O código fica em `packages/core/src/calc/` (testes em `test/calc.test.ts`) e `apps/tanden/src/lib/calc/`. O mathjs e o KaTeX só carregam quando o editor abre, num pedaço separado.
+
 ## IA
 
 A aba **IA** tem quatro painéis:

@@ -1,0 +1,23 @@
+/* gráfico de funções (plot-view.ts) */
+.tplot { position: relative; display: flex; flex-direction: column; gap: 6px; font-family: var(--f-body); }
+.tplot-title { font: 600 12px var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.tplot-box { position: relative; flex: 1; min-height: 160px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--ember) 4%, var(--surface)), var(--surface)); }
+.tplot canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.tplot canvas:active { cursor: grabbing; }
+.tplot-legend { position: absolute; top: 8px; left: 8px; display: flex; flex-wrap: wrap; gap: 4px; max-width: calc(100% - 110px); }
+.tplot-key { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 8px; padding: 2px 8px;
+  background: color-mix(in srgb, var(--surface) 85%, transparent); color: var(--ink); font: 11.5px var(--f-mono); backdrop-filter: blur(6px);
+  transition: opacity var(--dur, .2s); }
+.tplot-key i { width: 10px; height: 3px; border-radius: 2px; }
+.tplot-key.off { opacity: .4; }
+.tplot-key span { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tplot-tools { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; opacity: .55; transition: opacity var(--dur, .2s); }
+.tplot-box:hover .tplot-tools { opacity: 1; }
+.tplot-tools button { width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+  font: 600 14px/1 var(--f-mono); display: grid; place-items: center; padding: 0; }
+.tplot-tools button:hover { border-color: var(--ember); color: var(--ember); }
+.tplot-tip { position: absolute; left: 0; top: 0; pointer-events: none; padding: 3px 8px; border-radius: 7px; font: 12px var(--f-mono); color: var(--ink);
+  background: color-mix(in srgb, var(--surface-2) 92%, transparent); border: 1px solid var(--line); box-shadow: 0 8px 20px -10px #000; white-space: nowrap; }
+.tplot-errors { font: 11.5px var(--f-mono); color: var(--crit); display: grid; gap: 2px; }
+.tplot-errors:empty { display: none; }

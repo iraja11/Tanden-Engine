@@ -1,6 +1,6 @@
 <script lang="ts">
   import { EditorView, keymap, drawSelection, highlightActiveLine } from '@codemirror/view';
-  import { EditorState } from '@codemirror/state';
+  import { Compartment, EditorState } from '@codemirror/state';
   import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
   import { markdown } from '@codemirror/lang-markdown';
   import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
@@ -9,6 +9,7 @@
   import { untrack } from 'svelte';
   import { embeds, linkAt, type EmbedHost } from './embeds';
   import { editorBridge } from './files/editor-bridge';
+  import { calcLoaded, loadCalc } from './calc/load';
 
   let { value, docKey, onchange, host, onfiles, oncursor }: {
     value: string;
@@ -78,11 +79,14 @@
 
   // o host é fixo durante a vida do editor
   const embedHost = untrack(() => host);
-  const extensions = [
+  // cálculo, fórmulas e gráficos: entram quando o pedaço deles termina de carregar
+  const calcSlot = new Compartment();
+  const extensions = () => [
     history(), drawSelection(), highlightActiveLine(), EditorView.lineWrapping,
     keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
     markdown(), syntaxHighlighting(look), theme, attachments,
     ...(embedHost ? [embeds(embedHost)] : []),
+    calcSlot.of(calcLoaded() ?? []),
     EditorView.updateListener.of((u) => {
       if (u.docChanged) onchange(u.state.doc.toString());
       if ((u.docChanged || u.selectionSet) && oncursor) oncursor(u.state.doc.lineAt(u.state.selection.main.head).number - 1);
@@ -90,10 +94,11 @@
   ];
 
   $effect(() => {
-    view = new EditorView({ parent: el, state: EditorState.create({ doc: untrack(() => value), extensions }) });
+    view = new EditorView({ parent: el, state: EditorState.create({ doc: untrack(() => value), extensions: extensions() }) });
+    if (!calcLoaded()) void loadCalc().then((ext) => view?.dispatch({ effects: calcSlot.reconfigure(ext) }));
     // anexos e páginas web entram no cursor, em linha própria
     const detach = editorBridge.attach({
-      insert(text) {
+      insert(text, caret) {
         if (!view) return false;
         const { from, to } = view.state.selection.main;
         const line = view.state.doc.lineAt(from);
@@ -102,7 +107,8 @@
         const before = (from === line.from ? '' : '\n') + (/^\s*\|/.test(prev) ? '\n' : '');
         const after = '\n';
         const insert = `${before}${text}${after}`;
-        view.dispatch({ changes: { from, to, insert }, selection: { anchor: from + insert.length } });
+        const at = caret === undefined ? insert.length : before.length + caret;
+        view.dispatch({ changes: { from, to, insert }, selection: { anchor: from + at } });
         view.focus();
         return true;
       },
@@ -121,7 +127,7 @@
   // Nota trocada: substitui tudo e zera o histórico de desfazer.
   $effect(() => {
     docKey;
-    view?.setState(EditorState.create({ doc: untrack(() => value), extensions }));
+    view?.setState(EditorState.create({ doc: untrack(() => value), extensions: extensions() }));
   });
 
   // Mesma nota, mudança vinda de outro aparelho: aplica só a diferença, preservando o cursor.
