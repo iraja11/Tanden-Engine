@@ -15,6 +15,16 @@
   import FilesView from './lib/files/FilesView.svelte';
   import NoteTools from './lib/files/NoteTools.svelte';
   import { files } from './lib/files/files.svelte';
+  import LutaView from './lib/cadernos/LutaView.svelte';
+  import MundoView from './lib/cadernos/MundoView.svelte';
+  import { cadernos } from './lib/cadernos/cadernos.svelte';
+  import Splash from './lib/Splash.svelte';
+  import SettingsPanel from './lib/SettingsPanel.svelte';
+  import { feel } from './lib/feel.svelte';
+  import { sound } from './lib/sound.svelte';
+  import { theme } from './lib/theme.svelte';
+  import { pop, rise, vanish } from './lib/motion';
+  import { flip } from 'svelte/animate';
 
   let host = $state<HTMLElement>();
   let orbWrap = $state<HTMLElement>();
@@ -23,8 +33,14 @@
   let statusEl = $state<HTMLElement>();
   let drawer = $state(false);
   let drivePanel = $state(false);
+  let settings = $state(false);
+  let splash = $state(true);
+  let railList = $state<HTMLElement>();
+  let railBtns = $state<Record<string, HTMLElement>>({});
+  /** marcador que desliza até o módulo ativo na barra */
+  let mark = $state<{ x: number; y: number; w: number; h: number } | null>(null);
   let error = $state('');
-  let view = $state<'notas' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'arquivos'>('notas');
+  let view = $state<'notas' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'arquivos' | 'luta' | 'mundos'>('notas');
   /** o painel de IA fica montado depois de aberto, para não matar as sessões */
   let aiOpened = $state(false);
 
@@ -35,23 +51,73 @@
     { id: 'quadros', label: 'Quadros', ready: true },
     { id: 'agenda', label: 'Agenda', ready: false },
     { id: 'planilhas', label: 'Planilhas', ready: true },
+    { id: 'mundos', label: 'Mundos', ready: true },
+    { id: 'luta', label: 'Luta', ready: true },
     { id: 'arquivos', label: 'Arquivos', ready: true },
   ];
 
   $effect(() => { if (engine.ready) void reminders.start(); });
   $effect(() => { if (engine.ready) sheets.start(); });
+  $effect(() => { if (engine.ready) cadernos.start(); });
   $effect(() => { if (engine.ready) files.start(); });
   // links e importações pedem para trocar de tela
   $effect(() => { if (files.goto) view = files.goto.view; });
   // clicar num aviso de lembrete abre a tela de lembretes
   $effect(() => { if (reminders.openRequests) view = 'lembretes'; });
 
+  function placeMark() {
+    const b = railBtns[view];
+    mark = b ? { x: b.offsetLeft, y: b.offsetTop, w: b.offsetWidth, h: b.offsetHeight } : null;
+  }
+  $effect(() => {
+    view;
+    placeMark();
+  });
+  $effect(() => {
+    if (!railList) return;
+    const ro = new ResizeObserver(placeMark);
+    ro.observe(railList);
+    return () => ro.disconnect();
+  });
+
+  function go(id: typeof view) {
+    if (id !== view) sound.play('tick');
+    view = id;
+    if (view === 'ia') aiOpened = true;
+  }
+
+  function newNote() {
+    feel.local(() => engine.newNote());
+    sound.play('create');
+  }
+
+  async function syncByHand() {
+    sound.play('tick');
+    feel.turn();
+    await engine.syncNow();
+  }
+
+  function toggleSettings() {
+    settings = !settings;
+    sound.play(settings ? 'open' : 'close');
+    if (settings) drivePanel = false;
+  }
+
+  function toggleDrive() {
+    drivePanel = !drivePanel;
+    sound.play(drivePanel ? 'open' : 'close');
+    if (drivePanel) settings = false;
+  }
+
   onMount(() => {
+    feel.start();
     engine.start().catch((e) => (error = String(e)));
     void updater.start();
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') { e.preventDefault(); engine.newNote(); }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); void engine.syncNow(); }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') { e.preventDefault(); newNote(); }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); void syncByHand(); }
+      if ((e.ctrlKey || e.metaKey) && e.key === ',') { e.preventDefault(); toggleSettings(); }
+      if (e.key === 'Escape' && drivePanel) { drivePanel = false; sound.play('close'); }
     };
     addEventListener('keydown', onKey);
     return () => removeEventListener('keydown', onKey);
@@ -67,26 +133,36 @@
     flowing={engine.busy} pulses={engine.pulses} />
 
   <nav class="rail">
-    <div bind:this={orbWrap} class="orb-wrap"><Orb busy={engine.busy} onclick={() => engine.syncNow()} /></div>
-    <button class="menu" onclick={() => (drawer = !drawer)} aria-label="Notas">☰</button>
-    <ul>
+    <div bind:this={orbWrap} class="orb-wrap" class:hide={splash}>
+      <Orb load={feel.load} kick={feel.kick} flash={feel.flash} onclick={syncByHand} />
+    </div>
+    <button class="menu" onclick={() => { drawer = !drawer; sound.play(drawer ? 'open' : 'close'); }} aria-label="Notas">☰</button>
+    <ul bind:this={railList}>
+      {#if mark}
+        <span class="mark" aria-hidden="true" style:transform="translate({mark.x}px, {mark.y}px)"
+          style:width="{mark.w}px" style:height="{mark.h}px"></span>
+      {/if}
       {#each modules as m (m.id)}
-        <li><button class:on={m.id === view} disabled={!m.ready} title={m.ready ? m.label : `${m.label}: em breve`}
-          onclick={() => { view = m.id as typeof view; if (view === 'ia') aiOpened = true; }}>{m.label}{#if m.id === 'lembretes' && reminders.attention}<i class="badge">{reminders.attention}</i>{/if}</button></li>
+        <li><button bind:this={railBtns[m.id]} class:on={m.id === view} disabled={!m.ready} title={m.ready ? m.label : `${m.label}: em breve`}
+          onclick={() => go(m.id as typeof view)}>{m.label}{#if m.id === 'lembretes' && reminders.attention}{#key reminders.attention}<i class="badge" in:pop={{ from: .5 }}>{reminders.attention}</i>{/key}{/if}</button></li>
       {/each}
     </ul>
+    <button class="gear" class:on={settings} onclick={toggleSettings} title="Aparência e sons (Ctrl+,)" aria-label="Aparência e sons">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" /></svg>
+    </button>
   </nav>
 
   <aside class="side" class:open={drawer} bind:this={notesEl}>
     <header>
       <h2>Notas <span>{engine.notes.length}</span></h2>
-      <button class="new" onclick={() => { engine.newNote(); drawer = false; }} title="Nova nota (Ctrl+N)" aria-label="Nova nota">+</button>
+      <button class="new" onclick={() => { newNote(); drawer = false; }} title="Nova nota (Ctrl+N)" aria-label="Nova nota">+</button>
     </header>
     <ul>
       {#each engine.notes as path (path)}
-        <li>
+        <li animate:flip={{ duration: theme.ms(220) }} in:rise={{ y: -6, duration: 260 }}>
           <button class:active={path === engine.active} draggable="true"
-            ondragstart={(e) => e.dataTransfer?.setData('text/tanden-note', path)} onclick={() => { engine.open(path); drawer = false; view = 'notas'; }}>
+            ondragstart={(e) => e.dataTransfer?.setData('text/tanden-note', path)}
+            onclick={() => { if (path !== engine.active) sound.play('tick'); engine.open(path); drawer = false; view = 'notas'; }}>
             <b>{title(path)}</b>{#if folder(path)}<small>{folder(path)}</small>{/if}
           </button>
         </li>
@@ -110,27 +186,39 @@
     {#if aiOpened}
       <div class="ai-host" class:hidden={view !== 'ia'}><AiPanel /></div>
     {/if}
-    {#if view === 'ia'}
-      <!-- o painel de IA ocupa a área -->
-    {:else if view === 'lembretes' && engine.ready}
-      <RemindersPanel onopen={(p) => { engine.open(p); view = 'notas'; }} />
-    {:else if view === 'planilhas' && engine.ready}
-      <SheetsView />
-    {:else if view === 'arquivos' && engine.ready}
-      <FilesView />
-    {:else if view === 'quadros' && engine.ready}
-      <Quadro onOpenNote={(p) => { engine.open(p); view = 'notas'; }} />
-    {:else if error}
-      <p class="err">Não consegui abrir o cofre: {error}</p>
-    {:else if !engine.ready}
-      <p class="loading">Abrindo o cofre…</p>
-    {:else if engine.active}
-      <div class="crumb"><span>{engine.active}</span><NoteTools path={engine.active} /></div>
-      <Editor value={engine.content} docKey={engine.active} onchange={(v) => engine.edit(v)}
-        host={files.host} onfiles={(f) => void files.importFiles(f, { attach: true })} />
-    {:else}
-      <p class="loading">Nenhuma nota aberta.</p>
-    {/if}
+    {#key view}
+      <div class="view" class:empty={view === 'ia'} in:rise={{ y: 10 }}>
+        {#if view === 'ia'}
+          <!-- o painel de IA ocupa a área -->
+        {:else if view === 'lembretes' && engine.ready}
+          <RemindersPanel onopen={(p) => { engine.open(p); go('notas'); }} />
+        {:else if view === 'planilhas' && engine.ready}
+          <SheetsView />
+        {:else if view === 'arquivos' && engine.ready}
+          <FilesView />
+        {:else if view === 'luta' && engine.ready}
+          <LutaView onOpenNote={(p) => { engine.open(p); go('notas'); }} />
+        {:else if view === 'mundos' && engine.ready}
+          <MundoView onOpenNote={(p) => { engine.open(p); go('notas'); }} />
+        {:else if view === 'quadros' && engine.ready}
+          <Quadro onOpenNote={(p) => { engine.open(p); go('notas'); }} />
+        {:else if error}
+          <p class="err">Não consegui abrir o cofre: {error}</p>
+        {:else if !engine.ready}
+          <p class="loading">Abrindo o cofre…</p>
+        {:else if engine.active}
+          {#key engine.active}
+            <div class="note" in:rise={{ y: 4, duration: 200 }}>
+              <div class="crumb"><span>{engine.active}</span><NoteTools path={engine.active} /></div>
+              <Editor value={engine.content} docKey={engine.active} onchange={(v) => engine.edit(v)}
+                host={files.host} onfiles={(f) => void files.importFiles(f, { attach: true })} />
+            </div>
+          {/key}
+        {:else}
+          <p class="loading">Nenhuma nota aberta.</p>
+        {/if}
+      </div>
+    {/key}
   </main>
 
   {#if files.notice || files.busy}
@@ -158,15 +246,20 @@
       Aguardando
     {/if}
     <span class="sep">·</span>
-    <button class="drive" class:on={engine.driveOn} class:warn={!!engine.driveError} onclick={() => (drivePanel = !drivePanel)}>
+    <button class="drive" class:on={engine.driveOn} class:warn={!!engine.driveError} onclick={toggleDrive}>
       {engine.driveOn ? (engine.driveError ? 'Drive: sem conexão' : 'Drive conectado') : 'Conectar Google Drive'}
     </button>
     <span class="sep">·</span> {engine.vault?.deviceId ?? ''}
     <span class="sep">·</span> <span class="loc">{engine.location}</span>
   </footer>
 
-  {#if drivePanel}<DrivePanel onclose={() => (drivePanel = false)} />{/if}
+  {#if drivePanel}<DrivePanel onclose={toggleDrive} />{/if}
+  {#if settings}<SettingsPanel onclose={toggleSettings} />{/if}
 </div>
+
+{#if splash}
+  <Splash ready={engine.ready} {error} target={orbWrap} ondone={() => (splash = false)} />
+{/if}
 
 <style>
   .shell { position: relative; height: 100%; display: grid; overflow: hidden;
@@ -175,14 +268,26 @@
 
   .rail { grid-area: rail; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 16px 0;
     border-right: 1px solid var(--line); }
-  .rail ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .rail ul { position: relative; list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
   .rail ul button { width: 64px; border: 0; background: none; padding: 8px 0; border-radius: 10px;
-    font: 500 10.5px/1 var(--f-display); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-  .rail ul button.on { color: var(--ember); background: color-mix(in srgb, var(--ember) 10%, transparent); }
+    font: 500 10.5px/1 var(--f-display); letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+    transition: color var(--dur) var(--ease), transform var(--dur) var(--spring); }
+  .rail ul button:hover:not(:disabled) { color: var(--ink); }
+  .rail ul button:active:not(:disabled) { transform: scale(.94); }
+  .rail ul button.on { color: var(--ember); }
+  .mark { position: absolute; left: 0; top: 0; border-radius: 10px; pointer-events: none;
+    background: color-mix(in srgb, var(--ember) 11%, transparent); box-shadow: inset 2px 0 0 var(--ember), 0 0 18px -8px var(--ember-glow);
+    transition: transform var(--dur-slow) var(--spring), width var(--dur-slow) var(--spring), height var(--dur-slow) var(--spring); }
+  .orb-wrap.hide { visibility: hidden; }
+  .gear { margin-top: auto; width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 10px;
+    background: none; color: var(--muted); transition: color var(--dur), background var(--dur), transform var(--dur-slow) var(--spring); }
+  .gear svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+  .gear:hover { color: var(--ink); background: var(--surface-2); }
+  .gear.on { color: var(--ember); transform: rotate(60deg); }
   .rail ul button:disabled { opacity: .35; cursor: default; }
   .rail ul button { position: relative; width: 70px; letter-spacing: .05em; }
   .badge { position: absolute; top: -6px; right: 0; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 8px; background: var(--ember);
-    color: #160b03; font: 600 9.5px/15px var(--f-mono); font-style: normal; letter-spacing: 0; }
+    color: var(--on-ember); font: 600 9.5px/15px var(--f-mono); font-style: normal; letter-spacing: 0; box-shadow: 0 0 10px -2px var(--ember-glow); }
   .menu { display: none; border: 0; background: none; font-size: 20px; color: var(--muted); }
 
   .side { grid-area: side; display: flex; flex-direction: column; min-height: 0; background: var(--surface);
@@ -191,10 +296,13 @@
   .side h2 { margin: 0; font: 600 11.5px/1 var(--f-display); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
   .side h2 span { color: var(--ember); font-family: var(--f-mono); letter-spacing: 0; margin-left: 6px; }
   .new { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); font-size: 18px; line-height: 1; }
-  .new:hover { border-color: var(--ember); color: var(--ember); }
+  .new { transition: border-color var(--dur), color var(--dur), transform var(--dur) var(--spring); }
+  .new:hover { border-color: var(--ember); color: var(--ember); transform: rotate(90deg); }
   .side ul { list-style: none; margin: 0; padding: 0 8px 16px; overflow-y: auto; }
   .side li button { width: 100%; text-align: left; border: 0; background: none; border-radius: 9px; padding: 7px 10px;
-    display: grid; gap: 1px; border-left: 2px solid transparent; }
+    display: grid; gap: 1px; border-left: 2px solid transparent;
+    transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), padding var(--dur) var(--ease); }
+  .side li button:hover:not(.active) { padding-left: 13px; }
   .side li button:hover { background: var(--surface-2); }
   .side li button.active { background: var(--surface-2); border-left-color: var(--ember); }
   .side b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -203,11 +311,16 @@
   .main { grid-area: main; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
   .crumb { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 24px 0; font: 11px var(--f-mono); color: var(--muted); max-width: 808px; width: 100%; margin: 0 auto; }
   .main :global(.editor) { flex: 1; }
+  .view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .view.empty { display: none; }
+  .note { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .ai-host:not(.hidden) { animation: view-in var(--dur) var(--ease); }
+  @keyframes view-in { from { opacity: 0; transform: translateY(10px); } }
   .update { display: flex; align-items: center; gap: 12px; justify-content: space-between; margin: 12px 24px 0;
     padding: 10px 14px; border: 1px solid var(--ember); border-radius: 12px; background: color-mix(in srgb, var(--ember) 8%, var(--surface));
     box-shadow: 0 0 24px -12px var(--ember); }
   .update b { color: var(--ember-soft); }
-  .update button { border: 0; border-radius: 9px; padding: 6px 12px; background: var(--ember); color: #160b03; font-weight: 600; }
+  .update button { border: 0; border-radius: 9px; padding: 6px 12px; background: var(--ember); color: var(--on-ember); font-weight: 600; }
   .ai-host { flex: 1; min-height: 0; }
   .ai-host.hidden { display: none; }
   .loading, .err { margin: auto; color: var(--muted); }
@@ -221,7 +334,8 @@
   .drive.warn { color: var(--crit); }
   .sep { opacity: .5; }
   .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
-  .dot.busy { background: var(--ember); }
+  .dot.busy { background: var(--ember); animation: beat 1s var(--ease) infinite; }
+  @keyframes beat { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--ember) 18%, transparent); } }
 
   @media (max-width: 720px) {
     .shell { grid-template: "rail" auto "main" 1fr "status" auto / 1fr; }
@@ -230,8 +344,10 @@
     .rail ul { display: flex; margin-left: auto; min-width: 0; overflow-x: auto; scrollbar-width: none; padding-top: 6px; }
     .rail ul button { width: auto; padding: 8px 8px; }
     .menu { display: block; }
+    .gear { margin: 0; flex: none; }
+    .mark { box-shadow: inset 0 -2px 0 var(--ember); }
     .side { position: absolute; z-index: 5; top: 0; bottom: 0; left: 0; width: min(300px, 85vw);
-      transform: translateX(-100%); transition: transform .28s cubic-bezier(.2, .8, .2, 1); box-shadow: 0 0 40px #000; }
+      transform: translateX(-100%); transition: transform var(--dur-slow) var(--ease); box-shadow: 0 0 40px var(--shadow); }
     .side.open { transform: none; }
     .status { padding-bottom: max(6px, env(safe-area-inset-bottom)); }
   }

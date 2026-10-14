@@ -1,9 +1,14 @@
-/* Tokens do tema Núcleo. Fontes vêm empacotadas no app, para funcionar offline. */
+/* Tokens do tema. Os valores aqui são o tema Núcleo; o theme.svelte.ts reescreve
+   cada variável no <html> conforme o tema escolhido. Fontes vêm empacotadas no app. */
 :root {
   --void: #0c0c0e; --surface: #151518; --surface-2: #1c1c20; --line: #2b2a31;
   --ink: #ecebf0; --muted: #8c8a96; --silver: #c8c7cf;
-  --ember: #ff8a3d; --ember-soft: #ffc08a; --ember-glow: rgba(255, 138, 61, .35);
+  --ember: #ff8a3d; --ember-soft: #ffc08a; --ember-glow: rgba(255, 138, 61, .35); --on-ember: #160b03;
   --ok: #7fd1a8; --crit: #ff6b6b;
+  --shadow: rgba(0, 0, 0, .75); --scrim: rgba(6, 6, 8, .6);
+  --yin: #0b0b0d; --yang: #ecebf0;
+  --dur: 220ms; --dur-slow: 420ms;
+  --ease: cubic-bezier(.2, .8, .2, 1); --spring: cubic-bezier(.34, 1.4, .64, 1);
   --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
   --f-body: "Manrope", "Segoe UI", system-ui, sans-serif;
   --f-mono: "JetBrains Mono", ui-monospace, monospace;
@@ -15,4 +20,25 @@ body { background: var(--void); color: var(--ink); font: 14px/1.5 var(--f-body);
 button { font: inherit; color: inherit; cursor: pointer; }
 :focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
 ::selection { background: color-mix(in srgb, var(--ember) 35%, transparent); }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+
+/* barras de rolagem discretas, na cor do tema */
+* { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 10px; border: 3px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background-color: var(--muted); }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* troca de tema sem View Transitions: as cores escorrem em vez de piscar */
+.theme-shift, .theme-shift *, .theme-shift *::before, .theme-shift *::after {
+  transition: background-color var(--dur-slow) var(--ease), color var(--dur-slow) var(--ease),
+    border-color var(--dur-slow) var(--ease), fill var(--dur-slow) var(--ease), stroke var(--dur-slow) var(--ease) !important;
+}
+/* com View Transitions o tema novo se espalha em círculo a partir do clique (theme.svelte.ts) */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 2; }
+
+/* movimento: "parado" desliga tudo; o sistema pedindo menos movimento também */
+[data-motion='parado'] *, [data-motion='parado'] *::before, [data-motion='parado'] *::after {
+  animation-duration: 0s !important; animation-iteration-count: 1 !important; transition-duration: 0s !important;
+}

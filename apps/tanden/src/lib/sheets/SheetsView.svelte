@@ -238,7 +238,7 @@
   .div { width: 1px; height: 20px; background: var(--line); }
   .menu-wrap { position: relative; }
   .menu { position: absolute; z-index: 30; top: calc(100% + 6px); right: 0; min-width: 210px; display: grid; gap: 2px; padding: 6px;
-    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 20px 40px -16px #000, 0 0 0 1px var(--ember-glow);
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 20px 40px -16px var(--shadow), 0 0 0 1px var(--ember-glow);
     animation: rise .14s cubic-bezier(.2, .8, .2, 1); }
   .book .menu { left: 0; right: auto; }
   .menu.grid2 { grid-template-columns: 1fr 1fr; min-width: 250px; }
@@ -285,7 +285,7 @@
   .empty h2 { margin: 0; font: 600 18px var(--f-display); letter-spacing: .08em; text-transform: uppercase; }
   .empty p { margin: 0; color: var(--muted); }
   .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-  .pri { background: var(--ember); border-color: var(--ember); color: #160b03; font-weight: 600; }
+  .pri { background: var(--ember); border-color: var(--ember); color: var(--on-ember); font-weight: 600; }
 
   @media (max-width: 720px) {
     .al, .div { display: none; }

@@ -26,7 +26,7 @@ pnpm --filter @tanden/app tauri build   # gera AppImage/deb (Linux) ou instalado
 No **Arch Linux**, as bibliotecas do Tauri:
 
 ```bash
-sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl appmenu-gtk-module libappindicator-gtk3 librsvg xdotool
+sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl appmenu-gtk-module libappindicator-gtk3 librsvg xdotool gst-plugins-base gst-plugins-good
 ```
 
 ## Onde ficam as notas
@@ -49,6 +49,16 @@ PDFs/  Importados/  Anexos/  Web/       arquivos, conversões e páginas salvas
 Cada aparelho grava só os próprios arquivos em `.tanden/`, então dois aparelhos nunca disputam o mesmo arquivo no Drive. Ao sincronizar, o Tanden lê o histórico de todos e funde com um CRDT (Yjs): edições feitas offline no celular e no PC se juntam sem perder nada.
 
 Se você editar um `.md` fora do Tanden (Obsidian, editor do Drive), a diferença é detectada e entra no merge também. Dois aparelhos que detectam a mesma edição externa geram operações idênticas, então o texto não duplica. Os casos estão em `packages/core/test/vault.test.ts`.
+
+## Cadernos: jogos de luta e world building
+
+Os dois cadernos são notas `.md` comuns com propriedades no topo, então o Obsidian abre, busca e liga tudo do mesmo jeito.
+
+**Luta** (`Luta/<jogo>/<personagem>.md`, `tipo: lutador`): combos em notação numpad (`2MK xx 236HP`, `[4]6P`, `j.HK`) que viram ícones de direção e botão, frame data, matchups e uma aba de punições que cruza o bloqueio dos golpes do oponente com o startup dos seus. A nota do jogo (`tipo: jogo`) define a notação: `sf`, `tekken`, `gg`, `kof`, `dbfz` ou `livre` com `botões: [...]`. Frame data entra por CSV ou colando uma tabela de site; nomes de coluna em inglês ou português servem, e reimportar atualiza sem apagar suas notas.
+
+**Mundos** (`Mundos/<mundo>/<Tipo>/<nome>.md`): cada ficha tem `tipo` (personagem, lugar, facção, evento, item, espécie, conceito ou um seu) e `mundo`. Uma propriedade com `[[link]]` vira uma ligação com o nome da propriedade (`afiliação: "[[Ordem do Sol]]"`); links no texto viram "menciona". Datas (`data`, `nascimento`, `morte`, `fundação`, `fim`) montam a linha do tempo e aceitam qualquer calendário: `342`, `-50`, `50 a.C.`, `12/03/342`.
+
+O código fica em `packages/core/src/caderno/` (testes em `test/caderno.test.ts`) e `apps/tanden/src/lib/cadernos/`.
 
 ## Eventos (sistema nervoso)
 
@@ -171,6 +181,18 @@ A aba **Arquivos** lista tudo no cofre que não é nota: PDFs, documentos, image
 **Páginas web.** Cole um endereço em **Página web**. *Salvar como nota* guarda o texto do artigo e as imagens em `Web/`, com título, site, autor e data no topo, no mesmo formato do Obsidian Web Clipper. *Só o link* coloca um cartão com título e resumo na nota aberta. Um link direto para um PDF ou imagem vira arquivo do cofre.
 
 Arquivos grandes sobem para o Drive em partes, e o sync só relê um arquivo quando ele muda. O código está em `packages/core/src/convert/` (conversões), `files.ts`, `webclip.ts`, `annotations.ts`, `pdf-export.ts` e em `apps/tanden/src/lib/files/` e `apps/tanden/src/lib/pdf/`.
+
+## Aparência, movimento e sons
+
+O botão de engrenagem no pé da barra lateral (ou **Ctrl+,**) abre *Aparência e sons*. Tudo vale na hora e fica salvo por aparelho.
+
+- **Temas:** Núcleo, Seth, Satsui, Hadou, Jade (escuros), Papel e Gelo (claros). Dá para trocar só o fundo ou escolher qualquer cor de destaque; no tema claro, o destaque escurece sozinho até ficar legível. Com suporte do sistema, o tema novo se espalha em círculo a partir do clique.
+- **O símbolo tanden** só se mexe com motivo: parado e alinhado é "tudo em dia"; gira enquanto há trabalho (mais rápido quando a IA pensa) e desacelera como motor até assentar; dá uma volta quando algo de outro aparelho é fundido; o anel acende quando um dado chega e fica vermelho quando o sync falha. Processos de menos de 150 ms não o movem.
+- **Abertura:** as duas metades se encaixam quando o app liga, o símbolo gira enquanto o cofre abre de verdade e depois voa para a barra lateral.
+- **Movimento:** Completo, Reduzido (transições curtas, giro lento) ou Parado (o estado aparece só em cor).
+- **Sons:** sintetizados na hora, sem arquivos (no Linux, o WebKit toca áudio pelo GStreamer: `gst-plugins-good`). Três estilos (Cristal, Taiko, Circuito), volume e três grupos que ligam e desligam separados: Interface, Atividade e Avisos. Cada som tem limite de repetição e uma variação mínima de altura para não enjoar.
+
+Código: `apps/tanden/src/lib/theme.svelte.ts`, `sound.svelte.ts`, `feel.svelte.ts` (eventos do núcleo viram gesto e som), `motion.ts`, `Orb.svelte` e `Splash.svelte`.
 
 ## Próximos passos (fase 1)
 

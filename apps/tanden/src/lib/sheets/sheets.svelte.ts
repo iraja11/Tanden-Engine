@@ -1,5 +1,6 @@
 import { SheetStore, Workbook, csvSheet, readXlsx, toBytes, writeCsv, writeXlsx, type Storage } from '@tanden/core';
 import { engine } from '../engine.svelte';
+import { sound } from '../sound.svelte';
 import { isTauri, TauriStorage } from '../storage-tauri';
 
 // Estado do módulo de planilhas. A grade e os gráficos leem daqui.
@@ -66,6 +67,7 @@ class Sheets {
   create(name = 'Nova planilha'): void {
     if (!this.store) return;
     const path = this.store.freePath(name);
+    sound.play('create');
     this.store.create(path);
     this.open(path);
   }

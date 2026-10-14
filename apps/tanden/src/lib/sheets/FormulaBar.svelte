@@ -86,7 +86,7 @@
     color: var(--ink); font: 13px var(--f-mono); outline: none; }
   .field input:focus { border-color: var(--ember); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ember) 15%, transparent); }
   .pop { position: absolute; z-index: 20; top: calc(100% + 6px); left: 0; width: min(520px, 100%); background: var(--surface);
-    border: 1px solid var(--line); border-radius: 12px; padding: 6px; box-shadow: 0 20px 40px -16px #000, 0 0 0 1px var(--ember-glow);
+    border: 1px solid var(--line); border-radius: 12px; padding: 6px; box-shadow: 0 20px 40px -16px var(--shadow), 0 0 0 1px var(--ember-glow);
     animation: rise .14s cubic-bezier(.2, .8, .2, 1); }
   @keyframes rise { from { opacity: 0; transform: translateY(-4px); } }
   .opt { display: grid; grid-template-columns: auto 1fr; gap: 2px 6px; width: 100%; text-align: left; border: 0; background: none;

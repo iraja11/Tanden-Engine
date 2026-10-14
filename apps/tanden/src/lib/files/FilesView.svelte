@@ -184,7 +184,7 @@
   .acts { display: flex; gap: 6px; }
   button { border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; padding: 6px 11px; font-size: 12.5px; color: var(--ink); }
   button:hover { border-color: color-mix(in srgb, var(--ember) 50%, var(--line)); }
-  .pri { background: var(--ember); border-color: var(--ember); color: #160b03; font-weight: 600; }
+  .pri { background: var(--ember); border-color: var(--ember); color: var(--on-ember); font-weight: 600; }
   .pri:hover { box-shadow: 0 0 18px -6px var(--ember); }
   .filter { border: 1px solid var(--line); background: var(--void); color: var(--ink); border-radius: 8px; padding: 6px 10px; font: inherit; }
   .filter:focus { outline: none; border-color: var(--ember); }
@@ -201,7 +201,7 @@
   li em { font: normal 10.5px var(--f-mono); color: var(--ember); border: 1px solid color-mix(in srgb, var(--ember) 40%, transparent); border-radius: 6px; padding: 0 5px; }
   .tag { flex: none; width: 34px; text-align: center; font: 600 8.5px/18px var(--f-mono); font-style: normal; letter-spacing: .04em; border-radius: 5px;
     color: var(--silver); background: var(--surface-2); border: 1px solid var(--line); }
-  .tag.pdf { color: #160b03; background: var(--ember); border-color: var(--ember); }
+  .tag.pdf { color: var(--on-ember); background: var(--ember); border-color: var(--ember); }
   .tag.image { color: var(--ok); }
   .tag.document, .tag.book { color: #8ab4ff; }
   .tag.slides { color: #ffb37a; }

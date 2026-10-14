@@ -354,5 +354,5 @@
   .fill { position: absolute; border: 1.5px dashed var(--ember-soft); pointer-events: none; z-index: 1; }
   .editor { position: absolute; height: 26px; z-index: 5; padding: 0 6px; border: 2px solid var(--ember); border-radius: 2px;
     background: var(--surface-2); color: var(--ink); font: 13px var(--f-body); outline: none;
-    box-shadow: 0 8px 24px -8px #000, 0 0 18px -6px var(--ember); }
+    box-shadow: 0 8px 24px -8px var(--shadow), 0 0 18px -6px var(--ember); }
 </style>

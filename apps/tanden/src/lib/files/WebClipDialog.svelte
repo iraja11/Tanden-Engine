@@ -79,7 +79,7 @@
   footer { display: flex; justify-content: flex-end; gap: 8px; }
   button { border: 1px solid var(--line); background: var(--surface-2); border-radius: 9px; padding: 7px 14px; color: var(--ink); }
   button:disabled { opacity: .5; }
-  .pri { background: var(--ember); border-color: var(--ember); color: #160b03; font-weight: 600; }
+  .pri { background: var(--ember); border-color: var(--ember); color: var(--on-ember); font-weight: 600; }
   @keyframes fade { from { opacity: 0; } }
   @keyframes rise { from { opacity: 0; transform: translateY(8px) scale(.98); } }
   @keyframes pulse { 50% { opacity: .3; transform: scale(.7); } }

@@ -2,6 +2,9 @@
   import type { BoardData, BoardEdit, BoardKind, BoardStore, CanvasNode, InkStroke } from '@tanden/core';
   import { untrack } from 'svelte';
   import { engine } from '../engine.svelte';
+  import { feel } from '../feel.svelte';
+  import { sound } from '../sound.svelte';
+  import { pop } from '../motion';
   import {
     PALETTE, arrowHead, center, colorOf, edgePath, facing, inkOutline, layoutMindMap, recognize, shapePath,
     strokeHit, thin, treeOf, uid, type Box, type Pt, type Side,
@@ -24,6 +27,8 @@
     { id: 'eraser', label: 'Borracha', key: 'E', icon: 'M7 19h11 M5 15l8-9 6 6-7 7H9z' },
   ];
   const INK_COLORS = ['#ecebf0', '#ff8a3d', '#ffc08a', '#7fd1a8', '#6cc6e0', '#ff6b6b'];
+  /** a tinta "clara" padrão segue a cor do texto do tema, para não sumir no tema claro */
+  const inkOf = (c: string) => (c === INK_COLORS[0] ? 'var(--ink)' : c);
   const GRID = 20;
   const KINDS: Record<BoardKind, { label: string; hint: string }> = {
     mapa: { label: 'Mapa mental', hint: 'Tab cria um filho, Enter cria um irmão. O mapa se organiza sozinho.' },
@@ -172,6 +177,11 @@
   }
 
   function createBoard(k: BoardKind): void {
+    sound.play('create');
+    feel.local(() => createBoardHere(k));
+  }
+
+  function createBoardHere(k: BoardKind): void {
     const base = newName.trim().replace(/[\\/:*?"<>|]/g, '') || KINDS[k].label;
     let p = `Quadros/${base}.canvas`;
     let n = 1;
@@ -1007,7 +1017,7 @@
         <span class="caret">▾</span>
       </button>
       {#if menu === 'boards'}
-        <div class="menu boards" role="menu">
+        <div class="menu boards" role="menu" transition:pop>
           {#each boardsSorted as b (b)}
             <button class:on={b === path} onclick={() => { open(b); menu = null; }} role="menuitem">
               {title(b)}<small>{b.includes('/') ? b.slice(0, b.lastIndexOf('/')) : ''}</small>
@@ -1035,7 +1045,7 @@
         <span class="zoom">{Math.round(view.k * 100)}%</span>
       </div>
       {#if menu === 'notes'}
-        <div class="menu notes" role="menu">
+        <div class="menu notes" role="menu" transition:pop>
           <input placeholder="Buscar nota" bind:value={noteQuery} use:focusOnMount />
           {#each notesFound as n (n)}<button onclick={() => insertNote(n)}>{n.replace(/\.md$/, '')}</button>{/each}
           {#if !notesFound.length}<p>Nenhuma nota com esse nome.</p>{/if}
@@ -1147,14 +1157,14 @@
         <svg class="ink" aria-hidden="true">
           {#each data.ink as s (s.id)}
             {#if s.tool === 'pen'}
-              <path d={inkOutline(s)} fill={s.color} class:erasing={erasing.includes(s.id)} />
+              <path d={inkOutline(s)} fill={inkOf(s.color)} class:erasing={erasing.includes(s.id)} />
             {:else}
-              <path d={shapePath(s)} fill="none" stroke={s.color} stroke-width={s.width} stroke-linecap="round" stroke-linejoin="round" class:erasing={erasing.includes(s.id)} />
+              <path d={shapePath(s)} fill="none" stroke={inkOf(s.color)} stroke-width={s.width} stroke-linecap="round" stroke-linejoin="round" class:erasing={erasing.includes(s.id)} />
             {/if}
           {/each}
           {#if live}
-            {#if live.tool === 'pen'}<path d={inkOutline(live)} fill={live.color} />
-            {:else}<path d={shapePath(live)} fill="none" stroke={live.color} stroke-width={live.width} stroke-linecap="round" stroke-linejoin="round" />{/if}
+            {#if live.tool === 'pen'}<path d={inkOutline(live)} fill={inkOf(live.color)} />
+            {:else}<path d={shapePath(live)} fill="none" stroke={inkOf(live.color)} stroke-width={live.width} stroke-linecap="round" stroke-linejoin="round" />{/if}
           {/if}
           {#if marquee}
             <rect class="marquee" x={Math.min(marquee.a.x, marquee.b.x)} y={Math.min(marquee.a.y, marquee.b.y)}
@@ -1176,7 +1186,7 @@
         <span class="div"></span>
         {#if drawTools.has(tool) && tool !== 'eraser'}
           {#each INK_COLORS as c (c)}
-            <button class="swatch" class:on={inkColor === c} style:--sw={c} onclick={() => (inkColor = c)} aria-label="Cor {c}"></button>
+            <button class="swatch" class:on={inkColor === c} style:--sw={inkOf(c)} onclick={() => (inkColor = c)} aria-label="Cor {c}"></button>
           {/each}
           <button class="width" onclick={() => (inkWidth = inkWidth >= 8 ? 1.5 : inkWidth * 2)} title="Espessura" aria-label="Espessura">
             <span style:height="{Math.max(2, inkWidth)}px"></span>
@@ -1215,7 +1225,7 @@
   .zoom { font: 11px var(--f-mono); color: var(--muted); min-width: 40px; text-align: right; }
 
   .menu { position: absolute; top: calc(100% + 6px); z-index: 10; background: var(--surface); border: 1px solid var(--line);
-    border-radius: 12px; padding: 6px; box-shadow: 0 18px 50px -10px #000; display: grid; gap: 2px;
+    border-radius: 12px; padding: 6px; box-shadow: 0 18px 50px -10px var(--shadow); display: grid; gap: 2px;
     max-height: 60vh; overflow: auto; width: min(320px, 90vw); }
   .menu.notes { right: 16px; }
   .menu button { text-align: left; border: 0; background: none; border-radius: 8px; padding: 7px 10px; display: grid; }
@@ -1270,12 +1280,12 @@
   input.edge-label { color: var(--ink); outline: none; border-color: var(--ember); min-width: 120px; }
 
   .node { position: absolute; border-radius: 12px; background: var(--surface); border: 1px solid var(--line);
-    box-shadow: 0 8px 24px -16px #000; cursor: default; }
+    box-shadow: 0 8px 24px -16px var(--shadow); cursor: default; }
   .node.text, .node.file, .node.link { border-top: 3px solid var(--c, var(--line)); }
   .node:hover { border-color: color-mix(in srgb, var(--c, var(--ember)) 55%, var(--line)); }
   .node.sel { border-color: var(--c, var(--ember)); box-shadow: 0 0 0 1px var(--c, var(--ember)), 0 0 26px -10px var(--c, var(--ember)); }
   .node.target { box-shadow: 0 0 0 2px var(--ember), 0 0 26px -6px var(--ember); }
-  .node.moving { opacity: .92; box-shadow: 0 16px 40px -14px #000; }
+  .node.moving { opacity: .92; box-shadow: 0 16px 40px -14px var(--shadow); }
   /* chegou de outro aparelho: o brilho é o dado entrando, e some quando assenta */
   .node.arrived { animation: arrive 1.3s ease-out; }
   @keyframes arrive { from { box-shadow: 0 0 0 2px var(--ember-soft), 0 0 34px -4px var(--ember); } }
@@ -1321,7 +1331,7 @@
 
   .tools { position: absolute; z-index: 5; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 2px;
     padding: 5px; border-radius: 14px; border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 92%, transparent);
-    backdrop-filter: blur(8px); box-shadow: 0 14px 40px -16px #000; max-width: calc(100% - 24px); overflow-x: auto; }
+    backdrop-filter: blur(8px); box-shadow: 0 14px 40px -16px var(--shadow); max-width: calc(100% - 24px); overflow-x: auto; }
   .tools button { flex: none; border: 0; background: none; width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; color: var(--muted); }
   .tools button:hover { color: var(--ink); background: var(--surface-2); }
   .tools button.on { color: var(--ember); background: color-mix(in srgb, var(--ember) 12%, transparent); }

@@ -234,6 +234,7 @@ class Files {
         this.busy = `Importando ${f.name}…`;
         const r = await engine.bus.process(`import:${f.name}`, `Importando ${f.name}`, () => this.importOne(f, opts));
         if (r.insert) inserts.push(r.insert);
+        engine.bus.emit({ type: 'file.imported', path: r.open ?? '', from: f.name });
         if (!opened && r.open && !opts.attach) {
           opened = true;
           this.openPath(r.open);
@@ -352,6 +353,7 @@ class Files {
         };
         await Promise.all([worker(), worker(), worker(), worker()]);
         this.createNote(notePath, clipToMarkdown(clip, { parse, images }));
+        engine.bus.emit({ type: 'file.imported', path: notePath, from: url });
         if (attachTo) this.insertInto(attachTo, linkCard(clip.meta, { note: notePath.replace(/\.md$/, '') }));
         this.say(`"${clip.meta.title}" salva em ${notePath}${images.size ? ` com ${images.size} imagens` : ''}.`, { path: notePath });
         if (!attachTo) this.openPath(notePath);
