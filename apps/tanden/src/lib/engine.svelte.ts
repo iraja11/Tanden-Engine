@@ -149,6 +149,17 @@ class Engine {
     }, 1500);
   }
 
+  /** Grava uma nota inteira vinda de fora do editor (ex.: lembretes); cria se não existir. */
+  writeNote(path: string, text: string): void {
+    if (this.vault.has(path)) this.vault.write(path, text);
+    else {
+      this.vault.create(path, text);
+      this.refresh();
+    }
+    if (path === this.active) this.content = text;
+    void this.syncNow();
+  }
+
   newNote(): void {
     let n = 1;
     let path = 'Nova nota.md';

@@ -102,6 +102,26 @@ A aba **IA** tem quatro painéis:
 
 Quando qualquer programa muda uma nota (IA, Obsidian, terminal), o app percebe na hora e funde a mudança. Os terminais continuam abertos ao trocar de aba.
 
+## Lembretes
+
+A aba **Lembretes** tem uma captura rápida em português: escreva `amanhã 9h comprar pão`, `em 20 min tirar o bolo`, `sexta 18h30 jogar SF5`, `15/11 aniversário da Ana`, `toda segunda 7h30 academia` ou `dias úteis 7h ponto` e aperte Enter. O lembrete vai para a nota `Lembretes.md`.
+
+Qualquer tarefa com data, em qualquer nota, também é um lembrete. O formato é o dos plugins Reminder e Tasks do Obsidian, então os dois apps entendem a mesma linha:
+
+```markdown
+- [ ] Comprar pão (@2026-10-15 09:00)
+- [ ] Academia 🔁 every week on Monday, Thursday (@2026-10-19 07:30)
+- [ ] Entregar relatório ⏫ 📅 2026-10-20        (sem hora, avisa às 9h)
+```
+
+Como os lembretes moram nas notas, eles sincronizam pelo mesmo merge do cofre: marcar como feito no celular tira o aviso do PC. Um lembrete repetido, ao ser marcado como feito, pula para a próxima vez. O aviso tem os botões **Feito** e **Adiar 10 min**.
+
+- **Computador:** ao fechar a janela, o Tanden continua na bandeja e avisa na hora. Ele abre com o sistema, já minimizado (dá para desligar nas opções da aba Lembretes). Abrir o app de novo traz a janela de volta. Se o app ficou fechado, os lembretes das últimas 12 horas avisam assim que ele abre.
+- **Android:** cada lembrete vai para o agendador do sistema, que avisa no horário exato mesmo com o app fechado e depois de reiniciar o celular. Na primeira vez, o Android pede permissão para notificações. Em celulares Xiaomi (MIUI/HyperOS), vale liberar *Inicialização automática* e tirar a restrição de bateria do Tanden nas configurações do app.
+- **Web:** avisa enquanto a aba estiver aberta.
+
+Cada aparelho lembra quais avisos já mostrou, então um lembrete não repete no mesmo aparelho. Adiar cria um aviso novo. O código está em `packages/core/src/reminders.ts` (formato e agenda), `packages/core/src/quick-reminder.ts` (português) e `apps/tanden/src/lib/reminders.svelte.ts` (avisos).
+
 ## Próximos passos (fase 1)
 
 1. Agenda com Google Agenda.
