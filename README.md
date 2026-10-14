@@ -48,6 +48,16 @@ Cada aparelho grava só os próprios arquivos em `.tanden/`, então dois aparelh
 
 Se você editar um `.md` fora do Tanden (Obsidian, editor do Drive), a diferença é detectada e entra no merge também. Dois aparelhos que detectam a mesma edição externa geram operações idênticas, então o texto não duplica. Os casos estão em `packages/core/test/vault.test.ts`.
 
+## Cadernos: jogos de luta e world building
+
+Os dois cadernos são notas `.md` comuns com propriedades no topo, então o Obsidian abre, busca e liga tudo do mesmo jeito.
+
+**Luta** (`Luta/<jogo>/<personagem>.md`, `tipo: lutador`): combos em notação numpad (`2MK xx 236HP`, `[4]6P`, `j.HK`) que viram ícones de direção e botão, frame data, matchups e uma aba de punições que cruza o bloqueio dos golpes do oponente com o startup dos seus. A nota do jogo (`tipo: jogo`) define a notação: `sf`, `tekken`, `gg`, `kof`, `dbfz` ou `livre` com `botões: [...]`. Frame data entra por CSV ou colando uma tabela de site; nomes de coluna em inglês ou português servem, e reimportar atualiza sem apagar suas notas.
+
+**Mundos** (`Mundos/<mundo>/<Tipo>/<nome>.md`): cada ficha tem `tipo` (personagem, lugar, facção, evento, item, espécie, conceito ou um seu) e `mundo`. Uma propriedade com `[[link]]` vira uma ligação com o nome da propriedade (`afiliação: "[[Ordem do Sol]]"`); links no texto viram "menciona". Datas (`data`, `nascimento`, `morte`, `fundação`, `fim`) montam a linha do tempo e aceitam qualquer calendário: `342`, `-50`, `50 a.C.`, `12/03/342`.
+
+O código fica em `packages/core/src/caderno/` (testes em `test/caderno.test.ts`) e `apps/tanden/src/lib/cadernos/`.
+
 ## Eventos (sistema nervoso)
 
 Tudo passa pelo `EventBus` do núcleo (`note.created`, `note.changed`, `process.started`, `sync.finished`...). A interface usa esses eventos para as veias: fluxo contínuo enquanto um processo roda, um pulso quando um dado viaja. As automações vão escutar os mesmos eventos.

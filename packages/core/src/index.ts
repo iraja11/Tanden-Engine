@@ -28,3 +28,4 @@ export {
 export { parseQuickReminder, type QuickReminder } from './quick-reminder';
 export { BoardStore, readBoard, parseBoard, serializeBoard, type BoardData, type BoardEdit, type BoardKind, type CanvasNode, type CanvasEdge, type InkStroke } from './board';
 export * from './sheet';
+export * from './caderno';

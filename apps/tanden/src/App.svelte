@@ -12,6 +12,9 @@
   import Quadro from './lib/quadro/Quadro.svelte';
   import SheetsView from './lib/sheets/SheetsView.svelte';
   import { sheets } from './lib/sheets/sheets.svelte';
+  import LutaView from './lib/cadernos/LutaView.svelte';
+  import MundoView from './lib/cadernos/MundoView.svelte';
+  import { cadernos } from './lib/cadernos/cadernos.svelte';
 
   let host = $state<HTMLElement>();
   let orbWrap = $state<HTMLElement>();
@@ -21,7 +24,7 @@
   let drawer = $state(false);
   let drivePanel = $state(false);
   let error = $state('');
-  let view = $state<'notas' | 'ia' | 'lembretes' | 'quadros' | 'planilhas'>('notas');
+  let view = $state<'notas' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'luta' | 'mundos'>('notas');
   /** o painel de IA fica montado depois de aberto, para não matar as sessões */
   let aiOpened = $state(false);
 
@@ -32,10 +35,13 @@
     { id: 'quadros', label: 'Quadros', ready: true },
     { id: 'agenda', label: 'Agenda', ready: false },
     { id: 'planilhas', label: 'Planilhas', ready: true },
+    { id: 'mundos', label: 'Mundos', ready: true },
+    { id: 'luta', label: 'Luta', ready: true },
   ];
 
   $effect(() => { if (engine.ready) void reminders.start(); });
   $effect(() => { if (engine.ready) sheets.start(); });
+  $effect(() => { if (engine.ready) cadernos.start(); });
   // clicar num aviso de lembrete abre a tela de lembretes
   $effect(() => { if (reminders.openRequests) view = 'lembretes'; });
 
@@ -109,6 +115,10 @@
       <RemindersPanel onopen={(p) => { engine.open(p); view = 'notas'; }} />
     {:else if view === 'planilhas' && engine.ready}
       <SheetsView />
+    {:else if view === 'luta' && engine.ready}
+      <LutaView onOpenNote={(p) => { engine.open(p); view = 'notas'; }} />
+    {:else if view === 'mundos' && engine.ready}
+      <MundoView onOpenNote={(p) => { engine.open(p); view = 'notas'; }} />
     {:else if view === 'quadros' && engine.ready}
       <Quadro onOpenNote={(p) => { engine.open(p); view = 'notas'; }} />
     {:else if error}
