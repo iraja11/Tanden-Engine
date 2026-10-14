@@ -2,8 +2,8 @@
 // páginas web). O editor se registra ao montar e sai ao desmontar.
 
 interface EditorApi {
-  /** insere no cursor, em linha própria; devolve false se não deu */
-  insert(text: string): boolean;
+  /** insere no cursor, em linha própria; devolve false se não deu. caret: onde o cursor fica, contado dentro de text */
+  insert(text: string, caret?: number): boolean;
 }
 
 let current: EditorApi | null = null;
@@ -15,7 +15,7 @@ export const editorBridge = {
       if (current === api) current = null;
     };
   },
-  insert(text: string): boolean {
-    return current?.insert(text) ?? false;
+  insert(text: string, caret?: number): boolean {
+    return current?.insert(text, caret) ?? false;
   },
 };

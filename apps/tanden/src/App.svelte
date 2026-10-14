@@ -40,7 +40,7 @@
   /** marcador que desliza até o módulo ativo na barra */
   let mark = $state<{ x: number; y: number; w: number; h: number } | null>(null);
   let error = $state('');
-  let view = $state<'notas' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'arquivos' | 'luta' | 'mundos'>('notas');
+  let view = $state<'notas' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'calculo' | 'arquivos' | 'luta' | 'mundos'>('notas');
   /** o painel de IA fica montado depois de aberto, para não matar as sessões */
   let aiOpened = $state(false);
 
@@ -51,6 +51,7 @@
     { id: 'quadros', label: 'Quadros', ready: true },
     { id: 'agenda', label: 'Agenda', ready: false },
     { id: 'planilhas', label: 'Planilhas', ready: true },
+    { id: 'calculo', label: 'Cálculo', ready: true },
     { id: 'mundos', label: 'Mundos', ready: true },
     { id: 'luta', label: 'Luta', ready: true },
     { id: 'arquivos', label: 'Arquivos', ready: true },
@@ -194,6 +195,11 @@
           <RemindersPanel onopen={(p) => { engine.open(p); go('notas'); }} />
         {:else if view === 'planilhas' && engine.ready}
           <SheetsView />
+        {:else if view === 'calculo' && engine.ready}
+          <!-- o cálculo (mathjs, KaTeX) carrega só quando a aba abre -->
+          {#await import('./lib/calc/CalcView.svelte') then m}
+            <m.default onOpenNote={(p: string) => { engine.open(p); go('notas'); }} />
+          {/await}
         {:else if view === 'arquivos' && engine.ready}
           <FilesView />
         {:else if view === 'luta' && engine.ready}

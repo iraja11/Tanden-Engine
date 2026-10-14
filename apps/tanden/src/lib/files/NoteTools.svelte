@@ -1,11 +1,24 @@
 <script lang="ts">
   import { files } from './files.svelte';
   import WebClipDialog from './WebClipDialog.svelte';
+  import { editorBridge } from './editor-bridge';
 
   // Botões da nota aberta: anexar arquivo ou página web, exportar.
   let { path }: { path: string } = $props();
 
-  let menu = $state<'attach' | 'export' | null>(null);
+  let menu = $state<'attach' | 'export' | 'insert' | null>(null);
+
+  // modelos de bloco: o cursor fica onde se começa a escrever
+  const blocks = {
+    calc: ['```calc\n', '\n```'],
+    plot: ['```grafico\ny = ', '\nx: -10..10\n```'],
+    tex: ['$$\n', '\n$$'],
+  } as const;
+  function insertBlock(kind: keyof typeof blocks) {
+    menu = null;
+    const [a, b] = blocks[kind];
+    editorBridge.insert(a + b, a.length);
+  }
   let clip = $state(false);
   let input = $state<HTMLInputElement>();
 
@@ -28,6 +41,16 @@
       <div class="menu" role="menu">
         <button role="menuitem" onclick={() => { menu = null; input?.click(); }}>Arquivo…<small>ou arraste para a nota</small></button>
         <button role="menuitem" onclick={() => { menu = null; clip = true; }}>Página web…<small>nota ou cartão</small></button>
+      </div>
+    {/if}
+  </div>
+  <div class="wrap">
+    <button onclick={() => (menu = menu === 'insert' ? null : 'insert')} aria-haspopup="menu" title="Inserir conta, gráfico ou fórmula">∑ Inserir</button>
+    {#if menu === 'insert'}
+      <div class="menu" role="menu">
+        <button role="menuitem" onclick={() => insertBlock('calc')}>Bloco de cálculo<small>contas e unidades</small></button>
+        <button role="menuitem" onclick={() => insertBlock('plot')}>Gráfico<small>funções e pontos</small></button>
+        <button role="menuitem" onclick={() => insertBlock('tex')}>Fórmula<small>LaTeX</small></button>
       </div>
     {/if}
   </div>
