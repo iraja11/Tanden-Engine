@@ -540,7 +540,7 @@ export function suggest(prefix: string, limit = 8): FnDef[] {
   const p = strip(prefix.toUpperCase());
   if (!p) return [];
   const starts = F.filter((f) => strip(f.pt).startsWith(p) || f.name.startsWith(p));
-  const contains = F.filter((f) => !starts.includes(f) && (strip(f.pt).includes(p) || strip(f.desc.toUpperCase()).includes(p)));
+  const contains = F.filter((f) => !starts.includes(f) && (strip(f.pt).includes(p) || f.name.includes(p) || (p.length >= 4 && strip(f.desc.toUpperCase()).includes(p))));
   return [...starts, ...contains].slice(0, limit);
 }
 

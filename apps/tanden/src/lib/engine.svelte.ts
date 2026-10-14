@@ -1,4 +1,4 @@
-import { BoardStore, DriveRemote, EventBus, Replicator, Vault, fullSync, type Storage, type TandenEvent } from '@tanden/core';
+import { BoardStore, DriveRemote, EventBus, Replicator, SheetStore, Vault, fullSync, type Storage, type TandenEvent } from '@tanden/core';
 import { listen } from '@tauri-apps/api/event';
 import { google } from './google.svelte';
 import { BrowserStorage } from './storage-browser';
@@ -38,6 +38,8 @@ class Engine {
   /** quadros (.canvas) e um contador que sobe quando chega mudança de fora */
   boardList = $state<string[]>([]);
   boardRev = $state(0);
+  /** planilhas (.xlsx); o módulo de planilhas cuida do estado da tela */
+  sheets!: SheetStore;
   private storage!: Storage;
   private replicator: Replicator | null = null;
   /** última falha ao falar com o Drive; o app segue funcionando offline */
@@ -75,11 +77,13 @@ class Engine {
     this.storage = storage;
     this.vault = new Vault(storage, deviceId(), this.bus);
     this.boards = new BoardStore(storage, this.vault.deviceId, this.bus);
+    this.sheets = new SheetStore(storage, this.vault.deviceId, this.bus);
     await google.refresh();
     this.connectDrive();
     this.bus.on('*', (e) => this.onEvent(e));
     await this.vault.sync();
     await this.boards.sync();
+    await this.sheets.sync();
     if (this.vault.list().length === 0) {
       this.vault.create('Bem-vinda.md', WELCOME);
       await this.vault.sync();
@@ -91,7 +95,7 @@ class Engine {
     if (isTauri()) {
       // outro programa (Claude Code, Gemini CLI, Obsidian) mexeu numa nota
       await listen<string[]>('vault-changed', (e) => {
-        if (!e.payload.some((p) => p.endsWith('.md') || p.endsWith('.canvas'))) return;
+        if (!e.payload.some((p) => p.endsWith('.md') || p.endsWith('.canvas') || p.endsWith('.xlsx'))) return;
         if (this.watchTimer) clearTimeout(this.watchTimer);
         this.watchTimer = setTimeout(() => void this.syncNow(), 400);
       });
@@ -222,16 +226,18 @@ class Engine {
     if (!this.replicator) {
       await this.vault.sync();
       await this.boards.sync();
+      await this.sheets.sync();
       return;
     }
     try {
-      await fullSync(this.vault, this.replicator, [this.boards]);
+      await fullSync(this.vault, this.replicator, [this.boards, this.sheets]);
       this.driveError = '';
     } catch (e) {
       // sem internet ou token vencido: o cofre local continua íntegro
       this.driveError = String(e);
       await this.vault.sync();
       await this.boards.sync();
+      await this.sheets.sync();
     }
   }
 }

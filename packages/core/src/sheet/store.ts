@@ -9,17 +9,17 @@ import { applyBookDiff, loadBook, readXlsx, writeXlsx, type BookData } from './x
  * Planilhas no cofre, com o mesmo esquema de merge das notas:
  *
  *   **\/*.xlsx                          a planilha, legível no Excel, Sheets e LibreOffice
- *   .tanden/docs/<chave>/<aparelho>.bin  estado CRDT completo que aquele aparelho conhece
- *   .tanden/docs/<chave>/<aparelho>.json o que aquele aparelho gravou no .xlsx
+ *   .tanden/sheet/<chave>/<aparelho>.bin  estado CRDT completo que aquele aparelho conhece
+ *   .tanden/sheet/<chave>/<aparelho>.json o que aquele aparelho gravou no .xlsx
  *
- * Cada aparelho só escreve os próprios arquivos em .tanden/docs/; ao ler, funde
+ * Cada aparelho só escreve os próprios arquivos em .tanden/sheet/; ao ler, funde
  * o estado de todos. Um .xlsx editado fora do Tanden (Excel, Sheets) é comparado
  * com a versão de onde partiu, e só as células que mudaram lá entram no merge.
  * Um .xlsx que apareceu na pasta sem histórico é adotado como está e só é
  * regravado quando a planilha for editada no Tanden.
  */
 
-const DOCS_DIR = '.tanden/docs/';
+const DOCS_DIR = '.tanden/sheet/';
 const LOCAL_DIR = '.tanden/local/';
 const MIRRORS_KEPT = 8;
 export const SHEETS_FOLDER = 'Planilhas/';
