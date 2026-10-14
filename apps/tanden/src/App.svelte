@@ -25,7 +25,7 @@
 
   onMount(() => {
     engine.start().catch((e) => (error = String(e)));
-    updater.start();
+    void updater.start();
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') { e.preventDefault(); engine.newNote(); }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); void engine.syncNow(); }
@@ -78,7 +78,7 @@
           <span>Baixando a versão {updater.available.version}… {Math.round(updater.progress * 100)}%</span>
         {:else}
           <span>Versão <b>{updater.available.version}</b> disponível</span>
-          <button onclick={() => updater.install()}>Atualizar e reiniciar</button>
+          <button onclick={() => updater.install()}>{updater.android ? 'Baixar e instalar' : 'Atualizar e reiniciar'}</button>
         {/if}
       </div>
     {/if}

@@ -54,20 +54,27 @@ Tudo passa pelo `EventBus` do núcleo (`note.created`, `note.changed`, `process.
 
 ## Atualização automática
 
-Cada push na branch `main` do GitHub dispara `.github/workflows/release.yml`, que testa, compila para Linux (AppImage) e Windows e publica uma release com o `latest.json`. O app instalado verifica ao abrir e a cada 6 horas; quando há versão nova, mostra **Atualizar e reiniciar**.
+Cada push na branch `main` do GitHub dispara `.github/workflows/release.yml`, que testa, compila para Linux (AppImage), Windows e Android (APK) e publica uma release. No computador, o app verifica ao abrir e a cada 6 horas e mostra **Atualizar e reiniciar**. No Android, mostra **Baixar e instalar**: o navegador baixa o APK novo e o Android instala por cima, sem perder as notas.
 
-Configuração, uma vez só:
+Configuração, uma vez só. Tudo fica nos secrets do GitHub (*Settings → Secrets and variables → Actions*); nenhum arquivo do código precisa ser editado.
 
-1. Gere a chave de assinatura no seu computador (dentro de `apps/tanden`):
+1. Chave do atualizador do computador (dentro de `apps/tanden`):
    `pnpm tauri signer generate -w ~/.tauri/tanden.key`
-2. No GitHub, em *Settings → Secrets and variables → Actions*, crie:
-   - `TAURI_SIGNING_PRIVATE_KEY` com o conteúdo de `~/.tauri/tanden.key`
-   - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` com a senha que você escolheu
-3. Em `apps/tanden/src-tauri/tauri.conf.json`, troque `PREENCHER_COM_A_CHAVE_PUBLICA` pelo conteúdo de `~/.tauri/tanden.key.pub` e `PREENCHER_USUARIO/PREENCHER_REPOSITORIO` pelo seu repositório.
-4. Em *Settings → Actions → General → Workflow permissions*, marque *Read and write permissions*.
-5. Faça push. Instale a primeira versão pela página de Releases; dali em diante ela se atualiza sozinha.
+   - `TAURI_SIGNING_PRIVATE_KEY`: conteúdo de `~/.tauri/tanden.key`
+   - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`: a senha que você escolheu
+   - `TAURI_UPDATER_PUBKEY`: conteúdo de `~/.tauri/tanden.key.pub`
+2. Chave do APK (precisa do Java; no Arch, `sudo pacman -S jre-openjdk-headless`):
+   `keytool -genkeypair -keystore ~/.tauri/tanden-android.jks -alias tanden -keyalg RSA -keysize 2048 -validity 10000`
+   - `ANDROID_KEYSTORE`: saída de `base64 -w0 ~/.tauri/tanden-android.jks`
+   - `ANDROID_KEY_PASSWORD`: a senha que você escolheu
+3. Em *Settings → Actions → General → Workflow permissions*, marque *Read and write permissions*.
+4. Faça push. Instale a primeira versão pela página de Releases (no celular, abra o `.apk` e permita que o navegador instale apps); dali em diante ela se atualiza sozinha.
 
-O repositório precisa ser público para o app baixar as atualizações sem senha. Nunca coloque a chave privada no repositório.
+Guarde as duas chaves num lugar seguro fora do repositório. Se a chave do APK se perder, o Android não aceita a próxima versão por cima e será preciso desinstalar e instalar de novo. Sem `ANDROID_KEYSTORE`, o build pula o APK e segue com o computador. O repositório precisa ser público para o app baixar as atualizações sem senha.
+
+## Android
+
+O APK é compilado pelo GitHub Actions (o projeto Android está em `apps/tanden/src-tauri/gen/android`). No celular, o cofre fica na pasta interna do app e conversa com o computador pelo Google Drive. Para compilar na sua máquina, instale o Android Studio (SDK e NDK) e rode `pnpm tauri android dev` dentro de `apps/tanden`.
 
 ## Sync com o Google Drive
 
@@ -87,7 +94,6 @@ Opcional: para não colar as credenciais em cada aparelho, crie os secrets `TAND
 
 ## Próximos passos (fase 1)
 
-1. Build para Android (com login Google e atualização do APK).
-2. Painel de IA: Claude Code e Gemini CLI no PC (pelas suas assinaturas), Ollama local.
-3. Agenda com Google Agenda.
-4. Links `[[ ]]` clicáveis, busca e grafo.
+1. Painel de IA: Claude Code e Gemini CLI no PC (pelas suas assinaturas), Ollama local.
+2. Agenda com Google Agenda.
+3. Links `[[ ]]` clicáveis, busca e grafo.

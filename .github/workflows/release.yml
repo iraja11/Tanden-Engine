@@ -1,5 +1,6 @@
-# Cada push na main gera uma release nova (Linux e Windows) com o arquivo
-# latest.json que o app instalado consulta para se atualizar sozinho.
+# Cada push na main gera uma release nova (Linux, Windows e Android) com os
+# arquivos latest.json e android.json que o app instalado consulta para se
+# atualizar sozinho.
 # Versão: major.minor do tauri.conf.json + número da execução (ex.: 0.1.7).
 name: Release
 
@@ -36,6 +37,8 @@ jobs:
     runs-on: ${{ matrix.platform }}
     env:
       VERSION: ${{ needs.version.outputs.version }}
+      RUN_NUMBER: ${{ github.run_number }}
+      TANDEN_REPO: ${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
 
@@ -63,14 +66,9 @@ jobs:
       - run: pnpm test
 
       - name: Configuração desta versão
-        shell: bash
-        run: |
-          node -e "
-            const fs = require('fs');
-            const rel = JSON.parse(fs.readFileSync('apps/tanden/src-tauri/tauri.release.conf.json', 'utf8'));
-            rel.version = process.env.VERSION;
-            fs.writeFileSync('apps/tanden/src-tauri/tauri.ci.conf.json', JSON.stringify(rel));
-          "
+        run: node scripts/ci-config.mjs
+        env:
+          TAURI_UPDATER_PUBKEY: ${{ secrets.TAURI_UPDATER_PUBKEY }}
 
       - uses: tauri-apps/tauri-action@v0
         env:
@@ -90,3 +88,96 @@ jobs:
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
+
+  # APK para o celular. Assinado sempre com a mesma chave, para instalar por cima.
+  android:
+    needs: version
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      RUN_NUMBER: ${{ github.run_number }}
+      TANDEN_REPO: ${{ github.repository }}
+      ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+    steps:
+      - name: Chave do APK configurada?
+        id: key
+        run: |
+          if [ -z "$ANDROID_KEYSTORE" ]; then
+            echo "::warning::Secret ANDROID_KEYSTORE ausente; APK não gerado. Veja o README."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.key.outputs.ok == 'true'
+        uses: actions/checkout@v4
+
+      - if: steps.key.outputs.ok == 'true'
+        uses: pnpm/action-setup@v4
+
+      - if: steps.key.outputs.ok == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - if: steps.key.outputs.ok == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - if: steps.key.outputs.ok == 'true'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - if: steps.key.outputs.ok == 'true'
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/tanden/src-tauri -> target
+
+      - if: steps.key.outputs.ok == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - if: steps.key.outputs.ok == 'true'
+        name: Chave de assinatura
+        env:
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$ANDROID_KEYSTORE" | base64 -d > "$RUNNER_TEMP/tanden.jks"
+          {
+            echo "storeFile=$RUNNER_TEMP/tanden.jks"
+            echo "keyAlias=tanden"
+            echo "password=$ANDROID_KEY_PASSWORD"
+          } > apps/tanden/src-tauri/gen/android/keystore.properties
+
+      - if: steps.key.outputs.ok == 'true'
+        name: Configuração desta versão
+        run: node scripts/ci-config.mjs
+
+      - if: steps.key.outputs.ok == 'true'
+        name: Compilar o APK
+        working-directory: apps/tanden
+        env:
+          TANDEN_GOOGLE_CLIENT_ID: ${{ secrets.TANDEN_GOOGLE_CLIENT_ID }}
+          TANDEN_GOOGLE_CLIENT_SECRET: ${{ secrets.TANDEN_GOOGLE_CLIENT_SECRET }}
+        run: |
+          export NDK_HOME="$ANDROID_NDK_LATEST_HOME"
+          pnpm tauri android build --ci --apk --target aarch64 --config src-tauri/tauri.ci.conf.json
+
+      - if: steps.key.outputs.ok == 'true'
+        name: Publicar na release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          apk=$(find apps/tanden/src-tauri/gen/android/app/build/outputs/apk -name '*release*.apk' | head -1)
+          name="Tanden-Engine-$VERSION.apk"
+          cp "$apk" "$name"
+          printf '{"version":"%s","url":"https://github.com/%s/releases/download/v%s/%s"}\n' "$VERSION" "$TANDEN_REPO" "$VERSION" "$name" > android.json
+          # a release é criada pelo build do desktop; espera ela existir
+          for i in $(seq 1 120); do
+            gh release view "v$VERSION" > /dev/null 2>&1 && break
+            sleep 30
+          done
+          gh release upload "v$VERSION" "$name" android.json --clobber

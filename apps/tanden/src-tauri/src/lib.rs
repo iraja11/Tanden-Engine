@@ -3,6 +3,7 @@
 //! há leitura e escrita de arquivos, sempre presas dentro da pasta do cofre.
 
 mod google;
+mod release;
 mod vault;
 
 use std::path::PathBuf;
@@ -39,7 +40,10 @@ pub fn run() {
             google::google_set_credentials,
             google::google_sign_in,
             google::google_access_token,
-            google::google_sign_out
+            google::google_sign_out,
+            release::release_info,
+            release::release_android_check,
+            release::release_open_apk
         ])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o Tanden Engine");
