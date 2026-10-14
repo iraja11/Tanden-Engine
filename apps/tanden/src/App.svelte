@@ -7,6 +7,8 @@
   import { updater } from './lib/updater.svelte';
   import DrivePanel from './lib/DrivePanel.svelte';
   import AiPanel from './lib/AiPanel.svelte';
+  import RemindersPanel from './lib/RemindersPanel.svelte';
+  import { reminders } from './lib/reminders.svelte';
 
   let host = $state<HTMLElement>();
   let orbWrap = $state<HTMLElement>();
@@ -16,16 +18,21 @@
   let drawer = $state(false);
   let drivePanel = $state(false);
   let error = $state('');
-  let view = $state<'notas' | 'ia'>('notas');
+  let view = $state<'notas' | 'ia' | 'lembretes'>('notas');
   /** o painel de IA fica montado depois de aberto, para não matar as sessões */
   let aiOpened = $state(false);
 
   const modules = [
     { id: 'notas', label: 'Notas', ready: true },
     { id: 'ia', label: 'IA', ready: true },
+    { id: 'lembretes', label: 'Lembretes', ready: true },
     { id: 'agenda', label: 'Agenda', ready: false },
     { id: 'planilhas', label: 'Planilhas', ready: false },
   ];
+
+  $effect(() => { if (engine.ready) void reminders.start(); });
+  // clicar num aviso de lembrete abre a tela de lembretes
+  $effect(() => { if (reminders.openRequests) view = 'lembretes'; });
 
   onMount(() => {
     engine.start().catch((e) => (error = String(e)));
@@ -53,7 +60,7 @@
     <ul>
       {#each modules as m (m.id)}
         <li><button class:on={m.id === view} disabled={!m.ready} title={m.ready ? m.label : `${m.label}: em breve`}
-          onclick={() => { view = m.id as 'notas' | 'ia'; if (view === 'ia') aiOpened = true; }}>{m.label}</button></li>
+          onclick={() => { view = m.id as typeof view; if (view === 'ia') aiOpened = true; }}>{m.label}{#if m.id === 'lembretes' && reminders.attention}<i class="badge">{reminders.attention}</i>{/if}</button></li>
       {/each}
     </ul>
   </nav>
@@ -92,6 +99,8 @@
     {/if}
     {#if view === 'ia'}
       <!-- o painel de IA ocupa a área -->
+    {:else if view === 'lembretes' && engine.ready}
+      <RemindersPanel onopen={(p) => { engine.open(p); view = 'notas'; }} />
     {:else if error}
       <p class="err">Não consegui abrir o cofre: {error}</p>
     {:else if !engine.ready}
@@ -136,6 +145,9 @@
     font: 500 10.5px/1 var(--f-display); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
   .rail ul button.on { color: var(--ember); background: color-mix(in srgb, var(--ember) 10%, transparent); }
   .rail ul button:disabled { opacity: .35; cursor: default; }
+  .rail ul button { position: relative; width: 70px; letter-spacing: .05em; }
+  .badge { position: absolute; top: -6px; right: 0; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 8px; background: var(--ember);
+    color: #160b03; font: 600 9.5px/15px var(--f-mono); font-style: normal; letter-spacing: 0; }
   .menu { display: none; border: 0; background: none; font-size: 20px; color: var(--muted); }
 
   .side { grid-area: side; display: flex; flex-direction: column; min-height: 0; background: var(--surface);
@@ -179,7 +191,8 @@
   @media (max-width: 720px) {
     .shell { grid-template: "rail" auto "main" 1fr "status" auto / 1fr; }
     .rail { flex-direction: row; padding: 10px 16px; padding-top: max(10px, env(safe-area-inset-top)); border-right: 0; border-bottom: 1px solid var(--line); }
-    .rail ul { display: flex; margin-left: auto; }
+    .rail { min-width: 0; }
+    .rail ul { display: flex; margin-left: auto; min-width: 0; overflow-x: auto; scrollbar-width: none; padding-top: 6px; }
     .rail ul button { width: auto; padding: 8px 8px; }
     .menu { display: block; }
     .side { position: absolute; z-index: 5; top: 0; bottom: 0; left: 0; width: min(300px, 85vw);

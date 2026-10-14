@@ -5,7 +5,8 @@ export type TandenEvent =
   | { type: 'note.changed'; path: string; origin: 'local' | 'remote' | 'external' }
   | { type: 'process.started'; id: string; label: string }
   | { type: 'process.finished'; id: string; ok: boolean }
-  | { type: 'sync.finished'; merged: number; external: number; written: number };
+  | { type: 'sync.finished'; merged: number; external: number; written: number }
+  | { type: 'reminder.fired'; path: string; text: string; at: number };
 
 export type EventType = TandenEvent['type'];
 type Handler<E extends TandenEvent = TandenEvent> = (e: E) => void;

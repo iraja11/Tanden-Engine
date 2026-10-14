@@ -2,6 +2,8 @@
 //! A lógica de notas e merge vive em TypeScript (`@tanden/core`); aqui só
 //! há leitura e escrita de arquivos, sempre presas dentro da pasta do cofre.
 
+#[cfg(desktop)]
+mod background;
 mod google;
 mod ollama;
 #[cfg(desktop)]
@@ -15,8 +17,13 @@ use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    // abrir o app de novo traz de volta a janela que está na bandeja
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _, _| background::show_main(app)));
+    builder
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(google::GoogleState::default())
         .setup(|app| {
             // atualização automática pelas releases do GitHub (só desktop)
@@ -25,6 +32,17 @@ pub fn run() {
                 app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
                 app.handle().plugin(tauri_plugin_process::init())?;
                 app.manage(pty::Terminals::default());
+                app.handle().plugin(tauri_plugin_autostart::Builder::new().arg(background::HIDDEN_ARG).build())?;
+                app.manage(background::Background::default());
+                background::setup(app)?;
+                // clicar num aviso de lembrete abre a janela
+                use tauri_plugin_notification::NotificationExt;
+                let handle = app.handle().clone();
+                app.notification().on_action(move |a| {
+                    if a.action_id() == "tap" {
+                        background::show_main(&handle);
+                    }
+                })?;
             }
             // TANDEN_VAULT aponta para outra pasta (ex.: uma pasta sincronizada do Drive).
             let root = match std::env::var("TANDEN_VAULT") {
@@ -58,6 +76,8 @@ pub fn run() {
             release::release_open_apk,
             ollama::ollama_models,
             ollama::ollama_chat,
+            #[cfg(desktop)]
+            background::background_set,
             #[cfg(desktop)]
             pty::pty_spawn,
             #[cfg(desktop)]
