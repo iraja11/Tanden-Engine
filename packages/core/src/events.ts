@@ -8,7 +8,8 @@ export type TandenEvent =
   | { type: 'process.started'; id: string; label: string }
   | { type: 'process.finished'; id: string; ok: boolean }
   | { type: 'sync.finished'; merged: number; external: number; written: number }
-  | { type: 'reminder.fired'; path: string; text: string; at: number };
+  | { type: 'reminder.fired'; path: string; text: string; at: number }
+  | { type: 'sheet.changed'; path: string; origin: 'local' | 'remote' | 'external' };
 
 export type EventType = TandenEvent['type'];
 type Handler<E extends TandenEvent = TandenEvent> = (e: E) => void;
