@@ -27,6 +27,7 @@ import { engine } from '../engine.svelte';
 import { sheets } from '../sheets/sheets.svelte';
 import { isTauri } from '../storage-tauri';
 import { editorBridge } from './editor-bridge';
+import { slides } from '../slides/slides.svelte';
 
 /*
  * Arquivos do cofre que não são notas (PDFs, imagens, documentos) e tudo que
@@ -269,6 +270,12 @@ class Files {
       const path = freePath(this.exists, FOLDERS.pdf, stem(name), 'pdf');
       await this.write(path, bytes);
       return { open: path, message: `PDF salvo em ${path}.` };
+    }
+    if (kind === 'slides' && /\.pptx$/i.test(name) && opts.convert !== false) {
+      // .pptx vira apresentação (nota com --- entre slides), que também se lê como nota
+      const path = await slides.importFile(f);
+      if (!path) throw new Error('o arquivo não pôde ser lido');
+      return { message: `${f.name} virou a apresentação ${path}.` };
     }
     if (CONVERTIBLE.test(name) && opts.convert !== false) return this.convert(name, bytes);
     const path = freePath(this.exists, FOLDERS.attachments, stem(name), name.split('.').pop()!.toLowerCase());

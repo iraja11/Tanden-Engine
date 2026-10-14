@@ -1,4 +1,4 @@
-import { Lexer, type Token, type Tokens } from 'marked';
+import { Lexer, Marked, type Token, type Tokens } from 'marked';
 import { obsidianToCommonMark } from '../convert/export';
 import type { Layout, Slide } from './deck';
 
@@ -231,4 +231,28 @@ export function estimateLines(blocks: Block[], cols: number): number {
     else if (b.t === 'table') n += (b.rows.length + 1) * 1.15 + 0.4;
   }
   return n;
+}
+
+/* ----------------------------------------------------------- tela (HTML) */
+
+const escHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/**
+ * Markdown de um slide → HTML para a tela do app. `image` devolve o HTML de
+ * cada imagem (o app troca o alvo pelo endereço já carregado).
+ */
+export function slideHtml(md: string, image: (target: string, alt: string) => string): string {
+  if (!md.trim()) return '';
+  const marked = new Marked({ gfm: true, breaks: false });
+  marked.use({
+    renderer: {
+      image({ href, text }) {
+        return image(href.startsWith(EMBED) ? href.slice(EMBED.length) : href, text);
+      },
+      link({ href, tokens }) {
+        return `<a href="${escHtml(href)}" target="_blank" rel="noopener">${this.parser.parseInline(tokens)}</a>`;
+      },
+    },
+  });
+  return marked.parse(slideCommonMark(md), { async: false }) as string;
 }

@@ -251,7 +251,12 @@ function buildSlide(m: SlideModel, index: number, total: number, opts: DeckExpor
     s.rect(M, 190, 5, 160, look.accent);
     s.text(M + 30, 150, W - 2 * M - 30, 130, titleP(42, 'l'), { title: true, anchor: 'b' });
     s.text(M + 30, 290, W - 2 * M - 30, 90, paragraphs(s, texts, 20, look, 'l', look.muted));
-  } else if (m.layout === 'imagem') {
+  } else if (m.layout === 'imagem' && !title.length) {
+    // só a imagem (ex.: página de PDF importado): ocupa o slide inteiro, sem rodapé
+    const im = imgs[0];
+    if (im) addImage(s, opts.image?.(im.target), media, im.target, im.alt, 0, 0, W, H, files);
+    return s;
+} else if (m.layout === 'imagem') {
     let top = 28;
     if (title.length) {
       s.text(M, 20, W - 2 * M, 40, titleP(24, 'l'), { title: true, anchor: 'ctr' });

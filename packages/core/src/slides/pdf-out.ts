@@ -266,7 +266,14 @@ function slideOps(m: SlideModel, ctx: Ctx, index: number, total: number): Op[] {
       y = emitLines(ops, tLines, M + 30, y, ts * 1.15);
       emitLines(ops, sLines, M + 30, y + 20, 28);
     }
-  } else if (m.layout === 'imagem') {
+  } else if (m.layout === 'imagem' && !titleRuns.length) {
+    // só a imagem (ex.: página de PDF importado): ocupa o slide inteiro, sem rodapé
+    const img = blocks.find((b) => b.t === 'img');
+    if (img) ops.push(...layoutBlocks([img], ctx, 0, 0, W, 18, H).ops);
+    const one = ops.find((o) => o.k === 'img');
+    if (one) one.y = (H - one.h) / 2;
+    return ops;
+} else if (m.layout === 'imagem') {
     const img = blocks.find((b) => b.t === 'img');
     let top = 28;
     if (titleRuns.length) {

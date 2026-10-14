@@ -10,7 +10,7 @@
   import { embeds, linkAt, type EmbedHost } from './embeds';
   import { editorBridge } from './files/editor-bridge';
 
-  let { value, docKey, onchange, host, onfiles }: {
+  let { value, docKey, onchange, host, onfiles, oncursor }: {
     value: string;
     docKey: string | null;
     onchange: (v: string) => void;
@@ -18,6 +18,8 @@
     host?: EmbedHost;
     /** arquivos soltos ou colados na nota: quem chama anexa e insere no cursor */
     onfiles?: (files: File[]) => void;
+    /** linha (a partir de 0) onde o cursor está, a cada movimento */
+    oncursor?: (line: number) => void;
   } = $props();
   let el: HTMLDivElement;
   let view: EditorView | undefined;
@@ -81,7 +83,10 @@
     keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
     markdown(), syntaxHighlighting(look), theme, attachments,
     ...(embedHost ? [embeds(embedHost)] : []),
-    EditorView.updateListener.of((u) => { if (u.docChanged) onchange(u.state.doc.toString()); }),
+    EditorView.updateListener.of((u) => {
+      if (u.docChanged) onchange(u.state.doc.toString());
+      if ((u.docChanged || u.selectionSet) && oncursor) oncursor(u.state.doc.lineAt(u.state.selection.main.head).number - 1);
+    }),
   ];
 
   $effect(() => {
@@ -100,6 +105,11 @@
         view.dispatch({ changes: { from, to, insert }, selection: { anchor: from + insert.length } });
         view.focus();
         return true;
+      },
+      goto(line) {
+        if (!view) return;
+        const l = view.state.doc.line(Math.min(view.state.doc.lines, Math.max(1, line + 1)));
+        view.dispatch({ selection: { anchor: l.to }, effects: EditorView.scrollIntoView(l.from, { y: 'start', yMargin: 24 }) });
       },
     });
     return () => {

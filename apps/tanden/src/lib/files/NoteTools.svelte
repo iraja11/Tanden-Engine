@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { isDeck } from '@tanden/core';
+  import { engine } from '../engine.svelte';
+  import { slides } from '../slides/slides.svelte';
   import { files } from './files.svelte';
   import WebClipDialog from './WebClipDialog.svelte';
 
@@ -37,6 +40,11 @@
       <div class="menu" role="menu">
         <button role="menuitem" onclick={() => { menu = null; void files.exportNote(path, 'docx'); }}>Word (.docx)<small>Docs, LibreOffice</small></button>
         <button role="menuitem" onclick={() => { menu = null; void files.exportNote(path, 'html'); }}>Página (.html)<small>imprime em PDF</small></button>
+        {#if isDeck(path, engine.content)}
+          <button role="menuitem" onclick={() => { menu = null; slides.show(path); }}>Abrir nos slides<small>apresentar, .pptx, PDF</small></button>
+        {:else}
+          <button role="menuitem" onclick={() => { menu = null; slides.fromNote(path); }}>Slides<small>cada seção vira um slide</small></button>
+        {/if}
       </div>
     {/if}
   </div>

@@ -18,6 +18,9 @@
   import LutaView from './lib/cadernos/LutaView.svelte';
   import MundoView from './lib/cadernos/MundoView.svelte';
   import { cadernos } from './lib/cadernos/cadernos.svelte';
+  import SlidesView from './lib/slides/SlidesView.svelte';
+  import Presenter from './lib/slides/Presenter.svelte';
+  import { slides } from './lib/slides/slides.svelte';
   import Splash from './lib/Splash.svelte';
   import SettingsPanel from './lib/SettingsPanel.svelte';
   import { feel } from './lib/feel.svelte';
@@ -40,7 +43,7 @@
   /** marcador que desliza até o módulo ativo na barra */
   let mark = $state<{ x: number; y: number; w: number; h: number } | null>(null);
   let error = $state('');
-  let view = $state<'notas' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'arquivos' | 'luta' | 'mundos'>('notas');
+  let view = $state<'notas' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'arquivos' | 'luta' | 'mundos' | 'slides'>('notas');
   /** o painel de IA fica montado depois de aberto, para não matar as sessões */
   let aiOpened = $state(false);
 
@@ -51,6 +54,7 @@
     { id: 'quadros', label: 'Quadros', ready: true },
     { id: 'agenda', label: 'Agenda', ready: false },
     { id: 'planilhas', label: 'Planilhas', ready: true },
+    { id: 'slides', label: 'Slides', ready: true },
     { id: 'mundos', label: 'Mundos', ready: true },
     { id: 'luta', label: 'Luta', ready: true },
     { id: 'arquivos', label: 'Arquivos', ready: true },
@@ -60,6 +64,9 @@
   $effect(() => { if (engine.ready) sheets.start(); });
   $effect(() => { if (engine.ready) cadernos.start(); });
   $effect(() => { if (engine.ready) files.start(); });
+  $effect(() => { if (engine.ready) slides.start(); });
+  // "criar slides da nota" e importações de .pptx abrem a tela de slides
+  $effect(() => { if (slides.goto) go('slides'); });
   // links e importações pedem para trocar de tela
   $effect(() => { if (files.goto) view = files.goto.view; });
   // clicar num aviso de lembrete abre a tela de lembretes
@@ -194,6 +201,8 @@
           <RemindersPanel onopen={(p) => { engine.open(p); go('notas'); }} />
         {:else if view === 'planilhas' && engine.ready}
           <SheetsView />
+        {:else if view === 'slides' && engine.ready}
+          <SlidesView />
         {:else if view === 'arquivos' && engine.ready}
           <FilesView />
         {:else if view === 'luta' && engine.ready}
@@ -256,6 +265,10 @@
   {#if drivePanel}<DrivePanel onclose={toggleDrive} />{/if}
   {#if settings}<SettingsPanel onclose={toggleSettings} />{/if}
 </div>
+
+{#if slides.presenting}
+  <Presenter path={slides.presenting.path} start={slides.presenting.index} />
+{/if}
 
 {#if splash}
   <Splash ready={engine.ready} {error} target={orbWrap} ondone={() => (splash = false)} />

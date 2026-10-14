@@ -4,6 +4,8 @@
 interface EditorApi {
   /** insere no cursor, em linha própria; devolve false se não deu */
   insert(text: string): boolean;
+  /** leva o cursor para o começo da linha (a partir de 0) e mostra ela */
+  goto?(line: number): void;
 }
 
 let current: EditorApi | null = null;
@@ -17,5 +19,8 @@ export const editorBridge = {
   },
   insert(text: string): boolean {
     return current?.insert(text) ?? false;
+  },
+  goto(line: number): void {
+    current?.goto?.(line);
   },
 };
