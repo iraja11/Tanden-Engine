@@ -320,7 +320,7 @@
   .plegend span { color: var(--muted); font-variant-numeric: tabular-nums; }
   .tip { position: absolute; transform: translate(-50%, -100%); pointer-events: none; z-index: 2; display: grid; gap: 2px;
     background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px; padding: 6px 9px; white-space: nowrap;
-    font: 12px var(--f-body); color: var(--ink); box-shadow: 0 10px 24px -10px #000; }
+    font: 12px var(--f-body); color: var(--ink); box-shadow: 0 10px 24px -10px var(--shadow); }
   .tip b { font-weight: 600; }
   .tip span { display: flex; align-items: center; gap: 6px; color: var(--silver); font-variant-numeric: tabular-nums; }
   .tip i { width: 8px; height: 8px; border-radius: 2px; flex: none; }

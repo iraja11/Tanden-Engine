@@ -524,7 +524,7 @@
   .crumbs { margin: 0 0 2px; }
   .crumbs button { border: 0; background: none; padding: 0; color: var(--ember-soft); font: inherit; }
   .acts { display: flex; gap: 8px; flex-wrap: wrap; }
-  .primary { border: 0; border-radius: 9px; padding: 7px 14px; background: var(--ember); color: #160b03; font-weight: 600; }
+  .primary { border: 0; border-radius: 9px; padding: 7px 14px; background: var(--ember); color: var(--on-ember); font-weight: 600; }
   .primary:disabled { opacity: .45; cursor: default; }
   .ghost { border: 1px solid var(--line); border-radius: 9px; padding: 6px 12px; background: var(--surface-2); }
   .ghost:hover { border-color: var(--ember); }
@@ -626,9 +626,9 @@
   .risky { display: flex; flex-wrap: wrap; gap: 8px; }
   .risky > span { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 10px; }
 
-  .scrim { position: absolute; inset: 0; z-index: 10; background: rgba(0, 0, 0, .55); display: grid; place-items: center; padding: 16px; }
+  .scrim { position: absolute; inset: 0; z-index: 10; background: var(--scrim); display: grid; place-items: center; padding: 16px; }
   .dialog { width: min(520px, 100%); max-height: 100%; overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
-    padding: 18px; display: grid; gap: 12px; box-shadow: 0 30px 80px -20px #000; }
+    padding: 18px; display: grid; gap: 12px; box-shadow: 0 30px 80px -20px var(--shadow); }
   .dialog h2 { font-size: 13px; color: var(--ink); }
   .dialog form { display: grid; gap: 12px; }
   .dialog textarea { font: 12.5px var(--f-mono); resize: vertical; }

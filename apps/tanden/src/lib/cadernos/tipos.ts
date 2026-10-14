@@ -11,11 +11,16 @@ const COLORS: Record<string, string> = {
 };
 
 export function typeColor(type: string): string {
-  if (COLORS[type]) return COLORS[type]!;
-  // tipos criados pela pessoa: uma cor estável pelo nome
-  let h = 0;
-  for (const c of type) h = (h * 31 + c.charCodeAt(0)) % 360;
-  return `hsl(${h} 45% 70%)`;
+  let base = COLORS[type];
+  if (!base) {
+    // tipos criados pela pessoa: uma cor estável pelo nome
+    let h = 0;
+    for (const c of type) h = (h * 31 + c.charCodeAt(0)) % 360;
+    base = `hsl(${h} 45% 70%)`;
+  }
+  // puxada para a cor do texto: clareia no tema escuro e escurece no claro,
+  // para continuar legível nos dois
+  return `color-mix(in srgb, ${base} 78%, var(--ink))`;
 }
 
 /** Tipo provável de uma nota nova pelo nome da propriedade que aponta para ela. */

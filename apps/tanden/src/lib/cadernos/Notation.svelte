@@ -79,12 +79,12 @@
     font: 700 max(9px, calc(var(--u) * .44))/1 var(--f-mono); letter-spacing: -.02em; border: 1.6px solid var(--c); color: var(--c); }
   .btn.wide { padding: 0 6px; }
   .btn.p1 { background: color-mix(in srgb, var(--c) 28%, transparent); color: var(--ink); }
-  .btn.p2 { background: var(--c); color: #120a04; box-shadow: 0 0 10px -3px var(--c); }
+  .btn.p2 { background: var(--c); color: var(--on-ember); box-shadow: 0 0 10px -3px var(--c); }
   .f-p { --c: var(--ember); }
   .f-k { --c: var(--silver); }
   .f-s { --c: var(--ember-soft); }
-  .f-h { --c: #7fb6ff; }
-  .f-d { --c: #e7d27a; }
+  .f-h { --c: color-mix(in srgb, #7fb6ff 78%, var(--ink)); }
+  .f-d { --c: color-mix(in srgb, #e7d27a 78%, var(--ink)); }
   .f-x { --c: var(--ok); }
 
   .sep { display: inline-grid; place-items: center; color: var(--muted); font: 600 calc(var(--u) * .55)/1 var(--f-mono); min-width: 8px; }

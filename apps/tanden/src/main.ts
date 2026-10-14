@@ -6,5 +6,8 @@ import '@fontsource/jetbrains-mono/400.css';
 import './styles.css';
 import { mount } from 'svelte';
 import App from './App.svelte';
+import { theme } from './lib/theme.svelte';
 
+// o tema entra antes da primeira pintura, para não piscar o padrão
+theme.apply();
 mount(App, { target: document.getElementById('app')! });

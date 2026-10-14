@@ -421,7 +421,7 @@
   .crumbs button { border: 0; background: none; padding: 0; color: var(--ember-soft); font: inherit; }
   .acts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   select { background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px; color: var(--ink); padding: 6px 10px; font: inherit; }
-  .primary { border: 0; border-radius: 9px; padding: 7px 14px; background: var(--ember); color: #160b03; font-weight: 600; }
+  .primary { border: 0; border-radius: 9px; padding: 7px 14px; background: var(--ember); color: var(--on-ember); font-weight: 600; }
   .primary.sm { padding: 4px 10px; font-size: 12.5px; }
   .primary:disabled { opacity: .45; cursor: default; }
   .ghost { border: 1px solid var(--line); border-radius: 9px; padding: 6px 12px; background: var(--surface-2); }
@@ -498,9 +498,9 @@
   .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; padding-bottom: 24px; }
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
 
-  .scrim { position: absolute; inset: 0; z-index: 10; background: rgba(0, 0, 0, .55); display: grid; place-items: center; padding: 16px; }
+  .scrim { position: absolute; inset: 0; z-index: 10; background: var(--scrim); display: grid; place-items: center; padding: 16px; }
   .dialog { width: min(480px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; display: grid; gap: 12px;
-    box-shadow: 0 30px 80px -20px #000; }
+    box-shadow: 0 30px 80px -20px var(--shadow); }
   .dialog h2 { font-size: 13px; color: var(--ink); }
   .dialog form { display: grid; gap: 12px; }
   .dialog label { display: grid; gap: 4px; font: 600 10.5px var(--f-display); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }

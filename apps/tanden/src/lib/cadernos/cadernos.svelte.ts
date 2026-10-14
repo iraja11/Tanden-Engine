@@ -1,5 +1,7 @@
 import { fightIndex, safeName, worldIndex, type Game, type World } from '@tanden/core';
 import { engine } from '../engine.svelte';
+import { feel } from '../feel.svelte';
+import { sound } from '../sound.svelte';
 
 // Estado dos cadernos (luta e world building). Tudo vem das notas do cofre:
 // os índices são refeitos quando uma nota muda, aqui ou em outro aparelho.
@@ -47,7 +49,8 @@ class Cadernos {
     const cur = this.read(path);
     const next = fn(cur);
     if (next === cur) return;
-    engine.writeNote(path, next);
+    feel.local(() => engine.writeNote(path, next));
+    sound.play('tick');
     engine.pulse('editor', 'in');
     this.rebuild();
   }
@@ -66,7 +69,8 @@ class Cadernos {
     let final = base;
     const at = (x: string) => `${folder ? `${folder}/` : ''}${x}.md`;
     while (engine.vault.has(at(final))) final = `${base} ${++n}`;
-    engine.writeNote(at(final), text(final));
+    feel.local(() => engine.writeNote(at(final), text(final)));
+    sound.play('create');
     engine.pulse('notes', 'in');
     this.rebuild();
     return at(final);
