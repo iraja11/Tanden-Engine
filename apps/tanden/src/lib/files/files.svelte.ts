@@ -27,6 +27,7 @@ import { engine } from '../engine.svelte';
 import { sheets } from '../sheets/sheets.svelte';
 import { isTauri } from '../storage-tauri';
 import { editorBridge } from './editor-bridge';
+import { slides } from '../slides/slides.svelte';
 
 /*
  * Arquivos do cofre que não são notas (PDFs, imagens, documentos) e tudo que
@@ -270,6 +271,12 @@ class Files {
       await this.write(path, bytes);
       return { open: path, message: `PDF salvo em ${path}.` };
     }
+    if (kind === 'slides' && /\.pptx$/i.test(name) && opts.convert !== false) {
+      // .pptx vira apresentação (nota com --- entre slides), que também se lê como nota
+      const path = await slides.importFile(f);
+      if (!path) throw new Error('o arquivo não pôde ser lido');
+      return { message: `${f.name} virou a apresentação ${path}.` };
+    }
     if (CONVERTIBLE.test(name) && opts.convert !== false) return this.convert(name, bytes);
     const path = freePath(this.exists, FOLDERS.attachments, stem(name), name.split('.').pop()!.toLowerCase());
     await this.write(path, bytes);
@@ -303,7 +310,12 @@ class Files {
    * Página web → nota em Web/ (texto e imagens, para ler offline) ou só um
    * cartão com o link. Nos dois casos, a nota aberta ganha o cartão.
    */
-  async clip(input: string, mode: 'note' | 'card', attachTo: string | null): Promise<string | null> {
+  async clip(
+    input: string,
+    mode: 'note' | 'card',
+    attachTo: string | null,
+    opts: { folder?: string; open?: boolean; allowPrivate?: boolean } = {},
+  ): Promise<string | null> {
     const url = normalizeUrl(input);
     if (!url) {
       this.say('Esse endereço não parece uma página (comece com https://).', { error: true });
@@ -312,7 +324,7 @@ class Files {
     try {
       return await engine.bus.process(`clip:${url}`, 'Baixando a página', async () => {
         this.busy = 'Baixando a página…';
-        const page = await fetchUrl(url, true);
+        const page = await fetchUrl(url, opts.allowPrivate ?? true);
         // link direto para um PDF ou imagem: vira arquivo, não recorte
         const kind = page.type.includes('pdf') ? 'pdf' : page.type.startsWith('image/') ? 'image' : null;
         if (kind) {
@@ -331,8 +343,9 @@ class Files {
           return null;
         }
         const title = safeFileName(clip.meta.title) || 'Página';
-        const notePath = freePath(this.exists, FOLDERS.web, title, 'md');
-        const dir = `${FOLDERS.attachments}/${FOLDERS.web}/${stem(notePath)}`;
+        const folder = opts.folder ?? FOLDERS.web;
+        const notePath = freePath(this.exists, folder, title, 'md');
+        const dir = `${FOLDERS.attachments}/${folder}/${stem(notePath)}`;
         const images = new Map<string, string>();
         let n = 0;
         const queue = clip.images.slice(0, 40);
@@ -355,8 +368,8 @@ class Files {
         this.createNote(notePath, clipToMarkdown(clip, { parse, images }));
         engine.bus.emit({ type: 'file.imported', path: notePath, from: url });
         if (attachTo) this.insertInto(attachTo, linkCard(clip.meta, { note: notePath.replace(/\.md$/, '') }));
-        this.say(`"${clip.meta.title}" salva em ${notePath}${images.size ? ` com ${images.size} imagens` : ''}.`, { path: notePath });
-        if (!attachTo) this.openPath(notePath);
+        this.say(`"${clip.meta.title}" salva em ${notePath}${images.size ? ` com ${images.size} ${images.size === 1 ? 'imagem' : 'imagens'}` : ''}.`, { path: notePath });
+        if (!attachTo && opts.open !== false) this.openPath(notePath);
         return notePath;
       });
     } catch (e) {

@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "desktop",
-  "description": "Atualização automática e início com o sistema no desktop",
+  "description": "Atualização automática, início com o sistema e tela cheia das apresentações no desktop",
   "platforms": ["linux", "windows", "macOS"],
   "windows": ["main"],
-  "permissions": ["updater:default", "process:allow-restart", "autostart:default"]
+  "permissions": ["updater:default", "process:allow-restart", "autostart:default", "core:window:allow-set-fullscreen", "core:window:allow-is-fullscreen"]
 }

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { engine } from './lib/engine.svelte';
   import Orb from './lib/Orb.svelte';
   import Veins from './lib/Veins.svelte';
@@ -18,6 +18,12 @@
   import LutaView from './lib/cadernos/LutaView.svelte';
   import MundoView from './lib/cadernos/MundoView.svelte';
   import { cadernos } from './lib/cadernos/cadernos.svelte';
+  import SlidesView from './lib/slides/SlidesView.svelte';
+  import Presenter from './lib/slides/Presenter.svelte';
+  import { slides } from './lib/slides/slides.svelte';
+  import PluginsView from './lib/plugins/PluginsView.svelte';
+  import PluginFrame from './lib/plugins/PluginFrame.svelte';
+  import { plugins } from './lib/plugins/plugins.svelte';
   import Splash from './lib/Splash.svelte';
   import SettingsPanel from './lib/SettingsPanel.svelte';
   import { feel } from './lib/feel.svelte';
@@ -40,7 +46,10 @@
   /** marcador que desliza até o módulo ativo na barra */
   let mark = $state<{ x: number; y: number; w: number; h: number } | null>(null);
   let error = $state('');
-  let view = $state<'notas' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'calculo' | 'arquivos' | 'luta' | 'mundos'>('notas');
+  type View = 'notas' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'calculo' | 'arquivos' | 'luta' | 'mundos' | 'slides' | 'plugins' | `plugin:${string}`;
+  let view = $state<View>('notas');
+  /** id do plugin cuja tela está aberta */
+  const pluginView = $derived(view.startsWith('plugin:') ? view.slice(7) : null);
   /** o painel de IA fica montado depois de aberto, para não matar as sessões */
   let aiOpened = $state(false);
 
@@ -52,15 +61,31 @@
     { id: 'agenda', label: 'Agenda', ready: false },
     { id: 'planilhas', label: 'Planilhas', ready: true },
     { id: 'calculo', label: 'Cálculo', ready: true },
+    { id: 'slides', label: 'Slides', ready: true },
     { id: 'mundos', label: 'Mundos', ready: true },
     { id: 'luta', label: 'Luta', ready: true },
     { id: 'arquivos', label: 'Arquivos', ready: true },
   ];
+  /** cada plugin com tela ganha um botão, depois dos módulos */
+  const railItems = $derived([
+    ...modules,
+    ...plugins.rail.map((e) => ({ id: `plugin:${e.manifest.id}`, label: e.manifest.nome, ready: true })),
+    { id: 'plugins', label: 'Plugins', ready: true },
+  ]);
+  const badgeOf = (id: string) => (id === 'lembretes' ? reminders.attention : id.startsWith('plugin:') ? plugins.badges[id.slice(7)] ?? 0 : 0);
 
   $effect(() => { if (engine.ready) void reminders.start(); });
   $effect(() => { if (engine.ready) sheets.start(); });
   $effect(() => { if (engine.ready) cadernos.start(); });
   $effect(() => { if (engine.ready) files.start(); });
+  $effect(() => { if (engine.ready) slides.start(); });
+  // "criar slides da nota" e importações de .pptx abrem a tela de slides
+  $effect(() => { if (slides.goto) untrack(() => go('slides')); });
+  $effect(() => { if (engine.ready) void plugins.start(); });
+  // abrir um plugin (pela tela de plugins ou por um aviso dele)
+  $effect(() => { const g = plugins.goto; if (g) untrack(() => go(`plugin:${g.id}`)); });
+  // plugin desligado com a tela aberta: volta para a lista
+  $effect(() => { if (pluginView && !plugins.active.some((e) => e.manifest.id === pluginView)) view = 'plugins'; });
   // links e importações pedem para trocar de tela
   $effect(() => { if (files.goto) view = files.goto.view; });
   // clicar num aviso de lembrete abre a tela de lembretes
@@ -81,10 +106,11 @@
     return () => ro.disconnect();
   });
 
-  function go(id: typeof view) {
+  function go(id: View) {
     if (id !== view) sound.play('tick');
     view = id;
     if (view === 'ia') aiOpened = true;
+    if (id.startsWith('plugin:') && !plugins.opened[id.slice(7)]) plugins.opened = { ...plugins.opened, [id.slice(7)]: true };
   }
 
   function newNote() {
@@ -143,9 +169,10 @@
         <span class="mark" aria-hidden="true" style:transform="translate({mark.x}px, {mark.y}px)"
           style:width="{mark.w}px" style:height="{mark.h}px"></span>
       {/if}
-      {#each modules as m (m.id)}
-        <li><button bind:this={railBtns[m.id]} class:on={m.id === view} disabled={!m.ready} title={m.ready ? m.label : `${m.label}: em breve`}
-          onclick={() => go(m.id as typeof view)}>{m.label}{#if m.id === 'lembretes' && reminders.attention}{#key reminders.attention}<i class="badge" in:pop={{ from: .5 }}>{reminders.attention}</i>{/key}{/if}</button></li>
+      {#each railItems as m (m.id)}
+        {@const badge = badgeOf(m.id)}
+        <li><button bind:this={railBtns[m.id]} class:on={m.id === view} class:plugin={m.id.startsWith('plugin:')} disabled={!m.ready} title={m.ready ? m.label : `${m.label}: em breve`}
+          onclick={() => go(m.id as View)}>{m.label}{#if badge}{#key badge}<i class="badge" in:pop={{ from: .5 }}>{badge > 99 ? '99+' : badge}</i>{/key}{/if}</button></li>
       {/each}
     </ul>
     <button class="gear" class:on={settings} onclick={toggleSettings} title="Aparência e sons (Ctrl+,)" aria-label="Aparência e sons">
@@ -187,10 +214,16 @@
     {#if aiOpened}
       <div class="ai-host" class:hidden={view !== 'ia'}><AiPanel /></div>
     {/if}
+    {#each plugins.mounted as p (p.manifest.id)}
+      <!-- janelas de plugins ficam vivas escondidas, para avisar e buscar em segundo plano -->
+      <div class="plugin-host" class:hidden={pluginView !== p.manifest.id}><PluginFrame entry={p} visible={pluginView === p.manifest.id} /></div>
+    {/each}
     {#key view}
-      <div class="view" class:empty={view === 'ia'} in:rise={{ y: 10 }}>
-        {#if view === 'ia'}
-          <!-- o painel de IA ocupa a área -->
+      <div class="view" class:empty={view === 'ia' || !!pluginView} in:rise={{ y: 10 }}>
+        {#if view === 'ia' || pluginView}
+          <!-- o painel de IA ou a janela do plugin ocupa a área -->
+        {:else if view === 'plugins' && engine.ready}
+          <PluginsView />
         {:else if view === 'lembretes' && engine.ready}
           <RemindersPanel onopen={(p) => { engine.open(p); go('notas'); }} />
         {:else if view === 'planilhas' && engine.ready}
@@ -200,6 +233,8 @@
           {#await import('./lib/calc/CalcView.svelte') then m}
             <m.default onOpenNote={(p: string) => { engine.open(p); go('notas'); }} />
           {/await}
+        {:else if view === 'slides' && engine.ready}
+          <SlidesView />
         {:else if view === 'arquivos' && engine.ready}
           <FilesView />
         {:else if view === 'luta' && engine.ready}
@@ -262,6 +297,10 @@
   {#if drivePanel}<DrivePanel onclose={toggleDrive} />{/if}
   {#if settings}<SettingsPanel onclose={toggleSettings} />{/if}
 </div>
+
+{#if slides.presenting}
+  <Presenter path={slides.presenting.path} start={slides.presenting.index} />
+{/if}
 
 {#if splash}
   <Splash ready={engine.ready} {error} target={orbWrap} ondone={() => (splash = false)} />
@@ -329,6 +368,8 @@
   .update button { border: 0; border-radius: 9px; padding: 6px 12px; background: var(--ember); color: var(--on-ember); font-weight: 600; }
   .ai-host { flex: 1; min-height: 0; }
   .ai-host.hidden { display: none; }
+  .plugin-host { flex: 1; min-height: 0; animation: view-in var(--dur) var(--ease); }
+  .plugin-host.hidden { display: none; }
   .loading, .err { margin: auto; color: var(--muted); }
   .err { color: var(--crit); }
 

@@ -60,6 +60,44 @@ Os dois cadernos são notas `.md` comuns com propriedades no topo, então o Obsi
 
 O código fica em `packages/core/src/caderno/` (testes em `test/caderno.test.ts`) e `apps/tanden/src/lib/cadernos/`.
 
+## Apresentações (Slides)
+
+Uma apresentação é uma nota `.md` comum em `Apresentações/` (ou qualquer nota com `tipo: apresentação`). Cada linha com `---` separa um slide, o mesmo formato do plugin Slides do Obsidian:
+
+```markdown
+---
+tipo: apresentação
+transição: núcleo        # núcleo, deslizar, esmaecer ou nenhuma
+---
+
+# Título da capa
+Subtítulo
+
+---
+
+## Assunto
+- um ponto por linha
+
+> [!note] Notas do apresentador
+> só aparece para quem apresenta
+```
+
+O arranjo de cada slide sai do conteúdo: só um `#` vira capa, só um `##` vira divisória de seção, uma imagem sozinha ocupa o slide e imagem com texto divide em duas colunas. O texto encolhe até caber.
+
+- **Da nota:** em *Exportar ▾ → Slides* (ou *Da nota…* na tela de slides), a nota vira uma apresentação nova: o título vira a capa, cada seção vira um slide e seções longas continuam no slide seguinte. A nota original não muda.
+- **Apresentar:** *Apresentar* ou F5. Setas, espaço e clique avançam; Esc sai; **N** abre as notas do apresentador com cronômetro e o próximo slide; **B** apaga a tela; um número + Enter pula para o slide. No celular, arraste para o lado.
+- **Importar:** `.pptx` vira apresentação (títulos, listas, tabelas, imagens, código e notas). PDF vira uma apresentação com uma página por slide (`![[PDFs/aula.pdf#page=3]]`).
+- **Exportar:** `.pptx` (PowerPoint, Google Slides, Impress) com as notas do apresentador, PDF com o tema do app e PDF claro para imprimir. Ficam em `Exportados/`.
+
+O código fica em `packages/core/src/slides/` (testes em `test/slides.test.ts`) e `apps/tanden/src/lib/slides/`.
+## Plugins
+
+Um plugin é uma página HTML (um artefato do Claude serve) que roda isolada e só faz o que você permitir, em cada aparelho. Na tela **Plugins** dá para ligar, desligar, instalar um `.html` ou colar um artefato. Os instalados ficam em `Plugins/<id>.html` no cofre e chegam aos outros aparelhos pelo sync, desligados até você permitir lá também.
+
+O primeiro plugin, que vem com o app, é o **Notícias**: lê feeds RSS, Atom e JSON Feed (basta colar o endereço do site), avisa quando chega notícia nova e salva um artigo como nota, com as imagens, em `Notícias/`. As fontes ficam na nota `Notícias/Fontes.md`.
+
+A API, as permissões e um exemplo de manifesto estão em [docs/plugins.md](docs/plugins.md).
+
 ## Eventos (sistema nervoso)
 
 Tudo passa pelo `EventBus` do núcleo (`note.created`, `note.changed`, `process.started`, `sync.finished`...). A interface usa esses eventos para as veias: fluxo contínuo enquanto um processo roda, um pulso quando um dado viaja. As automações vão escutar os mesmos eventos.

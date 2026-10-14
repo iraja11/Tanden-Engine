@@ -83,7 +83,7 @@ function placeholder(sp: Element): string | null {
   const nv = kids(sp).find((k) => ln(k).startsWith('nv'));
   const ph = nv ? descendants(nv, 'ph')[0] : undefined;
   if (!ph) return null;
-  return ph.getAttribute('type') ?? 'body';
+  return (ph.getAttribute('type') ?? 'body').toLowerCase();
 }
 
 function textBody(body: Element, links: Map<string, Rel>, bulletsByDefault: boolean): string {
@@ -126,6 +126,31 @@ function table(tbl: Element, links: Map<string, Rel>): string {
   return [line(rows[0]!), `|${' --- |'.repeat(cols)}`, ...rows.slice(1).map(line)].join('\n');
 }
 
+const MONO = /mono|consol|courier|menlo|monaco|code|inconsolata/i;
+
+/** Caixa de texto toda em fonte de largura fixa: é código. */
+function monospace(body: Element): boolean {
+  const runs = descendants(body, 'r');
+  return runs.length > 0 && runs.every((r) => MONO.test(attr(kid(kid(r, 'rpr'), 'latin'), 'typeface') ?? ''));
+}
+
+function codeBlock(body: Element): string {
+  const lines = kids(body, 'p').flatMap((p) => {
+    let line = '';
+    const out: string[] = [];
+    for (const r of kids(p)) {
+      if (ln(r) === 'br') {
+        out.push(line);
+        line = '';
+      } else if (ln(r) === 'r') line += kid(r, 't')?.textContent ?? '';
+    }
+    out.push(line);
+    return out;
+  });
+  const fence = lines.some((l) => l.includes('```')) ? '~~~' : '```';
+  return `${fence}\n${lines.join('\n').replace(/\s+$/, '')}\n${fence}`;
+}
+
 function shapes(tree: Element, ctx: { zip: Zip; rels: Map<string, Rel>; bag: AssetBag; seen: Map<string, string> }): Block[] {
   const out: Block[] = [];
   for (const el of kids(tree)) {
@@ -139,6 +164,10 @@ function shapes(tree: Element, ctx: { zip: Zip; rels: Map<string, Rel>; bag: Ass
       if (isTitle) {
         const md = kids(body, 'p').map((p) => runsText(p, ctx.rels)).filter(Boolean).join(' ').replace(/<br>/g, ' ');
         if (md) out.push({ x, y, title: true, md });
+        continue;
+      }
+      if (!ph && monospace(body)) {
+        out.push({ x, y, title: false, md: codeBlock(body) });
         continue;
       }
       const isBody = ph === 'body' || ph === 'obj' || (ph !== null && ph !== 'subtitle' && !['dt', 'ftr', 'sldnum', 'hdr'].includes(ph));
