@@ -26,7 +26,7 @@ pnpm --filter @tanden/app tauri build   # gera AppImage/deb (Linux) ou instalado
 No **Arch Linux**, as bibliotecas do Tauri:
 
 ```bash
-sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl appmenu-gtk-module libappindicator-gtk3 librsvg xdotool
+sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl appmenu-gtk-module libappindicator-gtk3 librsvg xdotool gst-plugins-base gst-plugins-good
 ```
 
 ## Onde ficam as notas
@@ -171,7 +171,7 @@ O botão de engrenagem no pé da barra lateral (ou **Ctrl+,**) abre *Aparência 
 - **O símbolo tanden** só se mexe com motivo: parado e alinhado é "tudo em dia"; gira enquanto há trabalho (mais rápido quando a IA pensa) e desacelera como motor até assentar; dá uma volta quando algo de outro aparelho é fundido; o anel acende quando um dado chega e fica vermelho quando o sync falha. Processos de menos de 150 ms não o movem.
 - **Abertura:** as duas metades se encaixam quando o app liga, o símbolo gira enquanto o cofre abre de verdade e depois voa para a barra lateral.
 - **Movimento:** Completo, Reduzido (transições curtas, giro lento) ou Parado (o estado aparece só em cor).
-- **Sons:** sintetizados na hora, sem arquivos. Três estilos (Cristal, Taiko, Circuito), volume e três grupos que ligam e desligam separados: Interface, Atividade e Avisos. Cada som tem limite de repetição e uma variação mínima de altura para não enjoar.
+- **Sons:** sintetizados na hora, sem arquivos (no Linux, o WebKit toca áudio pelo GStreamer: `gst-plugins-good`). Três estilos (Cristal, Taiko, Circuito), volume e três grupos que ligam e desligam separados: Interface, Atividade e Avisos. Cada som tem limite de repetição e uma variação mínima de altura para não enjoar.
 
 Código: `apps/tanden/src/lib/theme.svelte.ts`, `sound.svelte.ts`, `feel.svelte.ts` (eventos do núcleo viram gesto e som), `motion.ts`, `Orb.svelte` e `Splash.svelte`.
 
