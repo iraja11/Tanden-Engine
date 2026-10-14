@@ -25,13 +25,33 @@ import { readText, toBytes, type Storage } from './storage';
 
 const META_DIR = '.tanden/';
 const CRDT_DIR = '.tanden/crdt/';
+const LOCAL_DIR = '.tanden/local/';
+const MIRRORS_KEPT = 8;
 
 interface DeviceMeta {
   path: string;
   /** hash do .md que este aparelho escreveu por último */
   mdHash: string;
   writtenAt: number;
+  /**
+   * Últimos .md que este aparelho escreveu: hash e snapshot Yjs (base64).
+   * Um snapshot é pequeno (vetor de estado + apagamentos) e, com o histórico
+   * completo do documento, reconstrói exatamente aquele texto. É a base de
+   * qualquer edição feita fora do Tanden a partir daquele .md.
+   */
+  mirrors?: Array<{ h: string; s: string }>;
+  /** hashes de .md editados fora do Tanden que este aparelho já incorporou */
+  absorbed?: string[];
 }
+
+const toB64 = (b: Uint8Array): string => {
+  let s = '';
+  for (let i = 0; i < b.length; i += 4096) s += String.fromCharCode(...b.subarray(i, i + 4096));
+  return btoa(s);
+};
+const fromB64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+// gc desligado: o documento guarda o que foi apagado, para reconstruir versões antigas
+const newDoc = (): Y.Doc => new Y.Doc({ gc: false });
 
 export interface SyncReport {
   /** notas que receberam mudanças de outros aparelhos */
@@ -49,12 +69,16 @@ function textOf(doc: Y.Doc): Y.Text {
   return doc.getText('body');
 }
 
-/** Aplica a diferença entre o texto atual de `t` e `target`, com o mínimo de operações. */
-function applyDiff(t: Y.Text, target: string): void {
+/**
+ * Aplica a diferença entre o texto atual de `t` e `target`. Com `semantic`, os
+ * trechos são agrupados em palavras inteiras em vez de letras soltas, o que deixa
+ * a fusão com edições concorrentes previsível (usado em edições externas).
+ */
+function applyDiff(t: Y.Text, target: string, semantic = false): void {
   const current = t.toString();
   if (current === target) return;
   let pos = 0;
-  for (const [op, chunk] of diff(current, target)) {
+  for (const [op, chunk] of diff(current, target, undefined, semantic)) {
     if (op === diff.EQUAL) pos += chunk.length;
     else if (op === diff.DELETE) t.delete(pos, chunk.length);
     else {
@@ -62,6 +86,26 @@ function applyDiff(t: Y.Text, target: string): void {
       pos += chunk.length;
     }
   }
+}
+
+/** Quantas linhas separam dois textos (inseridas + apagadas). Só para desempate. */
+function lineDistance(a: string, b: string): number {
+  const ids = new Map<string, string>();
+  const enc = (t: string) =>
+    t.split('\n').map((l) => ids.get(l) ?? (ids.set(l, String.fromCharCode(0xe000 + ids.size)), ids.get(l)!)).join('');
+  let n = 0;
+  for (const [op, chunk] of diff(enc(a), enc(b))) if (op !== diff.EQUAL) n += chunk.length;
+  return n;
+}
+
+export interface SyncOptions {
+  /**
+   * Notas cujo .md acabou de chegar de outro lugar (ex.: baixado do Drive) e,
+   * para cada uma, os conteúdos anteriores daquele arquivo lá, do mais novo ao
+   * mais antigo. Diz de qual versão uma edição externa partiu.
+   */
+  previousVersions?: (path: string) => Promise<string[]>;
+  downloaded?: ReadonlySet<string>;
 }
 
 export class Vault {
@@ -98,7 +142,7 @@ export class Vault {
   create(path: string, content = ''): void {
     if (!isNotePath(path)) throw new Error(`Caminho de nota inválido: ${path}`);
     if (this.docs.has(path)) throw new Error(`Nota já existe: ${path}`);
-    const doc = new Y.Doc();
+    const doc = newDoc();
     textOf(doc).insert(0, content);
     this.docs.set(path, doc);
     this.bus.emit({ type: 'note.created', path });
@@ -118,13 +162,24 @@ export class Vault {
   }
 
   /** Lê a pasta, funde tudo e grava o estado e os .md deste aparelho. */
-  sync(): Promise<SyncReport> {
-    return this.bus.process(`sync:${this.deviceId}`, 'Sincronizando', () => this.doSync());
+  sync(opts: SyncOptions = {}): Promise<SyncReport> {
+    return this.bus.process(`sync:${this.deviceId}`, 'Sincronizando', () => this.doSync(opts));
   }
 
-  private async doSync(): Promise<SyncReport> {
+  private get diskPath(): string {
+    return `${LOCAL_DIR}${this.deviceId}/disk.json`;
+  }
+
+  private async doSync(opts: SyncOptions): Promise<SyncReport> {
     const report: SyncReport = { merged: 0, external: 0, written: 0 };
     const all = await this.storage.list();
+    // hash do .md que este aparelho deixou no disco no último sync, por nota
+    let disk: Record<string, string> = {};
+    try {
+      disk = JSON.parse((await readText(this.storage, this.diskPath)) ?? '{}') as Record<string, string>;
+    } catch {
+      disk = {};
+    }
 
     // agrupa os arquivos de estado por nota
     const crdtByKey = new Map<string, string[]>();
@@ -146,11 +201,12 @@ export class Vault {
     }
 
     for (const path of [...paths].sort()) {
-      const r = await this.syncNote(path, crdtByKey.get(keyFor(path)) ?? []);
+      const r = await this.syncNote(path, crdtByKey.get(keyFor(path)) ?? [], disk, opts);
       if (r.merged) report.merged++;
       if (r.external) report.external++;
       if (r.written) report.written++;
     }
+    await this.storage.write(this.diskPath, toBytes(JSON.stringify(disk)));
     this.bus.emit({ type: 'sync.finished', ...report });
     return report;
   }
@@ -165,12 +221,12 @@ export class Vault {
     }
   }
 
-  private async syncNote(path: string, files: string[]) {
+  private async syncNote(path: string, files: string[], disk: Record<string, string>, opts: SyncOptions) {
     const key = keyFor(path);
     let doc = this.docs.get(path);
     const isNew = !doc;
     if (!doc) {
-      doc = new Y.Doc();
+      doc = newDoc();
       this.docs.set(path, doc);
     }
     const text = textOf(doc);
@@ -194,21 +250,58 @@ export class Vault {
 
     // 2. o .md mudou fora do Tanden?
     let external = false;
+    let absorbedNow: string | null = null;
     const md = await readText(this.storage, path);
     if (md !== null && md !== text.toString()) {
       const mdHash = hashHex(md);
-      const mirroredBySomeone = metas.some((m) => m.mdHash === mdHash);
-      if (!mirroredBySomeone) {
-        // parte da versão de quem escreveu o .md por último
-        const author = metas.filter((m) => states.has(m.device)).sort((a, b) => b.writtenAt - a.writtenAt)[0];
-        const baseState = author ? states.get(author.device)! : null;
-        if (baseState || text.length === 0) {
-          const fork = new Y.Doc();
-          if (baseState) Y.applyUpdate(fork, baseState);
-          fork.clientID = clientIdFor(`${path}\0${baseState ? hashBytesHex(baseState) : ''}\0${md}`);
+      const mirrors = metas.flatMap((m) => m.mirrors ?? []);
+      // já é um espelho conhecido, ou outro aparelho já incorporou esta mesma edição
+      // (as operações dele chegaram junto com o estado que acabamos de fundir)
+      const known =
+        metas.some((m) => m.mdHash === mdHash || m.absorbed?.includes(mdHash)) || mirrors.some((m) => m.h === mdHash);
+      if (!known) {
+        // A edição partiu de algum .md que um aparelho escreveu antes. Qual?
+        // - .md baixado agora: a versão anterior daquele arquivo no Drive;
+        // - .md editado neste disco: o que este aparelho deixou nele no último sync.
+        // Se nenhuma for um espelho conhecido, usa o espelho mais parecido.
+        const hints: string[] = [];
+        if (opts.downloaded?.has(path) && opts.previousVersions) {
+          for (const t of await opts.previousVersions(path)) hints.push(hashHex(t));
+        } else if (disk[path]) {
+          hints.push(disk[path]);
+        }
+        const rebuild = (m: { h: string; s: string }): Y.Doc | null => {
+          try {
+            return Y.createDocFromSnapshot(doc, Y.decodeSnapshot(fromB64(m.s)), newDoc());
+          } catch {
+            return null; // histórico daquele aparelho ainda incompleto aqui
+          }
+        };
+        let base: { h: string; fork: Y.Doc } | null = null;
+        for (const h of hints) {
+          const m = mirrors.find((x) => x.h === h);
+          const fork = m && rebuild(m);
+          if (m && fork) {
+            base = { h: m.h, fork };
+            break;
+          }
+        }
+        if (!base) {
+          let best = Infinity;
+          for (const m of mirrors) {
+            const fork = rebuild(m);
+            if (!fork) continue;
+            const dist = lineDistance(textOf(fork).toString(), md);
+            if (dist < best) [best, base] = [dist, { h: m.h, fork }];
+          }
+        }
+        if (base || text.length === 0) {
+          const fork = base?.fork ?? newDoc();
+          fork.clientID = clientIdFor(`${path}\0${base?.h ?? ''}\0${md}`);
           applyDiff(textOf(fork), md);
           Y.applyUpdate(doc, Y.encodeStateAsUpdate(fork), 'external');
           external = true;
+          absorbedNow = mdHash;
         }
         // sem histórico e com conteúdo local: o .md é antigo, o CRDT vence
       }
@@ -223,12 +316,17 @@ export class Vault {
     let written = false;
     if (!prev || prev.state !== stateSig || md !== finalText) {
       await this.storage.write(`${CRDT_DIR}${key}/${this.deviceId}.bin`, state);
-      const meta: DeviceMeta = { path, mdHash, writtenAt: Date.now() };
+      const own = metas.find((m) => m.device === this.deviceId);
+      const mirrors = [...(own?.mirrors ?? []).filter((m) => m.h !== mdHash), { h: mdHash, s: toB64(Y.encodeSnapshot(Y.snapshot(doc))) }];
+      const absorbed = [...(own?.absorbed ?? []), ...(absorbedNow ? [absorbedNow] : [])].slice(-MIRRORS_KEPT * 2);
+      const meta: DeviceMeta = { path, mdHash, writtenAt: Date.now(), mirrors: mirrors.slice(-MIRRORS_KEPT), absorbed };
       await this.storage.write(`${CRDT_DIR}${key}/${this.deviceId}.json`, toBytes(JSON.stringify(meta)));
       if (md !== finalText) await this.storage.write(path, toBytes(finalText));
       this.lastWritten.set(path, { state: stateSig, mdHash });
       written = true;
     }
+
+    disk[path] = mdHash;
 
     if (isNew) this.bus.emit({ type: 'note.created', path });
     else if (merged) this.bus.emit({ type: 'note.changed', path, origin: 'remote' });
