@@ -92,8 +92,18 @@ Enquanto o app estiver em modo "Teste", o Google pede para entrar de novo a cada
 
 Opcional: para não colar as credenciais em cada aparelho, crie os secrets `TANDEN_GOOGLE_CLIENT_ID` e `TANDEN_GOOGLE_CLIENT_SECRET` no GitHub; o build já as embute. Para um app de computador, o Google não considera essa "chave secreta" confidencial.
 
+## IA
+
+A aba **IA** tem quatro painéis:
+
+- **Claude** e **Gemini** (só no computador): abrem o Claude Code e o Gemini CLI num terminal dentro do app, já na pasta do cofre. Eles leem e escrevem as notas direto e usam as suas assinaturas, sem custo extra. Instale uma vez: `npm install -g @anthropic-ai/claude-code @google/gemini-cli`.
+- **Ollama**: chat com a IA local da sua placa de vídeo, grátis e offline, com a nota aberta como contexto e um botão para inserir a resposta na nota. No celular, troque o endereço pelo IP do PC (ex.: `http://192.168.0.10:11434`) e, no PC, rode o Ollama com `OLLAMA_HOST=0.0.0.0`.
+- **Terminal**: um terminal comum na pasta do cofre.
+
+Quando qualquer programa muda uma nota (IA, Obsidian, terminal), o app percebe na hora e funde a mudança. Os terminais continuam abertos ao trocar de aba.
+
 ## Próximos passos (fase 1)
 
-1. Painel de IA: Claude Code e Gemini CLI no PC (pelas suas assinaturas), Ollama local.
-2. Agenda com Google Agenda.
+1. Agenda com Google Agenda.
+2. Ferramentas do Tanden para a IA via MCP (buscar, criar e ligar notas, mexer na agenda).
 3. Links `[[ ]]` clicáveis, busca e grafo.

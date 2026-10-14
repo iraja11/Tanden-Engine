@@ -6,6 +6,7 @@
   import Editor from './lib/Editor.svelte';
   import { updater } from './lib/updater.svelte';
   import DrivePanel from './lib/DrivePanel.svelte';
+  import AiPanel from './lib/AiPanel.svelte';
 
   let host = $state<HTMLElement>();
   let orbWrap = $state<HTMLElement>();
@@ -15,10 +16,13 @@
   let drawer = $state(false);
   let drivePanel = $state(false);
   let error = $state('');
+  let view = $state<'notas' | 'ia'>('notas');
+  /** o painel de IA fica montado depois de aberto, para não matar as sessões */
+  let aiOpened = $state(false);
 
   const modules = [
     { id: 'notas', label: 'Notas', ready: true },
-    { id: 'ia', label: 'IA', ready: false },
+    { id: 'ia', label: 'IA', ready: true },
     { id: 'agenda', label: 'Agenda', ready: false },
     { id: 'planilhas', label: 'Planilhas', ready: false },
   ];
@@ -48,7 +52,8 @@
     <button class="menu" onclick={() => (drawer = !drawer)} aria-label="Notas">☰</button>
     <ul>
       {#each modules as m (m.id)}
-        <li><button class:on={m.id === 'notas'} disabled={!m.ready} title={m.ready ? m.label : `${m.label}: em breve`}>{m.label}</button></li>
+        <li><button class:on={m.id === view} disabled={!m.ready} title={m.ready ? m.label : `${m.label}: em breve`}
+          onclick={() => { view = m.id as 'notas' | 'ia'; if (view === 'ia') aiOpened = true; }}>{m.label}</button></li>
       {/each}
     </ul>
   </nav>
@@ -61,7 +66,7 @@
     <ul>
       {#each engine.notes as path (path)}
         <li>
-          <button class:active={path === engine.active} onclick={() => { engine.open(path); drawer = false; }}>
+          <button class:active={path === engine.active} onclick={() => { engine.open(path); drawer = false; view = 'notas'; }}>
             <b>{title(path)}</b>{#if folder(path)}<small>{folder(path)}</small>{/if}
           </button>
         </li>
@@ -82,7 +87,12 @@
         {/if}
       </div>
     {/if}
-    {#if error}
+    {#if aiOpened}
+      <div class="ai-host" class:hidden={view !== 'ia'}><AiPanel /></div>
+    {/if}
+    {#if view === 'ia'}
+      <!-- o painel de IA ocupa a área -->
+    {:else if error}
       <p class="err">Não consegui abrir o cofre: {error}</p>
     {:else if !engine.ready}
       <p class="loading">Abrindo o cofre…</p>
@@ -151,6 +161,8 @@
     box-shadow: 0 0 24px -12px var(--ember); }
   .update b { color: var(--ember-soft); }
   .update button { border: 0; border-radius: 9px; padding: 6px 12px; background: var(--ember); color: #160b03; font-weight: 600; }
+  .ai-host { flex: 1; min-height: 0; }
+  .ai-host.hidden { display: none; }
   .loading, .err { margin: auto; color: var(--muted); }
   .err { color: var(--crit); }
 

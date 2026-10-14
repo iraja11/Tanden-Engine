@@ -1,4 +1,5 @@
 import { DriveRemote, EventBus, Replicator, Vault, fullSync, type Storage, type TandenEvent } from '@tanden/core';
+import { listen } from '@tauri-apps/api/event';
 import { google } from './google.svelte';
 import { BrowserStorage } from './storage-browser';
 import { TauriStorage, isTauri, vaultRoot } from './storage-tauri';
@@ -50,6 +51,9 @@ class Engine {
   pulses = $state<Pulse[]>([]);
   private pulseSeq = 0;
   private syncTimer: ReturnType<typeof setTimeout> | null = null;
+  private watchTimer: ReturnType<typeof setTimeout> | null = null;
+  /** pedido de sync que chegou enquanto outro rodava */
+  private syncAgain = false;
 
   get busy(): boolean {
     return Object.keys(this.running).length > 0;
@@ -78,6 +82,14 @@ class Engine {
     this.open(this.notes[0] ?? null);
     this.ready = true;
     setInterval(() => void this.syncNow(), 30_000);
+    if (isTauri()) {
+      // outro programa (Claude Code, Gemini CLI, Obsidian) mexeu numa nota
+      await listen<string[]>('vault-changed', (e) => {
+        if (!e.payload.some((p) => p.endsWith('.md'))) return;
+        if (this.watchTimer) clearTimeout(this.watchTimer);
+        this.watchTimer = setTimeout(() => void this.syncNow(), 400);
+      });
+    }
   }
 
   private onEvent(e: TandenEvent): void {
@@ -157,7 +169,21 @@ class Engine {
   }
 
   async syncNow(): Promise<void> {
-    if (Object.keys(this.running).some((k) => k.includes('sync:'))) return;
+    if (Object.keys(this.running).some((k) => k.includes('sync:'))) {
+      this.syncAgain = true;
+      return;
+    }
+    try {
+      await this.syncOnce();
+    } finally {
+      if (this.syncAgain) {
+        this.syncAgain = false;
+        void this.syncNow();
+      }
+    }
+  }
+
+  private async syncOnce(): Promise<void> {
     if (!this.replicator) {
       await this.vault.sync();
       return;

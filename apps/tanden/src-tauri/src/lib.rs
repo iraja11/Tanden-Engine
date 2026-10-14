@@ -3,8 +3,12 @@
 //! há leitura e escrita de arquivos, sempre presas dentro da pasta do cofre.
 
 mod google;
+mod ollama;
+#[cfg(desktop)]
+mod pty;
 mod release;
 mod vault;
+mod watch;
 
 use std::path::PathBuf;
 use tauri::Manager;
@@ -20,6 +24,7 @@ pub fn run() {
             {
                 app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
                 app.handle().plugin(tauri_plugin_process::init())?;
+                app.manage(pty::Terminals::default());
             }
             // TANDEN_VAULT aponta para outra pasta (ex.: uma pasta sincronizada do Drive).
             let root = match std::env::var("TANDEN_VAULT") {
@@ -27,6 +32,13 @@ pub fn run() {
                 Err(_) => default_root(app)?,
             };
             std::fs::create_dir_all(&root)?;
+            // sem o vigia o app funciona igual, só percebe mudanças externas no sync periódico
+            match watch::start(app.handle().clone(), &root) {
+                Ok(w) => {
+                    app.manage(w);
+                }
+                Err(e) => eprintln!("vigia do cofre indisponível: {e}"),
+            }
             app.manage(vault::VaultRoot(root));
             Ok(())
         })
@@ -43,7 +55,17 @@ pub fn run() {
             google::google_sign_out,
             release::release_info,
             release::release_android_check,
-            release::release_open_apk
+            release::release_open_apk,
+            ollama::ollama_models,
+            ollama::ollama_chat,
+            #[cfg(desktop)]
+            pty::pty_spawn,
+            #[cfg(desktop)]
+            pty::pty_write,
+            #[cfg(desktop)]
+            pty::pty_resize,
+            #[cfg(desktop)]
+            pty::pty_kill
         ])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o Tanden Engine");
