@@ -63,7 +63,8 @@
     <button onclick={() => (menu = menu === 'export' ? null : 'export')} aria-haspopup="menu" title="Exportar esta nota">Exportar ▾</button>
     {#if menu === 'export'}
       <div class="menu" role="menu">
-        <button role="menuitem" onclick={() => { menu = null; void files.exportNote(path, 'docx'); }}>Word (.docx)<small>Docs, LibreOffice</small></button>
+        <button role="menuitem" onclick={() => { menu = null; void files.exportNote(path, 'docx'); }}>Word (.docx)<small>Word, Google Docs</small></button>
+        <button role="menuitem" onclick={() => { menu = null; void files.exportNote(path, 'odt'); }}>LibreOffice (.odt)<small>Writer, com os estilos dele</small></button>
         <button role="menuitem" onclick={() => { menu = null; void files.exportNote(path, 'pdf'); }}>PDF<small>pela janela de impressão</small></button>
         <button role="menuitem" onclick={() => { menu = null; void files.exportNote(path, 'html'); }}>Página (.html)<small>abre em qualquer lugar</small></button>
         <button role="menuitem" onclick={() => { menu = null; void files.exportNote(path, 'md'); }}>Markdown (.md)<small>Obsidian, GitHub</small></button>

@@ -19,6 +19,7 @@ import {
   localStamp,
   markdownToDocx,
   markdownToHtml,
+  markdownToOdt,
   mimeOf,
   normalizeUrl,
   pdfTextToMarkdown,
@@ -305,7 +306,7 @@ class Files {
       await this.write(path, bytes);
       return { open: path, insert: `![[${path}]]`, message: `Anexei ${f.name}.` };
     }
-    if (kind === 'sheet' && /\.(xlsx|csv|tsv)$/i.test(name)) {
+    if (kind === 'sheet' && /\.(xlsx|xlsm|xls|ods|csv|tsv)$/i.test(name)) {
       await sheets.importFile(f);
       this.navigate('planilhas');
       return { message: `Importei ${f.name} nas planilhas.` };
@@ -315,8 +316,8 @@ class Files {
       await this.write(path, bytes);
       return { open: path, message: `PDF salvo em ${path}.` };
     }
-    if (kind === 'slides' && /\.pptx$/i.test(name) && opts.convert !== false) {
-      // .pptx vira apresentação (nota com --- entre slides), que também se lê como nota
+    if (kind === 'slides' && /\.(pptx|odp)$/i.test(name) && opts.convert !== false) {
+      // .pptx e .odp viram apresentação (nota com --- entre slides), que também se lê como nota
       const path = await slides.importFile(f);
       if (!path) throw new Error('o arquivo não pôde ser lido');
       return { message: `${f.name} virou a apresentação ${path}.` };
@@ -514,8 +515,8 @@ class Files {
     return null;
   }
 
-  /** Nota → .html (abre em qualquer lugar), .docx, PDF (pela impressão) ou o próprio .md. */
-  async exportNote(notePath: string, format: 'html' | 'docx' | 'pdf' | 'md'): Promise<void> {
+  /** Nota → .html (abre em qualquer lugar), .docx, .odt, PDF (pela impressão) ou o próprio .md. */
+  async exportNote(notePath: string, format: 'html' | 'docx' | 'odt' | 'pdf' | 'md'): Promise<void> {
     try {
       const md = engine.vault.read(notePath);
       const title = stem(notePath);
@@ -535,6 +536,7 @@ class Files {
       const opts = { title, image: (t: string) => images.get(t.trim()) ?? null };
       if (format === 'pdf') printHtml(markdownToHtml(md, opts));
       else if (format === 'html') await this.deliver(`${title}.html`, new TextEncoder().encode(markdownToHtml(md, opts)), 'text/html');
+      else if (format === 'odt') await this.deliver(`${title}.odt`, markdownToOdt(md, opts), mimeOf('x.odt'));
       else await this.deliver(`${title}.docx`, markdownToDocx(md, opts), mimeOf('x.docx'));
     } catch (e) {
       this.say(`Não consegui exportar: ${e instanceof Error ? e.message : String(e)}`, { error: true });

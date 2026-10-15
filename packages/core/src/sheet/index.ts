@@ -8,5 +8,6 @@ export {
 export { Calculator } from './calc';
 export { Workbook, DEFAULT_COL_WIDTH, type CellFormat, type ChartSpec, type ChartType, type SheetInfo } from './workbook';
 export { writeXlsx, readXlsx, loadBook, applyBookDiff, bookData, type BookData, type SheetData } from './xlsx';
+export { readOds, writeOds, odfToExcelFormula, printOdfFormula, excelCodeToOdfStyle, odfNumberStyleCode } from './ods';
 export { parseCsv, writeCsv, csvSheet, detectDelimiter } from './csv';
 export { SheetStore, SHEETS_FOLDER, type SheetSyncReport } from './store';

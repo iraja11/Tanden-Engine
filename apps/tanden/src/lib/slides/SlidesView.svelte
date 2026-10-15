@@ -72,7 +72,7 @@
 
   function onDrop(e: DragEvent) {
     dragging = 0;
-    const list = Array.from(e.dataTransfer?.files ?? []).filter((f) => /\.(pptx|pdf)$/i.test(f.name));
+    const list = Array.from(e.dataTransfer?.files ?? []).filter((f) => /\.(pptx|odp|pdf)$/i.test(f.name));
     if (!list.length) return;
     e.preventDefault();
     void (async () => { for (const f of list) await slides.importFile(f); })();
@@ -124,8 +124,8 @@
         </div>
       {/if}
     </div>
-    <button onclick={() => input?.click()} title="Importar .pptx ou PDF">Importar</button>
-    <input bind:this={input} type="file" accept=".pptx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation" multiple hidden onchange={onPick} />
+    <button onclick={() => input?.click()} title="Importar .pptx, .odp ou PDF">Importar</button>
+    <input bind:this={input} type="file" accept=".pptx,.odp,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.oasis.opendocument.presentation" multiple hidden onchange={onPick} />
 
     {#if path && deck}
       <span class="sep"></span>
@@ -140,7 +140,8 @@
         <button onclick={() => (menu = menu === 'export' ? null : 'export')} aria-haspopup="menu">Exportar ▾</button>
         {#if menu === 'export'}
           <div class="menu right" role="menu" transition:pop>
-            <button role="menuitem" onclick={() => { menu = null; void slides.export(path, 'pptx'); }}>PowerPoint (.pptx)<small>Slides, Impress</small></button>
+            <button role="menuitem" onclick={() => { menu = null; void slides.export(path, 'pptx'); }}>PowerPoint (.pptx)<small>PowerPoint, Google Slides</small></button>
+            <button role="menuitem" onclick={() => { menu = null; void slides.export(path, 'odp'); }}>LibreOffice (.odp)<small>Impress</small></button>
             <button role="menuitem" onclick={() => { menu = null; void slides.export(path, 'pdf'); }}>PDF<small>com o tema do app</small></button>
             <button role="menuitem" onclick={() => { menu = null; void slides.export(path, 'pdf-claro'); }}>PDF claro<small>para imprimir</small></button>
           </div>
@@ -191,11 +192,11 @@
       <div class="cards">
         <button onclick={() => slides.create()}><b>Nova</b><small>começa de um modelo</small></button>
         <button onclick={() => { menu = 'note'; query = ''; }}><b>A partir de uma nota</b><small>cada seção vira um slide</small></button>
-        <button onclick={() => input?.click()}><b>Importar</b><small>.pptx ou PDF, ou arraste aqui</small></button>
+        <button onclick={() => input?.click()}><b>Importar</b><small>.pptx, .odp ou PDF, ou arraste aqui</small></button>
       </div>
     </div>
   {/if}
-  {#if dragging}<div class="drop">Solte o .pptx ou o PDF para virar apresentação</div>{/if}
+  {#if dragging}<div class="drop">Solte o .pptx, o .odp ou o PDF para virar apresentação</div>{/if}
 </div>
 
 <style>

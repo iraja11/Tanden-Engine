@@ -1,9 +1,16 @@
-import { SheetStore, Workbook, csvSheet, readXlsx, toBytes, writeCsv, writeXlsx, type Storage } from '@tanden/core';
+import { SheetStore, Workbook, csvSheet, readOds, readXlsx, toBytes, writeCsv, writeOds, writeXlsx, type BookData, type Storage } from '@tanden/core';
 import { engine } from '../engine.svelte';
 import { sound } from '../sound.svelte';
 import { isTauri, TauriStorage } from '../storage-tauri';
 
 // Estado do módulo de planilhas. A grade e os gráficos leem daqui.
+
+const MIME = {
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  ods: 'application/vnd.oasis.opendocument.spreadsheet',
+  csv: 'text/csv',
+  'csv-br': 'text/csv',
+} as const;
 
 class Sheets {
   store: SheetStore | null = null;
@@ -72,15 +79,17 @@ class Sheets {
     this.open(path);
   }
 
-  /** Importa .xlsx, .csv ou .tsv como uma planilha nova. */
+  /** Importa .xlsx, .ods (LibreOffice), .csv ou .tsv como uma planilha nova. */
   async importFile(file: File): Promise<void> {
     if (!this.store) return;
     try {
       await engine.bus.process('sheets:import', `Importando ${file.name}`, async () => {
         const base = file.name.replace(/\.[^.]+$/, '');
-        const data = /\.xlsx$/i.test(file.name)
-          ? readXlsx(new Uint8Array(await file.arrayBuffer()))
-          : { sheets: [csvSheet(base.slice(0, 31) || 'Dados', await file.text())] };
+        let data: BookData;
+        if (/\.(xlsx|xlsm)$/i.test(file.name)) data = readXlsx(new Uint8Array(await file.arrayBuffer()));
+        else if (/\.ods$/i.test(file.name)) data = readOds(new Uint8Array(await file.arrayBuffer()));
+        else if (/\.xls$/i.test(file.name)) throw new Error('o .xls é o formato antigo do Excel. Abra no Excel ou no LibreOffice e salve como .xlsx ou .ods.');
+        else data = { sheets: [csvSheet(base.slice(0, 31) || 'Dados', await file.text())] };
         const path = this.store!.freePath(base);
         this.store!.create(path, data);
         this.open(path);
@@ -92,16 +101,18 @@ class Sheets {
   }
 
   /** Baixa o arquivo (navegador) ou grava em Exportados/ no cofre (app instalado). */
-  async export(kind: 'xlsx' | 'csv' | 'csv-br', sheetId?: string): Promise<void> {
+  async export(kind: 'xlsx' | 'ods' | 'csv' | 'csv-br', sheetId?: string): Promise<void> {
     const wb = this.workbook;
     if (!wb || !this.active) return;
     const name = this.active.split('/').pop()!.replace(/\.xlsx$/i, '');
     const sheetName = wb.sheets().find((s) => s.id === sheetId)?.name;
-    const fileName = kind === 'xlsx' ? `${name}.xlsx` : `${name}${sheetName && wb.sheets().length > 1 ? ` - ${sheetName}` : ''}.csv`;
+    const fileName = kind === 'xlsx' || kind === 'ods' ? `${name}.${kind}` : `${name}${sheetName && wb.sheets().length > 1 ? ` - ${sheetName}` : ''}.csv`;
     const data =
       kind === 'xlsx'
         ? writeXlsx(wb)
-        : toBytes(`﻿${writeCsv(wb, sheetId ?? wb.sheets()[0]!.id, { delimiter: kind === 'csv-br' ? ';' : ',' })}`);
+        : kind === 'ods'
+          ? writeOds(wb, name)
+          : toBytes(`﻿${writeCsv(wb, sheetId ?? wb.sheets()[0]!.id, { delimiter: kind === 'csv-br' ? ';' : ',' })}`);
     if (isTauri()) {
       const path = `Exportados/${fileName}`;
       const storage: Storage = new TauriStorage();
@@ -110,7 +121,7 @@ class Sheets {
       return;
     }
     const url = URL.createObjectURL(
-      new Blob([data as BlobPart], { type: kind === 'xlsx' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'text/csv' }),
+      new Blob([data as BlobPart], { type: MIME[kind] }),
     );
     const a = Object.assign(document.createElement('a'), { href: url, download: fileName });
     a.click();
