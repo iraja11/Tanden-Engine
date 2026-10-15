@@ -6,6 +6,7 @@
   import { rise } from '../motion';
   import { dayLabel, vida } from './vida.svelte';
   import { saude } from '../saude/saude.svelte';
+  import { flashcards } from '../flashcards/flashcards.svelte';
 
   // Tela Hoje: tarefas, hábitos, diário, projetos, metas e leituras num lugar só.
   let { onOpenNote }: { onOpenNote: (path: string) => void } = $props();
@@ -49,6 +50,7 @@
   const care = $derived(saude.todayCare);
   const waterPct = $derived(Math.min(1, care.ml / Math.max(1, saude.config.agua.goalMl)));
   const workout = $derived(saude.hasPlan ? saude.nextWorkout : null);
+  const cardsDue = $derived(flashcards.pending());
 
   const hello = $derived.by(() => {
     const h = vida.now.getHours();
@@ -110,6 +112,7 @@
     <button onclick={() => onOpenNote(vida.openDaily())}>✎ Nota do dia</button>
     <button onclick={() => onOpenNote(vida.review())}>◷ Revisão da semana</button>
     <button onclick={() => (files.clipDialog = true)}>✂ Salvar página web</button>
+    {#if cardsDue}<button onclick={() => { flashcards.goto++; flashcards.start(); }}>🃏 Revisar {cardsDue} {cardsDue === 1 ? 'flashcard' : 'flashcards'}</button>{/if}
     {#if snap.dbs.tarefas}<button onclick={() => bases.openDatabase(snap.dbs.tarefas!.note)}>▤ Banco de tarefas</button>{/if}
   </nav>
 

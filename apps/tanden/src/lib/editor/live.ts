@@ -155,6 +155,31 @@ const HL = /(^|[^=])(==)(?=\S)([^=\n]+?)(==)(?!=)/g;
 const WIKI = /(!?)\[\[([^\[\]\n]+?)\]\]/g;
 const TAG = /(^|[\s(])#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)/gu;
 const COMMENT = /%%[^\n]*?%%/g;
+/** agendamento dos flashcards (<!--SR:!data,intervalo,facilidade-->) */
+const SR = /<!--SR:((?:![^,!>]+,[^,!>]+,[^,!>]+)+)-->/g;
+
+/** O agendamento vira uma etiqueta discreta com a próxima revisão; o texto volta com o cursor na linha. */
+class SrChip extends WidgetType {
+  constructor(readonly raw: string) {
+    super();
+  }
+  eq(o: SrChip) {
+    return o.raw === this.raw;
+  }
+  toDOM() {
+    const s = document.createElement('span');
+    s.className = 'cm-sr';
+    const parts = this.raw.split('!').filter(Boolean).map((p) => p.split(','));
+    const days = parts.map((p) => p[0]!).filter((d) => d !== '2000-01-01').sort();
+    const d = days[0];
+    s.textContent = d ? `🃏 ${d.slice(8, 10)}/${d.slice(5, 7)}` : '🃏';
+    s.title = parts.map((p, i) => (p[0] === '2000-01-01' ? `${i + 1}: novo` : `${i + 1}: próxima revisão ${p[0]}, a cada ${p[1]} dias, facilidade ${p[2]}%`)).join('\n');
+    return s;
+  }
+  ignoreEvent() {
+    return false;
+  }
+}
 const FOOT = /\[\^[^\]\s]+\]/g;
 
 function build(view: EditorView): DecorationSet {
@@ -374,6 +399,15 @@ function build(view: EditorView): DecorationSet {
       if (t.includes('^')) {
         const bid = BLOCK_ID.exec(t);
         if (bid && !lineActive(line.from) && !inCode(line.from + bid.index)) hide(line.from + bid.index, line.to);
+      }
+      if (t.includes('<!--SR:')) {
+        for (const m of t.matchAll(SR)) {
+          const a = line.from + m.index!;
+          const b = a + m[0].length;
+          if (inCode(a)) continue;
+          if (lineActive(line.from)) out.push(Decoration.mark({ class: 'cm-comment' }).range(a, b));
+          else out.push(Decoration.replace({ widget: new SrChip(m[1]!) }).range(a, b));
+        }
       }
       if (t.includes('%%')) for (const m of t.matchAll(COMMENT)) out.push(Decoration.mark({ class: 'cm-comment' }).range(line.from + m.index!, line.from + m.index! + m[0].length));
       if (t.includes('[^')) for (const m of t.matchAll(FOOT)) if (!/^\[\^[^\]]+\]:/.test(t.slice(m.index!))) out.push(Decoration.mark({ class: 'cm-footref' }).range(line.from + m.index!, line.from + m.index! + m[0].length));

@@ -37,6 +37,8 @@
   import HojeView from './lib/vida/HojeView.svelte';
   import SaudeView from './lib/saude/SaudeView.svelte';
   import { saude } from './lib/saude/saude.svelte';
+  import FlashcardsView from './lib/flashcards/FlashcardsView.svelte';
+  import { flashcards } from './lib/flashcards/flashcards.svelte';
   import WebClipDialog from './lib/files/WebClipDialog.svelte';
   import Splash from './lib/Splash.svelte';
   import SettingsPanel from './lib/SettingsPanel.svelte';
@@ -65,7 +67,7 @@
   /** marcador que desliza até o módulo ativo na barra */
   let mark = $state<{ x: number; y: number; w: number; h: number } | null>(null);
   let error = $state('');
-  type View = 'hoje' | 'notas' | 'bancos' | 'grafo' | 'ia' | 'lembretes' | 'saude' | 'quadros' | 'planilhas' | 'calculo' | 'arquivos' | 'luta' | 'mundos' | 'slides' | 'plugins' | `plugin:${string}`;
+  type View = 'hoje' | 'notas' | 'bancos' | 'grafo' | 'ia' | 'lembretes' | 'saude' | 'quadros' | 'planilhas' | 'calculo' | 'flashcards' | 'arquivos' | 'luta' | 'mundos' | 'slides' | 'plugins' | `plugin:${string}`;
   let view = $state<View>('notas');
   /** id do plugin cuja tela está aberta */
   const pluginView = $derived(view.startsWith('plugin:') ? view.slice(7) : null);
@@ -84,6 +86,7 @@
     { id: 'agenda', label: 'Agenda', ready: false },
     { id: 'planilhas', label: 'Planilhas', ready: true },
     { id: 'calculo', label: 'Cálculo', ready: true },
+    { id: 'flashcards', label: 'Flashcards', ready: true },
     { id: 'slides', label: 'Slides', ready: true },
     { id: 'mundos', label: 'Mundos', ready: true },
     { id: 'luta', label: 'Luta', ready: true },
@@ -95,7 +98,7 @@
     ...plugins.rail.map((e) => ({ id: `plugin:${e.manifest.id}`, label: e.manifest.nome, ready: true })),
     { id: 'plugins', label: 'Plugins', ready: true },
   ]);
-  const badgeOf = (id: string) => (id === 'lembretes' ? reminders.attention : id.startsWith('plugin:') ? plugins.badges[id.slice(7)] ?? 0 : 0);
+  const badgeOf = (id: string) => (id === 'lembretes' ? reminders.attention : id === 'flashcards' ? (engine.ready ? flashcards.pending() : 0) : id.startsWith('plugin:') ? plugins.badges[id.slice(7)] ?? 0 : 0);
 
   $effect(() => { if (engine.ready) void reminders.start(); });
   // depois dos lembretes, que registram os botões dos avisos de água e pausa
@@ -118,6 +121,8 @@
   $effect(() => { if (pluginView && !plugins.active.some((e) => e.manifest.id === pluginView)) view = 'plugins'; });
   // abrir um quadro de fora (paleta, grafo, "mapa da nota")
   $effect(() => { if (quadros.goto) untrack(() => go('quadros')); });
+  // "estudar flashcards" da paleta ou da tela Hoje
+  $effect(() => { if (flashcards.goto) untrack(() => go('flashcards')); });
   // links e importações pedem para trocar de tela
   $effect(() => { if (files.goto) view = files.goto.view; });
   // clicar num aviso de lembrete abre a tela de lembretes
@@ -331,6 +336,8 @@
           {/await}
         {:else if view === 'saude' && engine.ready}
           <SaudeView onOpenNote={openNote} />
+        {:else if view === 'flashcards' && engine.ready}
+          <FlashcardsView onOpenNote={openNote} />
         {:else if view === 'hoje' && engine.ready}
           <HojeView onOpenNote={openNote} />
         {:else if view === 'bancos' && engine.ready}
