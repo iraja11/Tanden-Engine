@@ -38,6 +38,7 @@ import { isTauri } from '../storage-tauri';
 import { editorBridge } from './editor-bridge';
 import { slides } from '../slides/slides.svelte';
 import { bases } from '../bases/bases.svelte';
+import { biblioteca } from '../biblioteca/biblioteca.svelte';
 
 /*
  * Arquivos do cofre que não são notas (PDFs, imagens, documentos) e tudo que
@@ -66,7 +67,7 @@ function printHtml(html: string): void {
   else frame.onload = () => setTimeout(go, 150);
 }
 
-export type View = 'notas' | 'planilhas' | 'quadros' | 'arquivos';
+export type View = 'notas' | 'planilhas' | 'quadros' | 'arquivos' | 'biblioteca';
 
 interface Fetched {
   url: string;
@@ -221,7 +222,7 @@ class Files {
     engine.writeNote(path, text);
   }
 
-  /** Abre um arquivo no lugar certo: nota no editor, planilha na aba dela, PDF/imagem aqui. */
+  /** Abre um arquivo no lugar certo: nota no editor, planilha na aba dela, PDF na Biblioteca, o resto aqui. */
   openPath(path: string, page?: number | null): void {
     const kind = fileKind(path);
     if (kind === 'note') {
@@ -233,6 +234,10 @@ class Files {
     } else if (kind === 'board') {
       if (engine.boards.has(path)) quadros.open(path);
       this.navigate('quadros');
+    } else if (kind === 'pdf') {
+      // PDFs abrem no leitor da Biblioteca (posição, marcadores e status sincronizados)
+      biblioteca.open(path, page);
+      this.navigate('biblioteca');
     } else {
       this.open = path;
       if (page) this.page = { n: page, seq: ++this.seq };

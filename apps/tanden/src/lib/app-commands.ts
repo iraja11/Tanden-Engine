@@ -1,6 +1,7 @@
 import { commands, type Command } from './commands.svelte';
 import { engine } from './engine.svelte';
 import { files } from './files/files.svelte';
+import { biblioteca } from './biblioteca/biblioteca.svelte';
 import { notes } from './editor/notes.svelte';
 import { noteName } from './editor/host';
 import { copyBlockLink, insertTemplate, linkAllMentions } from './editor/note-actions';
@@ -26,7 +27,7 @@ export interface AppActions {
 
 const MODULES: [string, string][] = [
   ['hoje', 'Hoje'], ['notas', 'Notas'], ['bancos', 'Bancos'], ['grafo', 'Grafo'], ['ia', 'IA'], ['lembretes', 'Lembretes'], ['quadros', 'Quadros'],
-  ['planilhas', 'Planilhas'], ['calculo', 'Cálculo'], ['flashcards', 'Flashcards'], ['slides', 'Slides'], ['mundos', 'Mundos'], ['luta', 'Luta'], ['arquivos', 'Arquivos'], ['plugins', 'Plugins'],
+  ['planilhas', 'Planilhas'], ['calculo', 'Cálculo'], ['flashcards', 'Flashcards'], ['slides', 'Slides'], ['mundos', 'Mundos'], ['luta', 'Luta'], ['biblioteca', 'Biblioteca'], ['arquivos', 'Arquivos'], ['plugins', 'Plugins'],
 ];
 
 const roll = (sides: number) => 1 + Math.floor(Math.random() * sides);
@@ -40,6 +41,19 @@ export function registerAppCommands(a: AppActions): () => void {
     { id: 'paleta.busca', label: 'Buscar no cofre (painel, com #tag, pasta:, [prop:valor]...)', keys: 'procurar pesquisa texto todas notas', hotkeys: ['Ctrl+Shift+F'], run: () => { notes.searchFor(''); a.go('notas'); } },
     { id: 'nota.explorar', label: 'Explorar tags, links sem nota e notas soltas', keys: 'tags orfas cerebro', run: () => { notes.sidebar = 'tags'; a.go('notas'); } },
     ...MODULES.map(([id, name]): Command => ({ id: `ir.${id}`, label: `Ir para ${name}`, keys: 'abrir tela modulo', run: () => a.go(id) })),
+
+    // biblioteca
+    {
+      id: 'biblioteca.continuar', label: 'Continuar a leitura (último PDF aberto)', keys: 'livro pdf ler biblioteca retomar', run: () => {
+        const last = engine.library.list().filter((b) => files.list.includes(b.path)).sort((x, y) => Math.max(y.opened ?? 0, y.pageAt ?? 0) - Math.max(x.opened ?? 0, x.pageAt ?? 0))[0];
+        if (!last) {
+          a.go('biblioteca');
+          return;
+        }
+        biblioteca.open(last.path);
+        a.go('biblioteca');
+      },
+    },
 
     // notas
     { id: 'nota.nova', label: 'Nova nota', hotkeys: ['Ctrl+N'], run: () => { a.newNote(); a.go('notas'); } },
