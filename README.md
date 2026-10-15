@@ -279,7 +279,13 @@ A aba **Arquivos** lista tudo no cofre que não é nota: PDFs, documentos, image
 
 **Nas notas.** O botão **Anexar** coloca um arquivo ou uma página web na nota aberta; arrastar ou colar um arquivo no editor faz o mesmo. Imagens aparecem dentro da nota e PDFs viram um cartão. Ctrl+clique (Cmd no Mac) em um link abre a nota, o arquivo ou o site. **Exportar** gera um `.docx` (abre no Word, Google Docs e LibreOffice) ou uma página `.html`, com as imagens dentro.
 
-**Páginas web.** Cole um endereço em **Página web**. *Salvar como nota* guarda o texto do artigo e as imagens em `Web/`, com título, site, autor e data no topo, no mesmo formato do Obsidian Web Clipper. *Só o link* coloca um cartão com título e resumo na nota aberta. Um link direto para um PDF ou imagem vira arquivo do cofre.
+**Páginas web.** Cole um endereço em **Página web** (botão Anexar, tela Hoje ou *Salvar página web* na paleta; um endereço copiado já vem preenchido). *Salvar como nota* guarda o texto do artigo e as imagens em `Web/`, com título, site, autor e data no topo, no mesmo formato do Obsidian Web Clipper, e `status: Para ler`, que coloca a página na lista *Para ler* da tela Hoje. *Só o link* coloca um cartão com título e resumo na nota aberta. Um link direto para um PDF ou imagem vira arquivo do cofre.
+
+- **Tags, sua nota e destaques.** Antes de salvar dá para pôr tags, um comentário (vira um callout *Minha nota*) e trechos para destacar. Cada trecho é marcado `==assim==` no texto e listado numa seção **Destaques** no topo. Depois, marcar `==trechos==` à mão e rodar *Juntar destaques da nota* na paleta atualiza a seção.
+- **Sem duplicar.** Salvar de novo uma página que já está no cofre (mesmo com `?utm_…`, `#seção` ou `www.` diferentes) não cria outra nota: os destaques e o comentário novos entram na que existe. *Salvar de novo* força uma cópia.
+- **YouTube** vira nota com o player, o canal, a data e a descrição inteira, com os links clicáveis.
+- **Modelos de recorte.** Uma nota em `Modelos/Recortes/` com `recorte-sites: [youtube.com]` (e, se quiser, `recorte-pasta: Vídeos`) vale para aquele site; `*` vale para todos. O resto do topo e o corpo viram a nota, com `{{title}}`, `{{url}}`, `{{site}}`, `{{author}}`, `{{published}}`, `{{description}}`, `{{image}}`, `{{content}}`, `{{comment}}`, `{{date}}` e `{{time}}`.
+- **Recortador do navegador** (app do computador). Em *Página web → ✂ Recortar direto do navegador*, arraste o botão **✂ Tanden** para a barra de favoritos do Chrome, Firefox ou Edge. Numa página, clique nele: ela chega ao Tanden como está na tela (serve para páginas que pedem login). Com um trecho selecionado, ele vira destaque; clique de novo com outro trecho para juntar mais destaques na mesma nota. O app escuta só em `127.0.0.1:27183` e cada computador tem uma chave própria dentro do favorito, então outro site não consegue mandar nada. Código: `apps/tanden/src-tauri/src/clipper.rs`.
 
 Arquivos grandes sobem para o Drive em partes, e o sync só relê um arquivo quando ele muda. O código está em `packages/core/src/convert/` (conversões), `files.ts`, `webclip.ts`, `annotations.ts`, `pdf-export.ts` e em `apps/tanden/src/lib/files/` e `apps/tanden/src/lib/pdf/`.
 
@@ -300,6 +306,22 @@ Código: `apps/tanden/src/lib/theme.svelte.ts`, `sound.svelte.ts`, `feel.svelte.
 1. Agenda com Google Agenda.
 2. Ferramentas do Tanden para a IA via MCP (buscar, criar e ligar notas, mexer na agenda).
 
+## Hoje: tarefas, projetos, hábitos e metas
+
+A tela **Hoje** (primeira da barra) junta o dia num lugar só. Ela não tem formato próprio: lê os bancos do cofre e as tarefas das notas, e cada clique grava na nota de onde o dado veio, então tudo sincroniza e abre igual no Obsidian.
+
+- **Montar meu sistema.** Na primeira vez, um botão cria em `Bancos/` o que faltar: Tarefas, Projetos, Hábitos, Metas e Diário (sem linhas de exemplo). Os bancos são reconhecidos pelas propriedades, não pelo nome: um banco com `prazo` e `status` é de tarefas, com `alvo` é de metas, com caixas e `data` é de hábitos, com `humor` é o diário.
+- **Captura rápida** (tecla **N**): `amanhã revisar slides !`, `comprar café`, `sexta 18h30 jogar SF6`. Sem hora vira tarefa no banco (com prazo e prioridade; `!` é alta, `!!` é máxima); com hora vira lembrete com aviso.
+- **Tarefas**: atrasadas, hoje, próximos 7 dias e sem data, juntando as do banco e as `- [ ]` com data de qualquer nota (formato do plugin Tasks). Marcar como feita troca o status e grava `concluída` (no banco) ou `✅ data` (na nota). **→** passa a tarefa para amanhã.
+- **Hábitos**: os últimos 7 dias de cada hábito (cada caixa do banco é um hábito), clique para marcar qualquer dia e a sequência 🔥 ao lado.
+- **Diário**: humor do dia com um clique e a nota de hoje (com o modelo do banco Diário).
+- **Projetos ativos**: progresso pelas tarefas ligadas (`projeto: [[X]]`) mais as caixas `- [ ]` da nota do projeto, a próxima tarefa e quantas atrasaram.
+- **Metas**: `alvo` e `atual` (o **+1** soma), ou a média dos projetos ligados (`meta: [[Y]]` no projeto).
+- **Para ler**: as páginas da web salvas que ainda estão `Para ler`; ✓ marca como lida.
+- **Revisão da semana**: gera `Revisões/2026-W42.md` com o que foi feito, o que atrasou, os próximos dias, a tabela dos hábitos, projetos, metas e espaço para pensar a semana seguinte.
+
+Na paleta (**Ctrl+P**): *Nova tarefa*, *Revisão da semana*, *Montar sistema de vida*, *Salvar página web*, *Recortador do navegador* e *Juntar destaques da nota*. Código: `packages/core/src/vida/` (testes em `test/vida.test.ts`) e `apps/tanden/src/lib/vida/`.
+
 ## Bancos de dados (estilo Notion)
 
 Um banco é um bloco ` ```base ` dentro de uma nota, no formato das **Bases do Obsidian**: o Obsidian abre e mostra o mesmo banco. As linhas são notas comuns e as colunas são as propriedades do topo delas.
@@ -308,7 +330,7 @@ Um banco é um bloco ` ```base ` dentro de uma nota, no formato das **Bases do O
 - **Propriedades tipadas:** texto, número (com formato de moeda e porcentagem), seleção, seleção múltipla, status, data, data e hora, caixa, relação, pessoa, link, e-mail, telefone, arquivos, criação e edição. Tipos, opções e cores ficam em `properties:` no bloco.
 - **Filtros, ordenação, agrupamento e cálculos no rodapé** por view; filtros do banco valem para todas.
 - **Fórmulas e rollups:** a linguagem das Bases (`if(prazo < today(), "atrasada", "")`, `prazo.format("DD/MM")`, `days(início, fim)`), e uma propriedade pedida de uma relação lê a nota ligada: `tarefas.horas.sum()`.
-- **Modelos:** notas em `Modelos/` com `{{title}}`, `{{date}}`, `{{time}}`. Com `modelo-para: "[[Banco]]"` viram opção do botão Novo daquele banco. A tela Bancos tem uma galeria de bancos prontos (tarefas, projetos, leituras, hábitos, reuniões, CRM, gastos, diário).
+- **Modelos:** notas em `Modelos/` com `{{title}}`, `{{date}}`, `{{time}}`. Com `modelo-para: "[[Banco]]"` viram opção do botão Novo daquele banco. A tela Bancos tem uma galeria de bancos prontos (tarefas, projetos, metas, leituras, hábitos, reuniões, CRM, gastos, diário).
 - **Páginas aninhadas:** as subpáginas de `X.md` moram em `X/`; a barra de notas mostra a árvore e o `+` de cada página cria uma subpágina.
 - **Arquivar** marca `arquivado: true` na nota; ela some das views (opção "Mostrar arquivados").
 

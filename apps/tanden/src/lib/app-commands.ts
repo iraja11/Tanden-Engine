@@ -7,6 +7,7 @@ import { quadros } from './quadro/quadros.svelte';
 import { snippets } from './snippets.svelte';
 import { sound } from './sound.svelte';
 import { theme } from './theme.svelte';
+import { vida } from './vida/vida.svelte';
 
 /*
  * Os comandos do app inteiro: a paleta (Ctrl+P) lista todos, e qualquer um
@@ -22,7 +23,7 @@ export interface AppActions {
 }
 
 const MODULES: [string, string][] = [
-  ['notas', 'Notas'], ['bancos', 'Bancos'], ['grafo', 'Grafo'], ['ia', 'IA'], ['lembretes', 'Lembretes'], ['quadros', 'Quadros'],
+  ['hoje', 'Hoje'], ['notas', 'Notas'], ['bancos', 'Bancos'], ['grafo', 'Grafo'], ['ia', 'IA'], ['lembretes', 'Lembretes'], ['quadros', 'Quadros'],
   ['planilhas', 'Planilhas'], ['calculo', 'Cálculo'], ['slides', 'Slides'], ['mundos', 'Mundos'], ['luta', 'Luta'], ['arquivos', 'Arquivos'], ['plugins', 'Plugins'],
 ];
 
@@ -66,7 +67,14 @@ export function registerAppCommands(a: AppActions): () => void {
     { id: 'nota.md', label: 'Exportar como Markdown (.md)', when: cur, run: () => void files.exportNote(cur()!, 'md') },
     { id: 'nota.link', label: 'Copiar link [[ ]] da nota', when: cur, run: () => void navigator.clipboard?.writeText(`[[${noteName(cur()!)}]]`) },
     { id: 'nota.anexar', label: 'Anexar arquivo', when: cur, run: () => notes.host.pickFiles?.() },
-    { id: 'nota.web', label: 'Salvar página web', keys: 'clipper recorte', when: cur, run: () => (notes.clip = true) },
+    { id: 'nota.web', label: 'Salvar página web', keys: 'recortar clipper web clip link artigo', run: () => (files.clipDialog = true) },
+    { id: 'nota.recortador', label: 'Recortador do navegador (favorito ✂)', keys: 'bookmarklet clipper web extensao', run: () => (files.clipDialog = true) },
+    { id: 'nota.destaques', label: 'Juntar destaques da nota', keys: 'highlights marcacoes realces ==', when: cur, run: () => files.gatherHighlights(cur()!) },
+
+    // vida (Hoje)
+    { id: 'vida.tarefa', label: 'Nova tarefa', keys: 'todo tarefa capturar hoje', run: () => { a.go('hoje'); setTimeout(() => (document.querySelector('.hoje .quick input') as HTMLInputElement | null)?.focus(), 120); } },
+    { id: 'vida.revisao', label: 'Revisão da semana', keys: 'semanal review weekly', run: () => { vida.review(); a.go('notas'); } },
+    { id: 'vida.montar', label: 'Montar sistema de vida (tarefas, projetos, hábitos, metas, diário)', keys: 'setup bancos life gtd', run: () => { vida.setup(); a.go('hoje'); } },
 
     // grafo e quadros
     {

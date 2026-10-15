@@ -32,6 +32,8 @@
   import PropertiesPanel from './lib/bases/PropertiesPanel.svelte';
   import Popover from './lib/bases/Popover.svelte';
   import { bases } from './lib/bases/bases.svelte';
+  import HojeView from './lib/vida/HojeView.svelte';
+  import WebClipDialog from './lib/files/WebClipDialog.svelte';
   import Splash from './lib/Splash.svelte';
   import SettingsPanel from './lib/SettingsPanel.svelte';
   import { feel } from './lib/feel.svelte';
@@ -59,7 +61,7 @@
   /** marcador que desliza até o módulo ativo na barra */
   let mark = $state<{ x: number; y: number; w: number; h: number } | null>(null);
   let error = $state('');
-  type View = 'notas' | 'bancos' | 'grafo' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'calculo' | 'arquivos' | 'luta' | 'mundos' | 'slides' | 'plugins' | `plugin:${string}`;
+  type View = 'hoje' | 'notas' | 'bancos' | 'grafo' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'calculo' | 'arquivos' | 'luta' | 'mundos' | 'slides' | 'plugins' | `plugin:${string}`;
   let view = $state<View>('notas');
   /** id do plugin cuja tela está aberta */
   const pluginView = $derived(view.startsWith('plugin:') ? view.slice(7) : null);
@@ -67,6 +69,7 @@
   let aiOpened = $state(false);
 
   const modules = [
+    { id: 'hoje', label: 'Hoje', ready: true },
     { id: 'notas', label: 'Notas', ready: true },
     { id: 'bancos', label: 'Bancos', ready: true },
     { id: 'grafo', label: 'Grafo', ready: true },
@@ -292,6 +295,8 @@
           {#await import('./lib/calc/CalcView.svelte') then m}
             <m.default onOpenNote={(p: string) => { engine.open(p); go('notas'); }} />
           {/await}
+        {:else if view === 'hoje' && engine.ready}
+          <HojeView onOpenNote={openNote} />
         {:else if view === 'bancos' && engine.ready}
           <DatabasesView onOpenNote={openNote} />
         {:else if view === 'grafo' && engine.ready}
@@ -329,6 +334,10 @@
     {#key notes.palette.seq}
       <Palette go={(v) => go(v as View)} onclose={() => (notes.palette = null)} />
     {/key}
+  {/if}
+
+  {#if files.clipDialog}
+    <WebClipDialog onclose={() => (files.clipDialog = false)} />
   {/if}
 
   {#if files.notice || files.busy}

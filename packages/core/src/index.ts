@@ -31,7 +31,11 @@ export * from './sheet';
 export { AnnotationStore, annotationsToMarkdown, type PdfAnnotation, type AnnotKind, type AnnotEdit } from './annotations';
 export { exportAnnotatedPdf } from './pdf-export';
 export { fileKind, mimeOf, freePath, convertToNote, decodeText, resolveLink, CONVERTIBLE, FOLDERS, type FileKind } from './files';
-export { prepareClip, clipToMarkdown, linkCard, readPageMeta, normalizeUrl, localStamp, type PageMeta, type PreparedClip } from './webclip';
+export {
+  prepareClip, clipToMarkdown, linkCard, readPageMeta, normalizeUrl, localStamp, youtubeId, addHighlight, collectHighlights, syncHighlights,
+  parseClipTemplate, pickClipTemplate, canonicalUrl, findClip, clipperBookmarklet, HIGHLIGHTS_TITLE, CLIP_UNREAD, CLIP_TEMPLATES_DIR,
+  type PageMeta, type PreparedClip, type ClipOptions, type ClipTemplate,
+} from './webclip';
 export { htmlToMarkdown, tidyMarkdown } from './convert/html';
 export { markdownToHtml, markdownToFragment, markdownToDocx, obsidianToCommonMark, imageSize, type ExportOptions } from './convert/export';
 export { pdfTextToMarkdown, type PdfTextItem } from './convert/pdf-text';
@@ -44,3 +48,4 @@ export * from './plugins';
 export * from './base';
 export * from './graph';
 export { comboOf, normalizeCombo } from './hotkeys';
+export * from './vida';

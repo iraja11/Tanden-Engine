@@ -123,6 +123,7 @@ export const DB_TEMPLATES: DbTemplate[] = [
       fim: { displayName: 'Fim', type: 'date' },
       área: { displayName: 'Área', type: 'select', options: [{ value: 'Trabalho', color: 'blue' }, { value: 'Estudo', color: 'purple' }, { value: 'Pessoal', color: 'green' }] },
       progresso: { displayName: 'Progresso', type: 'number', format: 'percent' },
+      meta: { displayName: 'Meta', type: 'relation', target: 'Metas' },
     },
     views: [
       { type: 'table', name: 'Projetos', order: ['file.name', 'note.status', 'note.área', 'note.progresso', 'note.início', 'note.fim'], groupBy: { property: 'note.área', direction: 'ASC' } },
@@ -175,6 +176,29 @@ export const DB_TEMPLATES: DbTemplate[] = [
       { type: 'calendar', name: 'Mês', date: 'note.data' },
     ],
     rowTemplates: [{ name: 'Dia', text: '---\ndata: {{date}}\nexercício: false\nleitura: false\nágua: false\nestudo: false\n---\n# {{title}}\n' }],
+  },
+  {
+    id: 'metas', name: 'Metas', icon: '⚑', description: 'Metas com alvo e valor atual, prazo e progresso; projetos ligados contam também.',
+    properties: {
+      status: status('Planejada', 'Ativa', 'Alcançada'),
+      área: { displayName: 'Área', type: 'select', options: [{ value: 'Saúde', color: 'green' }, { value: 'Estudo', color: 'purple' }, { value: 'Trabalho', color: 'blue' }, { value: 'Finanças', color: 'yellow' }, { value: 'Pessoal', color: 'pink' }] },
+      alvo: { displayName: 'Alvo', type: 'number' },
+      atual: { displayName: 'Atual', type: 'number' },
+      unidade: { displayName: 'Unidade', type: 'text' },
+      prazo: { displayName: 'Prazo', type: 'date' },
+      'formula.progresso': { displayName: 'Progresso', format: 'percent' },
+    },
+    formulas: { progresso: 'if(alvo > 0, min(atual / alvo, 1), "")' },
+    views: [
+      { type: 'gallery', name: 'Metas', order: ['file.name', 'formula.progresso', 'note.prazo', 'note.área'] },
+      { type: 'table', name: 'Tabela', order: ['file.name', 'note.status', 'note.área', 'note.atual', 'note.alvo', 'note.unidade', 'formula.progresso', 'note.prazo'], groupBy: { property: 'note.área', direction: 'ASC' } },
+      { type: 'board', name: 'Por status', groupBy: { property: 'note.status', direction: 'ASC' }, order: ['file.name', 'formula.progresso'] },
+    ],
+    samples: [
+      { name: 'Ler 12 livros', props: { status: 'Ativa', área: 'Estudo', alvo: '12', atual: '3', unidade: 'livros', prazo: '@hoje+75' } },
+      { name: 'Correr 5 km', props: { status: 'Planejada', área: 'Saúde', alvo: '5', atual: '1.5', unidade: 'km', prazo: '@hoje+60' } },
+    ],
+    rowTemplates: [{ name: 'Meta', text: '---\nstatus: Planejada\n---\n# {{title}}\n\n## Por quê\n\n## Como vou medir\n\n## Marcos\n- [ ] \n' }],
   },
   {
     id: 'reunioes', name: 'Reuniões', icon: '◷', description: 'Atas com data, participantes e pauta pronta em cada reunião nova.',
