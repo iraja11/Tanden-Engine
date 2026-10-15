@@ -1,3 +1,4 @@
+import { newBlockId, scanNote } from '@tanden/core';
 import { autocompletion, startCompletion, type Completion, type CompletionContext, type CompletionResult, type CompletionSection } from '@codemirror/autocomplete';
 import { EditorView } from '@codemirror/view';
 import type { Extension } from '@codemirror/state';
@@ -214,11 +215,49 @@ function wikiSource(ctx: CompletionContext): CompletionResult | null {
   const close = after === ']]' ? 2 : 0;
   const hash = query.indexOf('#');
   if (hash >= 0) {
-    // [[nota#  →  títulos daquela nota
     const note = query.slice(0, hash);
     const text = host.noteText?.(note || (host.current?.() ?? '')) ?? '';
-    const q = fold(query.slice(hash + 1));
-    const heads = [...text.matchAll(/^#{1,6}\s+(.+)$/gm)].map((h) => h[1]!.trim()).filter((h) => fold(h).includes(q));
+    const sub = query.slice(hash + 1);
+    const scan = scanNote(text);
+    if (sub.startsWith('^')) {
+      // [[nota#^  →  blocos (parágrafos, itens) daquela nota; cria o ^id ao escolher
+      const q = fold(sub.slice(1));
+      const lines = text.split('\n');
+      const ids = new Map(scan.blocks.map((b) => [b.line, b.id]));
+      const opts: Completion[] = [];
+      let inCode = false;
+      lines.forEach((l, n) => {
+        if (/^\s*(```|~~~)/.test(l)) inCode = !inCode;
+        if (inCode || n < scan.bodyLine || !l.trim() || /^\s*(---|\^[\w-]+\s*$)/.test(l) || opts.length >= 60) return;
+        const shown = l.replace(/\s\^[\w-]+\s*$/, '').trim();
+        if (q && !fold(shown).includes(q) && !(ids.get(n) ?? '').includes(q)) return;
+        const id = ids.get(n);
+        opts.push({
+          label: shown.length > 80 ? `${shown.slice(0, 80)}…` : shown,
+          detail: id ? `^${id}` : '',
+          type: 'text',
+          apply: (view, _c, f, t) => {
+            const self = !note || host.resolve?.(note) === host.current?.();
+            const insert = (got: string) => ({ from: f, to: t, insert: `^${got}]]` });
+            if (id) return view.dispatch({ changes: insert(id), selection: { anchor: f + id.length + 3 } });
+            if (self && n + 1 <= view.state.doc.lines) {
+              // bloco desta mesma nota: o ^id entra na mesma transação
+              const got = newBlockId(view.state.doc.toString());
+              const line = view.state.doc.line(n + 1);
+              const tail = { from: line.to, insert: ` ^${got}` };
+              const changes = view.state.changes(line.to <= f ? [tail, insert(got)] : [insert(got), tail]);
+              return view.dispatch({ changes, selection: { anchor: changes.mapPos(t, 1) } });
+            }
+            const got = host.ensureBlock?.(note, n);
+            if (got) view.dispatch({ changes: insert(got), selection: { anchor: f + got.length + 3 } });
+          },
+        });
+      });
+      return { from: from + hash + 1, to: ctx.pos + close, filter: false, options: opts };
+    }
+    // [[nota#  →  títulos daquela nota (fora de código)
+    const q = fold(sub);
+    const heads = scan.headings.map((h) => h.text).filter((h) => fold(h).includes(q));
     return {
       from: from + hash + 1,
       to: ctx.pos + close,
@@ -228,7 +267,17 @@ function wikiSource(ctx: CompletionContext): CompletionResult | null {
   }
   const options = noteOptions(host, query, (target) => `${target}]]`, (q) => {
     const t = q.trim();
-    if (!t || host.notes().some((p) => fold(noteName(p)) === fold(t))) return [];
+    const out: Completion[] = [];
+    // apelidos: [[Nota|apelido]], que o Obsidian também entende
+    if (t && host.aliases) {
+      for (const a of host.aliases()) {
+        if (!fold(a.alias).includes(fold(t)) || out.length >= 8) continue;
+        const c: Completion = { label: a.alias, detail: `apelido de ${noteName(a.path)}`, type: 'note', boost: fold(a.alias).startsWith(fold(t)) ? 1 : 0, apply: `${noteName(a.path)}|${a.alias}]]` };
+        iconOf.set(c, '≈');
+        out.push(c);
+      }
+    }
+    if (!t || host.notes().some((p) => fold(noteName(p)) === fold(t)) || host.resolve?.(t)) return out;
     const c: Completion = {
       label: `Criar "${t}"`,
       detail: 'nota nova',
@@ -239,7 +288,7 @@ function wikiSource(ctx: CompletionContext): CompletionResult | null {
       },
     };
     iconOf.set(c, '+');
-    return [c];
+    return [...out, c];
   });
   return { from, to: ctx.pos + close, options, filter: false };
 }

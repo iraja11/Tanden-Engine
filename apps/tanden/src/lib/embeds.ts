@@ -1,3 +1,4 @@
+import { noteSection } from '@tanden/core';
 import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view';
 import { StateField, type EditorState, type Range } from '@codemirror/state';
 
@@ -205,24 +206,30 @@ class MediaWidget extends WidgetType {
 }
 
 class NoteWidget extends WidgetType {
-  constructor(readonly target: string, readonly sub: string, readonly html: string, readonly host: EmbedHost) {
+  constructor(readonly target: string, readonly sub: string, readonly html: string, readonly host: EmbedHost, readonly empty = '') {
     super();
   }
   eq(o: NoteWidget) {
-    return o.target === this.target && o.sub === this.sub && o.html === this.html;
+    return o.target === this.target && o.sub === this.sub && o.html === this.html && o.empty === this.empty;
   }
   toDOM() {
     const wrap = document.createElement('div');
     wrap.className = 'cm-embed cm-embed-note';
     const head = document.createElement('button');
     head.className = 'head';
-    head.textContent = `${this.target.split('/').pop()}${this.sub ? ` › ${this.sub.slice(1)}` : ''}`;
+    head.textContent = `${this.target.split('/').pop()}${this.sub ? ` › ${this.sub.slice(1).split('#').join(' › ')}` : ''}`;
     head.title = 'Abrir a nota';
     head.addEventListener('mousedown', (e) => e.preventDefault());
     head.addEventListener('click', () => this.host.open(this.target + this.sub));
     const body = document.createElement('div');
     body.className = 'md-render';
-    body.innerHTML = this.html || '<p class="muted">Nota vazia ou não encontrada.</p>';
+    if (this.html) body.innerHTML = this.html;
+    else {
+      const p = document.createElement('p');
+      p.className = 'muted';
+      p.textContent = this.empty || 'Nota vazia.';
+      body.append(p);
+    }
     wrap.append(head, body);
     return wrap;
   }
@@ -255,24 +262,10 @@ class FileWidget extends WidgetType {
   }
 }
 
-/** Trecho de uma nota a partir de um título (#Seção), até o próximo título do mesmo nível. */
-function section(text: string, sub: string): string {
-  const body = text.replace(/^---\n[\s\S]*?\n---\n?/, '');
-  if (!sub) return body;
-  const want = sub.slice(1).trim().toLowerCase();
-  const lines = body.split('\n');
-  const start = lines.findIndex((l) => /^#{1,6}\s/.test(l) && l.replace(/^#+\s*/, '').trim().toLowerCase() === want);
-  if (start < 0) return '';
-  const level = /^#+/.exec(lines[start]!)![0].length;
-  let end = lines.length;
-  for (let i = start + 1; i < lines.length; i++) {
-    const h = /^(#+)\s/.exec(lines[i]!);
-    if (h && h[1]!.length <= level) {
-      end = i;
-      break;
-    }
-  }
-  return lines.slice(start, end).join('\n');
+/** Trecho de uma nota: a nota toda (sem o topo), um título (#Seção, #A#B) ou um bloco (#^id). */
+function section(text: string, sub: string): string | null {
+  if (!sub) return text.replace(/^---\n[\s\S]*?\n---\n?/, '');
+  return noteSection(text, sub.slice(1));
 }
 
 function widgetFor(f: Found, host: EmbedHost): WidgetType | null {
@@ -284,8 +277,9 @@ function widgetFor(f: Found, host: EmbedHost): WidgetType | null {
   if (f.wiki && /\.[a-z0-9]{2,5}$/i.test(f.target) && !/\.md$/i.test(f.target)) return new FileWidget(f.target, host);
   if (f.wiki && host.noteText && host.render) {
     const text = host.noteText(f.target);
-    const md = text === null ? '' : section(text, f.sub);
-    return new NoteWidget(f.target.replace(/\.md$/i, ''), f.sub, md ? host.render(md.length > 20000 ? md.slice(0, 20000) : md) : '', host);
+    const md = text === null ? null : section(text, f.sub);
+    const empty = text === null ? 'Esta nota ainda não existe.' : md === null ? `Não achei "${f.sub.slice(1)}" nessa nota.` : 'Trecho vazio.';
+    return new NoteWidget(f.target.replace(/\.md$/i, ''), f.sub, md ? host.render(md.length > 20000 ? md.slice(0, 20000) : md) : '', host, empty);
   }
   return null;
 }

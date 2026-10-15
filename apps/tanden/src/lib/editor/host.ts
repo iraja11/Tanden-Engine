@@ -19,6 +19,14 @@ export interface EditorHost extends EmbedHost {
   render?(md: string): string;
   /** caminho da nota aberta */
   current?(): string | null;
+  /** para onde um [[alvo]] leva (com apelidos), ou null se a nota não existe */
+  resolve?(target: string): string | null;
+  /** apelidos (aliases:) das notas, para sugerir [[Nota|apelido]] */
+  aliases?(): Array<{ alias: string; path: string }>;
+  /** clique numa #tag */
+  openTag?(tag: string): void;
+  /** garante um ^id na linha da nota (vazio = a atual) e devolve o id */
+  ensureBlock?(target: string, line: number): string | null;
 }
 
 export const hostFacet = Facet.define<EditorHost | null, EditorHost | null>({ combine: (v) => v.find((x) => x) ?? null });
@@ -30,6 +38,7 @@ export function linkExists(host: EditorHost | null, target: string): boolean {
   if (!host) return true;
   const t = target.split('#')[0]!.trim();
   if (!t || /^https?:/i.test(t) || (/\.[a-z0-9]{2,5}$/i.test(t) && !/\.md$/i.test(t))) return true;
+  if (host.resolve) return host.resolve(t) !== null;
   const want = strip(t);
   return host.notes().some((p) => {
     const s = strip(p);

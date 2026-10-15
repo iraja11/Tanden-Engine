@@ -31,7 +31,7 @@
 
   const textual = $derived(['text', 'number', 'url', 'email', 'phone'].includes(type));
   const strs = $derived(asStrings(value));
-  const late = $derived(value instanceof Date && (type === 'date' || type === 'datetime') && value.getTime() < new Date().setHours(0, 0, 0, 0));
+  const late = $derived(value instanceof Date && (type === 'date' || type === 'datetime') && value.getTime() < new Date().setHours(0, 0, 0, 0) && !bases.isDone(row.rec.path, row.rec.props));
   const fraction = $derived(typeof value === 'number' && cfg.format?.startsWith('percent') && value >= 0 && value <= 1.0001);
 
   function start(e?: Event) {

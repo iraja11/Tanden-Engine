@@ -4,6 +4,7 @@
   import { notes } from './notes.svelte';
   import { noteName } from './host';
   import { renderInline } from './inline';
+  import { scanNote } from '@tanden/core';
 
   // Painel ao lado da nota: sumário (títulos) e conexões (backlinks, links, menções sem link).
   let { path, line }: { path: string; line: number } = $props();
@@ -38,7 +39,13 @@
     notes.rev;
     return showUnlinked ? notes.unlinked(path) : [];
   });
-  const tags = $derived([...new Set([...engine.content.matchAll(/(?:^|[\s(])#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)/gu)].map((m) => m[1]!))]);
+  // tags do texto e do topo, fora de código (as mesmas que o índice conta)
+  const tags = $derived(scanNote(engine.content).tags);
+  const missing = $derived.by(() => {
+    notes.rev;
+    return notes.missing(path);
+  });
+  const aliases = $derived(scanNote(engine.content).aliases);
 
   function openAt(p: string, n: number) {
     engine.open(p);
@@ -70,6 +77,7 @@
           <div class="ref">
             <button class="name" onclick={() => engine.open(b.path)}>{noteName(b.path)}</button>
             {#each b.lines as l (l.n)}
+              {#if l.embed}<i class="emb" title="Esta nota aparece embutida ali">embutida</i>{/if}
               <button class="ctx" onclick={() => openAt(b.path, l.n)}>{@html renderInline(l.text.slice(0, 220))}</button>
             {/each}
           </div>
@@ -85,17 +93,34 @@
           {/each}
         </section>
       {/if}
+      {#if missing.length}
+        <section>
+          <h4>Links para notas que não existem <span>{missing.length}</span></h4>
+          {#each missing as m (m)}
+            <button class="chip missing" onclick={() => notes.openLink(m)} title="Criar a nota {m}">+ {m.split('/').pop()}</button>
+          {/each}
+        </section>
+      {/if}
+      {#if aliases.length}
+        <section>
+          <h4>Apelidos</h4>
+          {#each aliases as a (a)}<span class="chip alias">{a}</span>{/each}
+        </section>
+      {/if}
       {#if tags.length}
         <section>
           <h4>Tags</h4>
           {#each tags as t (t)}
-            <button class="chip tag" onclick={() => notes.openPalette('busca')} title="Buscar #{t}">#{t}</button>
+            <button class="chip tag" onclick={() => notes.searchFor(`tag:#${t}`)} title="Notas com #{t}">#{t}</button>
           {/each}
         </section>
       {/if}
       <section>
         <h4>
           <button class="toggle" onclick={() => (showUnlinked = !showUnlinked)}>{showUnlinked ? '▾' : '▸'} Menções sem link</button>
+          {#if showUnlinked && unlinked.length > 1}
+            <button class="link all" onclick={() => { for (const u of unlinked) notes.linkMentions(u.path, path); }}>Linkar todas</button>
+          {/if}
         </h4>
         {#if showUnlinked}
           {#each unlinked as u (u.path)}
@@ -145,6 +170,11 @@
   .chip { border: 1px solid var(--line); background: var(--void); color: var(--ink); border-radius: 999px; padding: 3px 10px; margin: 0 4px 6px 0; font-size: 12.5px; }
   .chip:hover { border-color: var(--ember); color: var(--ember); }
   .chip.tag { color: var(--ember-soft); }
+  .chip.missing { border-style: dashed; color: var(--muted); }
+  .chip.missing:hover { color: var(--ember); }
+  .chip.alias { display: inline-block; color: var(--muted); }
+  h4 .all { float: right; text-transform: none; letter-spacing: 0; font-family: var(--f-body); }
+  .emb { display: inline-block; margin: 2px 6px 0; font: 600 9.5px var(--f-mono); font-style: normal; text-transform: uppercase; letter-spacing: .06em; color: var(--ember); opacity: .8; }
   .toggle { border: 0; background: none; padding: 0; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; }
   .link { border: 1px solid var(--line); background: var(--surface-2); color: var(--ember); border-radius: 7px; padding: 2px 8px; font-size: 11.5px; }
   .empty { color: var(--muted); font-size: 12.5px; line-height: 1.5; padding: 0 4px; }

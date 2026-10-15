@@ -33,7 +33,7 @@
 .cm-wikilink.missing { color: color-mix(in srgb, var(--ember-soft) 60%, var(--muted)); border-bottom-style: dashed; }
 .cm-wikilink-sub { opacity: .55; }
 .cm-link-src { color: var(--ember-soft); }
-.cm-tag { color: var(--ember-soft); background: color-mix(in srgb, var(--ember) 12%, transparent); border-radius: 999px; padding: .05em .5em; font-size: .9em; }
+.cm-tag { cursor: pointer; color: var(--ember-soft); background: color-mix(in srgb, var(--ember) 12%, transparent); border-radius: 999px; padding: .05em .5em; font-size: .9em; }
 .cm-comment { color: var(--muted); opacity: .7; font-style: italic; }
 .cm-footref { font-size: .75em; vertical-align: super; color: var(--ember-soft); }
 
@@ -229,3 +229,13 @@
 .cm-line.cm-code-last { border-radius: 0 0 10px 10px; padding-bottom: 6px; }
 .cm-fence-label { display: inline-block; font: 600 10.5px var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 1px 0; user-select: none; }
 .cm-line.cm-fence-end { line-height: 6px; font-size: 6px; }
+.cm-tooltip.cm-tooltip-hover:has(.cm-link-preview) { border: 0; background: none; }
+.cm-link-preview { width: min(460px, 80vw); max-height: 340px; overflow: auto; padding: 10px 14px 12px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--line); box-shadow: 0 18px 40px -18px #000, 0 0 0 1px color-mix(in srgb, var(--ember) 18%, transparent);
+  font: 13.5px/1.55 var(--f-body); color: var(--ink); animation: cm-peek .14s ease-out; }
+.cm-link-preview .head { display: block; border: 0; background: none; padding: 0 0 6px; font: 600 13px var(--f-display); color: var(--ember-soft); cursor: pointer; }
+.cm-link-preview .head:hover { text-decoration: underline; }
+.cm-link-preview .md-render.muted { color: var(--muted); }
+.cm-link-preview .md-render > :first-child { margin-top: 0; }
+.cm-link-preview .md-render h1, .cm-link-preview .md-render h2 { font-size: 1.1em; }
+@keyframes cm-peek { from { opacity: 0; transform: translateY(4px); } }

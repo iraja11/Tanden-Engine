@@ -1,5 +1,7 @@
 // Ponte entre o editor de notas aberto e quem quer escrever nele (anexos,
-// páginas web). O editor se registra ao montar e sai ao desmontar.
+// páginas web). O editor se registra ao montar e sai ao desmontar; com dois
+// editores abertos (a nota e o painel lateral de um banco), vale o mais novo,
+// e o anterior volta a valer quando o mais novo fecha.
 
 interface EditorApi {
   /** insere no cursor, em linha própria; devolve false se não deu. caret: onde o cursor fica, contado dentro de text */
@@ -8,24 +10,31 @@ interface EditorApi {
   goto?(line: number): void;
   /** devolve o foco ao texto (atEnd: cursor no fim) */
   focus?(atEnd?: boolean): void;
+  /** linha (a partir de 0) onde o cursor está */
+  line?(): number;
 }
 
-let current: EditorApi | null = null;
+const stack: EditorApi[] = [];
+const current = (): EditorApi | null => stack[stack.length - 1] ?? null;
 
 export const editorBridge = {
   attach(api: EditorApi): () => void {
-    current = api;
+    stack.push(api);
     return () => {
-      if (current === api) current = null;
+      const i = stack.indexOf(api);
+      if (i >= 0) stack.splice(i, 1);
     };
   },
   insert(text: string, caret?: number): boolean {
-    return current?.insert(text, caret) ?? false;
+    return current()?.insert(text, caret) ?? false;
   },
   goto(line: number): void {
-    current?.goto?.(line);
+    current()?.goto?.(line);
   },
   focus(atEnd?: boolean): void {
-    current?.focus?.(atEnd);
+    current()?.focus?.(atEnd);
+  },
+  line(): number {
+    return current()?.line?.() ?? -1;
   },
 };

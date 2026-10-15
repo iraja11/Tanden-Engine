@@ -136,6 +136,21 @@ class FenceLabel extends WidgetType {
 }
 const hidden = Decoration.replace({});
 
+/** "Nota#Seção" aparece como "Nota › Seção", como no Obsidian */
+class SubSep extends WidgetType {
+  eq() {
+    return true;
+  }
+  toDOM() {
+    const s = document.createElement('span');
+    s.className = 'cm-wikilink-sub';
+    s.textContent = ' › ';
+    return s;
+  }
+}
+const subSep = new SubSep();
+const BLOCK_ID = /\s\^([A-Za-z0-9-]+)\s*$/;
+
 const HL = /(^|[^=])(==)(?=\S)([^=\n]+?)(==)(?!=)/g;
 const WIKI = /(!?)\[\[([^\[\]\n]+?)\]\]/g;
 const TAG = /(^|[\s(])#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)/gu;
@@ -334,9 +349,16 @@ function build(view: EditorView): DecorationSet {
             const labelFrom = bar >= 0 ? a + 2 + bar + 1 : a + 2;
             hide(a, labelFrom);
             hide(b - 2, b);
-            const hash = bar < 0 ? target.indexOf('#') : -1;
             out.push(Decoration.mark({ class: `cm-wikilink${ok ? '' : ' missing'}`, attributes: { 'data-href': target, title: ok ? target : `${target} (ainda não existe: clique para criar)` } }).range(labelFrom, b - 2));
-            if (hash > 0) out.push(Decoration.mark({ class: 'cm-wikilink-sub' }).range(a + 2 + hash, a + 2 + hash + 1));
+            if (bar < 0) {
+              // [[#Seção]] mostra só a seção; [[Nota#A#B]] vira "Nota › A › B"
+              let at = target.indexOf('#');
+              if (at === 0) hide(a + 2, a + 3);
+              else while (at > 0) {
+                out.push(Decoration.replace({ widget: subSep }).range(a + 2 + at, a + 2 + at + 1));
+                at = target.indexOf('#', at + 1);
+              }
+            }
           } else out.push(Decoration.mark({ class: 'cm-link-src' }).range(a, b));
         }
       }
@@ -347,6 +369,11 @@ function build(view: EditorView): DecorationSet {
           if (/^\d+$/.test(m[2]!) || inCode(a)) continue;
           out.push(Decoration.mark({ class: 'cm-tag', attributes: { 'data-tag': m[2]! } }).range(a, b));
         }
+      }
+      // ^id de bloco no fim da linha: some fora do cursor, como no Obsidian
+      if (t.includes('^')) {
+        const bid = BLOCK_ID.exec(t);
+        if (bid && !lineActive(line.from) && !inCode(line.from + bid.index)) hide(line.from + bid.index, line.to);
       }
       if (t.includes('%%')) for (const m of t.matchAll(COMMENT)) out.push(Decoration.mark({ class: 'cm-comment' }).range(line.from + m.index!, line.from + m.index! + m[0].length));
       if (t.includes('[^')) for (const m of t.matchAll(FOOT)) if (!/^\[\^[^\]]+\]:/.test(t.slice(m.index!))) out.push(Decoration.mark({ class: 'cm-footref' }).range(line.from + m.index!, line.from + m.index! + m[0].length));
@@ -385,6 +412,15 @@ export const livePreview = ViewPlugin.fromClass(
     eventHandlers: {
       mousedown(e, view) {
         if (e.button !== 0 || e.shiftKey || e.altKey) return false;
+        const tag = (e.target as HTMLElement).closest?.('[data-tag]') as HTMLElement | null;
+        if (tag && view.contentDOM.contains(tag)) {
+          const h = view.state.facet(hostFacet);
+          if (h?.openTag) {
+            e.preventDefault();
+            h.openTag(tag.dataset.tag!);
+            return true;
+          }
+        }
         const el = (e.target as HTMLElement).closest?.('[data-href]') as HTMLElement | null;
         if (!el || !view.contentDOM.contains(el)) return false;
         const host = view.state.facet(hostFacet);

@@ -8,6 +8,7 @@ import { formatKeymap } from './format';
 import { blockHandle } from './handle';
 import { hostFacet, type EditorHost } from './host';
 import { hideFrontmatter, livePreview } from './live';
+import { linkPreview } from './hover';
 import { smartPaste } from './paste';
 import { slashMenu } from './slash';
 import { tables } from './tables';
@@ -33,6 +34,7 @@ export function notionLike(host: EditorHost, opts: { preview?: boolean } = {}): 
     slashMenu,
     bubble,
     smartPaste,
+    linkPreview,
     codeFolding({
       placeholderDOM: (_view, onclick) => {
         const s = document.createElement('span');

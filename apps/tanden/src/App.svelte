@@ -16,6 +16,8 @@
   import { notes } from './lib/editor/notes.svelte';
   import NotePage from './lib/editor/NotePage.svelte';
   import Palette from './lib/editor/Palette.svelte';
+  import SearchPanel from './lib/editor/SearchPanel.svelte';
+  import ExplorePanel from './lib/editor/ExplorePanel.svelte';
   import LutaView from './lib/cadernos/LutaView.svelte';
   import MundoView from './lib/cadernos/MundoView.svelte';
   import { cadernos } from './lib/cadernos/cadernos.svelte';
@@ -126,6 +128,9 @@
   }
 
   let treeFilter = $state('');
+  const favs = $derived(notes.favorites.filter((p) => engine.notes.includes(p)));
+  // clique numa #tag (no texto ou nas conexões): no celular, abre a gaveta na busca
+  $effect(() => { if (notes.search) untrack(() => { drawer = true; }); });
   let newMenu = $state<HTMLElement | null>(null);
   function openNote(p: string) {
     if (p !== engine.active) sound.play('tick');
@@ -171,7 +176,7 @@
       if (mod && k === 'n' && !e.shiftKey) { e.preventDefault(); newNote(); go('notas'); }
       // Ctrl+K vira link dentro do editor; fora dele (ou sem seleção) abre a paleta
       if (mod && !e.shiftKey && (k === 'p' || k === 'o' || (k === 'k' && !e.defaultPrevented))) { e.preventDefault(); notes.openPalette(k === 'p' ? 'comandos' : 'tudo'); }
-      if (mod && e.shiftKey && k === 'f') { e.preventDefault(); notes.openPalette('busca'); }
+      if (mod && e.shiftKey && k === 'f') { e.preventDefault(); notes.searchFor(''); }
       if (mod && e.shiftKey && k === 'e') { e.preventDefault(); notes.setPreview(!notes.preview); }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); void syncByHand(); }
       if ((e.ctrlKey || e.metaKey) && e.key === ',') { e.preventDefault(); toggleSettings(); }
@@ -217,8 +222,30 @@
         <button class="new more" onclick={(e) => (newMenu = newMenu ? null : e.currentTarget as HTMLElement)} title="Nova a partir de modelo" aria-label="Mais opções de criação">▾</button>
       </span>
     </header>
-    <input class="find" placeholder="Filtrar notas" bind:value={treeFilter} aria-label="Filtrar notas" />
-    <div class="treewrap"><PageTree notes={engine.notes} active={view === 'notas' ? engine.active : null} filter={treeFilter} onopen={openNote} /></div>
+    <div class="stabs" role="tablist">
+      <button role="tab" class:on={notes.sidebar === 'paginas'} onclick={() => (notes.sidebar = 'paginas')}>Páginas</button>
+      <button role="tab" class:on={notes.sidebar === 'busca'} onclick={() => (notes.sidebar = 'busca')} title="Buscar no cofre (Ctrl+Shift+F)">Busca</button>
+      <button role="tab" class:on={notes.sidebar === 'tags'} onclick={() => (notes.sidebar = 'tags')} title="Tags, links sem nota e notas soltas">Explorar</button>
+    </div>
+    {#if notes.sidebar === 'busca'}
+      <SearchPanel onopen={openNote} />
+    {:else if notes.sidebar === 'tags'}
+      <ExplorePanel onopen={openNote} />
+    {:else}
+      <input class="find" placeholder="Filtrar notas" bind:value={treeFilter} aria-label="Filtrar notas" />
+      <div class="treewrap">
+        {#if favs.length && !treeFilter.trim()}
+          <h3 class="fav-h">Favoritas</h3>
+          <ul class="favs">
+            {#each favs as f (f)}
+              <li><button class:on={view === 'notas' && engine.active === f} onclick={() => openNote(f)} title={f}><span>★</span>{f.split('/').pop()!.replace(/\.md$/, '')}</button></li>
+            {/each}
+          </ul>
+          <h3 class="fav-h">Páginas</h3>
+        {/if}
+        <PageTree notes={engine.notes} active={view === 'notas' ? engine.active : null} filter={treeFilter} onopen={openNote} />
+      </div>
+    {/if}
   </aside>
   {#if newMenu}
     <Popover anchor={newMenu} onclose={() => (newMenu = null)}>
@@ -397,6 +424,15 @@
   .find { margin: 0 12px 8px; background: var(--void); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); padding: 6px 9px; font: 12.5px var(--f-body); outline: none; }
   .find:focus { border-color: var(--ember); }
   .treewrap { flex: 1; min-height: 0; overflow-y: auto; padding: 0 8px 16px; }
+  .stabs { display: flex; gap: 2px; margin: 0 12px 8px; padding: 2px; border-radius: 9px; background: var(--void); border: 1px solid var(--line); }
+  .stabs button { flex: 1; border: 0; background: none; border-radius: 7px; padding: 4px 0; color: var(--muted); font: 600 10.5px var(--f-display); letter-spacing: .08em; text-transform: uppercase; }
+  .stabs button.on { background: var(--surface-2); color: var(--ink); }
+  .stabs button:hover:not(.on) { color: var(--ink); }
+  .fav-h { margin: 6px 8px 4px; font: 600 10px var(--f-display); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .favs { list-style: none; margin: 0 0 8px; padding: 0; }
+  .favs button { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: none; border-radius: 8px; padding: 5px 8px; text-align: left; color: var(--ink); font: 500 13.5px var(--f-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .favs button span { color: var(--ember); font-size: 11px; }
+  .favs button:hover, .favs button.on { background: var(--surface-2); }
 
   .main { grid-area: main; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
   .main :global(.editor) { flex: 1; }

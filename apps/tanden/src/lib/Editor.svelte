@@ -213,6 +213,9 @@
         if (atEnd) view.dispatch({ selection: { anchor: view.state.doc.length } });
         view.focus();
       },
+      line() {
+        return view ? view.state.doc.lineAt(view.state.selection.main.head).number - 1 : -1;
+      },
     });
     return () => {
       remember();

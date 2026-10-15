@@ -2,8 +2,9 @@
  * Executa um banco sobre as notas do cofre: filtra, calcula fórmulas, ordena,
  * agrupa e resume. Tudo em memória, a partir do texto das notas.
  */
-import { asList, parseProps, setProp, splitFrontmatter, type PropValue, type Props } from '../caderno/frontmatter';
-import { linkTarget, noteDir, noteName } from '../caderno/markdown';
+import { asList, setProp, splitFrontmatter, type PropValue, type Props } from '../caderno/frontmatter';
+import { scanNote, type NoteScan } from '../knowledge';
+import { noteDir, noteName } from '../caderno/markdown';
 import {
   ExprError, Link, autoValue, compare, evaluate, isEmpty, isoDate, isObj, parseDate, show, truthy,
   type Obj, type Scope, type Value,
@@ -25,25 +26,16 @@ export interface NoteRec {
   image?: string;
 }
 
-const TAG_RE = /(?:^|[\s(])#([\p{L}\p{N}_/-]*\p{L}[\p{L}\p{N}_/-]*)/gu;
 const IMG_RE = /!\[\[([^\]|#]+\.(?:png|jpe?g|gif|webp|avif|svg|bmp))(?:\|[^\]]*)?\]\]|!\[[^\]]*\]\((<[^>]+>|[^)\s]+)/i;
 
-/** Lê uma nota para o índice dos bancos. */
-export function noteRecord(path: string, text: string, mtime?: number): NoteRec {
-  const props = parseProps(text);
+/** Lê uma nota para o índice dos bancos (tags e links contam como no resto do app). */
+export function noteRecord(path: string, text: string, mtime?: number, scanned?: NoteScan): NoteRec {
+  const scan = scanned ?? scanNote(text);
+  const props = scan.props;
   const { body } = splitFrontmatter(text);
-  const tags = new Set<string>();
-  for (const t of [...asList(props.tags), ...asList(props.tag)]) tags.add(t.replace(/^#/, ''));
-  let inCode = false;
-  for (const line of body.split('\n')) {
-    if (/^\s*(```|~~~)/.test(line)) inCode = !inCode;
-    if (inCode) continue;
-    for (const m of line.matchAll(TAG_RE)) tags.add(m[1]!);
-  }
   const links = new Set<string>();
-  for (const m of text.matchAll(/!?\[\[([^\]\n]+?)\]\]/g)) {
-    const t = linkTarget(m[1]!);
-    if (t && !/\.(png|jpe?g|gif|webp|avif|svg|bmp|pdf)$/i.test(t)) links.add(t);
+  for (const l of scan.links) {
+    if (l.target && !/\.(png|jpe?g|gif|webp|avif|svg|bmp|pdf)$/i.test(l.target)) links.add(l.target);
   }
   const img = IMG_RE.exec(body);
   const created = parseDate(String(props.criado ?? props.created ?? props['criado em'] ?? ''));
@@ -52,7 +44,7 @@ export function noteRecord(path: string, text: string, mtime?: number): NoteRec 
     name: noteName(path),
     folder: noteDir(path),
     props,
-    tags: [...tags],
+    tags: scan.tags,
     links: [...links],
     mtime,
     ctime: created?.getTime() ?? mtime,
@@ -68,7 +60,11 @@ export class NoteIndex {
   private byName = new Map<string, NoteRec>();
   private back = new Map<string, string[]>();
 
-  constructor(readonly notes: NoteRec[]) {
+  /**
+   * `resolve`: o resolvedor de [[links]] do app (com apelidos e caminhos
+   * parciais). Sem ele, resolve pelo nome, como antes.
+   */
+  constructor(readonly notes: NoteRec[], private resolver?: (target: string) => string | null) {
     for (const n of notes) {
       this.byPath.set(n.path, n);
       const k = fold(n.name);
@@ -86,6 +82,10 @@ export class NoteIndex {
 
   /** Nota por link: "Nome", "Pasta/Nome", "Pasta/Nome.md". */
   find(target: string): NoteRec | null {
+    if (this.resolver) {
+      const hit = this.resolver(target);
+      if (hit) return this.byPath.get(hit) ?? null;
+    }
     const t = target.replace(/\.md$/i, '').trim();
     return this.byPath.get(`${t}.md`) ?? this.byName.get(fold(t.split('/').pop()!)) ?? null;
   }

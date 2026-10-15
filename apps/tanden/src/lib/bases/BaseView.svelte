@@ -144,7 +144,12 @@
 
   function add(defaults: Record<string, string | string[]> = {}, name?: string, template?: TemplateEntry | null): string {
     const path = bases.createRow(def, notePath, { name, defaults: { ...defaultsFromFilters(), ...defaults }, template });
-    if (!name) open(path);
+    if (!name) {
+      bases.fresh = path;
+      // o botão que criou perde o foco: Espaço e Enter não criam outra linha
+      (document.activeElement as HTMLElement | null)?.blur?.();
+      open(path);
+    }
     return path;
   }
 

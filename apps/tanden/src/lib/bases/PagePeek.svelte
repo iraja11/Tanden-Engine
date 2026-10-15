@@ -8,6 +8,7 @@
   import { files } from '../files/files.svelte';
   import { sound } from '../sound.svelte';
   import { onMount } from 'svelte';
+  import { notes } from '../editor/notes.svelte';
 
   // Painel lateral (como o "abrir ao lado" do Notion): propriedades e texto da linha.
   let { path, onOpenNote }: { path: string; onOpenNote: (p: string) => void } = $props();
@@ -29,23 +30,34 @@
     return () => removeEventListener('keydown', k);
   });
   let wide = $state(false);
+  // quem cita esta página (como os backlinks no topo de uma página do Notion)
+  const back = $derived.by(() => { void bases.rev; return notes.backlinks(path); });
+  let showBack = $state(false);
 
-  // renomear depende do Vault saber renomear (lápide no caminho antigo)
-  const vault = engine.vault as unknown as { rename?: (from: string, to: string) => void };
-  const canRename = typeof vault.rename === 'function';
-  function rename(name: string) {
+  // renomear leva junto os [[links]] e as relações que apontavam para a linha
+  const canRename = true;
+  let titleEl = $state<HTMLInputElement>();
+  async function rename(name: string) {
     const clean = safeName(name);
     if (!clean || clean === noteName(path)) return;
     const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/') + 1) : '';
-    const to = `${dir}${clean}.md`;
-    if (bases.exists(to)) return;
-    vault.rename!(path, to);
-    if (engine.active === path) engine.open(to);
-    engine.refresh();
-    void engine.syncNow();
+    const to = await notes.rename(path, `${dir}${clean}.md`);
+    if (!to) {
+      if (titleEl) titleEl.value = noteName(path);
+      return;
+    }
     bases.rebuild();
     bases.peek = to;
   }
+  // linha recém-criada: o cursor vai para o título, como no Notion
+  onMount(() => {
+    if (bases.fresh !== path) return;
+    bases.fresh = null;
+    setTimeout(() => {
+      titleEl?.focus();
+      titleEl?.select();
+    }, 40);
+  });
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -69,17 +81,26 @@
   {:else}
     <div class="scroll">
       {#if canRename}
-        <input class="title" value={noteName(path)} aria-label="Título"
-          onchange={(e) => rename((e.currentTarget as HTMLInputElement).value)}
-          onkeydown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); }} />
+        <input class="title" value={noteName(path)} aria-label="Título" bind:this={titleEl} placeholder="Sem título"
+          onchange={(e) => void rename((e.currentTarget as HTMLInputElement).value)}
+          onkeydown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); if (e.key === 'Escape') { e.stopPropagation(); (e.currentTarget as HTMLInputElement).value = noteName(path); (e.currentTarget as HTMLInputElement).blur(); } }} />
       {:else}
         <h1>{noteName(path)}</h1>
       {/if}
       {#if archived}<p class="arch">Arquivada: não aparece nas views do banco.</p>{/if}
       <PropertiesPanel {path} onopen={(p) => (bases.peek = p)} />
+      {#if back.length}
+        <button class="back" onclick={() => (showBack = !showBack)}>↙ {back.length} {back.length === 1 ? 'nota cita' : 'notas citam'} esta página {showBack ? '▴' : '▾'}</button>
+        {#if showBack}
+          <ul class="backs">
+            {#each back as b (b.path)}<li><button onclick={() => (bases.peek = b.path)} title={b.lines[0]?.text ?? b.path}>{noteName(b.path)}</button></li>{/each}
+          </ul>
+        {/if}
+      {/if}
       <div class="ed">
         {#key path}
-          <Editor value={body} docKey={path} onchange={typed} host={files.host} />
+          <Editor value={body} docKey={path} onchange={typed} host={notes.host} rich livePreview={notes.preview}
+            onfiles={(f) => void files.importFiles(f, { attach: true })} />
         {/key}
       </div>
     </div>
@@ -100,6 +121,11 @@
   h1 { margin: 0 0 6px; font: 600 28px/1.15 var(--f-display); letter-spacing: .01em; overflow-wrap: anywhere; }
   .title { margin: 0 0 6px; font: 600 28px/1.15 var(--f-display); letter-spacing: .01em; background: none; border: 0; color: var(--ink); outline: none; padding: 0; width: 100%; }
   .title:focus { border-bottom: 1px dashed var(--line); }
+  .back { align-self: flex-start; border: 0; background: none; padding: 2px 0 8px; color: var(--muted); font-size: 12.5px; }
+  .back:hover { color: var(--ember); }
+  .backs { list-style: none; margin: -4px 0 10px; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+  .backs button { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 2px 10px; font-size: 12.5px; }
+  .backs button:hover { border-color: var(--ember); color: var(--ember); }
   .arch { margin: 0 0 6px; color: var(--crit); font-size: 12.5px; }
   .ed { flex: 1; min-height: 50vh; margin: 0 -24px; border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent); padding-top: 6px; }
   .ed :global(.cm-scroller) { padding-bottom: 20vh; }

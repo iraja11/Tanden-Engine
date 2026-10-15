@@ -1,9 +1,10 @@
 import {
   NoteIndex, PAGE_TEMPLATES, TEMPLATES_DIR, baseFolder, blankRow, createDatabase, findBaseBlocks, instantiate, isoDate,
-  noteDir, noteName, noteRecord, parseBase, propConfig, replaceBaseBlock, safeName, serializeBase, setProp, templateTarget,
+  noteDir, noteName, noteRecord, parseBase, parseProps, propConfig, replaceBaseBlock, safeName, serializeBase, setProp, setProps, templateTarget,
   withDefaults, writeCell, DB_TEMPLATES, type BaseDef, type NoteRec, type PropConfig, type Value,
 } from '@tanden/core';
 import { engine } from '../engine.svelte';
+import { notes } from '../editor/notes.svelte';
 import { feel } from '../feel.svelte';
 import { sound } from '../sound.svelte';
 
@@ -32,6 +33,8 @@ class Bases {
   templates = $state<TemplateEntry[]>([]);
   /** nota aberta no painel lateral (peek) */
   peek = $state<string | null>(null);
+  /** linha recém-criada: o painel abre com o cursor no título */
+  fresh: string | null = null;
   /** pedido para abrir um banco na tela Bancos */
   goto = $state<{ path: string; seq: number } | null>(null);
   private seq = 0;
@@ -43,7 +46,7 @@ class Bases {
     if (this.started) return;
     this.started = true;
     engine.bus.on('*', (e) => {
-      if (e.type === 'note.changed' || e.type === 'note.created') this.schedule();
+      if (e.type === 'note.changed' || e.type === 'note.created' || e.type === 'note.deleted') this.schedule();
       if (e.type === 'sync.finished') {
         void this.loadTimes();
         this.schedule();
@@ -72,23 +75,38 @@ class Bases {
     }, 120);
   }
 
+  /** registro de cada nota, refeito só quando o texto (ou a data) muda */
+  private recs = new Map<string, { text: string; mtime: number | undefined; rec: NoteRec }>();
+
   rebuild(): void {
     const recs: NoteRec[] = [];
     const dbs: DbEntry[] = [];
     const tpls: TemplateEntry[] = [];
+    const ix = notes.brain;
+    const seen = new Set<string>();
     for (const path of engine.vault.list()) {
+      seen.add(path);
       const text = engine.vault.read(path);
-      recs.push(noteRecord(path, text, this.mtimes[path]));
+      const mtime = this.mtimes[path];
+      let hit = this.recs.get(path);
+      if (!hit || hit.text !== text || hit.mtime !== mtime) {
+        const scan = ix.text(path) === text ? ix.scan(path) ?? undefined : undefined;
+        hit = { text, mtime, rec: noteRecord(path, text, mtime, scan) };
+        this.recs.set(path, hit);
+      }
+      recs.push(hit.rec);
       if (text.includes('base')) {
         const n = findBaseBlocks(text).length;
         if (n) dbs.push({ path, name: noteName(path), blocks: n });
       }
       if (path.startsWith(`${TEMPLATES_DIR}/`)) tpls.push({ path, name: noteName(path), text, target: templateTarget(text) });
     }
+    for (const p of [...this.recs.keys()]) if (!seen.has(p)) this.recs.delete(p);
     for (const b of PAGE_TEMPLATES) {
       if (!tpls.some((t) => t.path === `${TEMPLATES_DIR}/${b.name}.md`)) tpls.push({ path: null, name: b.name, text: b.text, target: null });
     }
-    this.index = new NoteIndex(recs);
+    // [[links]] e relações resolvem como no editor (apelidos, caminhos parciais)
+    this.index = new NoteIndex(recs, (t) => ix.resolve(t));
     this.databases = dbs.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
     this.templates = tpls.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
     this.rev++;
@@ -238,6 +256,22 @@ class Bases {
     return path;
   }
 
+  /** Junta as propriedades de um topo (de um modelo) às da nota, sem trocar as que ela já tem; tags se somam. */
+  mergeProps(text: string, head: string): string {
+    const add = parseProps(head);
+    const have = parseProps(text);
+    const patch: Record<string, string | string[]> = {};
+    for (const [k, v] of Object.entries(add)) {
+      if (!(k in have) || have[k] === '') patch[k] = v;
+      else if ((k === 'tags' || k === 'aliases') && Array.isArray(v)) {
+        const cur = Array.isArray(have[k]) ? (have[k] as string[]) : String(have[k]).split(/,\s*/).filter(Boolean);
+        const merged = [...new Set([...cur, ...v])];
+        if (merged.length !== cur.length) patch[k] = merged;
+      }
+    }
+    return Object.keys(patch).length ? setProps(text, patch) : text;
+  }
+
   /** Banco que contém uma nota (pela pasta), para tipar o painel de propriedades. */
   configFor(path: string): { def: BaseDef; notePath: string } | null {
     void this.rev;
@@ -248,6 +282,37 @@ class Bases {
       if (path.startsWith(`${folder}/`)) return { def: b.def, notePath: db.path };
     }
     return null;
+  }
+
+  private doneCache = new Map<string, boolean>();
+  private doneRev = -1;
+  /**
+   * A linha já está concluída? (status num grupo "concluído", ou uma caixa
+   * feito/concluído marcada). Datas de linhas concluídas não ficam vermelhas.
+   */
+  isDone(path: string, props: Record<string, string | string[]>): boolean {
+    if (this.doneRev !== this.rev) {
+      this.doneCache.clear();
+      this.doneRev = this.rev;
+    }
+    const hit = this.doneCache.get(path);
+    if (hit !== undefined) return hit;
+    let done = false;
+    const def = this.configFor(path)?.def;
+    for (const [id, c] of Object.entries(def?.properties ?? {})) {
+      if (c.type !== 'status') continue;
+      const v = props[id.replace(/^note\./, '')];
+      if (typeof v === 'string' && c.options?.some((o) => o.value === v && o.group === 'done')) done = true;
+    }
+    if (!done) {
+      for (const [k, v] of Object.entries(props)) {
+        const key = k.toLowerCase();
+        if (['feito', 'concluído', 'concluido', 'done', 'completed'].includes(key) && v === 'true') done = true;
+        if (['status', 'situação'].includes(key) && typeof v === 'string' && /^(feito|conclu[íi]d[oa]|done|pronto|lido|pago|entregue)$/i.test(v.trim())) done = true;
+      }
+    }
+    this.doneCache.set(path, done);
+    return done;
   }
 
   openDatabase(path: string): void {

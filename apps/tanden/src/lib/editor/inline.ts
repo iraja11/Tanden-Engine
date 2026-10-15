@@ -8,8 +8,9 @@ export function renderInline(md: string): string {
   let s = md.replace(/`([^`]+)`/g, (_m, c: string) => `\u0000${codes.push(c) - 1}\u0000`);
   s = esc(s);
   s = s
-    .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, (_m, t: string, a: string) => `<a class="wl" data-href="${t}">${a}</a>`)
-    .replace(/\[\[([^\]]+)\]\]/g, (_m, t: string) => `<a class="wl" data-href="${t}">${t}</a>`)
+    .replace(/!?\[\[([^\]|]+)\|([^\]]+)\]\]/g, (_m, t: string, a: string) => `<a class="wl" data-href="${t}">${a}</a>`)
+    .replace(/!?\[\[([^\]]+)\]\]/g, (_m, t: string) => `<a class="wl" data-href="${t}">${t.replace(/^#/, '').split('#').join(' › ')}</a>`)
+    .replace(/\s\^[A-Za-z0-9-]+\s*$/, '')
     .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_m, t: string, u: string) => `<a data-href="${u}">${t}</a>`)
     .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
     .replace(/__([^_]+)__/g, '<b>$1</b>')

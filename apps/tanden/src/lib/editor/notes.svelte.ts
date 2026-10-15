@@ -1,4 +1,4 @@
-import { markdownToFragment, resolveLink } from '@tanden/core';
+import { PAGE_TEMPLATES, TEMPLATES_DIR, VaultIndex, ensureBlockId, instantiate, markdownToFragment, resolveLink, retargetLinks, sectionRange, type Backref } from '@tanden/core';
 import { engine } from '../engine.svelte';
 import { files } from '../files/files.svelte';
 import { editorBridge } from '../files/editor-bridge';
@@ -11,14 +11,7 @@ import { versions } from './versions.svelte';
  * índice de links (backlinks e tags) e o estado das telas do editor.
  */
 
-const LINK = /!?\[\[([^\]\n]+?)\]\]|\[[^\]\n]*\]\(([^)\s]+\.md)\)/g;
-const TAG = /(?:^|[\s(])#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)/gu;
-
-export interface Backlink {
-  path: string;
-  /** trechos (linhas) que citam a nota */
-  lines: Array<{ n: number; text: string }>;
-}
+export type Backlink = Backref;
 
 const FAV_KEY = 'tanden.favoritas';
 const RECENT_KEY = 'tanden.recentes';
@@ -55,6 +48,28 @@ const sanitize = (html: string): string => {
   return doc.body.innerHTML;
 };
 
+/**
+ * [[links]] viram links clicáveis para o HTML das prévias e embeds; código
+ * fica como está e os ^ids de bloco somem, como na leitura do Obsidian.
+ */
+function wikiToMarkdown(md: string): string {
+  return md
+    .split(/(^(?:```|~~~)[^\n]*\n[\s\S]*?^(?:```|~~~)[^\n]*$|`[^`\n]+`)/gm)
+    .map((part, i) =>
+      i % 2
+        ? part
+        : part
+            .replace(/(^|\s)\^[A-Za-z0-9-]+[ \t]*$/gm, '$1')
+            .replace(/(?<!!)\[\[([^\]|\n]+)\|([^\]\n]+)\]\]/g, (_m, t: string, a: string) => `[${a}](tanden-link:${encodeURIComponent(t)})`)
+            .replace(/(?<!!)\[\[([^\]\n]+)\]\]/g, (_m, t: string) => {
+              const [file, ...sub] = t.split('#');
+              const label = [file!.split('/').pop(), ...sub].filter(Boolean).join(' › ');
+              return `[${label}](tanden-link:${encodeURIComponent(t)})`;
+            }),
+    )
+    .join('');
+}
+
 class Notes {
   /** sobe a cada mudança em qualquer nota (o índice refaz sob demanda) */
   rev = $state(0);
@@ -69,13 +84,17 @@ class Notes {
   clip = $state(false);
   /** título para rolar depois de abrir uma nota por [[nota#título]] */
   pendingHeading: string | null = null;
-  private index: { rev: number; links: Map<string, Set<string>>; tags: Map<string, number> } | null = null;
+  /** aba do painel da esquerda */
+  sidebar = $state<'paginas' | 'busca' | 'tags'>('paginas');
+  /** pedido de busca vindo de outra tela (clique numa #tag, por exemplo) */
+  search = $state<{ q: string; seq: number } | null>(null);
   private timer: ReturnType<typeof setTimeout> | null = null;
 
   start(): void {
     engine.bus.on('*', (e) => {
       if (e.type === 'note.changed') versions.touch(e.path);
       if (e.type === 'note.changed' || e.type === 'note.created' || e.type === 'note.deleted') {
+        this.dirty.add(e.path);
         if (this.timer) clearTimeout(this.timer);
         this.timer = setTimeout(() => this.rev++, 600);
       }
@@ -112,104 +131,103 @@ class Notes {
 
   /* ------------------------------------------------------ índice */
 
-  private build() {
-    if (this.index && this.index.rev === this.rev) return this.index;
-    const links = new Map<string, Set<string>>();
-    const tags = new Map<string, number>();
-    const paths = engine.notes;
-    const all = [...paths, ...files.list];
-    for (const p of paths) {
-      let text: string;
-      try {
-        text = engine.vault.read(p);
-      } catch {
-        continue;
+  /**
+   * O índice do cofre (links, backlinks, tags, apelidos, blocos), o mesmo para
+   * todas as telas. Só as notas cujo texto mudou são relidas.
+   */
+  readonly vix = new VaultIndex();
+  private synced: { notes: readonly string[]; files: readonly string[] } | null = null;
+  /** notas mudadas desde a última consulta (o índice relê só elas) */
+  private dirty = new Set<string>();
+
+  get brain(): VaultIndex {
+    const s = this.synced;
+    const read = (p: string) => (engine.vault.has(p) ? engine.vault.read(p) : null);
+    if (!s || s.notes !== engine.notes) {
+      this.vix.sync(engine.notes, read);
+      this.dirty.clear();
+    } else if (this.dirty.size) {
+      for (const p of this.dirty) {
+        const t = read(p);
+        if (t === null) this.vix.delete(p);
+        else this.vix.set(p, t);
       }
-      const out = new Set<string>();
-      for (const m of text.matchAll(LINK)) {
-        const raw = (m[1] ?? decodeURIComponent(m[2]!)).split('|')[0]!;
-        const hit = resolveLink(raw, all);
-        if (hit && hit.path !== p) out.add(hit.path);
-      }
-      links.set(p, out);
-      const fm = /^---\n([\s\S]*?)\n---/.exec(text);
-      if (fm) {
-        const t = /^tags?\s*:\s*(.*)$/m.exec(fm[1]!);
-        if (t) {
-          const inline = t[1]!.replace(/[[\]"']/g, '').split(/[,\s]+/).filter(Boolean);
-          const list = inline.length ? inline : [...fm[1]!.slice(fm[1]!.indexOf(t[0]) + t[0].length).matchAll(/^\s+-\s+(.+)$/gm)].map((x) => x[1]!.trim());
-          for (const tag of list) tags.set(tag.replace(/^#/, ''), (tags.get(tag.replace(/^#/, '')) ?? 0) + 1);
-        }
-      }
-      const body = text.replace(/```[\s\S]*?```/g, '');
-      for (const m of body.matchAll(TAG)) if (!/^\d+$/.test(m[1]!)) tags.set(m[1]!, (tags.get(m[1]!) ?? 0) + 1);
+      this.dirty.clear();
     }
-    this.index = { rev: this.rev, links, tags };
-    return this.index;
+    if (!s || s.files !== files.list) this.vix.setFiles(files.list);
+    this.synced = { notes: engine.notes, files: files.list };
+    return this.vix;
   }
 
   tags(): string[] {
-    return [...this.build().tags].sort((a, b) => b[1] - a[1]).map(([t]) => t);
+    return this.brain.tags().map((t) => t.tag);
   }
 
   outgoing(path: string): string[] {
-    return [...(this.build().links.get(path) ?? [])].sort();
+    return this.brain.outgoing(path);
   }
 
   backlinks(path: string): Backlink[] {
-    const idx = this.build();
-    const out: Backlink[] = [];
-    const name = fold(noteName(path));
-    for (const [from, to] of idx.links) {
-      if (!to.has(path)) continue;
-      const lines: Backlink['lines'] = [];
-      engine.vault.read(from).split('\n').forEach((text, n) => {
-        for (const m of text.matchAll(LINK)) {
-          const raw = (m[1] ?? m[2]!).split(/[|#]/)[0]!;
-          if (fold(noteName(raw)) === name) {
-            lines.push({ n, text: text.trim() });
-            break;
-          }
-        }
-      });
-      out.push({ path: from, lines: lines.slice(0, 4) });
-    }
-    return out.sort((a, b) => a.path.localeCompare(b.path, 'pt-BR'));
+    return this.brain.backlinks(path);
   }
 
-  /** notas que citam o nome desta sem link (para virar link com um clique) */
+  /** notas que citam o nome (ou um apelido) desta sem link (para virar link com um clique) */
   unlinked(path: string): Backlink[] {
-    const name = noteName(path);
-    if (name.length < 3) return [];
-    const re = new RegExp(`(^|[^\\p{L}\\p{N}\\[|])(${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})(?=$|[^\\p{L}\\p{N}\\]])`, 'iu');
-    const linked = new Set(this.backlinks(path).map((b) => b.path));
-    const out: Backlink[] = [];
-    for (const p of engine.notes) {
-      if (p === path || linked.has(p)) continue;
-      const lines: Backlink['lines'] = [];
-      engine.vault.read(p).split('\n').forEach((text, n) => {
-        if (lines.length < 3 && re.test(text) && !/^\s*(```|---)/.test(text)) lines.push({ n, text: text.trim() });
-      });
-      if (lines.length) out.push({ path: p, lines });
-      if (out.length >= 30) break;
-    }
-    return out;
+    return this.brain.unlinkedMentions(path);
   }
 
-  /** Transforma as menções sem link de uma nota em [[link]]. */
+  /** [[links]] desta nota para notas que ainda não existem */
+  missing(path: string): string[] {
+    const ix = this.brain;
+    const out = new Set<string>();
+    for (const l of ix.scan(path)?.links ?? []) {
+      if (!l.target || ix.resolve(l.target)) continue;
+      if (/\.[a-z0-9]{1,5}$/i.test(l.target) && !/\.md$/i.test(l.target)) continue;
+      out.add(l.target.replace(/\.md$/i, ''));
+    }
+    return [...out];
+  }
+
+  /** Transforma as menções sem link (nome ou apelido) de uma nota em [[link]]. */
   linkMentions(inPath: string, target: string): void {
     const name = noteName(target);
-    const re = new RegExp(`(^|[^\\p{L}\\p{N}\\[|])(${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})(?=$|[^\\p{L}\\p{N}\\]])`, 'giu');
+    const words = [name, ...this.brain.aliases(target)].filter((w) => w.length >= 3).sort((a, b) => b.length - a.length);
+    const esc = (w: string) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`(^|[^\\p{L}\\p{N}])(${words.map(esc).join('|')})(?=$|[^\\p{L}\\p{N}])`, 'giu');
+    // links, código e endereços ficam intactos
+    const keep = /(!?\[\[[^\]\n]*\]\]|!?\[[^\]\n]*\]\([^)\n]*\)|`[^`\n]*`|https?:\/\/\S+)/;
     const text = engine.vault.read(inPath);
+    const lines = text.split('\n');
+    const body = this.brain.scan(inPath)?.bodyLine ?? 0;
     let inCode = false;
-    const next = text
-      .split('\n')
-      .map((l) => {
+    const next = lines
+      .map((l, i) => {
         if (/^\s*(```|~~~)/.test(l)) inCode = !inCode;
-        return inCode ? l : l.replace(re, (_m, pre: string, word: string) => `${pre}[[${name}${word === name ? '' : `|${word}`}]]`);
+        if (inCode || i < body) return l;
+        return l
+          .split(keep)
+          .map((part, k) => (k % 2 ? part : part.replace(re, (_m, pre: string, word: string) => `${pre}[[${name}${word === name ? '' : `|${word}`}]]`)))
+          .join('');
       })
       .join('\n');
     if (next !== text) engine.writeNote(inPath, next);
+  }
+
+  /** Abre a busca do painel lateral já com um texto (ex.: "tag:#projeto"). */
+  searchFor(q: string): void {
+    this.search = { q, seq: (this.search?.seq ?? 0) + 1 };
+    this.sidebar = 'busca';
+  }
+
+  /** Garante um ^id na linha `line` da nota e devolve o id (para [[nota#^id]]). */
+  ensureBlock(target: string, line: number): string | null {
+    const path = this.brain.resolve(target) ?? (target ? null : engine.active);
+    if (!path || !engine.vault.has(path)) return null;
+    const cur = engine.vault.read(path);
+    const r = ensureBlockId(cur, line);
+    if (!r.id) return null;
+    if (r.text !== cur) engine.writeNote(path, r.text);
+    return r.id;
   }
 
   /* ------------------------------------------------------ ações */
@@ -239,23 +257,31 @@ class Notes {
     return path;
   }
 
-  /** Nota do dia em Diário/AAAA-MM-DD.md (o padrão do plugin Daily notes do Obsidian). */
+  /**
+   * Nota do dia em Diário/AAAA-MM-DD.md (o padrão do plugin Daily notes do
+   * Obsidian), feita com o modelo "Nota diária" (o de Modelos/, se existir).
+   * Com uma nota diária aberta, ontem/amanhã contam a partir dela.
+   */
   daily(offset = 0): void {
     const d = new Date();
+    const open = engine.active ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(noteName(engine.active)) : null;
+    if (open && offset !== 0) d.setFullYear(Number(open[1]), Number(open[2]) - 1, Number(open[3]));
     d.setDate(d.getDate() + offset);
     const iso = isoDate(d);
     const existing = engine.notes.find((p) => noteName(p) === iso);
     if (existing) return engine.open(existing);
-    const title = d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    engine.writeNote(`Diário/${iso}.md`, `# ${title[0]!.toUpperCase()}${title.slice(1)}\n\n- [ ] \n`);
-    engine.open(`Diário/${iso}.md`);
+    const path = `Diário/${iso}.md`;
+    const tpl = engine.vault.has(`${TEMPLATES_DIR}/Nota diária.md`) ? engine.vault.read(`${TEMPLATES_DIR}/Nota diária.md`) : PAGE_TEMPLATES.find((t) => t.name === 'Nota diária')?.text;
+    const text = tpl ? instantiate(tpl, iso, d) : `# ${iso}\n\n- [ ] \n`;
+    engine.writeNote(path, text);
+    engine.open(path);
   }
 
   /**
    * Renomeia ou move. Os [[links]] e [](...md) das outras notas acompanham,
    * como no Obsidian. Devolve o caminho novo ou null se não deu.
    */
-  async rename(from: string, to: string): Promise<string | null> {
+  async rename(from: string, to: string, opts: { quiet?: boolean } = {}): Promise<string | null> {
     to = to.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
     if (!to.toLowerCase().endsWith('.md')) to += '.md';
     if (to === from) return from;
@@ -263,40 +289,48 @@ class Notes {
       files.say(`Já existe uma nota "${noteName(to)}" ali.`, { error: true });
       return null;
     }
-    const oldName = noteName(from);
+    const ix = this.brain;
+    // quais alvos de link, em cada nota, levavam à nota antiga (antes de mexer)
+    const pointing = new Map<string, Set<string>>();
+    for (const b of ix.backlinks(from)) {
+      const set = new Set<string>();
+      for (const l of ix.scan(b.path)?.links ?? []) if (l.target && ix.resolve(l.target) === from) set.add(l.target);
+      pointing.set(b.path, set);
+    }
     const newName = noteName(to);
-    const others = engine.notes.filter((p) => p !== from);
     // o link curto continua valendo se o nome novo não colidir com outra nota
-    const clash = others.some((p) => p !== to && noteName(p).toLowerCase() === newName.toLowerCase());
+    const clash = engine.notes.some((p) => p !== from && p !== to && noteName(p).toLowerCase() === newName.toLowerCase());
     const newTarget = clash ? to.replace(/\.md$/, '') : newName;
     const wasActive = engine.active === from;
     await versions.moved(from, to);
     await engine.renameNote(from, to);
-    const all = [...engine.notes, ...files.list];
     let touched = 0;
-    for (const p of engine.notes) {
+    for (const [p0, targets] of pointing) {
+      const p = p0 === from ? to : p0;
+      if (!engine.vault.has(p)) continue;
       const text = engine.vault.read(p);
-      let changed = false;
-      const next = text
-        .replace(/(!?)\[\[([^\]\n|#]+)(#[^\]\n|]*)?(\|[^\]\n]*)?\]\]/g, (m, bang: string, t: string, sub = '', alias = '') => {
-          // o link apontava para a nota antiga?
-          const tt = t.trim();
-          const pointsOld = tt.toLowerCase() === oldName.toLowerCase() || tt.replace(/\.md$/i, '').toLowerCase() === from.replace(/\.md$/, '').toLowerCase();
-          if (!pointsOld) return m;
-          // um link curto que agora resolve para outra nota com o mesmo nome antigo fica como está
-          const still = resolveLink(tt, all);
-          if (still && still.path !== to && still.path.toLowerCase() !== from.toLowerCase()) return m;
-          changed = true;
-          return `${bang}[[${newTarget}${sub}${alias}]]`;
-        })
-        .replace(/\]\(([^)\s]+\.md)\)/g, (m, href: string) => {
-          if (decodeURIComponent(href).replace(/^\.?\//, '').toLowerCase() !== from.toLowerCase()) return m;
-          changed = true;
-          return `](${encodeURI(to)})`;
-        });
-      if (changed) {
+      const next = retargetLinks(text, (t) => targets.has(t), newTarget, to);
+      if (next !== text) {
         engine.writeNote(p, next);
         touched++;
+      }
+    }
+    // subpáginas (a pasta com o mesmo nome da nota, como no Notion) vão junto
+    const oldDir = from.replace(/\.md$/, '');
+    const newDir = to.replace(/\.md$/, '');
+    const children = engine.notes.filter((p) => p.startsWith(`${oldDir}/`));
+    for (const c of children) {
+      const r = await this.rename(c, `${newDir}/${c.slice(oldDir.length + 1)}`, { quiet: true });
+      if (r) touched++;
+    }
+    if (children.length) {
+      // bancos que filtravam a pasta antiga
+      const re = new RegExp(`(file\\.inFolder\\(\\s*["'])${oldDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=["'/])`, 'g');
+      for (const p of engine.notes) {
+        const text = engine.vault.read(p);
+        if (!text.includes('inFolder')) continue;
+        const next = text.replace(re, `$1${newDir}`);
+        if (next !== text) engine.writeNote(p, next);
       }
     }
     this.favorites = this.favorites.map((p) => (p === from ? to : p));
@@ -304,7 +338,7 @@ class Notes {
     save(FAV_KEY, this.favorites);
     save(RECENT_KEY, this.recent);
     if (wasActive) engine.open(to);
-    if (touched) files.say(`Renomeada. Links atualizados em ${touched} ${touched === 1 ? 'nota' : 'notas'}.`);
+    if (touched && !opts.quiet) files.say(`Renomeada. Links atualizados em ${touched} ${touched === 1 ? 'nota' : 'notas'}.`);
     return to;
   }
 
@@ -343,7 +377,9 @@ class Notes {
     const file = hash < 0 ? target : target.slice(0, hash);
     const sub = hash < 0 ? '' : target.slice(hash + 1);
     if (!file && sub) return this.gotoHeading(sub);
-    const hit = resolveLink(target, [...engine.notes, ...files.list]);
+    // apelidos (aliases:) também levam à nota
+    const viaIndex = this.brain.resolve(file);
+    const hit = viaIndex?.endsWith('.md') ? { path: viaIndex, page: null } : resolveLink(target, [...engine.notes, ...files.list]);
     if (hit) {
       if (hit.path.endsWith('.md')) {
         this.pendingHeading = sub || null;
@@ -367,12 +403,11 @@ class Notes {
 
   gotoHeading(sub: string): void {
     const text = engine.content;
-    const lines = text.split('\n');
-    const want = fold(sub.replace(/^\^/, ''));
-    let n = sub.startsWith('^')
-      ? lines.findIndex((l) => new RegExp(`\\s\\^${sub.slice(1)}\\s*$`).test(l))
-      : lines.findIndex((l) => /^#{1,6}\s/.test(l) && fold(l.replace(/^#+\s*/, '').trim()) === want);
-    if (n < 0) n = lines.findIndex((l) => fold(l).includes(want));
+    let n = sectionRange(text, sub)?.from ?? -1;
+    if (n < 0) {
+      const want = fold(sub.replace(/^\^/, '').split('#').pop()!);
+      n = text.split('\n').findIndex((l) => fold(l).includes(want));
+    }
     if (n >= 0) editorBridge.goto(n);
   }
 
@@ -394,15 +429,15 @@ class Notes {
     webClip: () => (this.clip = true),
     createNote: (title, text = '') => this.createQuiet(title, text),
     noteText: (target) => {
-      const hit = resolveLink(target, engine.notes);
-      if (!hit) return null;
-      try {
-        return engine.vault.read(hit.path);
-      } catch {
-        return null;
-      }
+      const path = target.trim() ? this.brain.resolve(target) : engine.active;
+      if (!path || !engine.vault.has(path)) return null;
+      return engine.vault.read(path);
     },
-    render: (md) => sanitize(markdownToFragment(md.replace(/\[\[([^\]|\n]+)\|([^\]\n]+)\]\]/g, (_m, t: string, a: string) => `[${a}](tanden-link:${encodeURIComponent(t)})`).replace(/(?<!!)\[\[([^\]\n]+)\]\]/g, (_m, t: string) => `[${t.split('#')[0]!.split('/').pop()}](tanden-link:${encodeURIComponent(t)})`))),
+    resolve: (target) => this.brain.resolve(target),
+    aliases: () => this.brain.allAliases(),
+    openTag: (tag) => this.searchFor(`tag:#${tag}`),
+    ensureBlock: (target, line) => this.ensureBlock(target, line),
+    render: (md) => sanitize(markdownToFragment(wikiToMarkdown(md))),
     current: () => engine.active,
   };
 }
