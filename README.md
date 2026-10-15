@@ -299,4 +299,17 @@ Código: `apps/tanden/src/lib/theme.svelte.ts`, `sound.svelte.ts`, `feel.svelte.
 
 1. Agenda com Google Agenda.
 2. Ferramentas do Tanden para a IA via MCP (buscar, criar e ligar notas, mexer na agenda).
-3. Grafo das notas.
+
+## Bancos de dados (estilo Notion)
+
+Um banco é um bloco ` ```base ` dentro de uma nota, no formato das **Bases do Obsidian**: o Obsidian abre e mostra o mesmo banco. As linhas são notas comuns e as colunas são as propriedades do topo delas.
+
+- **Views:** tabela, quadro (kanban, arrastar entre colunas), galeria com capa, lista, calendário (arrastar entre dias) e linha do tempo (arrastar e esticar barras). `table`, `cards` e `list` são do Obsidian; `board`, `calendar`, `gallery` e `timeline` são extensões do Tanden.
+- **Propriedades tipadas:** texto, número (com formato de moeda e porcentagem), seleção, seleção múltipla, status, data, data e hora, caixa, relação, pessoa, link, e-mail, telefone, arquivos, criação e edição. Tipos, opções e cores ficam em `properties:` no bloco.
+- **Filtros, ordenação, agrupamento e cálculos no rodapé** por view; filtros do banco valem para todas.
+- **Fórmulas e rollups:** a linguagem das Bases (`if(prazo < today(), "atrasada", "")`, `prazo.format("DD/MM")`, `days(início, fim)`), e uma propriedade pedida de uma relação lê a nota ligada: `tarefas.horas.sum()`.
+- **Modelos:** notas em `Modelos/` com `{{title}}`, `{{date}}`, `{{time}}`. Com `modelo-para: "[[Banco]]"` viram opção do botão Novo daquele banco. A tela Bancos tem uma galeria de bancos prontos (tarefas, projetos, leituras, hábitos, reuniões, CRM, gastos, diário).
+- **Páginas aninhadas:** as subpáginas de `X.md` moram em `X/`; a barra de notas mostra a árvore e o `+` de cada página cria uma subpágina.
+- **Arquivar** marca `arquivado: true` na nota; ela some das views (opção "Mostrar arquivados").
+
+Código: `packages/core/src/base/` (testes em `test/base.test.ts`) e `apps/tanden/src/lib/bases/`.

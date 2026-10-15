@@ -93,6 +93,11 @@ export const PLOT_HELP = [
   ['x = 2', 'reta vertical'],
   ['x: -5..5', 'intervalo (também y: e t:)'],
   ['título: …   proporção: igual   grade: não', 'opções'],
+  ['z = sen(x) * cos(y)', '3D: superfície (ou g(x; y))'],
+  ['(cos(t); sen(t); t/4)', '3D: curva paramétrica'],
+  ['(cos(u)*sen(v); sen(u)*sen(v); cos(v))', '3D: superfície paramétrica em u e v'],
+  ['pontos: (1; 2; 3)', '3D: pontos'],
+  ['z: -1..1   u: 0..2pi   malha: 60', '3D: intervalos e detalhe da malha'],
 ];
 
 export const TEX_HELP = [

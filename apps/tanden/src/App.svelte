@@ -25,13 +25,18 @@
   import PluginsView from './lib/plugins/PluginsView.svelte';
   import PluginFrame from './lib/plugins/PluginFrame.svelte';
   import { plugins } from './lib/plugins/plugins.svelte';
+  import DatabasesView from './lib/bases/DatabasesView.svelte';
+  import PageTree from './lib/bases/PageTree.svelte';
+  import PagePeek from './lib/bases/PagePeek.svelte';
+  import PropertiesPanel from './lib/bases/PropertiesPanel.svelte';
+  import Popover from './lib/bases/Popover.svelte';
+  import { bases } from './lib/bases/bases.svelte';
   import Splash from './lib/Splash.svelte';
   import SettingsPanel from './lib/SettingsPanel.svelte';
   import { feel } from './lib/feel.svelte';
   import { sound } from './lib/sound.svelte';
   import { theme } from './lib/theme.svelte';
   import { pop, rise, vanish } from './lib/motion';
-  import { flip } from 'svelte/animate';
 
   let host = $state<HTMLElement>();
   let orbWrap = $state<HTMLElement>();
@@ -47,7 +52,7 @@
   /** marcador que desliza até o módulo ativo na barra */
   let mark = $state<{ x: number; y: number; w: number; h: number } | null>(null);
   let error = $state('');
-  type View = 'notas' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'calculo' | 'arquivos' | 'luta' | 'mundos' | 'slides' | 'plugins' | `plugin:${string}`;
+  type View = 'notas' | 'bancos' | 'grafo' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'calculo' | 'arquivos' | 'luta' | 'mundos' | 'slides' | 'plugins' | `plugin:${string}`;
   let view = $state<View>('notas');
   /** id do plugin cuja tela está aberta */
   const pluginView = $derived(view.startsWith('plugin:') ? view.slice(7) : null);
@@ -56,6 +61,8 @@
 
   const modules = [
     { id: 'notas', label: 'Notas', ready: true },
+    { id: 'bancos', label: 'Bancos', ready: true },
+    { id: 'grafo', label: 'Grafo', ready: true },
     { id: 'ia', label: 'IA', ready: true },
     { id: 'lembretes', label: 'Lembretes', ready: true },
     { id: 'quadros', label: 'Quadros', ready: true },
@@ -81,6 +88,9 @@
   $effect(() => { if (engine.ready) files.start(); });
   $effect(() => { if (engine.ready) notes.start(); });
   $effect(() => { if (engine.ready) slides.start(); });
+  $effect(() => { if (engine.ready) bases.start(); });
+  // "abrir banco" de outras telas
+  $effect(() => { if (bases.goto) untrack(() => go('bancos')); });
   // "criar slides da nota" e importações de .pptx abrem a tela de slides
   $effect(() => { if (slides.goto) untrack(() => go('slides')); });
   $effect(() => { if (engine.ready) void plugins.start(); });
@@ -113,6 +123,19 @@
     view = id;
     if (view === 'ia') aiOpened = true;
     if (id.startsWith('plugin:') && !plugins.opened[id.slice(7)]) plugins.opened = { ...plugins.opened, [id.slice(7)]: true };
+  }
+
+  let treeFilter = $state('');
+  let newMenu = $state<HTMLElement | null>(null);
+  function openNote(p: string) {
+    if (p !== engine.active) sound.play('tick');
+    engine.open(p);
+    drawer = false;
+    view = 'notas';
+  }
+  function pageFrom(t: (typeof bases.templates)[number] | null) {
+    newMenu = null;
+    openNote(bases.newPage(null, t));
   }
 
   function newNote() {
@@ -158,8 +181,6 @@
     return () => removeEventListener('keydown', onKey);
   });
 
-  const title = (p: string) => p.replace(/\.md$/, '').split('/').pop();
-  const folder = (p: string) => (p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '');
   const hhmm = (d: Date) => d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 </script>
 
@@ -191,20 +212,25 @@
   <aside class="side" class:open={drawer} bind:this={notesEl}>
     <header>
       <h2>Notas <span>{engine.notes.length}</span></h2>
-      <button class="new" onclick={() => { newNote(); drawer = false; }} title="Nova nota (Ctrl+N)" aria-label="Nova nota">+</button>
+      <span class="hb">
+        <button class="new" onclick={() => { newNote(); drawer = false; }} title="Nova nota (Ctrl+N)" aria-label="Nova nota">+</button>
+        <button class="new more" onclick={(e) => (newMenu = newMenu ? null : e.currentTarget as HTMLElement)} title="Nova a partir de modelo" aria-label="Mais opções de criação">▾</button>
+      </span>
     </header>
-    <ul>
-      {#each engine.notes as path (path)}
-        <li animate:flip={{ duration: theme.ms(220) }} in:rise={{ y: -6, duration: 260 }}>
-          <button class:active={path === engine.active} draggable="true"
-            ondragstart={(e) => e.dataTransfer?.setData('text/tanden-note', path)}
-            onclick={() => { if (path !== engine.active) sound.play('tick'); engine.open(path); drawer = false; view = 'notas'; }}>
-            <b>{title(path)}</b>{#if folder(path)}<small>{folder(path)}</small>{/if}
-          </button>
-        </li>
-      {/each}
-    </ul>
+    <input class="find" placeholder="Filtrar notas" bind:value={treeFilter} aria-label="Filtrar notas" />
+    <div class="treewrap"><PageTree notes={engine.notes} active={view === 'notas' ? engine.active : null} filter={treeFilter} onopen={openNote} /></div>
   </aside>
+  {#if newMenu}
+    <Popover anchor={newMenu} onclose={() => (newMenu = null)}>
+      <h4>Nova página</h4>
+      <button class="db-item" onclick={() => pageFrom(null)}><span class="ic">▫</span>Em branco</button>
+      {#each bases.templates.filter((t) => !t.target) as t (t.path ?? t.name)}
+        <button class="db-item" onclick={() => pageFrom(t)}><span class="ic">❐</span>{t.name}</button>
+      {/each}
+      <hr />
+      <button class="db-item" onclick={() => { newMenu = null; drawer = false; go('bancos'); }}><span class="ic">▤</span>Banco de dados…</button>
+    </Popover>
+  {/if}
 
   <main class="main" bind:this={editorEl}>
     {#if updater.available}
@@ -239,6 +265,12 @@
         {:else if view === 'calculo' && engine.ready}
           <!-- o cálculo (mathjs, KaTeX) carrega só quando a aba abre -->
           {#await import('./lib/calc/CalcView.svelte') then m}
+            <m.default onOpenNote={(p: string) => { engine.open(p); go('notas'); }} />
+          {/await}
+        {:else if view === 'bancos' && engine.ready}
+          <DatabasesView onOpenNote={openNote} />
+        {:else if view === 'grafo' && engine.ready}
+          {#await import('./lib/grafo/GraphView.svelte') then m}
             <m.default onOpenNote={(p: string) => { engine.open(p); go('notas'); }} />
           {/await}
         {:else if view === 'slides' && engine.ready}
@@ -310,6 +342,10 @@
   {#if settings}<SettingsPanel onclose={toggleSettings} />{/if}
 </div>
 
+{#if bases.peek}
+  {#key bases.peek}<PagePeek path={bases.peek} onOpenNote={openNote} />{/key}
+{/if}
+
 {#if slides.presenting}
   <Presenter path={slides.presenting.path} start={slides.presenting.index} />
 {/if}
@@ -355,15 +391,12 @@
   .new { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); font-size: 18px; line-height: 1; }
   .new { transition: border-color var(--dur), color var(--dur), transform var(--dur) var(--spring); }
   .new:hover { border-color: var(--ember); color: var(--ember); transform: rotate(90deg); }
-  .side ul { list-style: none; margin: 0; padding: 0 8px 16px; overflow-y: auto; }
-  .side li button { width: 100%; text-align: left; border: 0; background: none; border-radius: 9px; padding: 7px 10px;
-    display: grid; gap: 1px; border-left: 2px solid transparent;
-    transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), padding var(--dur) var(--ease); }
-  .side li button:hover:not(.active) { padding-left: 13px; }
-  .side li button:hover { background: var(--surface-2); }
-  .side li button.active { background: var(--surface-2); border-left-color: var(--ember); }
-  .side b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .side small { color: var(--muted); font: 11px var(--f-mono); }
+  .hb { display: flex; gap: 4px; }
+  .new.more { font-size: 11px; width: 22px; }
+  .new.more:hover { transform: none; }
+  .find { margin: 0 12px 8px; background: var(--void); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); padding: 6px 9px; font: 12.5px var(--f-body); outline: none; }
+  .find:focus { border-color: var(--ember); }
+  .treewrap { flex: 1; min-height: 0; overflow-y: auto; padding: 0 8px 16px; }
 
   .main { grid-area: main; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
   .main :global(.editor) { flex: 1; }

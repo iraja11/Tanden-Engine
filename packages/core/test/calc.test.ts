@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeNote, CalcSheet, formatNumber, integrate, polyRoots, preprocess } from '../src/calc';
+import { analyzeNote, CalcSheet, formatNumber, integrate, plotFn2, polyRoots, preprocess, sampleSurface } from '../src/calc';
 
 const run = (lines: string[]) => {
   const s = new CalcSheet();
@@ -174,5 +174,50 @@ describe('nota', () => {
     expect(spec.series.map((s) => s.kind).sort()).toEqual(['param', 'points', 'polar', 'vline']);
     expect(spec.title).toBe('Teste');
     expect(spec.errors).toHaveLength(1);
+  });
+  it('gráfico 3D: superfície, curva, superfície paramétrica e pontos', () => {
+    const r = analyzeNote([
+      '```calc',
+      'g(x; y) = x^2 - y^2',
+      '```',
+      '```grafico',
+      'z = sen(x) * cos(y)',
+      'Sela: g(x; y)',
+      'x * y',
+      '(cos(t); sen(t); t/4)',
+      'Esfera: (cos(u)*sen(v); sen(u)*sen(v); cos(v))',
+      'pontos: (1; 2; 3) (0; 0; 1,5)',
+      'z: -2..2   malha: 30',
+      '```',
+    ].join('\n'));
+    const spec = r.plots[0]!.spec;
+    expect(spec.errors).toEqual([]);
+    expect(spec.dim).toBe(3);
+    expect(spec.z).toEqual([-2, 2]);
+    expect(spec.mesh).toBe(30);
+    expect(spec.series.map((s) => s.kind).sort()).toEqual(['curve3', 'points3', 'psurface', 'surface', 'surface', 'surface']);
+    const sela = spec.series.find((s) => s.label === 'Sela')!;
+    expect(sela.kind === 'surface' && sela.f(3, 1)).toBe(8);
+    const esfera = spec.series.find((s) => s.kind === 'psurface')!;
+    if (esfera.kind !== 'psurface') throw new Error();
+    expect(esfera.fz(0, 0)).toBeCloseTo(1);
+    expect(esfera.v[1]).toBeCloseTo(Math.PI);
+    const pts = spec.series.find((s) => s.kind === 'points3')!;
+    expect(pts.kind === 'points3' && pts.points[1]).toEqual([0, 0, 1.5]);
+  });
+  it('gráfico 3D: y = f(x) vira curva no chão e o 2D continua 2D', () => {
+    const r = analyzeNote(['```grafico', 'y = x^2', 'z = x + y', '```', '```grafico', 'y = x^2', '```'].join('\n'));
+    const [a, b] = r.plots;
+    expect(a!.spec.dim).toBe(3);
+    expect(a!.spec.series.map((s) => s.kind).sort()).toEqual(['curve3', 'surface']);
+    expect(b!.spec.dim).toBe(2);
+  });
+  it('folha com função de duas variáveis lista a superfície', () => {
+    const r = analyzeNote(['---', 'tipo: cálculo', '---', 'h(a; b) = a * b', 'f(x) = x'].join('\n'));
+    expect(r.sheet.surfaces()).toEqual([{ name: 'h', params: ['a', 'b'], text: expect.any(String) }]);
+    expect(plotFn2(r.sheet, 'h(x; y)')(2, 5)).toBe(10);
+    const m = sampleSurface((u, v) => [u, v, u * v], [0, 1], [0, 1], 2);
+    expect(m.length).toBe(27);
+    expect(m[26]).toBe(1);
   });
 });

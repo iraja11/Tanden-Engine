@@ -18,6 +18,7 @@
   import { editorBridge } from './files/editor-bridge';
   import { calcLoaded, loadCalc } from './calc/load';
   import { notionLike, preview, previewSlot, type EditorHost } from './editor';
+  import { baseBlocks } from './bases/cm-base';
 
   let { value, docKey, onchange, host, onfiles, oncursor, rich = false, livePreview = true }: {
     value: string;
@@ -121,6 +122,7 @@
     keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
     markdown({ base: markdownLanguage }), syntaxHighlighting(isRich ? richLook : look), theme, ...(isRich ? [richTheme] : []), attachments,
     ...(embedHost ? [embeds(embedHost)] : []),
+    baseBlocks(() => docKey),
     calcSlot.of(calcLoaded() ?? []),
     EditorView.updateListener.of((u) => {
       if (u.docChanged) onchange(u.state.doc.toString());

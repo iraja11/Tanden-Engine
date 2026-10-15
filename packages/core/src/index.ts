@@ -41,3 +41,5 @@ export * from './caderno';
 export * from './slides';
 export { parseFeed, discoverFeeds, looksLikeFeed, type Feed, type FeedItem } from './feed';
 export * from './plugins';
+export * from './base';
+export * from './graph';

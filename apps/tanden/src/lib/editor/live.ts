@@ -1,6 +1,6 @@
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { syntaxTree, foldable, foldEffect, unfoldEffect, foldedRanges } from '@codemirror/language';
-import type { EditorState, Range } from '@codemirror/state';
+import { StateField, type EditorState, type Range } from '@codemirror/state';
 import { codeLines, frontmatterEnd } from './blocks';
 import { hostFacet, linkExists } from './host';
 
@@ -396,3 +396,21 @@ export const livePreview = ViewPlugin.fromClass(
     },
   },
 );
+
+/**
+ * As propriedades (frontmatter) já aparecem editáveis no painel acima do texto,
+ * então no texto elas somem; voltam como código quando o cursor entra nelas.
+ */
+function fmDeco(state: EditorState): DecorationSet {
+  const fm = frontmatterEnd(state.doc);
+  if (!fm) return Decoration.none;
+  const to = state.doc.line(fm).to;
+  if (state.selection.ranges.some((r) => r.from <= to)) return Decoration.none;
+  return Decoration.set([Decoration.replace({ block: true }).range(0, to)]);
+}
+
+export const hideFrontmatter = StateField.define<DecorationSet>({
+  create: fmDeco,
+  update: (d, tr) => (tr.docChanged || tr.selection ? fmDeco(tr.state) : d),
+  provide: (f) => EditorView.decorations.from(f),
+});

@@ -13,6 +13,8 @@
   import { showMenu } from './menu';
   import NoteAside from './NoteAside.svelte';
   import History from './History.svelte';
+  import PropertiesPanel from '../bases/PropertiesPanel.svelte';
+  import { bases } from '../bases/bases.svelte';
 
   // A nota aberta: título editável (é o nome do arquivo), ferramentas, editor e painel lateral.
   let { path }: { path: string } = $props();
@@ -147,6 +149,7 @@
     <div class="col">
       <textarea class="title" rows="1" bind:this={titleEl} bind:value={title} use:grow placeholder="Sem título" spellcheck="true"
         onkeydown={titleKey} onblur={() => void commitTitle()} aria-label="Título da nota"></textarea>
+      <div class="props"><PropertiesPanel {path} onopen={(p) => (bases.peek = p)} /></div>
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
       <div class="ed" onclick={(e) => { if (e.target === e.currentTarget) editorBridge.focus(true); }}>
         <Editor value={engine.content} docKey={path} onchange={(v) => engine.edit(v)} rich livePreview={notes.preview}
@@ -180,11 +183,13 @@
   .title { flex: none; display: block; width: 100%; max-width: 780px; margin: 18px auto 4px; padding: 0 56px 0 34px; resize: none; overflow: hidden; border: 0; outline: none; background: none;
     font: 700 2.2rem/1.2 var(--f-display); color: var(--ink); letter-spacing: -.01em; }
   .title::placeholder { color: color-mix(in srgb, var(--muted) 60%, transparent); }
+  .props { flex: none; width: 100%; max-width: 780px; margin: 0 auto; padding: 0 56px 0 34px; }
   .ed { flex: 1 0 auto; display: flex; flex-direction: column; padding-bottom: 30vh; cursor: text; }
   .ed :global(.editor) { flex: 1; }
   @media (max-width: 720px) {
     .head { padding: 8px 10px 0 14px; }
     .words { display: none; }
     .title { padding: 0 18px 0 24px; font-size: 1.7rem; margin-top: 10px; }
+    .props { padding: 0 18px 0 24px; }
   }
 </style>

@@ -343,7 +343,7 @@
       {:else}
         {#if graphNodes.length}
           <div class="graphwrap">
-            <Graph nodes={graphNodes} edges={graphEdges} selected={graphSel} onselect={(id) => (graphSel = id)} />
+            <Graph nodes={graphNodes} edges={graphEdges} selected={graphSel} onselect={(id) => (graphSel = id)} onopen={(id) => openEntity(id)} />
             {#if graphSel && byPath.get(graphSel)}
               {@const e = byPath.get(graphSel)!}
               <div class="peek" style:--c={typeColor(e.type)}>

@@ -15,6 +15,7 @@
   const blocks = {
     calc: ['```calc\n', '\n```'],
     plot: ['```grafico\ny = ', '\nx: -10..10\n```'],
+    plot3d: ['```grafico\nz = ', '\nx: -3..3   y: -3..3\n```'],
     tex: ['$$\n', '\n$$'],
   } as const;
   function insertBlock(kind: keyof typeof blocks) {
@@ -53,6 +54,7 @@
       <div class="menu" role="menu">
         <button role="menuitem" onclick={() => insertBlock('calc')}>Bloco de cálculo<small>contas e unidades</small></button>
         <button role="menuitem" onclick={() => insertBlock('plot')}>Gráfico<small>funções e pontos</small></button>
+        <button role="menuitem" onclick={() => insertBlock('plot3d')}>Gráfico 3D<small>superfícies e curvas</small></button>
         <button role="menuitem" onclick={() => insertBlock('tex')}>Fórmula<small>LaTeX</small></button>
       </div>
     {/if}
