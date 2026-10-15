@@ -34,6 +34,12 @@ export interface GraphCanvasOptions {
   arrows?: 'always' | 'lit' | 'never';
   /** nome das ligações acesas (Mundos) */
   edgeLabels?: boolean;
+  /** tamanho dos nós (1 = padrão) */
+  nodeScale?: number;
+  /** espessura das ligações (1 = padrão) */
+  linkWidth?: number;
+  /** quando os nomes aparecem: 0 = sempre, 1 = padrão, maior = só bem de perto; -1 = nunca (só os em foco) */
+  labelFade?: number;
 }
 
 type Cam = { x: number; y: number; k: number };
@@ -142,11 +148,7 @@ export class GraphCanvas {
       this.adj[this.ea[k]!]!.push(this.eb[k]!);
       this.adj[this.eb[k]!]!.push(this.ea[k]!);
     }
-    this.radius = new Float32Array(nodes.length);
-    nodes.forEach((n, i) => {
-      const deg = this.layout.degree[i] ?? 0;
-      this.radius[i] = 4 + Math.min(14, Math.sqrt(deg + (n.weight ?? 0)) * 2.2);
-    });
+    this.sizeNodes();
     this.selected = prevSel ? (this.byId.get(prevSel) ?? -1) : -1;
     this.hover = -1;
     this.colors = null;
@@ -162,8 +164,40 @@ export class GraphCanvas {
   }
 
   setOptions(o: Partial<GraphCanvasOptions>): void {
+    const resize = o.nodeScale !== undefined && o.nodeScale !== this.opts.nodeScale;
     Object.assign(this.opts, o);
+    if (resize) this.sizeNodes();
     this.draw();
+  }
+
+  private sizeNodes(): void {
+    const scale = this.opts.nodeScale ?? 1;
+    this.radius = new Float32Array(this.nodes.length);
+    this.nodes.forEach((n, i) => {
+      const deg = this.layout.degree[i] ?? 0;
+      this.radius[i] = (4 + Math.min(14, Math.sqrt(deg + (n.weight ?? 0)) * 2.2)) * scale;
+    });
+  }
+
+  /** Posições atuais do layout (para levar o grafo para um quadro). */
+  positions(): Map<string, { x: number; y: number }> {
+    const out = new Map<string, { x: number; y: number }>();
+    this.layout.ids.forEach((id, i) => out.set(id, { x: this.layout.x[i]!, y: this.layout.y[i]! }));
+    return out;
+  }
+
+  /** O que está na tela, como imagem PNG (com o fundo do tema). */
+  async png(): Promise<Blob | null> {
+    this.paint();
+    const out = document.createElement('canvas');
+    out.width = this.canvas.width;
+    out.height = this.canvas.height;
+    const g = out.getContext('2d');
+    if (!g) return null;
+    g.fillStyle = this.palette().bg;
+    g.fillRect(0, 0, out.width, out.height);
+    g.drawImage(this.canvas, 0, 0);
+    return new Promise((res) => out.toBlob((b) => res(b), 'image/png'));
   }
 
   setParams(p: Partial<LayoutParams>): void {
@@ -366,7 +400,8 @@ export class GraphCanvas {
 
     // ligações: primeiro as apagadas num só traço, depois as acesas
     const dense = this.ea.length > 4000;
-    g.lineWidth = Math.max(0.5, Math.min(1.6, 1.1 * Math.sqrt(k)));
+    const lw = this.opts.linkWidth ?? 1;
+    g.lineWidth = Math.max(0.5, Math.min(1.6, 1.1 * Math.sqrt(k))) * lw;
     const strokeBatch = (pick: (e: number) => boolean, dashed: boolean, color: string, alpha: number) => {
       g.beginPath();
       let any = false;
@@ -398,7 +433,7 @@ export class GraphCanvas {
     const edgeAlpha = (dense ? 0.45 : 0.75) * (focus >= 0 || this.highlight ? dimA : 1);
     for (const dashed of [false, true]) strokeBatch((e) => !isLitEdge(e), dashed, c.muted, edgeAlpha * 0.6);
     if (focus >= 0) {
-      g.lineWidth = Math.max(1.2, Math.min(2.4, 1.6 * Math.sqrt(k)));
+      g.lineWidth = Math.max(1.2, Math.min(2.4, 1.6 * Math.sqrt(k))) * lw;
       g.shadowColor = c.ember;
       g.shadowBlur = 6;
       for (const dashed of [false, true]) strokeBatch(isLitEdge, dashed, c.ember, 0.95);
@@ -507,13 +542,14 @@ export class GraphCanvas {
 
     // nomes: os importantes primeiro; um nome que cobriria outro já escrito fica de fora
     const many = order.length > 600;
-    const labelK = many ? 1.1 : 0.55;
+    const fadeOpt = this.opts.labelFade ?? 1;
+    const labelK = (many ? 1.1 : 0.55) * Math.max(0, fadeOpt);
     const fontPx = Math.max(10, Math.min(15, 11.5 * Math.pow(k, 0.25)));
     g.font = `${fontPx}px ${c.body}`;
     g.textAlign = 'center';
     g.textBaseline = 'top';
     g.lineJoin = 'round';
-    const fadeIn = Math.max(0, Math.min(1, (k - labelK * 0.7) / (labelK * 0.3)));
+    const fadeIn = fadeOpt < 0 ? 0 : labelK === 0 ? 1 : Math.max(0, Math.min(1, (k - labelK * 0.7) / (labelK * 0.3)));
     const isSpecial = (i: number) => i === this.selected || i === this.hover || (focus >= 0 && near.has(i)) || (this.highlight?.has(i) ?? false);
     const byImportance = [...order].sort((a, b) => Number(isSpecial(b)) - Number(isSpecial(a)) || this.radius[b]! - this.radius[a]!);
     // grade de ocupação na tela (células de 48 px)
@@ -536,7 +572,7 @@ export class GraphCanvas {
     let budget = 900;
     for (const i of byImportance) {
       const special = isSpecial(i);
-      const big = this.radius[i]! >= 11 && k > labelK * 0.45;
+      const big = fadeOpt >= 0 && this.radius[i]! >= 11 * (this.opts.nodeScale ?? 1) && k > labelK * 0.45;
       let a = special ? 1 : big ? Math.max(fadeIn, 0.85) : fadeIn;
       if (!special && !lit(i)) a *= dimA;
       if (a < 0.05) continue;

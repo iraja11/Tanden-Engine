@@ -14,7 +14,7 @@ import { engine } from '../engine.svelte';
 import { files, parse } from '../files/files.svelte';
 import { desktop } from '../platform';
 import { isTauri } from '../storage-tauri';
-import { theme } from '../theme.svelte';
+import { THEME_VARS, theme } from '../theme.svelte';
 import noticiasHtml from '../../plugins/noticias.html?raw';
 
 /*
@@ -83,11 +83,9 @@ async function fetchRaw(url: string): Promise<Fetched> {
 /** Cores do tema como variáveis CSS, para a janela do plugin seguir o app. */
 function themeMessage() {
   const vars: Record<string, string> = {};
-  const style = document.documentElement.style;
-  for (let i = 0; i < style.length; i++) {
-    const k = style[i]!;
-    if (k.startsWith('--')) vars[k] = style.getPropertyValue(k);
-  }
+  // valores finais, já com os snippets CSS aplicados
+  const style = getComputedStyle(document.documentElement);
+  for (const k of THEME_VARS) vars[k] = style.getPropertyValue(k).trim();
   return { tanden: 1, tipo: 'tema', tema: { vars, escuro: theme.dark, movimento: theme.motion, destaque: vars['--ember'] ?? '' } };
 }
 

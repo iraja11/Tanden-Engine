@@ -1,10 +1,18 @@
 <script lang="ts">
-  import { BASES, PRESETS, theme, type Motion } from './theme.svelte';
+  import { BASES, FONTS, PRESETS, ZOOM, theme, type Motion } from './theme.svelte';
+  import Hotkeys from './settings/Hotkeys.svelte';
+  import SnippetsPane from './settings/SnippetsPane.svelte';
   import { CATEGORIES, PACKS, sound, type Pack } from './sound.svelte';
   import { pop, vanish } from './motion';
 
   // Aparência e sons. Tudo vale na hora e fica salvo neste aparelho.
-  let { onclose }: { onclose: () => void } = $props();
+  type Tab = 'aparencia' | 'atalhos' | 'snippets';
+  let { onclose, tab = $bindable('aparencia') }: { onclose: () => void; tab?: Tab } = $props();
+  const TABS: { id: Tab; label: string }[] = [
+    { id: 'aparencia', label: 'Aparência' },
+    { id: 'atalhos', label: 'Atalhos' },
+    { id: 'snippets', label: 'Snippets CSS' },
+  ];
 
   const at = (e: MouseEvent) => ({ x: e.clientX, y: e.clientY });
   const motions: { id: Motion; label: string; hint: string }[] = [
@@ -20,7 +28,8 @@
   }
 
   function onkey(e: KeyboardEvent) {
-    if (e.key === 'Escape') { e.stopPropagation(); onclose(); }
+    // gravando um atalho, o Esc é da gravação
+    if (e.key === 'Escape' && !e.defaultPrevented) { e.stopPropagation(); onclose(); }
   }
 </script>
 
@@ -28,9 +37,20 @@
 
 <div class="panel" role="dialog" aria-label="Aparência e sons" in:pop out:vanish>
   <header>
-    <h3>Aparência e sons</h3>
+    <h3>Personalizar</h3>
     <button class="x" onclick={onclose} aria-label="Fechar">×</button>
   </header>
+  <div class="tabs" role="tablist">
+    {#each TABS as t (t.id)}
+      <button role="tab" aria-selected={tab === t.id} class:on={tab === t.id} onclick={() => pick(() => (tab = t.id))}>{t.label}</button>
+    {/each}
+  </div>
+
+  {#if tab === 'atalhos'}
+    <Hotkeys />
+  {:else if tab === 'snippets'}
+    <SnippetsPane />
+  {:else}
 
   <section>
     <h4>Tema</h4>
@@ -74,6 +94,25 @@
         <span>halo de energia nos destaques</span>
       </label>
     </div>
+  </section>
+
+  <section>
+    <h4>Texto</h4>
+    <div class="row">
+      <span class="lbl">Letra</span>
+      <div class="seg">
+        {#each FONTS as f (f.id)}
+          <button class:on={theme.font === f.id} style:font-family={f.css} onclick={() => pick(() => theme.set({ font: f.id }))}>{f.label}</button>
+        {/each}
+      </div>
+    </div>
+    <div class="row">
+      <span class="lbl">Tamanho</span>
+      <input class="range" type="range" min={ZOOM.min} max={ZOOM.max} step={ZOOM.step} value={theme.zoom} aria-label="Tamanho da interface"
+        onchange={(e) => pick(() => theme.set({ zoom: +e.currentTarget.value }))} />
+      <code class="pct">{Math.round(theme.zoom * 100)}%</code>
+    </div>
+    <p class="hint">Ctrl+= e Ctrl+- também mudam o tamanho; Ctrl+0 volta a 100%.</p>
   </section>
 
   <section>
@@ -129,6 +168,7 @@
     <button class="link" onclick={() => pick(() => theme.reset())}>Voltar ao padrão</button>
     <small>Salvo neste aparelho</small>
   </footer>
+  {/if}
 </div>
 
 <style>
@@ -140,6 +180,11 @@
   h4 { margin: 0 0 8px; display: flex; align-items: center; gap: 10px; font: 600 10.5px/1 var(--f-display); letter-spacing: .14em;
     text-transform: uppercase; color: var(--muted); }
   .x { border: 0; background: none; font-size: 20px; color: var(--muted); }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-top: -6px; }
+  .tabs button { border: 0; background: none; padding: 7px 10px; font: 600 10.5px var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+    border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color var(--dur), border-color var(--dur); }
+  .tabs button.on { color: var(--ember); border-color: var(--ember); }
+  .pct { font: 11px var(--f-mono); color: var(--muted); min-width: 38px; text-align: right; }
   section { display: grid; gap: 10px; }
   fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 10px; transition: opacity var(--dur); }
   fieldset:disabled { opacity: .4; }

@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Permissões da janela principal",
   "windows": ["main"],
-  "permissions": ["core:default", "notification:default"]
+  "permissions": ["core:default", "notification:default", "core:webview:allow-set-webview-zoom"]
 }

@@ -171,7 +171,9 @@ export function noteFromBoard(board: Pick<BoardData, 'nodes' | 'edges'>, root?: 
     if (seen.has(id)) return;
     seen.add(id);
     const n = byId.get(id)!;
-    out.push(depth === 0 ? `# ${textOf(n)}\n` : depth === 1 ? `\n## ${textOf(n)}\n` : `${'  '.repeat(depth - 2)}- ${textOf(n)}`);
+    // a raiz de um mapa feito de uma nota é o link para ela; como título, vale o nome
+    const title = () => textOf(n).replace(/^\[\[([^\]|]+)(?:\|([^\]]+))?\]\]$/, (_, t: string, a?: string) => a ?? t.split('/').pop()!);
+    out.push(depth === 0 ? `# ${title()}\n` : depth === 1 ? `\n## ${textOf(n)}\n` : `${'  '.repeat(depth - 2)}- ${textOf(n)}`);
     for (const k of byPos(children.get(id) ?? [])) walk(k, depth + 1);
   };
   const roots = root && byId.has(root) ? [root] : byPos([...byId.keys()].filter((id) => !hasParent.has(id) && children.has(id)));

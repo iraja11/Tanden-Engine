@@ -179,6 +179,7 @@ describe('grafo e quadros conversam', () => {
     const durante = m.nodes.find((n) => n.text === 'Durante')!;
     expect(Math.sign(antes.x)).not.toBe(Math.sign(durante.x));
 
+    m.nodes[0]!.text = '[[Planos/Viagem|Viagem]]';
     const back = noteFromBoard(m, 'raiz');
     expect(back).toBe('# Viagem\n\n## Antes\n\n- passaporte\n  - foto 3x4\n- reservar hotel\n\n## Durante\n\n- museu\n');
   });

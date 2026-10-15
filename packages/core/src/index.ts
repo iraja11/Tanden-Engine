@@ -43,3 +43,4 @@ export { parseFeed, discoverFeeds, looksLikeFeed, type Feed, type FeedItem } fro
 export * from './plugins';
 export * from './base';
 export * from './graph';
+export { comboOf, normalizeCombo } from './hotkeys';

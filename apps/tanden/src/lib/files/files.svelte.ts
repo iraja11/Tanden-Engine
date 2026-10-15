@@ -24,6 +24,7 @@ import {
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { engine } from '../engine.svelte';
+import { quadros } from '../quadro/quadros.svelte';
 import { sheets } from '../sheets/sheets.svelte';
 import { isTauri } from '../storage-tauri';
 import { editorBridge } from './editor-bridge';
@@ -213,6 +214,7 @@ class Files {
       sheets.open(path);
       this.navigate('planilhas');
     } else if (kind === 'board') {
+      if (engine.boards.has(path)) quadros.open(path);
       this.navigate('quadros');
     } else {
       this.open = path;

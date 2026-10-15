@@ -4,6 +4,9 @@
 
 export type Motion = 'completo' | 'reduzido' | 'parado';
 
+/** nomes das variáveis que o tema define (os plugins recebem os valores atuais) */
+export const THEME_VARS: string[] = [];
+
 export type Base = {
   id: string;
   label: string;
@@ -33,10 +36,22 @@ export const PRESETS: Preset[] = [
   { id: 'gelo', label: 'Gelo', base: 'gelo', accent: '#2f6fed' },
 ];
 
-type Saved = { base: string; accent: string; motion: Motion; glow: boolean };
+/** Letra do texto (os títulos de seção continuam na fonte do tanden). */
+export const FONTS = [
+  { id: 'manrope', label: 'Manrope', css: '"Manrope", "Segoe UI", system-ui, sans-serif' },
+  { id: 'sistema', label: 'Sistema', css: 'system-ui, "Segoe UI", Roboto, "Noto Sans", sans-serif' },
+  { id: 'serifa', label: 'Serifada', css: '"Iowan Old Style", "Palatino Linotype", Georgia, "Noto Serif", serif' },
+  { id: 'mono', label: 'Mono', css: '"JetBrains Mono", ui-monospace, monospace' },
+  { id: 'chakra', label: 'Chakra', css: '"Chakra Petch", "Segoe UI", system-ui, sans-serif' },
+] as const;
+export type Font = (typeof FONTS)[number]['id'];
+export const ZOOM = { min: 0.75, max: 1.5, step: 0.05 };
+
+type Saved = { base: string; accent: string; motion: Motion; glow: boolean; font: Font; zoom: number };
 
 const KEY = 'tanden.theme';
-const DEFAULTS: Saved = { base: 'carvao', accent: '#ff8a3d', motion: 'completo', glow: true };
+const DEFAULTS: Saved = { base: 'carvao', accent: '#ff8a3d', motion: 'completo', glow: true, font: 'manrope', zoom: 1 };
+const clampZoom = (z: number) => Math.round(Math.min(ZOOM.max, Math.max(ZOOM.min, z)) * 100) / 100;
 
 function load(): Saved {
   const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -50,6 +65,8 @@ function load(): Saved {
       accent: /^#[0-9a-f]{6}$/i.test(s.accent ?? '') ? s.accent! : base.accent,
       motion: s.motion === 'completo' || s.motion === 'reduzido' || s.motion === 'parado' ? s.motion : base.motion,
       glow: typeof s.glow === 'boolean' ? s.glow : base.glow,
+      font: FONTS.some((f) => f.id === s.font) ? s.font! : base.font,
+      zoom: typeof s.zoom === 'number' && Number.isFinite(s.zoom) ? clampZoom(s.zoom) : base.zoom,
     };
   } catch {
     return base;
@@ -96,6 +113,9 @@ class Theme {
   accent = $state(DEFAULTS.accent);
   motion = $state<Motion>(DEFAULTS.motion);
   glow = $state(DEFAULTS.glow);
+  font = $state<Font>(DEFAULTS.font);
+  /** tamanho da interface inteira (1 = 100%) */
+  zoom = $state(DEFAULTS.zoom);
   /** sobe a cada troca; o terminal e o editor releem as cores */
   rev = $state(0);
 
@@ -105,6 +125,8 @@ class Theme {
     this.accent = s.accent;
     this.motion = s.motion;
     this.glow = s.glow;
+    this.font = s.font;
+    this.zoom = s.zoom;
   }
 
   get dark(): boolean {
@@ -142,18 +164,51 @@ class Theme {
       '--yin': '#0b0b0d', '--yang': '#ecebf0',
       '--dur': `${this.ms(220)}ms`, '--dur-slow': `${this.ms(420)}ms`,
       '--ease': 'cubic-bezier(.2, .8, .2, 1)', '--spring': 'cubic-bezier(.34, 1.4, .64, 1)',
+      '--f-body': (FONTS.find((f) => f.id === this.font) ?? FONTS[0]).css,
     };
     const root = document.documentElement;
-    for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
+    // numa folha própria (e não no style do <html>), para os snippets CSS poderem trocar qualquer variável
+    let sheet = document.getElementById('tanden-theme') as HTMLStyleElement | null;
+    if (!sheet) {
+      sheet = document.createElement('style');
+      sheet.id = 'tanden-theme';
+      const firstSnippet = document.head.querySelector('style[data-snippet]');
+      document.head.insertBefore(sheet, firstSnippet);
+    }
+    sheet.textContent = `:root {\n${Object.entries(vars).map(([k, v]) => `  ${k}: ${v};`).join('\n')}\n}`;
+    for (const k of Object.keys(vars)) root.style.removeProperty(k);
+    THEME_VARS.splice(0, THEME_VARS.length, ...Object.keys(vars));
+    // quem desenha em canvas (grafo) observa o style do <html> para reler as cores
+    root.style.setProperty('--theme-rev', String(this.rev + 1));
     root.style.colorScheme = b.dark ? 'dark' : 'light';
     root.dataset.motion = this.motion;
     root.dataset.theme = b.dark ? 'dark' : 'light';
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', b.void);
+    this.applyZoom();
     this.rev++;
   }
 
+  private appliedZoom = 1;
+  /** No app, o zoom é o da própria janela (as contas de mouse continuam certas); na web, CSS. */
+  private applyZoom(): void {
+    if (this.zoom === this.appliedZoom) return;
+    this.appliedZoom = this.zoom;
+    const z = this.zoom;
+    if ('__TAURI_INTERNALS__' in window) {
+      void import('@tauri-apps/api/webview')
+        .then(({ getCurrentWebview }) => getCurrentWebview().setZoom(z))
+        .catch(() => {
+          (document.documentElement.style as CSSStyleDeclaration & { zoom: string }).zoom = String(z);
+        });
+    } else (document.documentElement.style as CSSStyleDeclaration & { zoom: string }).zoom = z === 1 ? '' : String(z);
+  }
+
+  zoomBy(delta: number): void {
+    this.set({ zoom: delta === 0 ? 1 : clampZoom(this.zoom + delta) });
+  }
+
   private save(): void {
-    const s: Saved = { base: this.base, accent: this.accent, motion: this.motion, glow: this.glow };
+    const s: Saved = { base: this.base, accent: this.accent, motion: this.motion, glow: this.glow, font: this.font, zoom: this.zoom };
     try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* sem armazenamento: vale só nesta sessão */ }
   }
 
@@ -195,6 +250,18 @@ class Theme {
 
   reset(): void {
     this.set({ ...DEFAULTS });
+  }
+
+  /** Gimmick: o próximo tema pronto da lista. */
+  nextPreset(): void {
+    const i = PRESETS.findIndex((p) => p.id === this.preset);
+    this.usePreset(PRESETS[(i + 1) % PRESETS.length]!.id, { x: innerWidth / 2, y: innerHeight / 2 });
+  }
+
+  /** Troca entre claro e escuro mantendo o destaque. */
+  toggleDark(): void {
+    const target = BASES.find((b) => b.dark !== this.dark)!;
+    this.set({ base: this.dark ? (BASES.find((b) => b.id === 'papel') ?? target).id : 'carvao' }, { x: innerWidth - 40, y: 40 });
   }
 }
 

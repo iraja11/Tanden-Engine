@@ -4,44 +4,18 @@
   import { editorBridge } from '../files/editor-bridge';
   import { notes } from './notes.svelte';
   import { fold, noteName } from './host';
+  import { commands } from '../commands.svelte';
+  import { quadros, boardTitle } from '../quadro/quadros.svelte';
 
   // Paleta (Ctrl+K / Ctrl+P): achar nota pelo nome ou pelo conteúdo e rodar comandos.
   let { go, onclose }: { go: (view: string) => void; onclose: () => void } = $props();
 
-  type Row = { kind: 'nota' | 'texto' | 'cmd'; label: string; hint?: string; snippet?: string; run: () => void };
+  type Row = { kind: 'nota' | 'quadro' | 'texto' | 'cmd'; label: string; hint?: string; snippet?: string; run: () => void };
 
   let q = $state(notes.palette?.mode === 'comandos' ? '>' : '');
   let sel = $state(0);
   let input = $state<HTMLInputElement>();
   let list = $state<HTMLElement>();
-
-  const cur = () => engine.active;
-  const commands: Array<{ label: string; hint?: string; keys?: string; when?: () => unknown; run: () => void }> = [
-    { label: 'Nova nota', hint: 'Ctrl+N', run: () => notes.create() },
-    { label: 'Nota de hoje (diário)', keys: 'diario daily hoje', run: () => notes.daily(0) },
-    { label: 'Nota de ontem', keys: 'diario', run: () => notes.daily(-1) },
-    { label: 'Nota de amanhã', keys: 'diario', run: () => notes.daily(1) },
-    { label: 'Renomear nota', when: cur, run: () => setTimeout(() => (document.querySelector('.page .title') as HTMLTextAreaElement | null)?.select()) },
-    { label: 'Duplicar nota', when: cur, run: () => notes.duplicate(cur()!) },
-    { label: 'Favoritar / desfavoritar', when: cur, run: () => notes.toggleFavorite(cur()!) },
-    { label: 'Apagar nota', keys: 'excluir deletar lixeira', when: cur, run: () => { if (confirm(`Apagar "${noteName(cur()!)}"? Uma cópia fica na lixeira (.trash).`)) void notes.remove(cur()!); } },
-    { label: 'Histórico de versões', keys: 'versao restaurar desfazer', when: cur, run: () => (notes.history = cur()) },
-    { label: 'Mostrar sumário', keys: 'indice titulos outline', run: () => notes.setAside('sumario') },
-    { label: 'Mostrar conexões e backlinks', keys: 'links grafo', run: () => notes.setAside('conexoes') },
-    { label: 'Alternar prévia ao vivo / Markdown', hint: 'Ctrl+Shift+E', keys: 'codigo fonte source modo leitura', run: () => notes.setPreview(!notes.preview) },
-    { label: 'Exportar como PDF', when: cur, run: () => void files.exportNote(cur()!, 'pdf') },
-    { label: 'Exportar como Word (.docx)', when: cur, run: () => void files.exportNote(cur()!, 'docx') },
-    { label: 'Exportar como página (.html)', when: cur, run: () => void files.exportNote(cur()!, 'html') },
-    { label: 'Exportar como Markdown (.md)', when: cur, run: () => void files.exportNote(cur()!, 'md') },
-    { label: 'Copiar link [[ ]] da nota', when: cur, run: () => void navigator.clipboard?.writeText(`[[${noteName(cur()!)}]]`) },
-    { label: 'Anexar arquivo', when: cur, run: () => notes.host.pickFiles?.() },
-    { label: 'Salvar página web', when: cur, run: () => (notes.clip = true) },
-    ...[['notas', 'Notas'], ['ia', 'IA'], ['lembretes', 'Lembretes'], ['quadros', 'Quadros'], ['planilhas', 'Planilhas'], ['calculo', 'Cálculo'], ['slides', 'Slides'], ['mundos', 'Mundos'], ['luta', 'Luta'], ['arquivos', 'Arquivos'], ['plugins', 'Plugins']].map(([id, name]) => ({
-      label: `Ir para ${name}`,
-      keys: 'abrir tela modulo',
-      run: () => go(id!),
-    })),
-  ];
 
   const snippet = (text: string, at: number, len: number) => {
     const a = Math.max(0, at - 50);
@@ -79,6 +53,9 @@
         }
         scored.sort((a, b) => b.s - a.s);
         for (const { p } of scored.slice(0, 12)) out.push({ kind: 'nota', label: noteName(p), hint: p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '', run: () => engine.open(p) });
+        // quadros (.canvas) pelo nome
+        for (const b of engine.boardList.filter((b) => words.every((w) => fold(b).includes(w))).slice(0, 6))
+          out.push({ kind: 'quadro', label: boardTitle(b), hint: b.includes('/') ? b.slice(0, b.lastIndexOf('/')) : '', run: () => quadros.open(b) });
         // dentro das notas
         if (query.length >= 3) {
           let n = 0;
@@ -96,12 +73,12 @@
         out.push({ kind: 'cmd', label: `Criar nota "${raw}"`, hint: 'Ctrl+Enter', run: () => notes.create('', raw) });
       }
     }
-    for (const c of commands) {
+    for (const c of commands.list) {
       if (c.when && !c.when()) continue;
       const hay = fold(`${c.label} ${c.keys ?? ''}`);
       if (words.length && !words.every((w) => hay.includes(w))) continue;
       if (!words.length && !onlyCmd && out.length > 10) continue;
-      out.push({ kind: 'cmd', label: c.label, hint: c.hint, run: c.run });
+      out.push({ kind: 'cmd', label: c.label, hint: commands.hotkeysOf(c.id)[0], run: c.run });
     }
     return out;
   });
@@ -120,7 +97,7 @@
   function pick(r: Row | undefined) {
     if (!r) return;
     onclose();
-    if (r.kind !== 'cmd' && r.label) go('notas');
+    if (r.kind !== 'cmd' && r.kind !== 'quadro' && r.label) go('notas');
     r.run();
   }
 
@@ -145,7 +122,7 @@
     }
   }
 
-  const SECTION: Record<Row['kind'], string> = { nota: 'Notas', texto: 'No texto', cmd: 'Comandos' };
+  const SECTION: Record<Row['kind'], string> = { nota: 'Notas', quadro: 'Quadros', texto: 'No texto', cmd: 'Comandos' };
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
   const mark = (s: string) => {
     const words = fold(q.replace(/^>/, '')).split(/\s+/).filter((w) => w.length > 1);
@@ -166,7 +143,7 @@
       {#each rows as r, i (i)}
         {#if i === 0 || rows[i - 1]!.kind !== r.kind}<div class="sec">{SECTION[r.kind]}</div>{/if}
         <button class:on={i === sel} onmousemove={() => (sel = i)} onclick={() => pick(r)}>
-          <span class="ic">{r.kind === 'cmd' ? '›' : r.kind === 'texto' ? '¶' : '▤'}</span>
+          <span class="ic">{r.kind === 'cmd' ? '›' : r.kind === 'texto' ? '¶' : r.kind === 'quadro' ? '▦' : '▤'}</span>
           <span class="txt">
             <span class="lb">{@html mark(r.label)}</span>
             {#if r.snippet}<span class="sn">{@html mark(r.snippet)}</span>{/if}

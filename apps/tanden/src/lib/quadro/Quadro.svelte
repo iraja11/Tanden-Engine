@@ -5,6 +5,8 @@
   import { feel } from '../feel.svelte';
   import { sound } from '../sound.svelte';
   import { pop } from '../motion';
+  import { files } from '../files/files.svelte';
+  import { quadros } from './quadros.svelte';
   import {
     PALETTE, arrowHead, center, colorOf, edgePath, facing, inkOutline, layoutMindMap, recognize, shapePath,
     strokeHit, thin, treeOf, uid, type Box, type Pt, type Side,
@@ -50,7 +52,8 @@
   let draft = $state('');
   let edgeEditing = $state<string | null>(null);
   let edgeDraft = $state('');
-  let menu = $state<'boards' | 'notes' | null>(null);
+  let menu = $state<'boards' | 'notes' | 'file' | null>(null);
+  let renaming = $state<string | null>(null);
   let newName = $state('');
   let noteQuery = $state('');
   /** caixas que acabaram de chegar de outro aparelho: brilham um instante */
@@ -141,11 +144,34 @@
     });
   });
 
+  // pedido de fora (link [[Quadro.canvas]], paleta, grafo, "mapa da nota")
+  let handled = 0;
+  $effect(() => {
+    const r = quadros.request;
+    const list = engine.boardList;
+    if (!r || r.seq === handled || !list.includes(r.path)) return;
+    untrack(() => {
+      handled = r.seq;
+      if (r.path !== path) open(r.path);
+      if (r.organize) {
+        requestAnimationFrame(() => {
+          organize(false);
+          requestAnimationFrame(fit);
+        });
+      }
+    });
+  });
+
   // mudança vinda de outro aparelho ou do Obsidian
   $effect(() => {
     engine.boardRev;
     untrack(() => {
-      if (!path || !engine.boards.has(path)) return;
+      if (path && !engine.boards.has(path)) {
+        // apagado em outro aparelho ou no Obsidian
+        open(engine.boardList[0] ?? null);
+        return;
+      }
+      if (!path) return;
       const before = new Map((data?.nodes ?? []).map((n) => [n.id, JSON.stringify(n)]));
       data = engine.boards.read(path);
       const changed = data.nodes.filter((n) => before.get(n.id) !== JSON.stringify(n)).map((n) => n.id);
@@ -432,10 +458,41 @@
     menu = null;
   }
 
-  function preview(file: string | undefined): string {
-    if (!file || !engine.vault?.has(file)) return file ? 'Nota não encontrada neste aparelho.' : '';
-    return engine.vault.read(file).replace(/^#.*\n+/, '').slice(0, 220);
+  const IMG = /\.(png|jpe?g|gif|webp|avif|svg|bmp)$/i;
+  /** caminho real no cofre (o .canvas do Obsidian pode trazer só o nome) */
+  function resolveFile(file: string | undefined): string | null {
+    if (!file) return null;
+    if (engine.vault?.has(file) || files.list.includes(file) || engine.boardList.includes(file)) return file;
+    const name = file.split('/').pop()!;
+    return engine.notes.find((n) => n === `${file}.md` || n.endsWith(`/${name}`)) ?? files.list.find((f) => f.endsWith(`/${name}`) || f === name) ?? null;
   }
+  function preview(file: string | undefined): string {
+    const p = resolveFile(file);
+    if (!p) return file ? 'Não encontrado neste aparelho.' : '';
+    if (p.endsWith('.canvas')) return 'Quadro';
+    if (!engine.vault.has(p)) return p.split('.').pop()!.toUpperCase();
+    return engine.vault
+      .read(p)
+      .replace(/^---\n[\s\S]*?\n---\n?/, '')
+      .replace(/^\s*#.*\n+/, '')
+      .replace(/!?\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, t: string, a?: string) => a ?? t)
+      .replace(/\*\*|__|`/g, '')
+      .slice(0, 220);
+  }
+  /** endereço das imagens dos cartões (carrega uma vez por arquivo) */
+  let imgs = $state<Record<string, string>>({});
+  $effect(() => {
+    const want = (data?.nodes ?? []).filter((n) => n.type === 'file' && IMG.test(n.file ?? '')).map((n) => n.file!);
+    untrack(() => {
+      for (const f of want) {
+        if (f in imgs) continue;
+        imgs[f] = '';
+        void files.imageUrl(f).then((u) => {
+          if (u) imgs[f] = u;
+        });
+      }
+    });
+  });
 
   // ---------- texto das caixas (markdown leve) ----------
 
@@ -765,6 +822,7 @@
     if (nodeId) {
       const n = byId.get(nodeId);
       if (n?.type === 'file' && n.file) openLinked(n.file);
+      else if (n?.type === 'link' && n.url) files.openLink(n.url);
       else startEdit(nodeId);
       return;
     }
@@ -786,9 +844,66 @@
   }
 
   function openLinked(target: string): void {
+    const real = resolveFile(target);
+    if (real?.endsWith('.canvas')) return open(real);
+    if (real && !engine.vault.has(real)) {
+      files.openLink(real);
+      return;
+    }
     const p = target.endsWith('.md') ? target : `${target}.md`;
-    const found = engine.notes.find((n) => n === p || n.endsWith(`/${p}`));
+    const found = real ?? engine.notes.find((n) => n === p || n.endsWith(`/${p}`));
     if (found) onOpenNote(found);
+    else files.openLink(target);
+  }
+
+  /** Colar no quadro: um endereço vira cartão de link; um texto vira caixa. */
+  function onPaste(e: ClipboardEvent): void {
+    if (!path || editing || (e.target as Element).closest('textarea, input')) return;
+    const text = e.clipboardData?.getData('text/plain')?.trim();
+    if (!text) return;
+    e.preventDefault();
+    const r = stage!.getBoundingClientRect();
+    const at = toWorld(r.left + r.width / 2, r.top + r.height / 2);
+    const id = uid();
+    if (/^https?:\/\/\S+$/i.test(text)) change((ed) => ed.setNode({ id, type: 'link', url: text, x: snap(at.x - 150), y: snap(at.y - 50), width: 300, height: 100 }));
+    else if (/^!?\[\[[^\]]+\]\]$/.test(text)) {
+      const t = text.replace(/^!?\[\[|\]\]$/g, '').split('|')[0]!;
+      const real = resolveFile(t) ?? resolveFile(`${t}.md`);
+      if (real) change((ed) => ed.setNode({ id, type: 'file', file: real, x: snap(at.x - 130), y: snap(at.y - 70), width: 260, height: 140 }));
+      else change((ed) => ed.setNode({ id, type: 'text', text, x: snap(at.x - 100), y: snap(at.y - 30), width: 200, height: 60 }));
+    } else change((ed) => ed.setNode({ id, type: 'text', text, x: snap(at.x - 130), y: snap(at.y - 40), width: 260, height: Math.min(400, 40 + 20 * text.split('\n').length) }));
+    selection = [id];
+    sound.play('create');
+  }
+
+  // ---------- arquivo do quadro ----------
+
+  async function commitRename(): Promise<void> {
+    const name = renaming;
+    renaming = null;
+    if (!path || name === null || name.trim() === title(path)) return;
+    try {
+      await quadros.rename(path, name);
+      sound.play('tick');
+    } catch (err) {
+      files.say(String(err instanceof Error ? err.message : err), { error: true });
+    }
+  }
+  async function removeBoard(): Promise<void> {
+    if (!path) return;
+    menu = null;
+    if (!confirm(`Apagar o quadro "${title(path)}"? Uma cópia fica na lixeira (.trash).`)) return;
+    const was = path;
+    const trashed = await quadros.remove(was);
+    open(engine.boardList[0] ?? null);
+    files.say(trashed ? `Quadro apagado. A cópia ficou em ${trashed}.` : 'Quadro apagado.');
+  }
+  function boardToNote(): void {
+    if (!path) return;
+    menu = null;
+    const p = quadros.toNote(path);
+    sound.play('create');
+    onOpenNote(p);
   }
 
   function onDrop(e: DragEvent): void {
@@ -1035,6 +1150,25 @@
       {/if}
     </div>
     {#if path}
+      <div class="picker">
+        <button class="icon-btn" onclick={() => (menu = menu === 'file' ? null : 'file')} title="Renomear, duplicar, apagar…" aria-label="Opções do quadro" aria-haspopup="true" aria-expanded={menu === 'file'}>⋯</button>
+        {#if menu === 'file'}
+          <div class="menu boards" role="menu" transition:pop>
+            {#if renaming !== null}
+              <div class="new-board">
+                <input bind:value={renaming} use:focusOnMount aria-label="Nome do quadro"
+                  onkeydown={(e) => { if (e.key === 'Enter') { void commitRename(); menu = null; } if (e.key === 'Escape') { renaming = null; menu = null; } }} />
+              </div>
+            {:else}
+              <button role="menuitem" onclick={() => (renaming = title(path!))}>Renomear</button>
+              <button role="menuitem" onclick={() => { menu = null; quadros.duplicate(path!); sound.play('create'); }}>Duplicar</button>
+              <button role="menuitem" onclick={boardToNote}>Virar nota em tópicos</button>
+              <button role="menuitem" onclick={() => { menu = null; void navigator.clipboard?.writeText(`[[${path}]]`); files.say('Link do quadro copiado.'); }}>Copiar link [[ ]]</button>
+              <button role="menuitem" class="danger" onclick={removeBoard}>Apagar</button>
+            {/if}
+          </div>
+        {/if}
+      </div>
       <div class="actions">
         {#if kind === 'mapa'}<button onclick={() => organize(true)} title="Reorganiza o mapa a partir da raiz">Organizar</button>{/if}
         <button onclick={() => (menu = menu === 'notes' ? null : 'notes')} title="Coloca uma nota do cofre no quadro">+ Nota</button>
@@ -1082,7 +1216,7 @@
     <div class="stage" bind:this={stage} tabindex="0" role="application" aria-label="Quadro {title(path)}"
       class:drawing={drawTools.has(tool)} class:eraser={tool === 'eraser'} class:carding={tool === 'card'}
       onpointerdown={onPointerDown} onpointermove={onPointerMove} onpointerup={onPointerUp} onpointercancel={onPointerUp}
-      onwheel={onWheel} ondblclick={onDblClick} onkeydown={onKeyDown}
+      onwheel={onWheel} ondblclick={onDblClick} onkeydown={onKeyDown} onpaste={onPaste}
       ondragover={(e) => e.dataTransfer?.types.includes('text/tanden-note') && e.preventDefault()} ondrop={onDrop}
       style:--grid="{GRID * view.k}px" style:--gx="{view.x}px" style:--gy="{view.y}px">
       <div class="world" class:settling style:transform="translate({view.x}px, {view.y}px) scale({view.k})">
@@ -1134,9 +1268,13 @@
                 <textarea class="text-edit" bind:value={draft} onkeydown={editKeys} onblur={commitEdit} use:focusOnMount
                   placeholder={kind === 'mapa' ? 'Tópico' : 'Escreva… (Ctrl+Enter salva)'}></textarea>
               {/if}
+            {:else if n.type === 'file' && IMG.test(n.file ?? '')}
+              <div class="file image">
+                {#if imgs[n.file ?? '']}<img src={imgs[n.file ?? '']} alt={(n.file ?? '').split('/').pop()} draggable="false" />{:else}<p>{preview(n.file)}</p>{/if}
+              </div>
             {:else if n.type === 'file'}
               <div class="file">
-                <span class="ftitle">◇ {(n.file ?? '').split('/').pop()?.replace(/\.md$/, '')}</span>
+                <span class="ftitle">{(n.file ?? '').endsWith('.canvas') ? '▦' : '◇'} {(n.file ?? '').split('/').pop()?.replace(/\.(md|canvas)$/, '')}</span>
                 <p>{preview(n.file)}</p>
               </div>
             {:else if n.type === 'link'}
@@ -1314,6 +1452,11 @@
   .file { padding: 10px 14px; height: 100%; overflow: hidden; display: grid; align-content: start; gap: 6px; }
   .ftitle { font: 600 13px var(--f-display); letter-spacing: .04em; color: var(--ember-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .file p { margin: 0; color: var(--muted); font-size: 12.5px; white-space: pre-wrap; }
+  .file.image { padding: 0; display: block; }
+  .file.image img { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; }
+  .icon-btn { width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); padding: 0; font-size: 16px; line-height: 1; }
+  .icon-btn:hover { border-color: var(--ember); color: var(--ember); }
+  .menu .danger { color: var(--crit); }
   .file a { color: var(--silver); font-size: 12px; word-break: break-all; }
 
   .text-edit { width: 100%; height: 100%; resize: none; border: 0; outline: none; background: transparent; color: var(--ink);

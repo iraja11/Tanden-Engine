@@ -9,6 +9,7 @@
   import RemindersPanel from './lib/RemindersPanel.svelte';
   import { reminders } from './lib/reminders.svelte';
   import Quadro from './lib/quadro/Quadro.svelte';
+  import { quadros } from './lib/quadro/quadros.svelte';
   import SheetsView from './lib/sheets/SheetsView.svelte';
   import { sheets } from './lib/sheets/sheets.svelte';
   import FilesView from './lib/files/FilesView.svelte';
@@ -36,6 +37,9 @@
   import { feel } from './lib/feel.svelte';
   import { sound } from './lib/sound.svelte';
   import { theme } from './lib/theme.svelte';
+  import { commands } from './lib/commands.svelte';
+  import { registerAppCommands } from './lib/app-commands';
+  import { snippets } from './lib/snippets.svelte';
   import { pop, rise, vanish } from './lib/motion';
 
   let host = $state<HTMLElement>();
@@ -46,6 +50,9 @@
   let drawer = $state(false);
   let drivePanel = $state(false);
   let settings = $state(false);
+  let settingsTab = $state<'aparencia' | 'atalhos' | 'snippets'>('aparencia');
+  /** modo foco: só a área principal, sem barras */
+  let focus = $state(false);
   let splash = $state(true);
   let railList = $state<HTMLElement>();
   let railBtns = $state<Record<string, HTMLElement>>({});
@@ -94,10 +101,13 @@
   // "criar slides da nota" e importações de .pptx abrem a tela de slides
   $effect(() => { if (slides.goto) untrack(() => go('slides')); });
   $effect(() => { if (engine.ready) void plugins.start(); });
+  $effect(() => { if (engine.ready) snippets.start(); });
   // abrir um plugin (pela tela de plugins ou por um aviso dele)
   $effect(() => { const g = plugins.goto; if (g) untrack(() => go(`plugin:${g.id}`)); });
   // plugin desligado com a tela aberta: volta para a lista
   $effect(() => { if (pluginView && !plugins.active.some((e) => e.manifest.id === pluginView)) view = 'plugins'; });
+  // abrir um quadro de fora (paleta, grafo, "mapa da nota")
+  $effect(() => { if (quadros.goto) untrack(() => go('quadros')); });
   // links e importações pedem para trocar de tela
   $effect(() => { if (files.goto) view = files.goto.view; });
   // clicar num aviso de lembrete abre a tela de lembretes
@@ -165,26 +175,41 @@
     feel.start();
     engine.start().catch((e) => (error = String(e)));
     void updater.start();
+    const unregister = registerAppCommands({
+      go: (v) => go(v as View),
+      newNote,
+      sync: () => void syncByHand(),
+      settings: (tab = 'aparencia') => {
+        if (settings && settingsTab === tab) toggleSettings();
+        else {
+          settingsTab = tab;
+          if (!settings) toggleSettings();
+        }
+      },
+      focusMode: () => {
+        focus = !focus;
+        sound.play(focus ? 'open' : 'close');
+        if (focus) files.say('Modo foco. Esc ou Ctrl+Shift+Enter traz as barras de volta.');
+      },
+    });
+    // os atalhos globais são os da tela Atalhos (cada um pode ser trocado);
+    // Ctrl+K com texto selecionado no editor vira link, porque o editor trata antes
     const onKey = (e: KeyboardEvent) => {
-      const mod = e.ctrlKey || e.metaKey;
-      const k = e.key.toLowerCase();
-      if (mod && k === 'n' && !e.shiftKey) { e.preventDefault(); newNote(); go('notas'); }
-      // Ctrl+K vira link dentro do editor; fora dele (ou sem seleção) abre a paleta
-      if (mod && !e.shiftKey && (k === 'p' || k === 'o' || (k === 'k' && !e.defaultPrevented))) { e.preventDefault(); notes.openPalette(k === 'p' ? 'comandos' : 'tudo'); }
-      if (mod && e.shiftKey && k === 'f') { e.preventDefault(); notes.openPalette('busca'); }
-      if (mod && e.shiftKey && k === 'e') { e.preventDefault(); notes.setPreview(!notes.preview); }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); void syncByHand(); }
-      if ((e.ctrlKey || e.metaKey) && e.key === ',') { e.preventDefault(); toggleSettings(); }
+      if (commands.handle(e)) return;
       if (e.key === 'Escape' && drivePanel) { drivePanel = false; sound.play('close'); }
+      else if (e.key === 'Escape' && focus && !e.defaultPrevented) focus = false;
     };
     addEventListener('keydown', onKey);
-    return () => removeEventListener('keydown', onKey);
+    return () => {
+      removeEventListener('keydown', onKey);
+      unregister();
+    };
   });
 
   const hhmm = (d: Date) => d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 </script>
 
-<div class="shell" bind:this={host}>
+<div class="shell" class:focus bind:this={host}>
   <Veins {host} orb={orbWrap} targets={{ notes: notesEl, editor: editorEl, status: statusEl }}
     flowing={engine.busy} pulses={engine.pulses} />
 
@@ -339,7 +364,7 @@
   </footer>
 
   {#if drivePanel}<DrivePanel onclose={toggleDrive} />{/if}
-  {#if settings}<SettingsPanel onclose={toggleSettings} />{/if}
+  {#if settings}<SettingsPanel bind:tab={settingsTab} onclose={toggleSettings} />{/if}
 </div>
 
 {#if bases.peek}
@@ -358,6 +383,8 @@
   .shell { position: relative; height: 100%; display: grid; overflow: hidden;
     grid-template: "rail side main" 1fr "rail side status" auto / 76px 260px 1fr; }
   .rail, .side, .main, .status { position: relative; }
+  .shell.focus { grid-template: "main" 1fr "status" auto / 1fr; }
+  .shell.focus > .rail, .shell.focus > .side { display: none; }
 
   .rail { grid-area: rail; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 16px 0;
     border-right: 1px solid var(--line); }
