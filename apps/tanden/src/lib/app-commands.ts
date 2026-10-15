@@ -10,6 +10,7 @@ import { snippets } from './snippets.svelte';
 import { sound } from './sound.svelte';
 import { theme } from './theme.svelte';
 import { vida } from './vida/vida.svelte';
+import { flashcards } from './flashcards/flashcards.svelte';
 
 /*
  * Os comandos do app inteiro: a paleta (Ctrl+P) lista todos, e qualquer um
@@ -26,7 +27,7 @@ export interface AppActions {
 
 const MODULES: [string, string][] = [
   ['hoje', 'Hoje'], ['notas', 'Notas'], ['bancos', 'Bancos'], ['grafo', 'Grafo'], ['ia', 'IA'], ['lembretes', 'Lembretes'], ['quadros', 'Quadros'],
-  ['planilhas', 'Planilhas'], ['calculo', 'Cálculo'], ['slides', 'Slides'], ['mundos', 'Mundos'], ['luta', 'Luta'], ['biblioteca', 'Biblioteca'], ['arquivos', 'Arquivos'], ['plugins', 'Plugins'],
+  ['planilhas', 'Planilhas'], ['calculo', 'Cálculo'], ['flashcards', 'Flashcards'], ['slides', 'Slides'], ['mundos', 'Mundos'], ['luta', 'Luta'], ['biblioteca', 'Biblioteca'], ['arquivos', 'Arquivos'], ['plugins', 'Plugins'],
 ];
 
 const roll = (sides: number) => 1 + Math.floor(Math.random() * sides);
@@ -94,6 +95,12 @@ export function registerAppCommands(a: AppActions): () => void {
     { id: 'vida.tarefa', label: 'Nova tarefa', keys: 'todo tarefa capturar hoje', run: () => { a.go('hoje'); setTimeout(() => (document.querySelector('.hoje .quick input') as HTMLInputElement | null)?.focus(), 120); } },
     { id: 'vida.revisao', label: 'Revisão da semana', keys: 'semanal review weekly', run: () => { vida.review(); a.go('notas'); } },
     { id: 'vida.montar', label: 'Montar sistema de vida (tarefas, projetos, hábitos, metas, diário)', keys: 'setup bancos life gtd', run: () => { vida.setup(); a.go('hoje'); } },
+
+    // flashcards
+    { id: 'flashcards.estudar', label: 'Estudar flashcards', keys: 'cartoes revisar repeticao espacada anki decorar', run: () => { a.go('flashcards'); flashcards.start(); } },
+    { id: 'flashcards.estudar-nota', label: 'Estudar os flashcards da nota aberta', keys: 'cartoes revisar anki', when: cur, run: () => { a.go('flashcards'); flashcards.start(null, cur()!); } },
+    { id: 'flashcards.marcar', label: 'Pôr a nota aberta nos flashcards (#flashcards)', keys: 'cartoes anki tag estudar', when: cur, run: () => flashcards.markNote(cur()!) },
+    { id: 'flashcards.novo', label: 'Novo flashcard', keys: 'cartao anki pergunta resposta', run: () => { flashcards.adding = true; a.go('flashcards'); } },
 
     // grafo e quadros
     {
