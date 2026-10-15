@@ -1,0 +1,73 @@
+/* Estilos compartilhados pelas telas de banco de dados (prefixo db-). */
+
+.db-chip { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; border-radius: 6px; padding: 0 7px; height: 21px;
+  font: 500 12.5px/21px var(--f-body); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: color-mix(in srgb, var(--c, #9b9a97) 22%, transparent); }
+.db-chip.status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--c); flex: none; }
+.db-chip.link { background: none; padding: 0; color: var(--ember-soft); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--ember-soft) 40%, transparent); text-underline-offset: 3px; cursor: pointer; border: 0; }
+.db-chip.link:hover { color: var(--ember); }
+.db-chip .x { border: 0; background: none; padding: 0; color: var(--muted); font-size: 13px; line-height: 1; }
+.db-chip .x:hover { color: var(--ink); }
+.db-chips { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+
+.db-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid transparent; background: none; border-radius: 8px;
+  padding: 4px 9px; color: var(--muted); font: 500 12.5px var(--f-body); white-space: nowrap;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease), border-color var(--dur) var(--ease); }
+.db-btn:hover { background: var(--surface-2); color: var(--ink); }
+.db-btn.on { color: var(--ember); background: color-mix(in srgb, var(--ember) 10%, transparent); }
+.db-btn.primary { background: var(--ember); color: var(--on-ember); font-weight: 600; }
+.db-btn.primary:hover { filter: brightness(1.08); }
+.db-btn.line { border-color: var(--line); background: var(--surface-2); color: var(--ink); }
+.db-btn.line:hover { border-color: var(--ember); }
+.db-btn.danger:hover { color: var(--crit); }
+.db-btn:disabled { opacity: .4; cursor: default; }
+
+.db-pop { position: fixed; z-index: 90; min-width: 220px; max-width: min(600px, calc(100vw - 24px)); max-height: min(520px, calc(100vh - 24px)); overflow: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 6px;
+  box-shadow: 0 22px 50px -18px var(--shadow), 0 0 0 1px color-mix(in srgb, var(--ember) 6%, transparent); font-size: 13px; color: var(--ink); }
+.db-pop h4 { margin: 6px 8px 4px; font: 600 10px var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.db-pop hr { border: 0; border-top: 1px solid var(--line); margin: 5px 0; }
+.db-item { width: 100%; display: flex; align-items: center; gap: 9px; border: 0; background: none; border-radius: 7px; padding: 6px 8px;
+  text-align: left; color: var(--ink); font: 13px var(--f-body); }
+.db-item:hover, .db-item.sel { background: var(--surface-2); }
+.db-item .ic { width: 18px; text-align: center; color: var(--muted); font-size: 12px; flex: none; }
+.db-item .r { margin-left: auto; color: var(--muted); font: 11px var(--f-mono); }
+.db-item.danger:hover { color: var(--crit); }
+.db-item.on .ic { color: var(--ember); }
+.db-input { width: 100%; background: var(--void); border: 1px solid var(--line); border-radius: 8px; color: var(--ink);
+  padding: 6px 9px; font: 13px var(--f-body); outline: none; }
+.db-input:focus { border-color: var(--ember); }
+textarea.db-input { resize: vertical; min-height: 60px; font: 12.5px/1.5 var(--f-mono); }
+.db-select { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); padding: 5px 8px; font: 12.5px var(--f-body); max-width: 100%; }
+.db-row { display: flex; align-items: center; gap: 6px; padding: 3px 4px; }
+.db-hint { color: var(--muted); font-size: 11.5px; padding: 4px 8px; line-height: 1.45; }
+.db-hint code, .db-pop code { font: 11.5px var(--f-mono); color: var(--ember-soft); }
+.db-err { color: var(--crit); font-size: 12px; padding: 4px 8px; }
+.db-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: none; }
+.db-swatches { display: flex; flex-wrap: wrap; gap: 5px; padding: 4px 8px; }
+.db-swatches button { width: 18px; height: 18px; border-radius: 6px; border: 2px solid transparent; background: var(--c); padding: 0; }
+.db-swatches button.on { border-color: var(--ink); }
+
+.db-check { width: 17px; height: 17px; border-radius: 5px; border: 1.5px solid var(--muted); background: none; display: inline-grid; place-items: center;
+  padding: 0; flex: none; transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), transform var(--dur) var(--spring); }
+.db-check:active { transform: scale(.88); }
+.db-check.on { background: var(--ember); border-color: var(--ember); }
+.db-check.on::after { content: ''; width: 9px; height: 5px; border: 2px solid var(--on-ember); border-top: 0; border-right: 0; transform: translateY(-1px) rotate(-45deg); }
+
+.db-bar { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.db-bar i { flex: 1; height: 5px; border-radius: 3px; background: var(--surface-2); overflow: hidden; min-width: 30px; max-width: 90px; }
+.db-bar i b { display: block; height: 100%; background: var(--ember); border-radius: 3px; }
+.db-bar.done i b { background: var(--ok); }
+.db-muted { color: var(--muted); }
+.db-empty { color: var(--muted); opacity: .45; }
+.db-url { color: var(--ember-soft); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-url:hover { text-decoration: underline; }
+.db-late { color: var(--crit); }
+.db-thumb { width: 28px; height: 28px; border-radius: 6px; object-fit: cover; border: 1px solid var(--line); }
+
+/* banco dentro de uma nota: o editor não pode impor o espaçamento do texto */
+.cm-base { position: relative; white-space: normal; line-height: 1.45; font-size: 13.5px; cursor: default; margin: 6px 0 12px; padding-top: 2px; }
+.cm-base-src { position: absolute; right: 0; top: -22px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 6px;
+  font: 10.5px var(--f-mono); padding: 2px 7px; opacity: 0; transition: opacity var(--dur); z-index: 2; }
+.cm-base:hover .cm-base-src, .cm-base-src:focus-visible { opacity: 1; }
+.cm-base-src:hover { color: var(--ember); border-color: var(--ember); }

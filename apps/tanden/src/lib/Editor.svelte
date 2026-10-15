@@ -10,6 +10,7 @@
   import { embeds, linkAt, type EmbedHost } from './embeds';
   import { editorBridge } from './files/editor-bridge';
   import { calcLoaded, loadCalc } from './calc/load';
+  import { baseBlocks } from './bases/cm-base';
 
   let { value, docKey, onchange, host, onfiles, oncursor }: {
     value: string;
@@ -86,6 +87,7 @@
     keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
     markdown(), syntaxHighlighting(look), theme, attachments,
     ...(embedHost ? [embeds(embedHost)] : []),
+    baseBlocks(() => docKey),
     calcSlot.of(calcLoaded() ?? []),
     EditorView.updateListener.of((u) => {
       if (u.docChanged) onchange(u.state.doc.toString());

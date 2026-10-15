@@ -251,6 +251,13 @@ class Files {
     void engine.syncNow();
   }
 
+  /** Salva um arquivo em Anexos/ e devolve o caminho (capas e propriedades de arquivo dos bancos). */
+  async attachFile(f: File): Promise<string> {
+    const r = await this.importOne(f, { attach: true });
+    void engine.syncNow();
+    return r.open!;
+  }
+
   private async importOne(f: File, opts: { attach?: boolean; convert?: boolean }): Promise<{ open?: string; insert?: string; message: string }> {
     const name = safeFileName(f.name) || 'arquivo';
     const kind = fileKind(name);

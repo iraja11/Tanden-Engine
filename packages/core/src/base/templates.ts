@@ -38,8 +38,9 @@ export function instantiate(template: string, title: string, now?: Date): string
 }
 
 /** Nota em branco de uma linha, com valores iniciais no topo. */
-export function blankRow(title: string, props: Record<string, string | string[]>): string {
-  let t = `# ${title}\n\n`;
+export function blankRow(_title: string, props: Record<string, string | string[]>): string {
+  // o nome do arquivo já é o título (como no Notion e no título embutido do Obsidian)
+  let t = '\n';
   for (const [k, v] of Object.entries(props)) t = setProp(t, k, v);
   return t;
 }
@@ -109,9 +110,9 @@ export const DB_TEMPLATES: DbTemplate[] = [
       { type: 'list', name: 'Hoje', filters: { and: ['prazo <= today()', 'status != "Feito"'] }, order: ['file.name', 'note.prioridade'] },
     ],
     samples: [
-      { name: 'Planejar a semana', props: { status: 'A fazer', prioridade: 'Alta' } },
-      { name: 'Revisar anotações', props: { status: 'Em andamento', prioridade: 'Média' } },
-      { name: 'Organizar o cofre', props: { status: 'Feito', prioridade: 'Baixa' } },
+      { name: 'Planejar a semana', props: { status: 'A fazer', prioridade: 'Alta', prazo: '@hoje+1' } },
+      { name: 'Revisar anotações', props: { status: 'Em andamento', prioridade: 'Média', prazo: '@hoje+3' } },
+      { name: 'Organizar o cofre', props: { status: 'Feito', prioridade: 'Baixa', prazo: '@hoje-2' } },
     ],
   },
   {
@@ -128,7 +129,10 @@ export const DB_TEMPLATES: DbTemplate[] = [
       { type: 'timeline', name: 'Linha do tempo', date: 'note.início', endDate: 'note.fim' },
       { type: 'board', name: 'Por status', groupBy: { property: 'note.status', direction: 'ASC' } },
     ],
-    samples: [{ name: 'Tanden Engine', props: { status: 'Ativo', área: 'Pessoal', progresso: '0.4' } }],
+    samples: [
+      { name: 'Tanden Engine', props: { status: 'Ativo', área: 'Pessoal', progresso: '0.4', início: '@hoje-10', fim: '@hoje+30' } },
+      { name: 'Curso de inglês', props: { status: 'Ideia', área: 'Estudo', progresso: '0', início: '@hoje+7', fim: '@hoje+60' } },
+    ],
     rowTemplates: [{ name: 'Projeto', text: '---\nstatus: Ideia\n---\n# {{title}}\n\n## Objetivo\n\n## Próximos passos\n- [ ] \n\n## Notas\n' }],
   },
   {
@@ -147,6 +151,11 @@ export const DB_TEMPLATES: DbTemplate[] = [
       { type: 'gallery', name: 'Estante', image: 'note.capa', order: ['file.name', 'note.autor', 'formula.estrelas'] },
       { type: 'board', name: 'Por status', groupBy: { property: 'note.status', direction: 'ASC' }, order: ['file.name', 'note.autor'] },
       { type: 'table', name: 'Tabela', order: ['file.name', 'note.autor', 'note.status', 'note.nota', 'note.gênero', 'note.terminado'], summaries: { 'note.nota': 'Average' } },
+    ],
+    samples: [
+      { name: 'Duna', props: { autor: 'Frank Herbert', status: 'Lendo', gênero: ['Ficção científica'], nota: '5' } },
+      { name: 'Hábitos Atômicos', props: { autor: 'James Clear', status: 'Lido', gênero: ['Produtividade'], nota: '4', terminado: '@hoje-20' } },
+      { name: 'O Hobbit', props: { autor: 'J. R. R. Tolkien', status: 'Quero ler', gênero: ['Fantasia'] } },
     ],
     rowTemplates: [{ name: 'Livro', text: '---\nstatus: Quero ler\n---\n# {{title}}\n\n## Resumo\n\n## Citações\n> \n\n## O que eu levo\n' }],
   },
@@ -208,6 +217,11 @@ export const DB_TEMPLATES: DbTemplate[] = [
       'formula.saldo': { displayName: 'Saldo', format: 'real:2' },
     },
     formulas: { mês: 'if(data.isEmpty(), "", data.format("YYYY-MM"))', saldo: 'if(tipo == "Entrada", valor, -valor)' },
+    samples: [
+      { name: 'Salário', props: { valor: '4500', tipo: 'Entrada', categoria: 'Salário', data: '@hoje-10' } },
+      { name: 'Mercado do mês', props: { valor: '620.4', tipo: 'Saída', categoria: 'Mercado', data: '@hoje-8' } },
+      { name: 'Cinema', props: { valor: '48', tipo: 'Saída', categoria: 'Lazer', data: '@hoje-2' } },
+    ],
     views: [
       { type: 'table', name: 'Por mês', order: ['file.name', 'note.data', 'note.tipo', 'note.categoria', 'note.valor', 'formula.saldo'], groupBy: { property: 'formula.mês', direction: 'DESC' }, sort: [{ property: 'note.data', direction: 'DESC' }], summaries: { 'formula.saldo': 'Sum', 'note.valor': 'Sum' } },
       { type: 'board', name: 'Categorias', groupBy: { property: 'note.categoria', direction: 'ASC' }, order: ['file.name', 'note.valor'] },
@@ -237,10 +251,18 @@ export function createDatabase(name: string, folder: string, tpl: DbTemplate, no
     views: structuredClone(tpl.views),
   };
   if (tpl.rowTemplates?.length) def.template = `[[${TEMPLATES_DIR}/${name}/${tpl.rowTemplates[0]!.name}]]`;
-  const note = `---\ntipo: banco\n---\n# ${name}\n\n${tpl.description ? '' : ''}\`\`\`base\n${serializeBase(def)}\`\`\`\n`;
+  const note = `# ${name}\n\n\`\`\`base\n${serializeBase(def)}\`\`\`\n`;
   const files: Array<{ path: string; text: string }> = [];
+  // "@hoje+3" nos exemplos vira uma data perto de hoje
+  const rel = (v: string) => {
+    const m = /^@hoje([+-]\d+)?$/.exec(v);
+    if (!m) return v;
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + Number(m[1] ?? 0));
+    return isoDate(d, false);
+  };
   for (const s of tpl.samples ?? []) {
-    let t = blankRow(s.name, s.props);
+    const props = Object.fromEntries(Object.entries(s.props).map(([k, v]) => [k, Array.isArray(v) ? v : rel(v)]));
+    let t = blankRow(s.name, props);
     if (s.body) t += s.body;
     if (!('criado' in s.props)) t = setProp(t, 'criado', isoDate(now, true));
     files.push({ path: `${rows}/${s.name}.md`, text: t });
