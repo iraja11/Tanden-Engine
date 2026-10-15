@@ -13,6 +13,8 @@
   import SheetsView from './lib/sheets/SheetsView.svelte';
   import { sheets } from './lib/sheets/sheets.svelte';
   import FilesView from './lib/files/FilesView.svelte';
+  import LibraryView from './lib/biblioteca/LibraryView.svelte';
+  import { biblioteca } from './lib/biblioteca/biblioteca.svelte';
   import { files } from './lib/files/files.svelte';
   import { notes } from './lib/editor/notes.svelte';
   import NotePage from './lib/editor/NotePage.svelte';
@@ -63,7 +65,7 @@
   /** marcador que desliza até o módulo ativo na barra */
   let mark = $state<{ x: number; y: number; w: number; h: number } | null>(null);
   let error = $state('');
-  type View = 'hoje' | 'notas' | 'bancos' | 'grafo' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'calculo' | 'arquivos' | 'luta' | 'mundos' | 'slides' | 'plugins' | `plugin:${string}`;
+  type View = 'hoje' | 'notas' | 'bancos' | 'grafo' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'calculo' | 'arquivos' | 'biblioteca' | 'luta' | 'mundos' | 'slides' | 'plugins' | `plugin:${string}`;
   let view = $state<View>('notas');
   /** id do plugin cuja tela está aberta */
   const pluginView = $derived(view.startsWith('plugin:') ? view.slice(7) : null);
@@ -84,6 +86,7 @@
     { id: 'slides', label: 'Slides', ready: true },
     { id: 'mundos', label: 'Mundos', ready: true },
     { id: 'luta', label: 'Luta', ready: true },
+    { id: 'biblioteca', label: 'Biblioteca', ready: true },
     { id: 'arquivos', label: 'Arquivos', ready: true },
   ];
   /** cada plugin com tela ganha um botão, depois dos módulos */
@@ -98,6 +101,7 @@
   $effect(() => { if (engine.ready) sheets.start(); });
   $effect(() => { if (engine.ready) cadernos.start(); });
   $effect(() => { if (engine.ready) files.start(); });
+  $effect(() => { if (engine.ready) biblioteca.start(); });
   $effect(() => { if (engine.ready) notes.start(); });
   $effect(() => { if (engine.ready) slides.start(); });
   $effect(() => { if (engine.ready) bases.start(); });
@@ -332,6 +336,8 @@
           {/await}
         {:else if view === 'slides' && engine.ready}
           <SlidesView />
+        {:else if view === 'biblioteca' && engine.ready}
+          <LibraryView />
         {:else if view === 'arquivos' && engine.ready}
           <FilesView />
         {:else if view === 'luta' && engine.ready}

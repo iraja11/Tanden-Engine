@@ -5,7 +5,9 @@
   import { files } from '../files/files.svelte';
   import { openPdf, type PdfDoc } from './pdfjs';
   import PdfPage, { type Tool } from './PdfPage.svelte';
+  import Thumbs from './Thumbs.svelte';
   import { COLORS, fold, type Rect } from './geometry';
+  import { biblioteca } from '../biblioteca/biblioteca.svelte';
 
   let { path }: { path: string } = $props();
 
@@ -28,7 +30,13 @@
   let popAt = $state<{ x: number; y: number } | null>(null);
   let picked = $state<{ page: number; rects: Rect[]; text: string; at: { x: number; y: number } } | null>(null);
   let version = $state(0);
-  let side = $state<'annots' | 'outline' | null>(null);
+  let side = $state<'pages' | 'outline' | 'marks' | 'annots' | null>(null);
+  /** modo de leitura: cores da página */
+  let tone = $state<'normal' | 'sepia' | 'noite'>('normal');
+  let full = $state(false);
+  let root = $state<HTMLDivElement>();
+  /** "chegou ao fim" já foi respondido nesta abertura */
+  let endAsked = $state(false);
   let outline = $state<Array<{ title: string; dest: unknown; depth: number }>>([]);
   let menu = $state(false);
   let searchOpen = $state(false);
@@ -52,6 +60,11 @@
     return m;
   });
   const selAnnot = $derived(annots.find((a) => a.id === selected) ?? null);
+  const book = $derived(biblioteca.book(path));
+  const marks = $derived(book?.bookmarks ?? []);
+  const markedPages = $derived(new Set(marks.map((m) => m.page)));
+  const annotatedPages = $derived(new Set(annots.map((a) => a.page)));
+  const atEnd = $derived(!!doc && sizes.length > 1 && current === sizes.length && book?.status !== 'lido' && !endAsked);
   const name = $derived(path.split('/').pop()!.replace(/\.pdf$/i, ''));
 
   // posição de cada página no rolamento, na escala atual
@@ -107,7 +120,13 @@
       if (fit === 'custom' && saved.scale) scale = saved.scale;
       else applyFit();
       await tick();
-      goto(files.page?.n ?? saved.page ?? 1, 'auto');
+      goto(files.page?.n ?? engine.library.get(p)?.page ?? saved.page ?? 1, 'auto');
+      if (!engine.library.get(p)?.pages) engine.library.ensure(p, { pages: d.numPages });
+      if (biblioteca.findOnOpen) {
+        searchOpen = true;
+        query = biblioteca.findOnOpen;
+        biblioteca.findOnOpen = '';
+      }
       void d.getOutline().then(async (items) => {
         const flat: typeof outline = [];
         const walk = (list: typeof items, depth: number) => {
@@ -118,6 +137,13 @@
         };
         walk(items, 0);
         outline = flat;
+        // página de cada capítulo (nome automático dos marcadores)
+        const out: typeof outlinePages = [];
+        for (const o of flat.slice(0, 400)) {
+          const n = await destPage(o.dest);
+          if (n) out.push({ title: o.title, page: n });
+        }
+        if (doc === d) outlinePages = out.sort((a, b) => a.page - b.page);
       });
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
@@ -169,13 +195,103 @@
     scale = Math.max(0.25, Math.min(5, fit === 'page' ? Math.min(w, h) : w));
   }
 
+  let posTimer: ReturnType<typeof setTimeout> | null = null;
   function savePos() {
     try {
       localStorage.setItem(posKey, JSON.stringify({ page: current, scale, fit }));
     } catch {
       // armazenamento cheio ou bloqueado: só não lembra a posição
     }
+    // a página onde parou vai para a biblioteca (e para os outros aparelhos)
+    if (posTimer) clearTimeout(posTimer);
+    const p = path;
+    const n = current;
+    const total = sizes.length;
+    // abrir num resultado de busca ou num link não conta como leitura até a pessoa mexer
+    if (!moved) return;
+    posTimer = setTimeout(() => {
+      posTimer = null;
+      if (doc && p === path) engine.library.setPosition(p, n, total);
+    }, 800);
   }
+
+  /* ------------------------------------------------- tempo de leitura */
+
+  // conta só com a janela à vista e alguém mexendo nos últimos 2 minutos
+  let lastActive = Date.now();
+  let pendingMs = 0;
+  /** a pessoa mexeu (rolou, tocou, teclou): só então a posição vale para a biblioteca */
+  let moved = false;
+  const poke = () => {
+    lastActive = Date.now();
+    moved = true;
+  };
+  function flushReading() {
+    if (pendingMs >= 1000) engine.library.addReading(path, pendingMs);
+    pendingMs = 0;
+  }
+  onMount(() => {
+    let last = Date.now();
+    const t = setInterval(() => {
+      const now = Date.now();
+      if (doc && document.visibilityState === 'visible' && now - lastActive < 120_000) pendingMs += now - last;
+      last = now;
+      if (pendingMs >= 60_000) flushReading();
+    }, 10_000);
+    const onFull = () => (full = document.fullscreenElement === root);
+    document.addEventListener('fullscreenchange', onFull);
+    try {
+      const t0 = localStorage.getItem('tanden.pdf.tone');
+      if (t0 === 'sepia' || t0 === 'noite') tone = t0;
+    } catch {
+      // sem armazenamento: fica o normal
+    }
+    return () => {
+      clearInterval(t);
+      flushReading();
+      document.removeEventListener('fullscreenchange', onFull);
+      if (posTimer) {
+        clearTimeout(posTimer);
+        if (sizes.length) engine.library.setPosition(path, current, sizes.length);
+      }
+    };
+  });
+
+  const TONES = { normal: 'Normal', sepia: 'Sépia', noite: 'Noite' } as const;
+  function cycleTone() {
+    tone = tone === 'normal' ? 'sepia' : tone === 'sepia' ? 'noite' : 'normal';
+    try {
+      localStorage.setItem('tanden.pdf.tone', tone);
+    } catch {
+      // só não lembra
+    }
+  }
+
+  async function toggleFull() {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await root?.requestFullscreen();
+    } catch {
+      files.say('Tela cheia não está disponível aqui.', { error: true });
+    }
+  }
+
+  /* --------------------------------------------------------- marcadores */
+
+  function toggleMark() {
+    if (!doc) return;
+    const on = engine.library.toggleBookmark(path, current, outlineTitleFor(current));
+    files.say(on ? `Marcador na página ${current}.` : `Marcador da página ${current} removido.`);
+  }
+
+  /** Nome do capítulo onde a página está (para nomear o marcador). */
+  let outlinePages = $state<Array<{ title: string; page: number }>>([]);
+  function outlineTitleFor(page: number): string {
+    let best = '';
+    for (const o of outlinePages) if (o.page <= page) best = o.title;
+    return best;
+  }
+  let renaming = $state<string | null>(null);
 
   function goto(n: number, behavior: ScrollBehavior = 'smooth', yPdf?: number) {
     if (!scroller || !sizes.length) return;
@@ -424,6 +540,18 @@
 
   /* ------------------------------------------------------------ sumário */
 
+  async function destPage(dest: unknown): Promise<number | null> {
+    if (!doc || !dest) return null;
+    try {
+      const explicit = (typeof dest === 'string' ? await doc.getDestination(dest) : dest) as unknown[] | null;
+      if (!explicit) return null;
+      const ref = explicit[0];
+      return (typeof ref === 'number' ? ref : await doc.getPageIndex(ref as { num: number; gen: number })) + 1;
+    } catch {
+      return null;
+    }
+  }
+
   async function openDest(dest: unknown) {
     if (!doc || !dest) return;
     try {
@@ -480,6 +608,12 @@
       return;
     }
     if (typing) return;
+    poke();
+    if (mod && e.key.toLowerCase() === 'd') {
+      e.preventDefault();
+      toggleMark();
+      return;
+    }
     if (mod && (e.key === '=' || e.key === '+')) {
       e.preventDefault();
       zoomBy(1.2);
@@ -504,6 +638,7 @@
     } else if (!mod && !e.altKey) {
       const t = ({ v: 'select', h: 'highlight', u: 'underline', s: 'strike', n: 'note', p: 'pen', b: 'box', e: 'eraser' } as Record<string, Tool>)[e.key.toLowerCase()];
       if (t) tool = t;
+      else if (e.key.toLowerCase() === 'f') void toggleFull();
       else if (/^[1-6]$/.test(e.key)) color = COLORS[Number(e.key) - 1]!.hex;
       else if (e.key === 'Home') goto(1);
       else if (e.key === 'End') goto(sizes.length);
@@ -537,18 +672,19 @@
 
 <svelte:window onkeydown={onKey} onpointerdown={(e) => {
   const t = e.target as Element;
+  if (t.closest?.('.pdf')) poke();
   if (menu && !t.closest('.menu-wrap')) menu = false;
   if (popAt && !t.closest('.pop, .page')) select(null);
   if (picked && !t.closest('.pick, .page')) picked = null;
 }} />
 
-<div class="pdf">
+<div class="pdf" bind:this={root} class:full>
   <header class="bar">
     <div class="group">
-      <button class="icon" class:on={side !== null} onclick={() => (side = side ? null : 'annots')} title="Painel de anotações e sumário" aria-label="Painel">
+      <button class="icon" class:on={side !== null} onclick={() => (side = side ? null : 'pages')} title="Páginas, sumário, marcadores e anotações" aria-label="Painel">
         <svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM10 5v14" /></svg>
       </button>
-      <form class="pageno" onsubmit={(e) => { e.preventDefault(); goto(Number(pageInput) || 1); (document.activeElement as HTMLElement)?.blur(); }}>
+      <form class="pageno" onsubmit={(e) => { e.preventDefault(); poke(); goto(Number(pageInput) || 1); (document.activeElement as HTMLElement)?.blur(); }}>
         <input name="page" bind:value={pageInput} inputmode="numeric" aria-label="Página" />
         <span>/ {sizes.length || '–'}</span>
       </form>
@@ -577,6 +713,15 @@
     </div>
 
     <div class="group end">
+      <button class="icon" class:on={markedPages.has(current)} onclick={toggleMark} disabled={!doc} title="Marcador nesta página (Ctrl+D)" aria-label="Marcador" aria-pressed={markedPages.has(current)}>
+        <svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4.5L6 21z" class:fill={markedPages.has(current)} /></svg>
+      </button>
+      <button class="icon" class:on={tone !== 'normal'} onclick={cycleTone} title="Cores da página: {TONES[tone]}" aria-label="Modo de leitura: {TONES[tone]}">
+        <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" /></svg>
+      </button>
+      <button class="icon" class:on={full} onclick={() => void toggleFull()} title="Tela cheia (F)" aria-label="Tela cheia">
+        <svg viewBox="0 0 24 24"><path d={full ? 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5' : 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'} /></svg>
+      </button>
       <button class="icon" class:on={searchOpen} onclick={() => { searchOpen = !searchOpen; if (searchOpen) void tick().then(() => searchInput?.focus()); }} title="Buscar (Ctrl+F)" aria-label="Buscar">
         <svg viewBox="0 0 24 24"><path d="M10.5 17a6.5 6.5 0 1 1 0-13 6.5 6.5 0 0 1 0 13zM15.5 15.5 21 21" /></svg>
       </button>
@@ -606,13 +751,52 @@
   {/if}
 
   <div class="body">
+    {#if atEnd}
+      <div class="end-ask" role="status">
+        <span>Chegou ao fim. Terminou o livro?</span>
+        <button class="pri" onclick={() => { engine.library.update(path, { status: 'lido' }); endAsked = true; files.say('Marcado como lido.'); }}>Marcar como lido</button>
+        <button onclick={() => (endAsked = true)}>Agora não</button>
+      </div>
+    {/if}
     {#if side}
       <aside class="side">
         <div class="tabs" role="tablist">
-          <button role="tab" class:on={side === 'annots'} aria-selected={side === 'annots'} onclick={() => (side = 'annots')}>Anotações <b>{annots.length}</b></button>
+          <button role="tab" class:on={side === 'pages'} aria-selected={side === 'pages'} onclick={() => (side = 'pages')}>Páginas</button>
           <button role="tab" class:on={side === 'outline'} aria-selected={side === 'outline'} onclick={() => (side = 'outline')} disabled={!outline.length}>Sumário</button>
+          <button role="tab" class:on={side === 'marks'} aria-selected={side === 'marks'} onclick={() => (side = 'marks')} title="Marcadores">Marc. {#if marks.length}<b>{marks.length}</b>{/if}</button>
+          <button role="tab" class:on={side === 'annots'} aria-selected={side === 'annots'} onclick={() => (side = 'annots')} title="Anotações">Anot. {#if annots.length}<b>{annots.length}</b>{/if}</button>
         </div>
-        {#if side === 'annots'}
+        {#if side === 'pages'}
+          {#if doc}
+            <Thumbs {doc} {sizes} {current} marked={markedPages} annotated={annotatedPages} onpick={(n) => goto(n)} />
+          {/if}
+        {:else if side === 'marks'}
+          {#if !marks.length}
+            <p class="hint">Marque páginas para voltar a elas depois: botão <b>marcador</b> na barra ou <b>Ctrl+D</b>. Os marcadores sincronizam entre os aparelhos.</p>
+          {/if}
+          <ul class="marks">
+            {#each marks as m (m.id)}
+              <li>
+                {#if renaming === m.id}
+                  <form onsubmit={(e) => { e.preventDefault(); const v = (e.currentTarget.elements.namedItem('label') as HTMLInputElement).value; engine.library.renameBookmark(path, m.id, v); renaming = null; }}>
+                    <!-- svelte-ignore a11y_autofocus -->
+                    <input name="label" value={m.label} autofocus placeholder="Nome do marcador" onblur={(e) => { engine.library.renameBookmark(path, m.id, e.currentTarget.value); renaming = null; }}
+                      onkeydown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); renaming = null; } }} />
+                  </form>
+                {:else}
+                  <div class="mrow" class:on={m.page === current}>
+                    <button class="go" onclick={() => goto(m.page)}>
+                      <span class="meta">p. {m.page}</span>
+                      <span class="label">{m.label || 'Sem nome'}</span>
+                    </button>
+                    <button class="mini" onclick={() => (renaming = m.id)} title="Renomear" aria-label="Renomear marcador">✎</button>
+                    <button class="mini" onclick={() => engine.library.removeBookmark(path, m.id)} title="Apagar" aria-label="Apagar marcador">×</button>
+                  </div>
+                {/if}
+              </li>
+            {/each}
+          </ul>
+        {:else if side === 'annots'}
           {#if !annots.length}
             <p class="hint">Selecione um trecho e escolha <b>Realçar</b>, ou use as ferramentas acima. As anotações sincronizam entre os aparelhos e o PDF original não é alterado.</p>
           {/if}
@@ -638,8 +822,8 @@
     {/if}
 
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="scroller" class:pan={tool === 'select'} bind:this={scroller} onscroll={onScroll} onwheel={onWheel}
-      onpointerdown={onTouchDown} onpointermove={onTouchMove} onpointerup={onTouchUp} onpointercancel={onTouchUp}>
+    <div class="scroller tone-{tone}" class:pan={tool === 'select'} bind:this={scroller} onscroll={onScroll} onwheel={(e) => { poke(); onWheel(e); }} ontouchstart={poke}
+      onpointerdown={(e) => { poke(); onTouchDown(e); }} onpointermove={onTouchMove} onpointerup={onTouchUp} onpointercancel={onTouchUp}>
       {#if error}
         <p class="err">Não consegui abrir o PDF: {error}</p>
       {:else if !doc}
@@ -699,7 +883,27 @@
 </script>
 
 <style>
-  .pdf { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
+  .pdf { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; background: var(--void); }
+  .icon svg .fill { fill: currentColor; }
+  .scroller.tone-sepia { background: #2b2620; }
+  .scroller.tone-sepia :global(.page) { filter: sepia(.5) saturate(1.15) brightness(.95) contrast(.95); }
+  .scroller.tone-noite { background: #0b0b0e; }
+  .scroller.tone-noite :global(.page) { filter: invert(.9) hue-rotate(180deg) contrast(.95); }
+  .body { position: relative; }
+  .end-ask { position: absolute; z-index: 25; left: 50%; top: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px 8px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); white-space: nowrap;
+    box-shadow: 0 20px 40px -16px #000, 0 0 0 1px var(--ember-glow); animation: rise .2s cubic-bezier(.2, .8, .2, 1); font-size: 13px; max-width: calc(100% - 24px); }
+  .end-ask span { overflow: hidden; text-overflow: ellipsis; }
+  .pri { background: var(--ember); border-color: var(--ember); color: var(--on-ember); font-weight: 600; }
+  .mrow { display: flex; align-items: center; gap: 2px; border-radius: 6px; border-left: 3px solid var(--ember); }
+  .mrow:hover, .mrow.on { background: var(--surface-2); }
+  .mrow .go { flex: 1; min-width: 0; display: grid; gap: 3px; text-align: left; border: 0; background: none; padding: 7px 8px; border-radius: 6px; }
+  .mrow .label { font-size: 12.5px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mini { border: 0; background: none; padding: 4px 7px; color: var(--muted); opacity: 0; }
+  .mrow:hover .mini, .mrow.on .mini { opacity: 1; }
+  .marks { list-style: none; margin: 0; padding: 6px; overflow-y: auto; display: grid; gap: 4px; align-content: start; }
+  .marks input { width: 100%; box-sizing: border-box; border: 1px solid var(--ember); background: var(--void); color: var(--ink); border-radius: 7px; padding: 6px 8px; font: inherit; }
+  @media (hover: none) { .mini { opacity: 1; } }
   .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 7px 10px; border-bottom: 1px solid var(--line); background: var(--surface); }
   .group { display: flex; align-items: center; gap: 4px; }
   .tools { flex-wrap: wrap; }
@@ -735,7 +939,7 @@
   .body { flex: 1; min-height: 0; display: flex; }
   .side { width: 290px; flex: none; border-right: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; min-height: 0; }
   .tabs { display: flex; gap: 2px; padding: 8px 8px 0; border-bottom: 1px solid var(--line); }
-  .tabs button { border: 0; border-radius: 8px 8px 0 0; background: none; color: var(--muted); border-bottom: 2px solid transparent;
+  .tabs button { flex: 1; min-width: 0; padding-left: 4px !important; padding-right: 4px !important; white-space: nowrap; border: 0; border-radius: 8px 8px 0 0; background: none; color: var(--muted); border-bottom: 2px solid transparent;
     font: 600 11px/1 var(--f-display); letter-spacing: .12em; text-transform: uppercase; padding: 9px 10px; }
   .tabs button.on { color: var(--ink); border-bottom-color: var(--ember); }
   .tabs b { color: var(--ember); font-family: var(--f-mono); }
