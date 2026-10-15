@@ -1,0 +1,4 @@
+/* grafo em canvas (graph-canvas.ts) */
+.tgraph { position: absolute; inset: 0; overflow: hidden; }
+.tgraph canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; user-select: none; }
+.tgraph canvas:active { cursor: grabbing; }

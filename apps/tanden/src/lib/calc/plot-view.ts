@@ -450,3 +450,6 @@ export class PlotView {
     );
   }
 }
+
+/** Gráfico 2D ou 3D conforme o bloco. */
+export type AnyPlot = { el: HTMLDivElement; setSpec(spec: PlotSpec): void; reset(): void; destroy(): void };
