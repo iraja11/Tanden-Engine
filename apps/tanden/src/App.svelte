@@ -46,7 +46,7 @@
   /** marcador que desliza até o módulo ativo na barra */
   let mark = $state<{ x: number; y: number; w: number; h: number } | null>(null);
   let error = $state('');
-  type View = 'notas' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'calculo' | 'arquivos' | 'luta' | 'mundos' | 'slides' | 'plugins' | `plugin:${string}`;
+  type View = 'notas' | 'grafo' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'calculo' | 'arquivos' | 'luta' | 'mundos' | 'slides' | 'plugins' | `plugin:${string}`;
   let view = $state<View>('notas');
   /** id do plugin cuja tela está aberta */
   const pluginView = $derived(view.startsWith('plugin:') ? view.slice(7) : null);
@@ -55,6 +55,7 @@
 
   const modules = [
     { id: 'notas', label: 'Notas', ready: true },
+    { id: 'grafo', label: 'Grafo', ready: true },
     { id: 'ia', label: 'IA', ready: true },
     { id: 'lembretes', label: 'Lembretes', ready: true },
     { id: 'quadros', label: 'Quadros', ready: true },
@@ -231,6 +232,10 @@
         {:else if view === 'calculo' && engine.ready}
           <!-- o cálculo (mathjs, KaTeX) carrega só quando a aba abre -->
           {#await import('./lib/calc/CalcView.svelte') then m}
+            <m.default onOpenNote={(p: string) => { engine.open(p); go('notas'); }} />
+          {/await}
+        {:else if view === 'grafo' && engine.ready}
+          {#await import('./lib/grafo/GraphView.svelte') then m}
             <m.default onOpenNote={(p: string) => { engine.open(p); go('notas'); }} />
           {/await}
         {:else if view === 'slides' && engine.ready}
