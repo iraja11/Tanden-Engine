@@ -3,8 +3,10 @@
   import { flip } from 'svelte/animate';
   import { bases, optionColor } from '../bases/bases.svelte';
   import { files } from '../files/files.svelte';
+  import { biblioteca } from '../biblioteca/biblioteca.svelte';
   import { rise } from '../motion';
   import { dayLabel, vida } from './vida.svelte';
+  import { flashcards } from '../flashcards/flashcards.svelte';
 
   // Tela Hoje: tarefas, hábitos, diário, projetos, metas e leituras num lugar só.
   let { onOpenNote }: { onOpenNote: (path: string) => void } = $props();
@@ -45,6 +47,9 @@
   const dailyPath = $derived(vida.dailyPath(day, snap));
   const mood = $derived(dailyPath ? String(bases.index.byPath.get(dailyPath)?.props.humor ?? '') : '');
   const reading = $derived(vida.reading);
+  /** PDFs em leitura na Biblioteca, do mais recente */
+  const books = $derived(biblioteca.books.filter((b) => b.status === 'lendo').sort((a, b) => Math.max(b.opened ?? 0, b.pageAt ?? 0) - Math.max(a.opened ?? 0, a.pageAt ?? 0)));
+  const cardsDue = $derived(flashcards.pending());
 
   const hello = $derived.by(() => {
     const h = vida.now.getHours();
@@ -106,6 +111,7 @@
     <button onclick={() => onOpenNote(vida.openDaily())}>✎ Nota do dia</button>
     <button onclick={() => onOpenNote(vida.review())}>◷ Revisão da semana</button>
     <button onclick={() => (files.clipDialog = true)}>✂ Salvar página web</button>
+    {#if cardsDue}<button onclick={() => { flashcards.goto++; flashcards.start(); }}>🃏 Revisar {cardsDue} {cardsDue === 1 ? 'flashcard' : 'flashcards'}</button>{/if}
     {#if snap.dbs.tarefas}<button onclick={() => bases.openDatabase(snap.dbs.tarefas!.note)}>▤ Banco de tarefas</button>{/if}
   </nav>
 
@@ -242,6 +248,20 @@
                   {#if g.target !== null}{g.current ?? 0} de {g.target}{g.unit ? ` ${g.unit}` : ''}{:else if g.projects.length}{g.projects.length} projeto{g.projects.length > 1 ? 's' : ''}{/if}
                   {#if g.due} · até {dayLabel(g.due, day)}{/if}
                 </small>
+              </li>
+            {/each}
+          </ul>
+        </section>
+      {/if}
+
+      {#if books.length}
+        <section class="card">
+          <h3>Lendo <span>{books.length}</span></h3>
+          <ul class="read">
+            {#each books.slice(0, 4) as b (b.path)}
+              <li>
+                <button class="title" onclick={() => files.openPath(b.path)}>{biblioteca.title(b)}</button>
+                <small>{b.page ? `p. ${b.page}${b.pages ? ` de ${b.pages}` : ''}` : ''}</small>
               </li>
             {/each}
           </ul>

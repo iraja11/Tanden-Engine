@@ -35,6 +35,7 @@
 .cm-link-src { color: var(--ember-soft); }
 .cm-tag { cursor: pointer; color: var(--ember-soft); background: color-mix(in srgb, var(--ember) 12%, transparent); border-radius: 999px; padding: .05em .5em; font-size: .9em; }
 .cm-comment { color: var(--muted); opacity: .7; font-style: italic; }
+.cm-sr { margin-left: 4px; padding: 0 6px; border-radius: 7px; border: 1px solid var(--line); color: var(--muted); font: 10.5px var(--f-mono); vertical-align: 1px; cursor: text; }
 .cm-footref { font-size: .75em; vertical-align: super; color: var(--ember-soft); }
 
 /* ---------- listas e tarefas ---------- */

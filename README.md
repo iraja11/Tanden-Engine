@@ -41,6 +41,7 @@ A pasta é um cofre comum do Obsidian: pode abrir a mesma pasta nele.
 .tanden/crdt/<nota>/<aparelho>.bin      histórico de edição de cada aparelho
 .tanden/crdt/<nota>/<aparelho>.json     o que cada aparelho escreveu no .md
 .tanden/annot/<pdf>/<aparelho>.bin      anotações de PDF de cada aparelho
+.tanden/library/<aparelho>.bin          biblioteca: status, estantes, posição e marcadores dos PDFs
 .tanden/crdt/<nota>/del/<aparelho>.json lápides: notas apagadas (cada geração da nota)
 .tanden/local/<aparelho>/versoes/       histórico de versões das notas (só neste aparelho)
 .trash/                                 notas apagadas (como a lixeira do Obsidian)
@@ -280,16 +281,31 @@ Como os lembretes moram nas notas, eles sincronizam pelo mesmo merge do cofre: m
 
 Cada aparelho lembra quais avisos já mostrou, então um lembrete não repete no mesmo aparelho. Adiar cria um aviso novo. O código está em `packages/core/src/reminders.ts` (formato e agenda), `packages/core/src/quick-reminder.ts` (português) e `apps/tanden/src/lib/reminders.svelte.ts` (avisos).
 
+## Flashcards
+
+Os cartões moram nas notas, no formato do plugin Spaced Repetition do Obsidian, então os dois apps estudam os mesmos cartões com o mesmo agendamento. Toda nota com a tag `#flashcards` entra no estudo; `#flashcards/idiomas/inglês` cria o baralho "idiomas/inglês" (e um baralho inclui os de dentro).
+
+- `Pergunta::Resposta` numa linha; `:::` estuda também ao contrário.
+- Várias linhas: a pergunta, uma linha só com `?` (ou `??` para os dois sentidos) e a resposta, até a linha em branco.
+- `==realce==` num parágrafo vira lacuna, uma por realce.
+- Depois de responder, o cartão ganha `<!--SR:!2026-10-20,3,250-->` (próxima data, intervalo em dias, facilidade). No editor isso aparece como uma etiqueta 🃏 com a data; o texto volta com o cursor na linha.
+
+A aba **Flashcards** mostra os baralhos, a previsão dos próximos 7 dias e um formulário de cartão novo. No estudo: espaço mostra a resposta, **1 a 4** respondem (Errei, Difícil, Bom, Fácil, com o próximo intervalo em cada botão) e **Ctrl+Z** desfaz. Errar traz o cartão de volta na mesma sessão. O agendamento é um SM-2 parecido com o do plugin. Só um lado de cada cartão (invertido ou lacuna) entra por dia, e isso vale em todos os aparelhos porque sai do próprio agendamento. O limite de novos por dia fica em cada aparelho. A tela Hoje e o número na barra mostram quantos cartões há para revisar. Código: `packages/core/src/flashcards.ts` e `apps/tanden/src/lib/flashcards/`.
+
 ## Arquivos, PDFs e páginas web
 
 A aba **Arquivos** lista tudo no cofre que não é nota: PDFs, documentos, imagens, áudio e vídeo. **Importar** (ou arrastar para a janela) leva cada arquivo para o lugar dele:
 
-- **PDF** vai para `PDFs/` e abre no leitor.
+- **PDF** vai para `PDFs/` e abre no leitor da Biblioteca.
 - **Word (.docx), PowerPoint (.pptx), LibreOffice (.odt), ePub, HTML e texto** viram nota em `Importados/`, com títulos, listas, tabelas, links, notas de rodapé e imagens. O original e as imagens ficam em `Anexos/<título>/`, e a nota aponta para o original no campo `original`. Em apresentações, cada slide vira uma seção e as notas do apresentador viram um bloco `[!note]`. Os formatos antigos `.doc` e `.ppt` não entram: salve como `.docx`/`.pptx` antes.
 - **Planilhas** vão para a aba Planilhas, como antes.
 - O resto fica em `Anexos/`.
 
 **Leitor de PDF.** Abre livros grandes sem travar (só as páginas visíveis são desenhadas), com zoom (Ctrl + roda, pinça no celular), sumário, busca no documento inteiro e posição lembrada. As ferramentas são realçar, sublinhar, riscar, nota, caneta, retângulo e borracha, em seis cores, com Ctrl+Z. Selecionar um trecho mostra um menu para realçar, comentar ou copiar. As anotações não alteram o PDF: ficam em `.tanden/annot/` e sincronizam entre aparelhos pelo mesmo merge das notas. Em **Exportar** dá para gerar uma nota com todos os realces e comentários (com links `[[livro.pdf#page=12]]` que abrem o PDF na página), um PDF anotado que outros leitores entendem, ou uma nota com o texto do PDF.
+
+**Biblioteca.** Todo PDF do cofre aparece na aba **Biblioteca** como um livro, com a capa (a primeira página), título e autor lidos do próprio PDF (editáveis). Cada livro tem status (*Quero ler*, *Lendo*, *Lido*, *Pausado*), nota de 1 a 5, favorito, estantes e etiquetas, e a biblioteca filtra por eles, busca por título, autor e estante, ordena por recentes, título, autor, adicionados ou progresso, e mostra em grade ou lista. *Continuar lendo* abre cada um na página onde parou, mesmo que você tenha parado no outro aparelho; a posição, os marcadores, o tempo de leitura e o resto sincronizam pelo mesmo merge das notas (`.tanden/library/`). A opção **no conteúdo** procura o texto dentro de todos os PDFs e abre o leitor no trecho achado (o texto é extraído uma vez e fica guardado neste aparelho). Mover ou renomear um PDF por fora (no Drive ou no gerenciador de arquivos) não perde nada: a biblioteca reconhece o arquivo e leva leitura e anotações junto. **Nota do livro** cria `Livros/<título>.md` com propriedades (autor, status, progresso, estantes, datas), marcadores e anotações, no formato que o Obsidian e os Bancos leem. A tela Hoje mostra os livros em leitura.
+
+**No leitor**, o painel lateral tem **Páginas** (miniaturas), **Sumário**, **Marcadores** (Ctrl+D marca a página com o nome do capítulo) e **Anotações**. As cores da página alternam entre normal, sépia e noite, F liga a tela cheia, e ao chegar na última página o app pergunta se o livro terminou.
 
 **Nas notas.** O botão **Anexar** coloca um arquivo ou uma página web na nota aberta; arrastar ou colar um arquivo no editor faz o mesmo. Imagens aparecem dentro da nota e PDFs viram um cartão. Ctrl+clique (Cmd no Mac) em um link abre a nota, o arquivo ou o site. **Exportar** gera um `.docx` (abre no Word, Google Docs e LibreOffice) ou uma página `.html`, com as imagens dentro.
 

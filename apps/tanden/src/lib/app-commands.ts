@@ -1,6 +1,7 @@
 import { commands, type Command } from './commands.svelte';
 import { engine } from './engine.svelte';
 import { files } from './files/files.svelte';
+import { biblioteca } from './biblioteca/biblioteca.svelte';
 import { notes } from './editor/notes.svelte';
 import { noteName } from './editor/host';
 import { copyBlockLink, insertTemplate, linkAllMentions } from './editor/note-actions';
@@ -10,6 +11,7 @@ import { snippets } from './snippets.svelte';
 import { sound } from './sound.svelte';
 import { theme } from './theme.svelte';
 import { vida } from './vida/vida.svelte';
+import { flashcards } from './flashcards/flashcards.svelte';
 
 /*
  * Os comandos do app inteiro: a paleta (Ctrl+P) lista todos, e qualquer um
@@ -26,7 +28,7 @@ export interface AppActions {
 
 const MODULES: [string, string][] = [
   ['hoje', 'Hoje'], ['notas', 'Notas'], ['bancos', 'Bancos'], ['grafo', 'Grafo'], ['ia', 'IA'], ['lembretes', 'Lembretes'], ['quadros', 'Quadros'],
-  ['planilhas', 'Planilhas'], ['calculo', 'Cálculo'], ['slides', 'Slides'], ['mundos', 'Mundos'], ['mesa', 'Mesa (RPG)'], ['luta', 'Luta'], ['arquivos', 'Arquivos'], ['plugins', 'Plugins'],
+  ['planilhas', 'Planilhas'], ['calculo', 'Cálculo'], ['flashcards', 'Flashcards'], ['slides', 'Slides'], ['mundos', 'Mundos'], ['mesa', 'Mesa (RPG)'], ['luta', 'Luta'], ['biblioteca', 'Biblioteca'], ['arquivos', 'Arquivos'], ['plugins', 'Plugins'],
 ];
 
 /** rola pela mesa (entra no histórico) e mostra o resultado num aviso */
@@ -46,6 +48,19 @@ export function registerAppCommands(a: AppActions): () => void {
     { id: 'paleta.busca', label: 'Buscar no cofre (painel, com #tag, pasta:, [prop:valor]...)', keys: 'procurar pesquisa texto todas notas', hotkeys: ['Ctrl+Shift+F'], run: () => { notes.searchFor(''); a.go('notas'); } },
     { id: 'nota.explorar', label: 'Explorar tags, links sem nota e notas soltas', keys: 'tags orfas cerebro', run: () => { notes.sidebar = 'tags'; a.go('notas'); } },
     ...MODULES.map(([id, name]): Command => ({ id: `ir.${id}`, label: `Ir para ${name}`, keys: 'abrir tela modulo', run: () => a.go(id) })),
+
+    // biblioteca
+    {
+      id: 'biblioteca.continuar', label: 'Continuar a leitura (último PDF aberto)', keys: 'livro pdf ler biblioteca retomar', run: () => {
+        const last = engine.library.list().filter((b) => files.list.includes(b.path)).sort((x, y) => Math.max(y.opened ?? 0, y.pageAt ?? 0) - Math.max(x.opened ?? 0, x.pageAt ?? 0))[0];
+        if (!last) {
+          a.go('biblioteca');
+          return;
+        }
+        biblioteca.open(last.path);
+        a.go('biblioteca');
+      },
+    },
 
     // notas
     { id: 'nota.nova', label: 'Nova nota', hotkeys: ['Ctrl+N'], run: () => { a.newNote(); a.go('notas'); } },
@@ -87,6 +102,12 @@ export function registerAppCommands(a: AppActions): () => void {
     { id: 'vida.tarefa', label: 'Nova tarefa', keys: 'todo tarefa capturar hoje', run: () => { a.go('hoje'); setTimeout(() => (document.querySelector('.hoje .quick input') as HTMLInputElement | null)?.focus(), 120); } },
     { id: 'vida.revisao', label: 'Revisão da semana', keys: 'semanal review weekly', run: () => { vida.review(); a.go('notas'); } },
     { id: 'vida.montar', label: 'Montar sistema de vida (tarefas, projetos, hábitos, metas, diário)', keys: 'setup bancos life gtd', run: () => { vida.setup(); a.go('hoje'); } },
+
+    // flashcards
+    { id: 'flashcards.estudar', label: 'Estudar flashcards', keys: 'cartoes revisar repeticao espacada anki decorar', run: () => { a.go('flashcards'); flashcards.start(); } },
+    { id: 'flashcards.estudar-nota', label: 'Estudar os flashcards da nota aberta', keys: 'cartoes revisar anki', when: cur, run: () => { a.go('flashcards'); flashcards.start(null, cur()!); } },
+    { id: 'flashcards.marcar', label: 'Pôr a nota aberta nos flashcards (#flashcards)', keys: 'cartoes anki tag estudar', when: cur, run: () => flashcards.markNote(cur()!) },
+    { id: 'flashcards.novo', label: 'Novo flashcard', keys: 'cartao anki pergunta resposta', run: () => { flashcards.adding = true; a.go('flashcards'); } },
 
     // grafo e quadros
     {

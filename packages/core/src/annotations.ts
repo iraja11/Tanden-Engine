@@ -126,6 +126,20 @@ export class AnnotationStore {
     for (const l of this.listeners) l(path, 'local');
   }
 
+  /** O PDF mudou de nome ou de pasta: as anotações vão junto. */
+  move(from: string, to: string): void {
+    if (from === to) return;
+    const list = this.list(from);
+    if (!list.length) return;
+    const have = new Set(this.list(to).map((a) => a.id));
+    this.edit(to, (e) => {
+      for (const a of list) if (!have.has(a.id)) e.add(a);
+    });
+    this.edit(from, (e) => {
+      for (const a of list) e.remove(a.id);
+    });
+  }
+
   /** Desfazer/refazer só o que este aparelho fez. */
   undoManager(path: string): Y.UndoManager {
     return new Y.UndoManager(items(this.doc(path)), { trackedOrigins: new Set(['local']), captureTimeout: 300 });
