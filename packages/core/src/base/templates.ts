@@ -122,10 +122,13 @@ export const DB_TEMPLATES: DbTemplate[] = [
       início: { displayName: 'Início', type: 'date' },
       fim: { displayName: 'Fim', type: 'date' },
       área: { displayName: 'Área', type: 'select', options: [{ value: 'Trabalho', color: 'blue' }, { value: 'Estudo', color: 'purple' }, { value: 'Pessoal', color: 'green' }] },
-      progresso: { displayName: 'Progresso', type: 'number', format: 'percent' },
+      progresso: { displayName: 'Progresso manual', type: 'number', format: 'percent' },
+      'formula.andamento': { displayName: 'Progresso', format: 'percent' },
     },
+    // com tarefas (- [ ]) na página, o progresso sai delas; sem tarefas, vale o número digitado
+    formulas: { andamento: 'if(file.tasks > 0, file.tasksDone / file.tasks, progresso)' },
     views: [
-      { type: 'table', name: 'Projetos', order: ['file.name', 'note.status', 'note.área', 'note.progresso', 'note.início', 'note.fim'], groupBy: { property: 'note.área', direction: 'ASC' } },
+      { type: 'table', name: 'Projetos', order: ['file.name', 'note.status', 'note.área', 'formula.andamento', 'note.início', 'note.fim'], groupBy: { property: 'note.área', direction: 'ASC' } },
       { type: 'timeline', name: 'Linha do tempo', date: 'note.início', endDate: 'note.fim' },
       { type: 'board', name: 'Por status', groupBy: { property: 'note.status', direction: 'ASC' } },
     ],

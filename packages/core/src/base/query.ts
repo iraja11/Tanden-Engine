@@ -24,6 +24,10 @@ export interface NoteRec {
   ctime?: number;
   /** primeira imagem da nota, para capas de galeria */
   image?: string;
+  /** tarefas (- [ ]) no corpo da nota: total (sem as canceladas) e feitas */
+  tasks?: number;
+  tasksDone?: number;
+  aliases?: string[];
 }
 
 const IMG_RE = /!\[\[([^\]|#]+\.(?:png|jpe?g|gif|webp|avif|svg|bmp))(?:\|[^\]]*)?\]\]|!\[[^\]]*\]\((<[^>]+>|[^)\s]+)/i;
@@ -49,6 +53,10 @@ export function noteRecord(path: string, text: string, mtime?: number, scanned?:
     mtime,
     ctime: created?.getTime() ?? mtime,
     image: img ? (img[1] ?? img[2]!.replace(/^<|>$/g, '')) : (typeof props.capa === 'string' ? props.capa : typeof props.cover === 'string' ? props.cover : undefined),
+    // tarefas vazias (o "- [ ] " que os modelos deixam) e canceladas (- [-]) não contam
+    tasks: scan.tasks.filter((t) => t.mark !== '-' && t.text).length,
+    tasksDone: scan.tasks.filter((t) => (t.mark === 'x' || t.mark === 'X') && t.text).length,
+    aliases: scan.aliases,
   };
 }
 
@@ -202,6 +210,10 @@ function fileObj(rec: NoteRec, ctx: Ctx): Obj {
         case 'mtime': return rec.mtime ? new Date(rec.mtime) : null;
         case 'ctime': return rec.ctime ? new Date(rec.ctime) : null;
         case 'image': case 'capa': return rec.image ?? null;
+        case 'tasks': case 'tarefas': return rec.tasks ?? 0;
+        case 'tasksDone': case 'tarefasFeitas': return rec.tasksDone ?? 0;
+        case 'progress': case 'progresso': return rec.tasks ? Math.round(((rec.tasksDone ?? 0) / rec.tasks) * 1000) / 1000 : null;
+        case 'aliases': case 'apelidos': return rec.aliases ?? [];
         case 'file': return this;
         case 'properties': return noteObj(rec, ctx);
       }

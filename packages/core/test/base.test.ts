@@ -155,6 +155,19 @@ views:
     expect(linked.rows).toHaveLength(2);
   });
 
+  it('tarefas da página viram progresso e o resolvedor do app acha apelidos', () => {
+    const recs = [
+      noteRecord('P/Alfa.md', '---\naliases: [A1]\n---\n- [x] um\n- [ ] dois\n- [-] cancelada\n- [ ] \n```\n- [ ] no código\n```'),
+      noteRecord('P/Beta.md', 'Liga [[A1]]'),
+    ];
+    const idx = new NoteIndex(recs, (t) => (t.toLowerCase() === 'a1' ? 'P/Alfa.md' : null));
+    const { def } = parseBase('formulas:\n  pct: if(file.tasks > 0, file.tasksDone / file.tasks, 0)\nviews: [{ type: table, name: T }]');
+    const rows = runView(def, def.views[0]!, idx).rows;
+    const alfa = rows.find((r) => r.rec.name === 'Alfa')!;
+    expect([alfa.get('file.tasks'), alfa.get('file.tasksDone'), alfa.get('file.progress'), alfa.get('formula.pct')]).toEqual([2, 1, 0.5, 0.5]);
+    expect((alfa.get('file.backlinks') as Link[]).map((l) => l.target)).toEqual(['P/Beta']);
+  });
+
   it('this aponta para a nota do bloco', () => {
     const notes = { ...NOTES, 'Projetos/Trabalho.md': '---\nárea: Empresa\n---\n```base\nfilters: projeto == this\nviews: [{type: table, name: T}]\n```' };
     const idx = new NoteIndex(Object.entries(notes).map(([p, t]) => noteRecord(p, t)));

@@ -152,6 +152,8 @@ export const FILE_PROPS: Array<{ id: string; label: string; type: PropType | 'fi
   { id: 'file.tags', label: 'Tags', type: 'multiselect' },
   { id: 'file.links', label: 'Links', type: 'relation' },
   { id: 'file.backlinks', label: 'Mencionado em', type: 'relation' },
+  { id: 'file.progress', label: 'Tarefas feitas (%)', type: 'number' },
+  { id: 'file.tasks', label: 'Tarefas', type: 'number' },
   { id: 'file.ctime', label: 'Criada em', type: 'created' },
   { id: 'file.mtime', label: 'Editada em', type: 'edited' },
 ];
