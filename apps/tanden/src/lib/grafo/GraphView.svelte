@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onDestroy, onMount, untrack } from 'svelte';
-  import { buildNoteGraph, neighborhood, type NoteGraph } from '@tanden/core/src/graph';
+  import { buildNoteGraph, graphQuery, neighborhood, type GraphNode, type NoteGraph } from '@tanden/core/src/graph';
+  import { serializeBoard } from '@tanden/core';
+  import { quadros } from '../quadro/quadros.svelte';
   import { engine } from '../engine.svelte';
   import { files } from '../files/files.svelte';
   import { sound } from '../sound.svelte';
@@ -27,8 +29,20 @@
     repel: number;
     distance: number;
     gravity: number;
+    /** quadros (.canvas) como nós */
+    boards: boolean;
+    /** só o que bate com esta busca aparece (path:, tag:, file:, -termo) */
+    filter: string;
+    /** grupos de cor por busca, como no Obsidian: o primeiro que bate pinta o nó */
+    colorGroups: { q: string; color: string }[];
+    nodeScale: number;
+    linkWidth: number;
+    labelFade: number;
   };
-  const DEFAULTS: Settings = { mode: 'global', depth: 2, tags: false, files: false, missing: false, orphans: true, arrows: false, hidden: [], repel: 1.6, distance: 80, gravity: 1 };
+  const DEFAULTS: Settings = {
+    mode: 'global', depth: 2, tags: false, files: false, missing: false, orphans: true, arrows: false, hidden: [], repel: 1.6, distance: 80, gravity: 1,
+    boards: true, filter: '', colorGroups: [], nodeScale: 1, linkWidth: 1, labelFade: 1,
+  };
   function load(): Settings {
     try {
       return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') };
@@ -51,6 +65,11 @@
   let center = $state<string | null>(engine.active);
   let panel = $state(true);
   let forces = $state(false);
+  let looks = $state(false);
+  let colorsOpen = $state(s.colorGroups.length > 0);
+  /** animação de crescimento: quantas notas já apareceram (null = todas) */
+  let grow = $state<number | null>(null);
+  let growTimer: ReturnType<typeof setInterval> | null = null;
 
   // cores por pasta de primeiro nível
   const PALETTE = ['#ff8a3d', '#5aa9ff', '#7fd1a8', '#c792ff', '#ffd166', '#ff6b8b', '#4dd0e1', '#b8e986', '#f78fb3', '#a0a4ff'];
@@ -68,7 +87,8 @@
   let timer: ReturnType<typeof setTimeout> | null = null;
   function rebuild() {
     const notes = engine.vault.list().filter((p) => p.endsWith('.md')).map((path) => ({ path, text: engine.vault.read(path) }));
-    graph = buildNoteGraph(notes, { tags: s.tags, missing: s.missing, files: s.files, allPaths: files.list });
+    const boards = s.boards ? engine.boardList.filter((p) => engine.boards.has(p)).map((path) => ({ path, text: serializeBoard(engine.boards.read(path)) })) : [];
+    graph = buildNoteGraph(notes, { tags: s.tags, missing: s.missing, files: s.files, allPaths: files.list, boards });
     rev++;
   }
   function schedule() {
@@ -81,12 +101,14 @@
   let off: (() => void) | null = null;
   onMount(() => {
     off = engine.bus.on('*', (e) => {
-      if (e.type === 'note.changed' || e.type === 'note.created' || e.type === 'sync.finished') schedule();
+      if (e.type === 'note.changed' || e.type === 'note.created' || e.type === 'note.deleted' || e.type === 'sync.finished') schedule();
+      else if (s.boards && (e.type === 'board.created' || e.type === 'board.changed' || e.type === 'board.deleted')) schedule();
     });
   });
   onDestroy(() => {
     off?.();
     if (timer) clearTimeout(timer);
+    if (growTimer) clearInterval(growTimer);
     gc?.destroy();
   });
   // opções que mudam o que entra no grafo
@@ -94,6 +116,7 @@
     void s.tags;
     void s.missing;
     void s.files;
+    void s.boards;
     void files.list;
     untrack(rebuild);
   });
@@ -102,7 +125,20 @@
   const view = $derived.by(() => {
     void rev;
     const hidden = new Set(s.hidden);
-    let keep = graph.nodes.filter((n) => n.kind !== 'note' || !hidden.has(top(n.folder)));
+    let keep = graph.nodes.filter((n) => (n.kind !== 'note' && n.kind !== 'board') || !hidden.has(top(n.folder)));
+    if (s.filter.trim()) {
+      const f = graphQuery(s.filter);
+      keep = keep.filter((n) => (n.kind !== 'note' && n.kind !== 'board') || f(n));
+      // tags e anexos só ficam se ligados a alguma nota que sobrou
+      const alive = new Set(keep.filter((n) => n.kind === 'note' || n.kind === 'board').map((n) => n.id));
+      const touched = new Set(graph.edges.filter((e) => alive.has(e.from) || alive.has(e.to)).flatMap((e) => [e.from, e.to]));
+      keep = keep.filter((n) => alive.has(n.id) || touched.has(n.id));
+    }
+    if (grow !== null) {
+      const order = growOrder.slice(0, grow);
+      const shown = new Set(order);
+      keep = keep.filter((n) => shown.has(n.id) || ((n.kind === 'tag' || n.kind === 'file' || n.kind === 'missing') && graph.edges.some((e) => shown.has(e.from) && e.to === n.id)));
+    }
     if (!s.orphans) keep = keep.filter((n) => n.in + n.out > 0);
     let ids = new Set(keep.map((n) => n.id));
     let edges = graph.edges.filter((e) => ids.has(e.from) && ids.has(e.to));
@@ -115,17 +151,31 @@
     return { nodes: keep, edges };
   });
 
-  const stats = $derived({ notes: view.nodes.filter((n) => n.kind === 'note').length, links: view.edges.length });
+  const stats = $derived({ notes: view.nodes.filter((n) => n.kind === 'note').length, boards: view.nodes.filter((n) => n.kind === 'board').length, links: view.edges.length });
+
+  /** grupos de cor por busca, já compilados */
+  const matchers = $derived(s.colorGroups.filter((g) => g.q.trim()).map((g) => ({ test: graphQuery(g.q), color: g.color })));
+  function colorFor(n: GraphNode, folders: Map<string, string>): string {
+    if (n.kind === 'tag') return 'var(--ember-soft)';
+    if (n.kind === 'file' || n.kind === 'missing') return 'var(--muted)';
+    for (const m of matchers) if (m.test(n)) return m.color;
+    if (n.kind === 'board') return 'var(--ok)';
+    return folders.get(top(n.folder)) ?? 'var(--silver)';
+  }
 
   $effect(() => {
     const v = view;
     const colors = groupColor;
+    void matchers;
     const arrows = s.arrows;
     untrack(() => {
       if (!host) return;
       if (!gc) {
         gc = new GraphCanvas({
           arrows: arrows ? 'always' : 'lit',
+          nodeScale: s.nodeScale,
+          linkWidth: s.linkWidth,
+          labelFade: s.labelFade,
           onSelect: (id) => {
             selected = id;
             if (id) sound.play('tick');
@@ -138,14 +188,18 @@
       const nodes: GNode[] = v.nodes.map((n) => ({
         id: n.id,
         label: n.label,
-        color: n.kind === 'tag' ? 'var(--ember-soft)' : n.kind === 'file' ? 'var(--muted)' : n.kind === 'missing' ? 'var(--muted)' : (colors.get(top(n.folder)) ?? 'var(--silver)'),
-        shape: n.kind === 'tag' ? 'ring' : n.kind === 'missing' ? 'ghost' : 'dot',
+        color: colorFor(n, colors),
+        shape: n.kind === 'tag' || n.kind === 'board' ? 'ring' : n.kind === 'missing' ? 'ghost' : 'dot',
         weight: n.id === engine.active ? 4 : 0,
       }));
       const edges: GEdge[] = v.edges.map((e) => ({ from: e.from, to: e.to, dashed: e.kind === 'tag' || e.kind === 'embed' }));
       gc.setData(nodes, edges);
       gc.select(selected);
     });
+  });
+  $effect(() => {
+    const o = { nodeScale: s.nodeScale, linkWidth: s.linkWidth, labelFade: s.labelFade };
+    untrack(() => gc?.setOptions(o));
   });
   $effect(() => {
     const a = s.arrows;
@@ -199,6 +253,7 @@
     const n = graph.nodes.find((x) => x.id === id);
     if (!n) return;
     if (n.kind === 'note') onOpenNote(id);
+    else if (n.kind === 'board') quadros.open(id);
     else if (n.kind === 'file') files.openLink(id);
     else if (n.kind === 'tag') query = n.label;
     else if (n.kind === 'missing') {
@@ -213,6 +268,75 @@
     center = id;
     s.mode = 'local';
   }
+  /* ------------------------------------------------------------ extras */
+
+  /** ordem de aparição na animação: notas mais antigas (pela data do arquivo) primeiro */
+  let growOrder: string[] = [];
+  async function animate() {
+    if (growTimer) {
+      clearInterval(growTimer);
+      growTimer = null;
+      grow = null;
+      return;
+    }
+    const ids = graph.nodes.filter((n) => n.kind === 'note' || n.kind === 'board').map((n) => n.id);
+    let times: Record<string, [string, number]> = {};
+    try {
+      times = (await engine.storage.stat?.()) ?? {};
+    } catch {
+      times = {};
+    }
+    const when = (id: string) => {
+      const d = /(\d{4}-\d{2}-\d{2})/.exec(id)?.[1];
+      return d ? Date.parse(d) : times[id]?.[1] ?? 0;
+    };
+    growOrder = ids.sort((a, b) => when(a) - when(b) || a.localeCompare(b));
+    const step = Math.max(1, Math.ceil(growOrder.length / 90));
+    grow = 0;
+    sound.play('open');
+    growTimer = setInterval(() => {
+      grow = (grow ?? 0) + step;
+      if (grow >= growOrder.length) {
+        clearInterval(growTimer!);
+        growTimer = null;
+        grow = null;
+        sound.play('complete');
+        setTimeout(() => gc?.fit(), 300);
+      }
+    }, 45);
+  }
+
+  async function savePng() {
+    const blob = await gc?.png();
+    if (!blob) return;
+    const stamp = new Date().toISOString().slice(0, 10);
+    await files.deliver(`Grafo ${stamp}.png`, new Uint8Array(await blob.arrayBuffer()), 'image/png');
+    sound.play('complete');
+  }
+
+  const MAX_TO_BOARD = 150;
+  function toBoard() {
+    const v = view;
+    if (!v.nodes.length || !gc) return;
+    if (v.nodes.length > MAX_TO_BOARD) {
+      files.say(`São ${v.nodes.length} itens. Use o grafo local ou o filtro para levar até ${MAX_TO_BOARD} para um quadro.`, { error: true });
+      return;
+    }
+    const pos = gc.positions();
+    const items = v.nodes.map((n) => ({ id: n.id, label: n.label, kind: n.kind, ...(pos.get(n.id) ?? { x: 0, y: 0 }) }));
+    const c = s.mode === 'local' && center ? center : undefined;
+    const name = c ? `Grafo de ${labelOf(c)}` : s.filter.trim() ? `Grafo ${s.filter.trim()}` : 'Grafo';
+    quadros.fromGraph(name, items, v.edges.filter((e) => e.kind !== 'tag' || s.tags), c);
+    sound.play('create');
+  }
+
+  function addColorGroup() {
+    const used = new Set(s.colorGroups.map((g) => g.color));
+    const color = PALETTE.find((c) => !used.has(c)) ?? PALETTE[s.colorGroups.length % PALETTE.length]!;
+    s.colorGroups = [...s.colorGroups, { q: query.trim() || '', color }];
+    colorsOpen = true;
+  }
+
   function toggleGroup(name: string) {
     s.hidden = s.hidden.includes(name) ? s.hidden.filter((x) => x !== name) : [...s.hidden, name];
   }
@@ -258,7 +382,15 @@
           </div>
         {/if}
 
+        <h3>Filtro</h3>
+        <label class="search" title="path:Pasta  tag:#tag  file:nome  -termo exclui">
+          <span aria-hidden="true">⧩</span>
+          <input bind:value={s.filter} placeholder="path:Projetos -tag:#arquivo" spellcheck="false" aria-label="Filtro do grafo" />
+          {#if s.filter}<button class="clear" onclick={() => (s.filter = '')} aria-label="Limpar filtro">×</button>{/if}
+        </label>
+
         <h3>Mostrar</h3>
+        <label class="tog"><input type="checkbox" bind:checked={s.boards} /> Quadros</label>
         <label class="tog"><input type="checkbox" bind:checked={s.tags} /> Tags</label>
         <label class="tog"><input type="checkbox" bind:checked={s.files} /> Anexos</label>
         <label class="tog"><input type="checkbox" bind:checked={s.missing} /> Notas que ainda não existem</label>
@@ -276,6 +408,26 @@
           </div>
         {/if}
 
+        <button class="more" onclick={() => (colorsOpen = !colorsOpen)} aria-expanded={colorsOpen}>Grupos de cor {colorsOpen ? '▾' : '▸'}</button>
+        {#if colorsOpen}
+          {#each s.colorGroups as g, i (i)}
+            <div class="cgroup">
+              <input type="color" bind:value={g.color} aria-label="Cor do grupo" />
+              <input bind:value={g.q} placeholder="path:Mundos ou #tag" spellcheck="false" aria-label="Busca do grupo" />
+              <button class="clear" onclick={() => (s.colorGroups = s.colorGroups.filter((_, j) => j !== i))} aria-label="Tirar o grupo">×</button>
+            </div>
+          {/each}
+          <button class="link" onclick={addColorGroup}>+ Novo grupo{query.trim() ? ` com "${query.trim()}"` : ''}</button>
+        {/if}
+
+        <button class="more" onclick={() => (looks = !looks)} aria-expanded={looks}>Aparência {looks ? '▾' : '▸'}</button>
+        {#if looks}
+          <label class="range"><span>Nós</span><input type="range" min="0.5" max="2.5" step="0.1" bind:value={s.nodeScale} /></label>
+          <label class="range"><span>Linhas</span><input type="range" min="0.3" max="3" step="0.1" bind:value={s.linkWidth} /></label>
+          <label class="range" title="Mais à direita, os nomes só aparecem bem de perto"><span>Nomes</span><input type="range" min="-1" max="3" step="0.25" bind:value={s.labelFade} /><b>{s.labelFade < 0 ? 'nunca' : s.labelFade === 0 ? 'sempre' : ''}</b></label>
+          <button class="link" onclick={() => { s.nodeScale = 1; s.linkWidth = 1; s.labelFade = 1; }}>Voltar ao padrão</button>
+        {/if}
+
         <button class="more" onclick={() => (forces = !forces)} aria-expanded={forces}>Forças {forces ? '▾' : '▸'}</button>
         {#if forces}
           <label class="range"><span>Repulsão</span><input type="range" min="0.2" max="4" step="0.1" bind:value={s.repel} /></label>
@@ -283,7 +435,7 @@
           <label class="range"><span>Gravidade</span><input type="range" min="0" max="4" step="0.1" bind:value={s.gravity} /></label>
           <button class="link" onclick={() => { s.repel = DEFAULTS.repel; s.distance = DEFAULTS.distance; s.gravity = DEFAULTS.gravity; }}>Voltar ao padrão</button>
         {/if}
-        <p class="stats">{stats.notes} {stats.notes === 1 ? 'nota' : 'notas'} · {stats.links} {stats.links === 1 ? 'ligação' : 'ligações'}</p>
+        <p class="stats">{stats.notes} {stats.notes === 1 ? 'nota' : 'notas'}{stats.boards ? ` · ${stats.boards} ${stats.boards === 1 ? 'quadro' : 'quadros'}` : ''} · {stats.links} {stats.links === 1 ? 'ligação' : 'ligações'}</p>
       </div>
     {/if}
   </aside>
@@ -294,13 +446,16 @@
       <button onclick={() => gc?.fit()} title="Enquadrar tudo (dois cliques no fundo)">⤢</button>
       <button onclick={() => gc?.zoomBy(1.4)} title="Aproximar">+</button>
       <button onclick={() => gc?.zoomBy(1 / 1.4)} title="Afastar">−</button>
+      <button class:on={grow !== null} onclick={animate} title="Ver o cofre crescer, das notas mais antigas às mais novas">{grow !== null ? '■' : '▶'}</button>
+      <button onclick={toBoard} title="Levar o que está no grafo para um quadro novo (cartões ligados)">▦</button>
+      <button onclick={savePng} title="Salvar o grafo como imagem PNG">⇩</button>
     </div>
     {#if !view.nodes.length}
       <p class="empty">{graph.nodes.length ? 'Nada aparece com esses filtros.' : 'Ainda não há notas. Crie notas e ligue com [[links]].'}</p>
     {/if}
     {#if info}
       <div class="peek">
-        <span class="kind">{info.kind === 'tag' ? 'Tag' : info.kind === 'file' ? 'Anexo' : info.kind === 'missing' ? 'Ainda não existe' : info.folder || 'Raiz'}</span>
+        <span class="kind">{info.kind === 'tag' ? 'Tag' : info.kind === 'file' ? 'Anexo' : info.kind === 'missing' ? 'Ainda não existe' : info.kind === 'board' ? `Quadro · ${info.folder || 'Raiz'}` : info.folder || 'Raiz'}</span>
         <b>{info.label}</b>
         {#if info.tags.length}<span class="tags">{#each info.tags.slice(0, 6) as t}<button onclick={() => (query = `#${t}`)}>#{t}</button>{/each}</span>{/if}
         <span class="counts">{outlinks.length} {outlinks.length === 1 ? 'link' : 'links'} · {backlinks.length} {backlinks.length === 1 ? 'menção' : 'menções'}</span>
@@ -314,6 +469,7 @@
         <div class="acts">
           <button class="primary" onclick={() => open(info.id)}>{info.kind === 'missing' ? 'Criar nota' : info.kind === 'tag' ? 'Buscar a tag' : 'Abrir'}</button>
           {#if info.kind !== 'tag'}<button onclick={() => localAround(info.id)}>Grafo local</button>{/if}
+          {#if info.kind === 'note'}<button onclick={() => { quadros.fromNote(info.id); sound.play('create'); }} title="Os títulos e listas da nota viram um mapa mental">Mapa mental</button>{/if}
         </div>
       </div>
     {/if}
@@ -376,7 +532,11 @@
   .tools { position: absolute; top: 12px; right: 12px; display: flex; flex-direction: column; gap: 4px; }
   .tools button { width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 85%, transparent);
     color: var(--ink); font: 600 15px/1 var(--f-mono); padding: 0; backdrop-filter: blur(6px); }
-  .tools button:hover { border-color: var(--ember); color: var(--ember); }
+  .tools button:hover, .tools button.on { border-color: var(--ember); color: var(--ember); }
+  .cgroup { display: flex; align-items: center; gap: 6px; }
+  .cgroup input[type='color'] { flex: none; width: 26px; height: 26px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: none; }
+  .cgroup input:not([type]) { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: 12px var(--f-mono); padding: 5px 7px; outline: 0; }
+  .cgroup input:not([type]):focus { border-color: var(--ember); }
   .empty { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; color: var(--muted); pointer-events: none; padding: 20px; text-align: center; }
 
   .peek { position: absolute; left: 14px; bottom: 14px; width: min(320px, calc(100% - 28px)); display: grid; gap: 6px; padding: 14px; border-radius: 14px;

@@ -335,3 +335,37 @@ Um banco é um bloco ` ```base ` dentro de uma nota, no formato das **Bases do O
 - **Arquivar** marca `arquivado: true` na nota; ela some das views (opção "Mostrar arquivados").
 
 Código: `packages/core/src/base/` (testes em `test/base.test.ts`) e `apps/tanden/src/lib/bases/`.
+
+## Grafo
+
+Tela **Grafo**: cada nota é um nó e cada `[[link]]` uma ligação, como no Obsidian. Os quadros (`.canvas`) entram como anéis ligados às notas que mostram.
+
+- **Global ou local** (em volta da nota aberta, de 1 a 4 ligações). O comando *Grafo local da nota aberta* abre direto.
+- **Filtro** com a busca do Obsidian: `path:Projetos`, `tag:#estudo` (ou `#estudo`), `file:ata`, `-termo` exclui e aspas juntam palavras.
+- **Grupos de cor**: cada grupo é uma busca e uma cor; o primeiro que bate pinta o nó.
+- **Aparência**: tamanho dos nós, espessura das linhas e quando os nomes aparecem (sempre, de perto ou nunca).
+- **▶ Animar**: o cofre cresce na tela, das notas mais antigas às mais novas.
+- **▦ Para quadro**: o que está no grafo (até 150 itens) vira um quadro novo, com as notas como cartões ligados.
+- **⇩ PNG**: salva a imagem do grafo em `Exportados/`.
+- No cartão de uma nota, *Mapa mental* transforma os títulos e listas dela num mapa.
+
+## Quadros: renomear, apagar e conversas com as notas
+
+- O **⋯** ao lado do nome do quadro renomeia, duplica, copia o link `[[ ]]`, transforma o quadro numa nota em tópicos e apaga (com cópia em `.trash/`). Apagar e renomear chegam aos outros aparelhos pelo sync, e um `.canvas` apagado no Obsidian também some aqui.
+- Um link `[[Plano.canvas]]` numa nota abre aquele quadro. Imagens do cofre aparecem dentro dos cartões; dois cliques num PDF ou num link abrem no lugar certo.
+- **Colar** no quadro: um endereço vira cartão de link, `[[Nota]]` vira cartão da nota e qualquer outro texto vira uma caixa.
+- *Mapa mental da nota aberta* (paleta) e *Virar nota em tópicos* (⋯) fazem o caminho de ida e volta entre nota e mapa.
+
+## Personalizar (Ctrl+,)
+
+- **Aparência**: tema, destaque, letra do texto (Manrope, Sistema, Serifada, Mono, Chakra) e tamanho da interface (Ctrl+= / Ctrl+- / Ctrl+0).
+- **Atalhos**: todo comando da paleta pode ganhar um ou mais atalhos. Clique no **+**, aperte as teclas e pronto; um atalho repetido sai do comando antigo. Fica salvo por aparelho.
+- **Snippets CSS**: arquivos `.css` em `Snippets/` (vão junto no sync) ou em `.obsidian/snippets/`. Cada aparelho liga os que quiser, e o editor embutido mostra o resultado enquanto você digita. Um snippet pode trocar qualquer variável do tema (`--ember`, `--void`, `--f-body`…).
+- **Modo foco** (Ctrl+Shift+Enter): esconde as barras; Esc volta.
+- Comandos extras na paleta: nota aleatória, próximo tema, claro/escuro, ligar/desligar sons, rolar d20 e 2d6, cara ou coroa.
+
+## Robustez do sync
+
+- Um `.md` apagado fora do Tanden (Obsidian, terminal, gerenciador de arquivos) vira um apagar de verdade, com cópia em `.trash/`. Renomear no Obsidian não deixa cópia. Se mais de 20 notas somem de uma vez (pasta desmontada), nada é apagado.
+- O sync com o Drive ignora `.git/`, `node_modules/`, o layout de janelas do Obsidian (`.obsidian/workspace*.json`), arquivos temporários e lixo do sistema.
+- Se a rede cai no meio do sync, o que já foi enviado fica registrado e não sobe de novo.

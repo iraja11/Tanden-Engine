@@ -95,3 +95,104 @@ describe('layout de forças', () => {
     for (let i = 0; i < n; i += 97) expect(Number.isFinite(L.x[i]!)).toBe(true);
   });
 });
+
+import { boardFromGraph, graphQuery, mindMapFromNote, noteFromBoard } from '../src/graph';
+
+describe('grafo e quadros conversam', () => {
+  it('quadros entram no grafo ligados às notas que mostram', () => {
+    const canvas = JSON.stringify({
+      nodes: [
+        { id: 'a', type: 'file', file: 'Projetos/Tanden.md', x: 0, y: 0, width: 10, height: 10 },
+        { id: 'b', type: 'text', text: 'ver [[Ideias]] e ![[foto.png]]', x: 0, y: 0, width: 10, height: 10 },
+        { id: 'c', type: 'link', url: 'https://x.com', x: 0, y: 0, width: 10, height: 10 },
+      ],
+      edges: [],
+    });
+    const g = buildNoteGraph(
+      [
+        { path: 'Projetos/Tanden.md', text: 'plano em [[Plano.canvas]]' },
+        { path: 'Ideias.md', text: '' },
+      ],
+      { boards: [{ path: 'Quadros/Plano.canvas', text: canvas }], files: true, allPaths: ['Anexos/foto.png'] },
+    );
+    const board = g.nodes.find((n) => n.id === 'Quadros/Plano.canvas')!;
+    expect(board.kind).toBe('board');
+    expect(board.label).toBe('Plano');
+    expect(g.edges.map((e) => `${e.from}>${e.to}:${e.kind}`).sort()).toEqual([
+      'Projetos/Tanden.md>Quadros/Plano.canvas:link',
+      'Quadros/Plano.canvas>Anexos/foto.png:link',
+      'Quadros/Plano.canvas>Ideias.md:link',
+      'Quadros/Plano.canvas>Projetos/Tanden.md:embed',
+    ]);
+    // .canvas quebrado não derruba o grafo
+    expect(() => buildNoteGraph([], { boards: [{ path: 'x.canvas', text: '{' }] })).not.toThrow();
+  });
+
+  it('busca do grafo: path:, tag:, #tag, file:, negação e aspas', () => {
+    const n = (id: string, tags: string[] = []) => ({ id, label: id.split('/').pop()!.replace('.md', ''), tags, kind: 'note' as const });
+    const a = n('Mundos/Aurath/Veyra.md', ['lugar']);
+    const b = n('Projetos/Tanden.md', ['estudo/cálculo']);
+    const c = n('Diário/2026-10-15.md');
+    expect(graphQuery('path:mundos')(a)).toBe(true);
+    expect(graphQuery('path:"Mundos/Aurath"')(a)).toBe(true);
+    expect(graphQuery('tag:#estudo')(b)).toBe(true);
+    expect(graphQuery('#estudo/calculo')(b)).toBe(true);
+    expect(graphQuery('#estudo/calc')(b)).toBe(false);
+    expect(graphQuery('file:veyra')(a)).toBe(true);
+    expect(graphQuery('-path:diário')(c)).toBe(false);
+    expect(graphQuery('tanden -tag:lugar')(b)).toBe(true);
+    expect(graphQuery('')(a)).toBe(false);
+  });
+
+  it('um pedaço do grafo vira um quadro sem cartões sobrepostos', () => {
+    const items = [
+      { id: 'A.md', label: 'A', kind: 'note' as const, x: 0, y: 0 },
+      { id: 'B.md', label: 'B', kind: 'note' as const, x: 30, y: 0 },
+      { id: '#tag', label: '#tag', kind: 'tag' as const, x: 0, y: 30 },
+      { id: '?nada', label: 'Nada', kind: 'missing' as const, x: -30, y: 0 },
+    ];
+    const b = boardFromGraph(items, [{ from: 'A.md', to: 'B.md' }, { from: 'A.md', to: '#tag' }, { from: 'A.md', to: 'B.md' }, { from: 'X', to: 'A.md' }], { center: 'A.md' });
+    expect(b.nodes.map((n) => n.type)).toEqual(['file', 'file', 'text', 'text']);
+    expect(b.nodes[0]!.color).toBe('1');
+    expect(b.nodes[3]!.text).toBe('[[Nada]]');
+    expect(b.edges).toHaveLength(2);
+    const [a, bb] = b.nodes;
+    expect(Math.abs(a!.x - bb!.x)).toBeGreaterThanOrEqual(260);
+    expect(new Set(b.nodes.map((n) => n.id)).size).toBe(4);
+  });
+
+  it('nota vira mapa mental e mapa vira nota', () => {
+    const md = ['---', 'tipo: plano', '---', '# Viagem', 'intro solta', '## Antes', '- passaporte', '  - foto 3x4', '- [ ] reservar hotel', '## Durante', '1. museu', '```', '# não é título', '```'].join('\n');
+    const m = mindMapFromNote('Viagem', md);
+    const text = (id: string) => m.nodes.find((n) => n.id === id)!.text;
+    const parentOf = (t: string) => {
+      const id = m.nodes.find((n) => n.text === t)!.id;
+      return text(m.edges.find((e) => e.toNode === id)!.fromNode);
+    };
+    expect(m.nodes.map((n) => n.text)).toEqual(['Viagem', 'Antes', 'passaporte', 'foto 3x4', 'reservar hotel', 'Durante', 'museu']);
+    expect(parentOf('Antes')).toBe('Viagem');
+    expect(parentOf('foto 3x4')).toBe('passaporte');
+    expect(parentOf('reservar hotel')).toBe('Antes');
+    expect(parentOf('museu')).toBe('Durante');
+    // galhos da raiz dos dois lados
+    const antes = m.nodes.find((n) => n.text === 'Antes')!;
+    const durante = m.nodes.find((n) => n.text === 'Durante')!;
+    expect(Math.sign(antes.x)).not.toBe(Math.sign(durante.x));
+
+    m.nodes[0]!.text = '[[Planos/Viagem|Viagem]]';
+    const back = noteFromBoard(m, 'raiz');
+    expect(back).toBe('# Viagem\n\n## Antes\n\n- passaporte\n  - foto 3x4\n- reservar hotel\n\n## Durante\n\n- museu\n');
+  });
+
+  it('quadro com cartões de nota e caixas soltas vira nota com links', () => {
+    const out = noteFromBoard({
+      nodes: [
+        { id: 'r', type: 'text', text: '# Tema', x: 0, y: 0, width: 1, height: 1 },
+        { id: 'f', type: 'file', file: 'Pasta/Leitura.md', x: 0, y: 50, width: 1, height: 1 },
+        { id: 's', type: 'text', text: 'solta', x: 0, y: 99, width: 1, height: 1 },
+      ],
+      edges: [{ id: 'e', fromNode: 'r', toNode: 'f' }],
+    });
+    expect(out).toBe('# Tema\n\n## [[Pasta/Leitura]]\n\n## Soltos\n\n- solta\n');
+  });
+});

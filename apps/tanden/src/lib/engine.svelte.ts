@@ -134,6 +134,7 @@ class Engine {
         if (e.path === this.active) this.open(this.notes[0] ?? null);
         break;
       case 'board.created':
+      case 'board.deleted':
         this.boardList = this.boards.list();
         break;
       case 'board.changed':
