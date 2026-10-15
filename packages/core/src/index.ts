@@ -30,6 +30,10 @@ export { BoardStore, readBoard, parseBoard, serializeBoard, type BoardData, type
 export * from './sheet';
 export { AnnotationStore, annotationsToMarkdown, type PdfAnnotation, type AnnotKind, type AnnotEdit } from './annotations';
 export { exportAnnotatedPdf } from './pdf-export';
+export {
+  LibraryStore, READ_STATUS, pdfFingerprint, bookTitle, bookAuthor, bookProgress, bookToMarkdown, readingTime,
+  type Book, type BookPatch, type Bookmark, type ReadStatus,
+} from './library';
 export { fileKind, mimeOf, freePath, convertToNote, decodeText, resolveLink, CONVERTIBLE, FOLDERS, type FileKind } from './files';
 export {
   prepareClip, clipToMarkdown, linkCard, readPageMeta, normalizeUrl, localStamp, youtubeId, addHighlight, collectHighlights, syncHighlights,

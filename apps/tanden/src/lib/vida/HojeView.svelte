@@ -3,6 +3,7 @@
   import { flip } from 'svelte/animate';
   import { bases, optionColor } from '../bases/bases.svelte';
   import { files } from '../files/files.svelte';
+  import { biblioteca } from '../biblioteca/biblioteca.svelte';
   import { rise } from '../motion';
   import { dayLabel, vida } from './vida.svelte';
   import { saude } from '../saude/saude.svelte';
@@ -50,6 +51,8 @@
   const care = $derived(saude.todayCare);
   const waterPct = $derived(Math.min(1, care.ml / Math.max(1, saude.config.agua.goalMl)));
   const workout = $derived(saude.hasPlan ? saude.nextWorkout : null);
+  /** PDFs em leitura na Biblioteca, do mais recente */
+  const books = $derived(biblioteca.books.filter((b) => b.status === 'lendo').sort((a, b) => Math.max(b.opened ?? 0, b.pageAt ?? 0) - Math.max(a.opened ?? 0, a.pageAt ?? 0)));
   const cardsDue = $derived(flashcards.pending());
 
   const hello = $derived.by(() => {
@@ -265,6 +268,20 @@
                   {#if g.target !== null}{g.current ?? 0} de {g.target}{g.unit ? ` ${g.unit}` : ''}{:else if g.projects.length}{g.projects.length} projeto{g.projects.length > 1 ? 's' : ''}{/if}
                   {#if g.due} · até {dayLabel(g.due, day)}{/if}
                 </small>
+              </li>
+            {/each}
+          </ul>
+        </section>
+      {/if}
+
+      {#if books.length}
+        <section class="card">
+          <h3>Lendo <span>{books.length}</span></h3>
+          <ul class="read">
+            {#each books.slice(0, 4) as b (b.path)}
+              <li>
+                <button class="title" onclick={() => files.openPath(b.path)}>{biblioteca.title(b)}</button>
+                <small>{b.page ? `p. ${b.page}${b.pages ? ` de ${b.pages}` : ''}` : ''}</small>
               </li>
             {/each}
           </ul>

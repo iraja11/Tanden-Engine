@@ -13,6 +13,7 @@ export type TandenEvent =
   | { type: 'reminder.fired'; path: string; text: string; at: number }
   | { type: 'sheet.changed'; path: string; origin: 'local' | 'remote' | 'external' }
   | { type: 'annot.changed'; path: string; origin: 'local' | 'remote' }
+  | { type: 'library.changed'; origin: 'local' | 'remote' }
   | { type: 'file.imported'; path: string; from: string };
 
 export type EventType = TandenEvent['type'];
