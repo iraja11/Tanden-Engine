@@ -353,6 +353,10 @@ class Saude {
   // ------------------------------------------------------------ água e pausas
 
   private log(kind: NudgeKind, ml = 0): void {
+    // web: o primeiro registro (um clique) é a hora de pedir para avisar
+    if (!isTauri() && typeof Notification !== 'undefined' && Notification.permission === 'default' && this.local.notify[kind]) {
+      void Notification.requestPermission();
+    }
     const at = Date.now();
     const path = careLogPath(at);
     const cur = engine.vault.has(path) ? engine.vault.read(path) : '';

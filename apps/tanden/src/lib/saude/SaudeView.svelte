@@ -94,7 +94,7 @@
 
   {#if saude.error}<p class="err">{saude.error}</p>{/if}
 
-  <div class="grid">
+  <div class="grid" class:training={!!saude.draft}>
     <div class="col">
       <!-- água -->
       <section class="card water">
@@ -219,7 +219,7 @@
                       onchange={(e) => { const v = parseFloat(e.currentTarget.value.replace(',', '.')); it.load = Number.isFinite(v) ? v : null; saude.saveDraft(); }} /> kg</label>
                   {/if}
                 </div>
-                <small class="sg sg-{it.suggestion.kind}">{it.suggestion.hint}{#if ex?.tip} · {ex.tip}{/if}</small>
+                <small class="sg sg-{it.suggestion.kind}">{it.suggestion.hint}{#if ex?.tip}{' · '}{ex.tip}{/if}</small>
                 <div class="sets">
                   {#each it.sets as s, k (k)}
                     <span class="set" class:done={s.done}>
@@ -297,7 +297,7 @@
           <h3>Treino</h3>
           {#if saude.doneToday.length}
             <p class="big">Treino de hoje feito. 💪</p>
-            <small>{saude.doneToday.map((s) => s.title).join(', ')}{#if next} · próximo: {next.key} · {next.name}{/if}</small>
+            <small>{saude.doneToday.map((s) => s.title).join(', ')}{#if next}{' · próximo: '}{next.key} · {next.name}{/if}</small>
           {:else if next}
             <p class="big">{saude.trainingToday ? 'Hoje é dia de' : 'Hoje é descanso. Próximo:'} <b>{next.key} · {next.name}</b></p>
             <small>{next.items.length} exercícios · cerca de {estimateMinutes(next)} min</small>
@@ -490,6 +490,8 @@
 
   @media (max-width: 860px) {
     .grid { grid-template-columns: 1fr; }
+    /* no celular, o treino em andamento vem primeiro */
+    .grid.training > .col:last-child { order: -1; }
     .saude { padding: 14px 14px 28px; }
     .wrow { gap: 12px; }
     .ring { width: 100px; height: 100px; }
