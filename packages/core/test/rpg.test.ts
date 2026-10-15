@@ -118,7 +118,7 @@ describe('dados: notação', () => {
 
   it('texto de uma linha', () => {
     const r = rollOnce('2d20kh1+1 # Furtividade', { rng: faces(20, 3, 12) });
-    expect(rollText(r)).toBe('Furtividade: 2d20kh1+1 = 13 (2d20kh1 [3̶, 12] + 1)');
+    expect(rollText(r)).toBe('Furtividade: 2d20kh1+1 = 13 (2d20kh1 [(3), 12] + 1)');
   });
 
   it('justiça do gerador: d6 equilibrado', () => {

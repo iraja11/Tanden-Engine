@@ -104,8 +104,8 @@
 
   function rollInit(all = false) {
     if (!enc) return;
-    const next = rollInitiative(enc, (mod) => {
-      const r = mesa.roll(`1d20${mod >= 0 ? `+${mod}` : mod}`, { label: 'Iniciativa', quiet: true });
+    const next = rollInitiative(enc, (mod, c) => {
+      const r = mesa.roll(`1d20${mod >= 0 ? `+${mod}` : mod}`, { who: plain(c.name), label: 'Iniciativa', quiet: true });
       return typeof r === 'string' ? 10 + mod : r[0]!.total;
     }, all);
     save(next);

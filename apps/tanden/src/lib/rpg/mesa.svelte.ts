@@ -56,9 +56,9 @@ function load(): Partial<Saved> {
 
 const pad = (n: number) => String(n).padStart(2, '0');
 export const isoDate = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-/** detalhe da rolagem sem marcação: descartados riscados, sucessos sem negrito */
+/** detalhe da rolagem sem marcação: descartados entre parênteses, sucessos sem negrito */
 export const plainDetail = (d: string): string =>
-  d.replace(/~~([^~]+)~~/g, (_m, t: string) => [...t].map((c) => `${c}\u0336`).join('')).replace(/\*\*/g, '');
+  d.replace(/~~([^~]+)~~/g, '($1)').replace(/\*\*/g, '');
 
 export const hhmm = (t: number) => {
   const d = new Date(t);

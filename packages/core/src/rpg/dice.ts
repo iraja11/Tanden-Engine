@@ -435,9 +435,9 @@ export function checkRoll(input: string): string | null {
 /** Parece uma fórmula de dados (para reconhecer "d6" no cabeçalho de uma tabela)? */
 export const looksLikeDice = (s: string): boolean => /^\s*\d*\s*d\s*(\d+|%)\s*([+-]\s*\d+)?\s*$/i.test(s);
 
-/** Resultado em uma linha: "1d20+5 = 22 (1d20 [17] + 5)". */
+/** Resultado em uma linha: "1d20+5 = 22 (1d20 [17] + 5)". Dados descartados ficam entre parênteses. */
 export function rollText(r: RollResult): string {
-  const plain = r.detail.replace(/~~([^~]+)~~/g, (_m, t: string) => [...t].map((c) => `${c}\u0336`).join('')).replace(/\*\*/g, '');
+  const plain = r.detail.replace(/~~([^~]+)~~/g, '($1)').replace(/\*\*/g, '');
   const crit = r.critical === 'max' ? ' · crítico!' : r.critical === 'min' ? ' · falha crítica' : '';
   return `${r.label ? `${r.label}: ` : ''}${r.formula} = ${r.total}${r.groups.length ? ` (${plain})` : ''}${crit}`;
 }

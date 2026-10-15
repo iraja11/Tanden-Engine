@@ -215,8 +215,8 @@ export function toggleCondition(e: Encounter, name: string, cond: string): Encou
 }
 
 /** Rola iniciativa para quem ainda não tem (ou para todos). `roll` recebe o modificador. */
-export function rollInitiative(e: Encounter, roll: (mod: number) => number, all = false): Encounter {
-  return { ...e, list: sortByInit(e.list.map((c) => (all || c.init === null ? { ...c, init: roll(c.mod) } : c))) };
+export function rollInitiative(e: Encounter, roll: (mod: number, c: Combatant) => number, all = false): Encounter {
+  return { ...e, list: sortByInit(e.list.map((c) => (all || c.init === null ? { ...c, init: roll(c.mod, c) } : c))) };
 }
 
 /** Fim do combate: volta a rodada a zero (os combatentes ficam). */

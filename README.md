@@ -108,6 +108,20 @@ Os dois cadernos são notas `.md` comuns com propriedades no topo, então o Obsi
 
 O código fica em `packages/core/src/caderno/` (testes em `test/caderno.test.ts`) e `apps/tanden/src/lib/cadernos/`.
 
+## Mesa de RPG
+
+A tela **Mesa** junta o que se usa jogando. Tudo continua sendo nota comum, então o Obsidian abre igual e outro aparelho recebe pelo sync.
+
+- **Dados.** Fórmulas no formato do Roll20 e do plugin Dice Roller: `1d20+5`, `2d20kh1` ou `1d20 vantagem`, `4d6dl1`, `3d6!` (explode), `2d6r1` (rola de novo os 1), `8d10>=7` (conta sucessos), `4dF`, `d%`, `(1d6+2)*2`, `6x 4d6dl1` (repete) e `# rótulo`. A bandeja mostra média, faixa, a distribuição e a chance de tirar um valor. O histórico fica no aparelho.
+- **Nas notas.** `` `dice: 1d20+5` `` vira um botão de rolar, e `` `dice: [[Geradores#Clima]]` `` rola numa tabela. Numa ficha, a fórmula aceita `@for`, `@des`, `@prof` e `@nível`. No menu `/`, use *Rolagem de dados* ou *Tabela de rolagem*.
+- **Campanhas** (`Campanhas/<nome>/`, `tipo: campanha`, `mundo: "[[Aerth]]"`, `sistema: 5e` ou `livre`). Os personagens e criaturas com números de jogo do mundo ligado entram na campanha. A tabela `## Rolagens` da nota da campanha vira atalhos na bandeja.
+- **Fichas de jogo.** São propriedades da ficha do Mundo: `nível`, `pv`, `pv máx`, `ca`, `for`…`car`, `salvaguardas`, `perícias`, `especialidades` e `jogador`. Opcionalmente, as tabelas `## Ataques` (Ataque, Acerto, Dano) e `## Rolagens` (Rolagem, Fórmula) completam a ficha. Um clique rola testes, salvaguardas, perícias, ataques e dano (×2 no crítico), com vantagem ou desvantagem. Dano e cura gastam primeiro os PV temporários. A mesma ficha aparece na tela Mundos, e `criatura` é um tipo novo de ficha lá.
+- **Combate.** O encontro é uma nota (`tipo: encontro`) com a tabela `## Combatentes`. Dá para adicionar o grupo inteiro ou criaturas em lote ("Goblin 1, 2, 3"), rolar a iniciativa de quem falta e passar turnos com N e B; inimigos com PV 0 são pulados. A tela também marca condições e registra o dano em `## Registro`. Quem tem ficha recebe o dano nela também.
+- **Tabelas de rolagem.** Qualquer tabela Markdown com um dado no cabeçalho (`d6`, `d20`, `d100`; faixas como `1-2`, `96-00`) é rolável. Numa nota com `tipo: tabela`, cada lista debaixo de um título também é. Num resultado, `{2d4}` rola dados e `{@Outra tabela}` rola outra tabela. *Geradores de exemplo* cria nomes, tavernas, jeito do NPC, ganchos, clima e tesouro.
+- **Sessões.** *Nova sessão* cria `Sessão N` com o resumo da anterior e a deixa aberta: cada rolagem entra no `## Registro` dela, com a hora.
+
+O código fica em `packages/core/src/rpg/` (testes em `test/rpg.test.ts`) e `apps/tanden/src/lib/rpg/`.
+
 ## Apresentações (Slides)
 
 Uma apresentação é uma nota `.md` comum em `Apresentações/` (ou qualquer nota com `tipo: apresentação`). Cada linha com `---` separa um slide, o mesmo formato do plugin Slides do Obsidian:
@@ -362,7 +376,7 @@ Tela **Grafo**: cada nota é um nó e cada `[[link]]` uma ligação, como no Obs
 - **Atalhos**: todo comando da paleta pode ganhar um ou mais atalhos. Clique no **+**, aperte as teclas e pronto; um atalho repetido sai do comando antigo. Fica salvo por aparelho.
 - **Snippets CSS**: arquivos `.css` em `Snippets/` (vão junto no sync) ou em `.obsidian/snippets/`. Cada aparelho liga os que quiser, e o editor embutido mostra o resultado enquanto você digita. Um snippet pode trocar qualquer variável do tema (`--ember`, `--void`, `--f-body`…).
 - **Modo foco** (Ctrl+Shift+Enter): esconde as barras; Esc volta.
-- Comandos extras na paleta: nota aleatória, próximo tema, claro/escuro, ligar/desligar sons, rolar d20 e 2d6, cara ou coroa.
+- Comandos extras na paleta: nota aleatória, próximo tema, claro/escuro, ligar/desligar sons, rolar d20 e 2d6, cara ou coroa, e os da Mesa de RPG (rolar fórmula, combate, fichas, tabelas, nova sessão).
 
 ## Robustez do sync
 

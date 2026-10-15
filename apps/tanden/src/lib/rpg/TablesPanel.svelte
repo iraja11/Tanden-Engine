@@ -63,7 +63,7 @@
               </div>
               {#if r}
                 {#key r}
-                  <p class="out"><span class="v mono">{r.value}</span> {@html renderInline(r.text)}</p>
+                  <p class="out">{#if t.dice}<span class="v mono">{r.value}</span> {/if}{@html renderInline(r.text)}</p>
                 {/key}
               {/if}
               {#if open === t.id}
