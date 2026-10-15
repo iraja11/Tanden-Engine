@@ -290,8 +290,8 @@
     <button class="drive" class:on={engine.driveOn} class:warn={!!engine.driveError} onclick={toggleDrive}>
       {engine.driveOn ? (engine.driveError ? 'Drive: sem conexão' : 'Drive conectado') : 'Conectar Google Drive'}
     </button>
-    <span class="sep">·</span> {engine.vault?.deviceId ?? ''}
-    <span class="sep">·</span> <span class="loc">{engine.location}</span>
+    <span class="extra"><span class="sep">·</span> {engine.vault?.deviceId ?? ''}</span>
+    <span class="extra loc"><span class="sep">·</span> {engine.location}</span>
   </footer>
 
   {#if drivePanel}<DrivePanel onclose={toggleDrive} />{/if}
@@ -355,6 +355,8 @@
 
   .main { grid-area: main; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
   .crumb { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 24px 0; font: 11px var(--f-mono); color: var(--muted); max-width: 808px; width: 100%; margin: 0 auto; }
+  .crumb > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .crumb :global(button) { white-space: nowrap; }
   .main :global(.editor) { flex: 1; }
   .view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .view.empty { display: none; }
@@ -397,6 +399,8 @@
       transform: translateX(-100%); transition: transform var(--dur-slow) var(--ease); box-shadow: 0 0 40px var(--shadow); }
     .side.open { transform: none; }
     .status { padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+    .status .extra { display: none; }
+    .crumb { padding: 10px 16px 0; gap: 8px; }
   }
   .toast { position: fixed; z-index: 70; left: 50%; bottom: 44px; transform: translateX(-50%); max-width: min(560px, calc(100vw - 32px));
     display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 14px; border-radius: 12px; font-size: 13px;
