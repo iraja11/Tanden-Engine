@@ -6,6 +6,7 @@ export type TandenEvent =
   | { type: 'note.deleted'; path: string }
   | { type: 'board.created'; path: string }
   | { type: 'board.changed'; path: string; origin: 'local' | 'remote' | 'external' }
+  | { type: 'board.deleted'; path: string }
   | { type: 'process.started'; id: string; label: string }
   | { type: 'process.finished'; id: string; ok: boolean }
   | { type: 'sync.finished'; merged: number; external: number; written: number }
@@ -29,9 +30,19 @@ export class EventBus {
     return () => set!.delete(fn);
   }
 
+  /**
+   * Avisa todos os ouvintes. Um ouvinte que falha não impede os outros nem
+   * quem emitiu (um sync não pode parar por causa de um painel com defeito).
+   */
   emit(e: TandenEvent): void {
-    this.handlers.get(e.type)?.forEach((fn) => fn(e));
-    this.handlers.get('*')?.forEach((fn) => fn(e));
+    for (const set of [this.handlers.get(e.type), this.handlers.get('*')])
+      for (const fn of [...(set ?? [])]) {
+        try {
+          fn(e);
+        } catch (err) {
+          console.error(`[tanden] ouvinte de ${e.type} falhou`, err);
+        }
+      }
   }
 
   /** Envolve um trabalho longo em process.started/finished, para a interface mostrar fluxo. */

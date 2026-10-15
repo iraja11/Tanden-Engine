@@ -231,3 +231,116 @@ describe('Quadros: desfazer', () => {
     expect(texts(pc.boards, 'u.canvas')).toEqual(['A', 'B', 'C']);
   });
 });
+
+describe('Quadros: apagar, renomear e duplicar', () => {
+  function pair() {
+    const disk = new MemoryStorage();
+    return { disk, pc: new BoardStore(disk, 'arch'), phone: new BoardStore(disk, 'redmi') };
+  }
+
+  it('apaga com cópia na lixeira e o outro aparelho apaga também', async () => {
+    const { disk, pc, phone } = pair();
+    pc.create('Quadros/plano.canvas', 'fluxo', (e) => e.setNode(card('a', 'A')));
+    await pc.sync();
+    await phone.sync();
+    expect(phone.has('Quadros/plano.canvas')).toBe(true);
+    const trashed = await pc.remove('Quadros/plano.canvas');
+    expect(trashed).toBe('.trash/Quadros/plano.canvas');
+    expect(parseBoard((await readText(disk, trashed!))!)!.nodes[0]!.text).toBe('A');
+    await pc.sync();
+    await phone.sync();
+    await pc.sync();
+    expect(pc.has('Quadros/plano.canvas')).toBe(false);
+    expect(phone.has('Quadros/plano.canvas')).toBe(false);
+    expect(await readText(disk, 'Quadros/plano.canvas')).toBeNull();
+  });
+
+  it('uma edição feita ao mesmo tempo em outro aparelho ressuscita o quadro', async () => {
+    const { pc, phone } = pair();
+    pc.create('q.canvas', 'livre', (e) => e.setNode(card('a', 'A')));
+    await pc.sync();
+    await phone.sync();
+    phone.edit('q.canvas', (e) => e.setNode(card('b', 'B do celular')));
+    await pc.remove('q.canvas');
+    await pc.sync();
+    await phone.sync();
+    await pc.sync();
+    expect(texts(phone, 'q.canvas')).toEqual(['A', 'B do celular']);
+    expect(texts(pc, 'q.canvas')).toEqual(['A', 'B do celular']);
+  });
+
+  it('criar de novo no mesmo caminho começa do zero', async () => {
+    const { disk, pc, phone } = pair();
+    pc.create('q.canvas', 'livre', (e) => e.setNode(card('a', 'velho')));
+    await pc.sync();
+    await phone.sync();
+    await pc.remove('q.canvas');
+    pc.create('q.canvas', 'mapa', (e) => e.setNode(card('n', 'novo')));
+    await pc.sync();
+    await phone.sync();
+    expect(parseBoard((await readText(disk, 'q.canvas'))!)!.nodes.map((n) => n.text)).toEqual(['novo']);
+    await pc.sync();
+    await phone.sync();
+    expect(texts(phone, 'q.canvas')).toEqual(['novo']);
+    expect(texts(pc, 'q.canvas')).toEqual(['novo']);
+  });
+
+  it('um .canvas apagado no Obsidian não volta', async () => {
+    const { disk, pc, phone } = pair();
+    pc.create('q.canvas', 'livre', (e) => e.setNode(card('a', 'A')));
+    await pc.sync();
+    await phone.sync();
+    await disk.remove('q.canvas');
+    await pc.sync();
+    await phone.sync();
+    await pc.sync();
+    expect(await readText(disk, 'q.canvas')).toBeNull();
+    expect(pc.has('q.canvas')).toBe(false);
+    expect(phone.has('q.canvas')).toBe(false);
+  });
+
+  it('renomeia levando tudo, inclusive o desenho', async () => {
+    const { disk, pc, phone } = pair();
+    pc.create('a.canvas', 'livre', (e) => {
+      e.setNode(card('x', 'X'));
+      e.addInk(stroke('k1'));
+    });
+    await pc.sync();
+    await phone.sync();
+    await pc.rename('a.canvas', 'Quadros/b.canvas');
+    await pc.sync();
+    await phone.sync();
+    expect(phone.list()).toEqual(['Quadros/b.canvas']);
+    expect(phone.read('Quadros/b.canvas').ink.map((k) => k.id)).toEqual(['k1']);
+    expect(await readText(disk, 'a.canvas')).toBeNull();
+    expect(await disk.list('.trash/')).toEqual([]);
+  });
+
+  it('duplica sem mexer no original', async () => {
+    const { pc } = pair();
+    pc.create('a.canvas', 'mapa', (e) => e.setNode(card('x', 'X')));
+    pc.duplicate('a.canvas', 'a 2.canvas');
+    pc.edit('a 2.canvas', (e) => e.setNode({ id: 'x', text: 'Y' }));
+    expect(texts(pc, 'a.canvas')).toEqual(['X']);
+    expect(texts(pc, 'a 2.canvas')).toEqual(['Y']);
+    expect(pc.read('a 2.canvas').kind).toBe('mapa');
+  });
+
+  it('apagar passando pelo Drive', async () => {
+    const drive = new MemoryRemote();
+    const a = device(drive, 'arch');
+    const b = device(drive, 'redmi');
+    a.boards.create('m.canvas', 'mapa', (e) => e.setNode(card('r', 'raiz')));
+    await a.sync();
+    await b.sync();
+    expect(b.boards.has('m.canvas')).toBe(true);
+    await a.boards.remove('m.canvas');
+    await a.sync();
+    await b.sync();
+    await b.sync();
+    expect(b.boards.has('m.canvas')).toBe(false);
+    expect(await readText(b.disk, 'm.canvas')).toBeNull();
+    await a.sync();
+    expect(drive.text('m.canvas')).toBeNull();
+  });
+});

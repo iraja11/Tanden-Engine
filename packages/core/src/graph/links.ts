@@ -108,7 +108,7 @@ export class LinkResolver {
   }
 }
 
-export type GraphNodeKind = 'note' | 'tag' | 'missing' | 'file';
+export type GraphNodeKind = 'note' | 'tag' | 'missing' | 'file' | 'board';
 
 export interface GraphNode {
   id: string;
@@ -142,14 +142,37 @@ export interface GraphOptions {
   files?: boolean;
   /** todos os caminhos do cofre (notas e arquivos), para resolver anexos */
   allPaths?: readonly string[];
+  /** quadros (.canvas) com o texto do arquivo: viram nós ligados às notas que mostram */
+  boards?: readonly { path: string; text: string }[];
 }
 
-const nameOf = (p: string) => p.slice(p.lastIndexOf('/') + 1).replace(/\.md$/i, '');
+/** Destinos de um .canvas: cartões de arquivo e [[links]] escritos nas caixas. */
+export function boardTargets(text: string): { files: string[]; links: string[] } {
+  const files = new Set<string>();
+  const links = new Set<string>();
+  try {
+    const j = JSON.parse(text) as { nodes?: Array<{ type?: string; file?: string; text?: string }> };
+    for (const n of Array.isArray(j.nodes) ? j.nodes : []) {
+      if (n?.type === 'file' && typeof n.file === 'string' && n.file) files.add(n.file);
+      else if (n?.type === 'text' && typeof n.text === 'string') {
+        const l = extractLinks(n.text);
+        for (const t of [...l.links, ...l.embeds]) links.add(t);
+      }
+    }
+  } catch {
+    // .canvas pela metade: sem ligações por enquanto
+  }
+  return { files: [...files], links: [...links] };
+}
+
+const nameOf = (p: string) => p.slice(p.lastIndexOf('/') + 1).replace(/\.(md|canvas)$/i, '');
 const dirOf = (p: string) => (p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '');
 
 export function buildNoteGraph(notes: readonly { path: string; text: string }[], opts: GraphOptions = {}): NoteGraph {
   const notePaths = notes.map((n) => n.path);
-  const resolver = new LinkResolver(opts.allPaths ? [...new Set([...notePaths, ...opts.allPaths])] : notePaths);
+  const boardPaths = (opts.boards ?? []).map((b) => b.path);
+  const resolver = new LinkResolver([...new Set([...notePaths, ...boardPaths, ...(opts.allPaths ?? [])])]);
+  const isBoard = new Set(boardPaths);
   const isNote = new Set(notePaths);
   const nodes = new Map<string, GraphNode>();
   const edges: GraphEdge[] = [];
@@ -169,11 +192,13 @@ export function buildNoteGraph(notes: readonly { path: string; text: string }[],
   };
   const parsed = notes.map((n) => ({ path: n.path, l: extractLinks(n.text) }));
   for (const { path, l } of parsed) add({ id: path, label: nameOf(path), kind: 'note', folder: dirOf(path), tags: l.tags });
+  for (const b of opts.boards ?? []) add({ id: b.path, label: nameOf(b.path), kind: 'board', folder: dirOf(b.path), tags: [] });
   for (const { path, l } of parsed) {
     for (const [targets, kind] of [[l.links, 'link'], [l.embeds, 'embed']] as const) {
       for (const raw of targets) {
         const hit = resolver.resolve(raw);
         if (hit && isNote.has(hit)) link(path, hit, kind);
+        else if (hit && isBoard.has(hit)) link(path, hit, kind);
         else if (hit) {
           if (!opts.files) continue;
           add({ id: hit, label: hit.slice(hit.lastIndexOf('/') + 1), kind: 'file', folder: dirOf(hit), tags: [] });
@@ -190,6 +215,19 @@ export function buildNoteGraph(notes: readonly { path: string; text: string }[],
         const id = `#${t.toLowerCase()}`;
         add({ id, label: `#${t}`, kind: 'tag', folder: '', tags: [] });
         link(path, id, 'tag');
+      }
+    }
+  }
+  for (const b of opts.boards ?? []) {
+    const t = boardTargets(b.text);
+    for (const [targets, kind] of [[t.files, 'embed'], [t.links, 'link']] as const) {
+      for (const raw of targets) {
+        const hit = resolver.resolve(raw);
+        if (hit && (isNote.has(hit) || isBoard.has(hit))) link(b.path, hit, kind);
+        else if (hit && opts.files) {
+          add({ id: hit, label: hit.slice(hit.lastIndexOf('/') + 1), kind: 'file', folder: dirOf(hit), tags: [] });
+          link(b.path, hit, kind);
+        }
       }
     }
   }

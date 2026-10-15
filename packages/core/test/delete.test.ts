@@ -62,7 +62,7 @@ describe('Vault: apagar e renomear', () => {
   });
 
   it('criar de novo no mesmo caminho começa do zero, sem o texto apagado', async () => {
-    const { phone, pc } = pair();
+    const { drive, phone, pc } = pair();
     pc.create('Nova nota.md', 'velho');
     await pc.sync();
     await phone.sync();
@@ -73,6 +73,7 @@ describe('Vault: apagar e renomear', () => {
     expect(pc.read('Nova nota.md')).toBe('novo');
     // o celular ainda tinha a versão velha: ela morre e a nova chega
     await phone.sync();
+    expect(await readText(drive, 'Nova nota.md')).toBe('novo');
     await pc.sync();
     await phone.sync();
     expect(phone.read('Nova nota.md')).toBe('novo');
@@ -157,5 +158,74 @@ describe('Apagar passando pelo Drive', () => {
     for (const p of await pc.disk.list()) if (!p.startsWith('.tanden/local/')) await pc.disk.remove(p);
     await pc.replicator.sync();
     expect(drive.text('n7.md')).toBe('nota 7');
+  });
+});
+
+describe('Apagar fora do Tanden (Obsidian, terminal)', () => {
+  it('um .md apagado na pasta vira um apagar de verdade, com cópia na lixeira', async () => {
+    const { drive, phone, pc } = pair();
+    pc.create('rascunho.md', 'texto');
+    await pc.sync();
+    await phone.sync();
+    await drive.remove('rascunho.md');
+    const seen: string[] = [];
+    pc.bus.on('note.deleted', (e) => seen.push(e.path));
+    await pc.sync();
+    expect(pc.has('rascunho.md')).toBe(false);
+    expect(seen).toEqual(['rascunho.md']);
+    expect(await readText(drive, '.trash/rascunho.md')).toBe('texto');
+    await phone.sync();
+    await pc.sync();
+    expect(phone.has('rascunho.md')).toBe(false);
+    expect(await readText(drive, 'rascunho.md')).toBeNull();
+  });
+
+  it('vale também depois de reabrir o app', async () => {
+    const disk = new MemoryStorage();
+    const before = new Vault(disk, 'arch');
+    before.create('x.md', 'conteúdo');
+    await before.sync();
+    await disk.remove('x.md');
+    const after = new Vault(disk, 'arch');
+    await after.sync();
+    expect(after.has('x.md')).toBe(false);
+    await after.sync();
+    expect(await readText(disk, 'x.md')).toBeNull();
+  });
+
+  it('renomear no Obsidian não deixa cópia na lixeira', async () => {
+    const disk = new MemoryStorage();
+    const v = new Vault(disk, 'arch');
+    v.create('velho.md', 'mesmo texto');
+    await v.sync();
+    await disk.remove('velho.md');
+    await disk.write('novo.md', new TextEncoder().encode('mesmo texto'));
+    await v.sync();
+    expect(v.list()).toEqual(['novo.md']);
+    expect(await disk.list('.trash/')).toEqual([]);
+  });
+
+  it('edição chegando de outro aparelho ao mesmo tempo ressuscita a nota', async () => {
+    const { drive, phone, pc } = pair();
+    pc.create('a.md', 'base');
+    await pc.sync();
+    await phone.sync();
+    phone.write('a.md', 'base + celular');
+    await phone.sync();
+    await drive.remove('a.md');
+    await pc.sync();
+    expect(pc.read('a.md')).toBe('base + celular');
+    expect(await readText(drive, 'a.md')).toBe('base + celular');
+  });
+
+  it('muitas notas sumindo de uma vez não apagam nada', async () => {
+    const disk = new MemoryStorage();
+    const v = new Vault(disk, 'arch');
+    for (let i = 0; i < 30; i++) v.create(`n${i}.md`, `nota ${i}`);
+    await v.sync();
+    for (let i = 0; i < 30; i++) await disk.remove(`n${i}.md`);
+    await v.sync();
+    expect(v.list()).toHaveLength(30);
+    expect(await readText(disk, 'n7.md')).toBe('nota 7');
   });
 });

@@ -29,6 +29,11 @@ import { readText, toBytes, type Storage } from './storage';
  * lápide cobre tudo o que existe dela; uma edição feita em outro aparelho ao
  * mesmo tempo (que a lápide não viu) ressuscita a nota, sem perder nada. Criar
  * de novo uma nota no mesmo caminho começa uma geração nova, sem o texto velho.
+ *
+ * Um .md apagado fora do Tanden (Obsidian, gerenciador de arquivos, terminal)
+ * vira um apagar comum, com cópia em .trash/, desde que este aparelho o tenha
+ * escrito e nada novo tenha chegado de outro aparelho. Muitos sumiços de uma
+ * vez parecem acidente e não apagam nada.
  */
 
 const META_DIR = '.tanden/';
@@ -66,6 +71,8 @@ interface Tomb {
 }
 
 const TOMBS_KEPT = 10;
+/** Acima disso, notas sumidas da pasta ao mesmo tempo parecem acidente (pasta desmontada): nada é apagado. */
+const MASS_REMOVAL = 20;
 
 const toB64 = (b: Uint8Array): string => {
   let s = '';
@@ -147,6 +154,8 @@ export class Vault {
   private lastWritten = new Map<string, { state: string; mdHash: string }>();
   /** geração de cada nota aberta neste aparelho */
   private gens = new Map<string, string>();
+  /** hashes dos .md novos desta rodada de sync (para reconhecer renomeações feitas fora) */
+  private movedOutside = new Set<string>();
 
   constructor(
     readonly storage: Storage,
@@ -296,8 +305,23 @@ export class Vault {
       }
     }
 
+    // .md que este aparelho escreveu e que sumiu da pasta: apagado por fora
+    const present = new Set(all);
+    const missing = [...paths].filter((p) => !present.has(p) && disk[p] !== undefined);
+    const mass = missing.length > MASS_REMOVAL && missing.length > Object.keys(disk).length / 2;
+    const goneOutside = new Set(mass ? [] : missing);
+    // renomear no Obsidian = sumir um .md e aparecer outro igual: não precisa de cópia na lixeira
+    const arrived = new Set<string>();
+    if (goneOutside.size)
+      for (const p of all)
+        if (isNotePath(p) && !this.docs.has(p) && disk[p] === undefined) {
+          const t = await readText(this.storage, p);
+          if (t !== null) arrived.add(hashHex(t));
+        }
+    this.movedOutside = arrived;
+
     for (const path of [...paths].sort()) {
-      const r = await this.syncNote(path, crdtByKey.get(keyFor(path)) ?? [], disk, opts);
+      const r = await this.syncNote(path, crdtByKey.get(keyFor(path)) ?? [], disk, opts, goneOutside.has(path));
       if (r.merged) report.merged++;
       if (r.external) report.external++;
       if (r.written) report.written++;
@@ -325,7 +349,7 @@ export class Vault {
     }
   }
 
-  private async syncNote(path: string, files: string[], disk: Record<string, string>, opts: SyncOptions) {
+  private async syncNote(path: string, files: string[], disk: Record<string, string>, opts: SyncOptions, goneOutside = false) {
     const key = keyFor(path);
     const none = { merged: false, external: false, written: false };
 
@@ -366,13 +390,21 @@ export class Vault {
       }
     }
     const md0 = dead.size ? await readText(this.storage, path) : null;
-    if (doc && dead.has(this.gens.get(path) ?? '')) {
-      // apagada em outro aparelho
-      await this.dropLocal(path, key, md0, disk);
-      this.bus.emit({ type: 'note.deleted', path });
-      return none;
-    }
     const live = [...states].filter(([dev]) => !dead.has(genOf(dev)));
+    let replaced = false;
+    if (doc && dead.has(this.gens.get(path) ?? '')) {
+      if (!live.length) {
+        // apagada em outro aparelho
+        await this.dropLocal(path, key, md0, disk);
+        this.bus.emit({ type: 'note.deleted', path });
+        return none;
+      }
+      // apagada e criada de novo no mesmo caminho em outro aparelho: o .md já é
+      // da nota nova, então fica; a geração nova assume no lugar da velha
+      this.forget(path);
+      doc = undefined;
+      replaced = true;
+    }
     if (!doc && dead.size) {
       // o .md que sobrou é da nota apagada, ou uma nota nova criada fora do Tanden?
       const stale =
@@ -398,6 +430,13 @@ export class Vault {
     // 1. funde o estado de todos os aparelhos (menos o das gerações apagadas)
     for (const [, b] of live) Y.applyUpdate(doc, b, 'remote');
     const merged = text.toString() !== before;
+
+    // apagada fora do Tanden, e nada chegou de outro aparelho desde o último .md daqui
+    if (goneOutside && hashHex(text.toString()) === disk[path]) {
+      await this.remove(path, { trash: !this.movedOutside.has(disk[path]!) });
+      delete disk[path];
+      return none;
+    }
 
     // 2. o .md mudou fora do Tanden?
     let external = false;
@@ -480,7 +519,8 @@ export class Vault {
 
     disk[path] = mdHash;
 
-    if (isNew) this.bus.emit({ type: 'note.created', path });
+    if (replaced) this.bus.emit({ type: 'note.changed', path, origin: 'remote' });
+    else if (isNew) this.bus.emit({ type: 'note.created', path });
     else if (merged) this.bus.emit({ type: 'note.changed', path, origin: 'remote' });
     if (external) this.bus.emit({ type: 'note.changed', path, origin: 'external' });
     return { merged, external, written };

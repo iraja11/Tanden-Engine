@@ -139,3 +139,42 @@ describe('Replicator com arquivos grandes', () => {
     expect(disk.reads.get('PDFs/a.pdf')).toBeUndefined();
   });
 });
+
+describe('Replicator: o que não vai para o Drive', () => {
+  it('ignora .git, o layout do Obsidian, lixo do sistema e arquivos pela metade', async () => {
+    const drive = new MemoryRemote();
+    const pc = device(drive, 'arch');
+    for (const p of ['.git/HEAD', '.git/objects/ab/cd', '.obsidian/workspace.json', '.obsidian/app.json', 'nota.md.tmp', 'Anexos/.DS_Store', 'Anexos/foto.png', '~$relatorio.docx'])
+      await pc.disk.write(p, toBytes('x'));
+    await pc.replicator.sync();
+    const up = [...drive.files.keys()].sort();
+    expect(up).toContain('Anexos/foto.png');
+    expect(up).toContain('.obsidian/app.json');
+    for (const p of ['.git/HEAD', '.git/objects/ab/cd', '.obsidian/workspace.json', 'nota.md.tmp', 'Anexos/.DS_Store', '~$relatorio.docx']) expect(up).not.toContain(p);
+  });
+
+  it('não baixa o que outro aparelho mandou por engano', async () => {
+    const drive = new MemoryRemote();
+    await drive.upload('.git/config', toBytes('[core]'));
+    await drive.upload('.obsidian/workspace-mobile.json', toBytes('{}'));
+    const phone = device(drive, 'redmi');
+    await phone.replicator.sync();
+    expect(await phone.disk.list()).toEqual(['.tanden/local/redmi/replica.json']);
+  });
+
+  it('a rede caindo no meio não perde o que já foi enviado', async () => {
+    const drive = new MemoryRemote();
+    const pc = device(drive, 'arch');
+    for (const p of ['a.md', 'b.md', 'c.md']) await pc.disk.write(p, toBytes(p));
+    const upload = drive.upload.bind(drive);
+    let calls = 0;
+    drive.upload = async (p, d) => {
+      if (++calls === 3) throw new Error('sem internet');
+      return upload(p, d);
+    };
+    await expect(pc.replicator.sync()).rejects.toThrow('sem internet');
+    drive.upload = upload;
+    const r = await pc.replicator.sync();
+    expect(r.uploaded).toEqual(['c.md']);
+  });
+});

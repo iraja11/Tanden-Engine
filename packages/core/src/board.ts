@@ -22,6 +22,11 @@ import type { SyncOptions } from './vault';
  * viram uma diferença de três vias contra a versão de onde partiram, então
  * apagar uma caixa no Obsidian apaga aqui, e uma caixa criada em outro
  * aparelho no meio tempo não some.
+ *
+ * Apagar segue o mesmo esquema das notas: cada quadro tem uma geração, quem
+ * apaga grava uma lápide (.tanden/board/<chave>/del/<aparelho>.json) e uma
+ * edição feita ao mesmo tempo em outro aparelho ressuscita o quadro. Um
+ * .canvas apagado fora do Tanden (pelo Obsidian) também apaga aqui.
  */
 
 export type BoardKind = 'mapa' | 'fluxo' | 'livre';
@@ -288,12 +293,35 @@ interface DeviceMeta {
   writtenAt: number;
   mirrors?: Array<{ h: string; s: string }>;
   absorbed?: string[];
+  /** geração do quadro; quadros de antes das gerações contam como '' */
+  gen?: string;
+}
+
+interface Tomb {
+  gens: string[];
+  /** vetor de estado (base64) de tudo o que quem apagou conhecia */
+  sv: string;
+  at: number;
+}
+
+const TOMB_SUB = 'del/';
+const TOMBS_KEPT = 10;
+const TRASH_DIR = '.trash/';
+/** muitos .canvas sumindo de uma vez parecem acidente: nada é apagado */
+const MASS_REMOVAL = 20;
+const newGen = (): string => Math.random().toString(36).slice(2, 10);
+
+function covers(tomb: Uint8Array, sv: Uint8Array): boolean {
+  const t = Y.decodeStateVector(tomb);
+  for (const [client, clock] of Y.decodeStateVector(sv)) if (clock > (t.get(client) ?? 0)) return false;
+  return true;
 }
 
 export class BoardStore {
   readonly bus: EventBus;
   private docs = new Map<string, Y.Doc>();
   private lastWritten = new Map<string, string>();
+  private gens = new Map<string, string>();
 
   constructor(
     readonly storage: Storage,
@@ -332,7 +360,71 @@ export class BoardStore {
       fill?.(e);
     }, 'local');
     this.docs.set(path, doc);
+    this.gens.set(path, newGen());
     this.bus.emit({ type: 'board.created', path });
+  }
+
+  /**
+   * Apaga o quadro. Uma cópia do .canvas vai para .trash/ e os outros
+   * aparelhos apagam no próximo sync. Devolve onde ficou a cópia.
+   */
+  async remove(path: string, opts: { trash?: boolean } = {}): Promise<string | null> {
+    const doc = this.doc(path);
+    const data = readBoard(doc);
+    let trashed: string | null = null;
+    if (opts.trash !== false && (data.nodes.length || data.ink.length)) {
+      const all = new Set(await this.storage.list(TRASH_DIR));
+      const base = `${TRASH_DIR}${path.replace(/\.canvas$/, '')}`;
+      let n = 1;
+      trashed = `${base}${EXT}`;
+      while (all.has(trashed)) trashed = `${base} ${++n}${EXT}`;
+      await this.storage.write(trashed, toBytes(serializeBoard(data)));
+    }
+    const key = keyFor(path);
+    const tombPath = `${BOARD_DIR}${key}/${TOMB_SUB}${this.deviceId}.json`;
+    let old: Tomb[] = [];
+    try {
+      old = (JSON.parse((await readText(this.storage, tombPath)) ?? '{}') as { tombs?: Tomb[] }).tombs ?? [];
+    } catch {
+      old = [];
+    }
+    const gens = new Set([this.gens.get(path) ?? '']);
+    for (const f of await this.storage.list(`${BOARD_DIR}${key}/`)) {
+      if (f.includes(`/${TOMB_SUB}`) || !f.endsWith('.json')) continue;
+      gens.add((await this.readMeta(f))?.gen ?? '');
+    }
+    const tomb: Tomb = { gens: [...gens], sv: toB64(Y.encodeStateVector(doc)), at: Date.now() };
+    await this.storage.write(tombPath, toBytes(JSON.stringify({ path, tombs: [...old, tomb].slice(-TOMBS_KEPT) })));
+    await this.storage.remove(path);
+    this.docs.delete(path);
+    this.gens.delete(path);
+    this.lastWritten.delete(path);
+    this.bus.emit({ type: 'board.deleted', path });
+    return trashed;
+  }
+
+  /** Renomeia ou move o quadro (cópia com o nome novo + apagar o velho, sem lixeira). */
+  async rename(from: string, to: string): Promise<void> {
+    if (from === to) return;
+    if (!isBoardPath(to)) throw new Error(`Caminho de quadro inválido: ${to}`);
+    if (this.docs.has(to)) throw new Error(`Já existe um quadro em ${to}`);
+    const data = readBoard(this.doc(from));
+    this.create(to, data.kind, (e) => {
+      for (const n of data.nodes) e.setNode(n);
+      for (const ed of data.edges) e.setEdge(ed);
+      for (const k of data.ink) e.addInk(k);
+    });
+    await this.remove(from, { trash: false });
+  }
+
+  /** Duplica o quadro num caminho novo. */
+  duplicate(from: string, to: string): void {
+    const data = readBoard(this.doc(from));
+    this.create(to, data.kind, (e) => {
+      for (const n of data.nodes) e.setNode(n);
+      for (const ed of data.edges) e.setEdge(ed);
+      for (const k of data.ink) e.addInk(k);
+    });
   }
 
   edit(path: string, fn: (e: BoardEdit) => void): void {
@@ -374,12 +466,17 @@ export class BoardStore {
     for (const p of this.docs.keys()) paths.add(p);
     for (const files of byKey.values())
       for (const f of files) {
-        if (!f.endsWith('.json')) continue;
+        if (!f.endsWith('.json') || f.includes(`/${TOMB_SUB}`)) continue;
         const meta = await this.readMeta(f);
         if (meta && isBoardPath(meta.path)) paths.add(meta.path);
       }
+    // .canvas que este aparelho escreveu e que sumiu da pasta: apagado por fora (Obsidian)
+    const present = new Set(all);
+    const missing = [...paths].filter((p) => !present.has(p) && disk[p] !== undefined);
+    const mass = missing.length > MASS_REMOVAL && missing.length > Object.keys(disk).length / 2;
+    const goneOutside = new Set(mass ? [] : missing);
     for (const path of [...paths].sort()) {
-      const r = await this.syncBoard(path, byKey.get(keyFor(path)) ?? [], disk, opts);
+      const r = await this.syncBoard(path, byKey.get(keyFor(path)) ?? [], disk, opts, goneOutside.has(path));
       if (r.merged) report.merged++;
       if (r.external) report.external++;
       if (r.written) report.written++;
@@ -398,29 +495,101 @@ export class BoardStore {
     }
   }
 
-  private async syncBoard(path: string, files: string[], disk: Record<string, string>, opts: SyncOptions) {
-    const key = keyFor(path);
-    let doc = this.docs.get(path);
-    const isNew = !doc;
-    if (!doc) {
-      doc = newDoc();
-      this.docs.set(path, doc);
-    }
-    const before = serializeBoard(readBoard(doc));
+  /** Tira o quadro apagado deste aparelho: o .canvas e o estado próprio dele. */
+  private async dropLocal(path: string, key: string, raw: string | null, disk: Record<string, string>): Promise<void> {
+    this.docs.delete(path);
+    this.gens.delete(path);
+    this.lastWritten.delete(path);
+    if (raw !== null) await this.storage.remove(path);
+    for (const f of [`${BOARD_DIR}${key}/${this.deviceId}.bin`, `${BOARD_DIR}${key}/${this.deviceId}.json`]) await this.storage.remove(f);
+    delete disk[path];
+  }
 
-    // 1. funde o estado de todos os aparelhos
+  private async syncBoard(path: string, files: string[], disk: Record<string, string>, opts: SyncOptions, goneOutside = false) {
+    const key = keyFor(path);
+    const none = { merged: false, external: false, written: false };
+
+    // 0. estado, metas e lápides de cada aparelho
+    const states = new Map<string, Uint8Array>();
     const metas: Array<DeviceMeta & { device: string }> = [];
+    const tombs: Tomb[] = [];
     for (const f of files) {
       const device = f.slice(f.lastIndexOf('/') + 1).replace(/\.(bin|json)$/, '');
-      if (f.endsWith('.bin')) {
+      if (f.includes(`/${TOMB_SUB}`)) {
+        if (!f.endsWith('.json')) continue;
+        try {
+          tombs.push(...((JSON.parse((await readText(this.storage, f)) ?? '{}') as { tombs?: Tomb[] }).tombs ?? []));
+        } catch {
+          // lápide ilegível: ignora (nunca apaga por engano)
+        }
+      } else if (f.endsWith('.bin')) {
         const b = await this.storage.read(f);
-        if (b) Y.applyUpdate(doc, b, 'remote');
+        if (b) states.set(device, b);
       } else if (f.endsWith('.json')) {
         const m = await this.readMeta(f);
         if (m) metas.push({ ...m, device });
       }
     }
+    const genOf = (device: string) => metas.find((m) => m.device === device)?.gen ?? '';
+    let doc = this.docs.get(path);
+
+    // gerações mortas: a lápide cobre tudo o que existe delas
+    const dead = new Set<string>();
+    let deadText: string | null = null;
+    for (const t of tombs) {
+      const probe = newDoc();
+      for (const [dev, b] of states) if (t.gens.includes(genOf(dev))) Y.applyUpdate(probe, b);
+      if (doc && t.gens.includes(this.gens.get(path) ?? '')) Y.applyUpdate(probe, Y.encodeStateAsUpdate(doc));
+      if (covers(fromB64(t.sv), Y.encodeStateVector(probe))) {
+        for (const g of t.gens) dead.add(g);
+        deadText ??= serializeBoard(readBoard(probe));
+      }
+    }
+    const raw0 = dead.size ? await readText(this.storage, path) : null;
+    const live = [...states].filter(([dev]) => !dead.has(genOf(dev)));
+    let replaced = false;
+    if (doc && dead.has(this.gens.get(path) ?? '')) {
+      if (!live.length) {
+        await this.dropLocal(path, key, raw0, disk);
+        this.bus.emit({ type: 'board.deleted', path });
+        return none;
+      }
+      // apagado e criado de novo no mesmo caminho em outro aparelho
+      this.docs.delete(path);
+      doc = undefined;
+      replaced = true;
+    }
+    if (!doc && dead.size && !live.length) {
+      const p0 = raw0 === null ? null : parseBoard(raw0);
+      const stale =
+        raw0 === null ||
+        hashHex(raw0) === disk[path] ||
+        (p0 !== null && deadText !== null && serializeBoard(normalize({ kind: p0.kind ?? 'livre', nodes: p0.nodes, edges: p0.edges, ink: p0.ink ?? [] })) === deadText) ||
+        metas.some((m) => dead.has(m.gen ?? '') && (m.hash === hashHex(raw0!) || m.mirrors?.some((x) => x.h === hashHex(raw0!))));
+      if (stale) {
+        await this.dropLocal(path, key, raw0, disk);
+        return none;
+      }
+    }
+    const isNew = !doc;
+    if (!doc) {
+      doc = newDoc();
+      this.docs.set(path, doc);
+      const newest = metas.filter((m) => !dead.has(m.gen ?? '') && states.has(m.device)).sort((a, b) => b.writtenAt - a.writtenAt)[0];
+      this.gens.set(path, newest ? newest.gen ?? '' : dead.size ? newGen() : '');
+    }
+    const before = serializeBoard(readBoard(doc));
+
+    // 1. funde o estado de todos os aparelhos (menos o das gerações apagadas)
+    for (const [, b] of live) Y.applyUpdate(doc, b, 'remote');
     const merged = !isNew && serializeBoard(readBoard(doc)) !== before;
+
+    // apagado fora do Tanden, e nada chegou de outro aparelho desde o último .canvas daqui
+    if (goneOutside && hashHex(serializeBoard(readBoard(doc))) === disk[path]) {
+      await this.remove(path);
+      delete disk[path];
+      return none;
+    }
 
     // 2. o .canvas mudou fora do Tanden?
     let external = false;
@@ -433,8 +602,9 @@ export class BoardStore {
       const extNorm = serializeBoard(normalize(ext));
       const extHash = hashHex(extNorm);
       if (extNorm !== serializeBoard(readBoard(doc))) {
-        const mirrors = metas.flatMap((m) => m.mirrors ?? []);
-        const known = metas.some((m) => m.hash === extHash || m.absorbed?.includes(extHash)) || mirrors.some((m) => m.h === extHash);
+        const liveMetas = metas.filter((m) => !dead.has(m.gen ?? ''));
+        const mirrors = liveMetas.flatMap((m) => m.mirrors ?? []);
+        const known = liveMetas.some((m) => m.hash === extHash || m.absorbed?.includes(extHash)) || mirrors.some((m) => m.h === extHash);
         if (!known) {
           const hints: string[] = [];
           if (opts.downloaded?.has(path) && opts.previousVersions) {
@@ -485,10 +655,10 @@ export class BoardStore {
     let written = false;
     if (this.lastWritten.get(path) !== sig || raw !== finalText) {
       await this.storage.write(`${BOARD_DIR}${key}/${this.deviceId}.bin`, state);
-      const own = metas.find((m) => m.device === this.deviceId);
+      const own = metas.find((m) => m.device === this.deviceId && (m.gen ?? '') === (this.gens.get(path) ?? ''));
       const mirrors = [...(own?.mirrors ?? []).filter((m) => m.h !== hash), { h: hash, s: toB64(Y.encodeSnapshot(Y.snapshot(doc))) }];
       const absorbed = [...(own?.absorbed ?? []), ...(absorbedNow ? [absorbedNow] : [])].slice(-MIRRORS_KEPT * 2);
-      const meta: DeviceMeta = { path, hash, writtenAt: Date.now(), mirrors: mirrors.slice(-MIRRORS_KEPT), absorbed };
+      const meta: DeviceMeta = { path, hash, writtenAt: Date.now(), mirrors: mirrors.slice(-MIRRORS_KEPT), absorbed, gen: this.gens.get(path) ?? '' };
       await this.storage.write(`${BOARD_DIR}${key}/${this.deviceId}.json`, toBytes(JSON.stringify(meta)));
       if (raw !== finalText) await this.storage.write(path, toBytes(finalText));
       this.lastWritten.set(path, sig);
@@ -496,7 +666,8 @@ export class BoardStore {
     }
     disk[path] = hash;
 
-    if (isNew) this.bus.emit({ type: 'board.created', path });
+    if (replaced) this.bus.emit({ type: 'board.changed', path, origin: 'remote' });
+    else if (isNew) this.bus.emit({ type: 'board.created', path });
     else if (merged) this.bus.emit({ type: 'board.changed', path, origin: 'remote' });
     if (external) this.bus.emit({ type: 'board.changed', path, origin: 'external' });
     return { merged, external, written };

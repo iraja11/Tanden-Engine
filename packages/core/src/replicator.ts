@@ -60,6 +60,21 @@ const RACY_MS = 3000;
 
 const LOCAL_DIR = '.tanden/local/';
 
+/**
+ * O que nunca vai para o Drive nem desce dele: arquivos internos de outras
+ * ferramentas (git, o layout de janelas do Obsidian, que muda a cada clique e
+ * é de cada aparelho), lixo do sistema e gravações pela metade (.tmp).
+ */
+export function ignoredInSync(path: string): boolean {
+  if (path.startsWith(LOCAL_DIR)) return true;
+  const parts = path.split('/');
+  const name = parts[parts.length - 1]!;
+  if (parts.some((p) => p === '.git' || p === 'node_modules')) return true;
+  if (/^\.obsidian\/workspace(-mobile)?\.json$/.test(path)) return true;
+  if (name === '.DS_Store' || name === 'Thumbs.db' || name === 'desktop.ini' || name.startsWith('~$')) return true;
+  return /\.(tmp|swp|crdownload|part)$/i.test(name);
+}
+
 export class Replicator {
   private readonly statePath: string;
 
@@ -91,8 +106,8 @@ export class Replicator {
     const knownStat = state.stat ?? {};
     const nextStat: Record<string, string> = {};
     const report: ReplicaReport = { uploaded: [], downloaded: [], removed: [] };
-    const remoteRevs = new Map((await this.remote.list()).map((f) => [f.path, f.rev]));
-    const localPaths = (await this.local.list()).filter((p) => !p.startsWith(LOCAL_DIR));
+    const remoteRevs = new Map((await this.remote.list()).filter((f) => !ignoredInSync(f.path)).map((f) => [f.path, f.rev]));
+    const localPaths = (await this.local.list()).filter((p) => !ignoredInSync(p));
     const paths = new Set([...localPaths, ...remoteRevs.keys()]);
     const now = Date.now();
     // apagados aqui desde a última vez, sem mudança lá
@@ -102,71 +117,79 @@ export class Replicator {
     const removeGone = !!this.remote.remove && !(gone.length > MASS_REMOVAL && gone.length > known / 2);
     const goneSet = new Set(removeGone ? gone : []);
 
-    for (const path of [...paths].sort()) {
-      if (path.startsWith(LOCAL_DIR)) continue;
-      if (goneSet.has(path)) {
-        await this.remote.remove!(path);
-        delete state.local[path];
-        delete state.remote[path];
-        report.removed!.push(path);
-        continue;
-      }
-      // arquivo grande que não mudou desde a última vez: usa o hash guardado, sem ler
-      const st = stats?.[path];
-      let data: Uint8Array | null | undefined;
-      let lHash: string | null;
-      if (st && knownStat[path] === st[0] && state.local[path]) {
-        lHash = state.local[path]!;
-        nextStat[path] = st[0];
-      } else {
-        data = await this.local.read(path);
-        lHash = data ? hashBytesHex(data) : null;
-        if (st && data && now - st[1] > RACY_MS) nextStat[path] = st[0];
-      }
-      const rRev = remoteRevs.get(path) ?? null;
-      const localChanged = lHash !== null && lHash !== state.local[path];
-      const remoteChanged = rRev !== null && rRev !== state.remote[path];
-      const has = lHash !== null;
-
-      let action: 'up' | 'down' | null = null;
-      if (this.isOwn(path)) {
-        if (has && (localChanged || rRev === null)) action = 'up';
-        else if (!has && rRev !== null) action = 'down'; // aparelho reinstalado: recupera o próprio histórico
-      } else if (path.startsWith('.tanden/')) {
-        if (rRev !== null && (remoteChanged || !has)) action = 'down';
-      } else if (has && rRev === null) {
-        action = 'up';
-      } else if (!has && rRev !== null) {
-        action = 'down';
-      } else if (remoteChanged) {
-        action = 'down';
-      } else if (localChanged) {
-        action = 'up';
-      }
-
-      if (action === 'up' && data === undefined) data = await this.local.read(path);
-      if (action === 'up' && data) {
-        state.remote[path] = await this.remote.upload(path, data);
-        state.local[path] = lHash!;
-        report.uploaded.push(path);
-      } else if (action === 'down') {
-        const got = await this.remote.download(path);
-        if (got) {
-          await this.local.write(path, got);
-          state.local[path] = hashBytesHex(got);
-          report.downloaded.push(path);
-          delete nextStat[path]; // a data mudou com a gravação; o próximo sync relê uma vez
+    const visited = new Set<string>();
+    // uma falha no meio (rede caiu) não perde o que já foi trocado: o estado é gravado mesmo assim
+    try {
+      for (const path of [...paths].sort()) {
+        visited.add(path);
+        if (path.startsWith(LOCAL_DIR)) continue;
+        if (goneSet.has(path)) {
+          await this.remote.remove!(path);
+          delete state.local[path];
+          delete state.remote[path];
+          report.removed!.push(path);
+          continue;
         }
-        state.remote[path] = rRev!;
-      } else {
-        if (rRev !== null) state.remote[path] = rRev;
-        if (lHash !== null) state.local[path] = lHash;
-      }
-    }
+        // arquivo grande que não mudou desde a última vez: usa o hash guardado, sem ler
+        const st = stats?.[path];
+        let data: Uint8Array | null | undefined;
+        let lHash: string | null;
+        if (st && knownStat[path] === st[0] && state.local[path]) {
+          lHash = state.local[path]!;
+          nextStat[path] = st[0];
+        } else {
+          data = await this.local.read(path);
+          lHash = data ? hashBytesHex(data) : null;
+          if (st && data && now - st[1] > RACY_MS) nextStat[path] = st[0];
+        }
+        const rRev = remoteRevs.get(path) ?? null;
+        const localChanged = lHash !== null && lHash !== state.local[path];
+        const remoteChanged = rRev !== null && rRev !== state.remote[path];
+        const has = lHash !== null;
 
+        let action: 'up' | 'down' | null = null;
+        if (this.isOwn(path)) {
+          if (has && (localChanged || rRev === null)) action = 'up';
+          else if (!has && rRev !== null) action = 'down'; // aparelho reinstalado: recupera o próprio histórico
+        } else if (path.startsWith('.tanden/')) {
+          if (rRev !== null && (remoteChanged || !has)) action = 'down';
+        } else if (has && rRev === null) {
+          action = 'up';
+        } else if (!has && rRev !== null) {
+          action = 'down';
+        } else if (remoteChanged) {
+          action = 'down';
+        } else if (localChanged) {
+          action = 'up';
+        }
+
+        if (action === 'up' && data === undefined) data = await this.local.read(path);
+        if (action === 'up' && data) {
+          state.remote[path] = await this.remote.upload(path, data);
+          state.local[path] = lHash!;
+          report.uploaded.push(path);
+        } else if (action === 'down') {
+          const got = await this.remote.download(path);
+          if (got) {
+            await this.local.write(path, got);
+            state.local[path] = hashBytesHex(got);
+            report.downloaded.push(path);
+            delete nextStat[path]; // a data mudou com a gravação; o próximo sync relê uma vez
+          }
+          state.remote[path] = rRev!;
+        } else {
+          if (rRev !== null) state.remote[path] = rRev;
+          if (lHash !== null) state.local[path] = lHash;
+        }
+      }
+
+    } finally {
+      // num sync interrompido, mantém as assinaturas antigas dos arquivos que não chegaram a ser vistos
+      for (const [p, sig] of Object.entries(knownStat)) if (!visited.has(p) && paths.has(p)) nextStat[p] = sig;
+      state.stat = nextStat;
+      await this.local.write(this.statePath, toBytes(JSON.stringify(state)));
+    }
     if (!report.removed!.length) delete report.removed;
-    state.stat = nextStat;
-    await this.local.write(this.statePath, toBytes(JSON.stringify(state)));
     return report;
   }
 }
