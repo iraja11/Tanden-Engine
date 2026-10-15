@@ -3,7 +3,6 @@
   import { engine } from './lib/engine.svelte';
   import Orb from './lib/Orb.svelte';
   import Veins from './lib/Veins.svelte';
-  import Editor from './lib/Editor.svelte';
   import { updater } from './lib/updater.svelte';
   import DrivePanel from './lib/DrivePanel.svelte';
   import AiPanel from './lib/AiPanel.svelte';
@@ -13,8 +12,10 @@
   import SheetsView from './lib/sheets/SheetsView.svelte';
   import { sheets } from './lib/sheets/sheets.svelte';
   import FilesView from './lib/files/FilesView.svelte';
-  import NoteTools from './lib/files/NoteTools.svelte';
   import { files } from './lib/files/files.svelte';
+  import { notes } from './lib/editor/notes.svelte';
+  import NotePage from './lib/editor/NotePage.svelte';
+  import Palette from './lib/editor/Palette.svelte';
   import LutaView from './lib/cadernos/LutaView.svelte';
   import MundoView from './lib/cadernos/MundoView.svelte';
   import { cadernos } from './lib/cadernos/cadernos.svelte';
@@ -78,6 +79,7 @@
   $effect(() => { if (engine.ready) sheets.start(); });
   $effect(() => { if (engine.ready) cadernos.start(); });
   $effect(() => { if (engine.ready) files.start(); });
+  $effect(() => { if (engine.ready) notes.start(); });
   $effect(() => { if (engine.ready) slides.start(); });
   // "criar slides da nota" e importações de .pptx abrem a tela de slides
   $effect(() => { if (slides.goto) untrack(() => go('slides')); });
@@ -141,7 +143,13 @@
     engine.start().catch((e) => (error = String(e)));
     void updater.start();
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') { e.preventDefault(); newNote(); }
+      const mod = e.ctrlKey || e.metaKey;
+      const k = e.key.toLowerCase();
+      if (mod && k === 'n' && !e.shiftKey) { e.preventDefault(); newNote(); go('notas'); }
+      // Ctrl+K vira link dentro do editor; fora dele (ou sem seleção) abre a paleta
+      if (mod && !e.shiftKey && (k === 'p' || k === 'o' || (k === 'k' && !e.defaultPrevented))) { e.preventDefault(); notes.openPalette(k === 'p' ? 'comandos' : 'tudo'); }
+      if (mod && e.shiftKey && k === 'f') { e.preventDefault(); notes.openPalette('busca'); }
+      if (mod && e.shiftKey && k === 'e') { e.preventDefault(); notes.setPreview(!notes.preview); }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); void syncByHand(); }
       if ((e.ctrlKey || e.metaKey) && e.key === ',') { e.preventDefault(); toggleSettings(); }
       if (e.key === 'Escape' && drivePanel) { drivePanel = false; sound.play('close'); }
@@ -250,9 +258,7 @@
         {:else if engine.active}
           {#key engine.active}
             <div class="note" in:rise={{ y: 4, duration: 200 }}>
-              <div class="crumb"><span>{engine.active}</span><NoteTools path={engine.active} /></div>
-              <Editor value={engine.content} docKey={engine.active} onchange={(v) => engine.edit(v)}
-                host={files.host} onfiles={(f) => void files.importFiles(f, { attach: true })} />
+              <NotePage path={engine.active} />
             </div>
           {/key}
         {:else}
@@ -261,6 +267,12 @@
       </div>
     {/key}
   </main>
+
+  {#if notes.palette}
+    {#key notes.palette.seq}
+      <Palette go={(v) => go(v as View)} onclose={() => (notes.palette = null)} />
+    {/key}
+  {/if}
 
   {#if files.notice || files.busy}
     <div class="toast" class:error={files.notice?.error} role="status" aria-live="polite">
@@ -354,7 +366,6 @@
   .side small { color: var(--muted); font: 11px var(--f-mono); }
 
   .main { grid-area: main; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
-  .crumb { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 24px 0; font: 11px var(--f-mono); color: var(--muted); max-width: 808px; width: 100%; margin: 0 auto; }
   .main :global(.editor) { flex: 1; }
   .view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .view.empty { display: none; }

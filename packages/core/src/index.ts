@@ -33,7 +33,7 @@ export { exportAnnotatedPdf } from './pdf-export';
 export { fileKind, mimeOf, freePath, convertToNote, decodeText, resolveLink, CONVERTIBLE, FOLDERS, type FileKind } from './files';
 export { prepareClip, clipToMarkdown, linkCard, readPageMeta, normalizeUrl, localStamp, type PageMeta, type PreparedClip } from './webclip';
 export { htmlToMarkdown, tidyMarkdown } from './convert/html';
-export { markdownToHtml, markdownToDocx, obsidianToCommonMark, imageSize, type ExportOptions } from './convert/export';
+export { markdownToHtml, markdownToFragment, markdownToDocx, obsidianToCommonMark, imageSize, type ExportOptions } from './convert/export';
 export { pdfTextToMarkdown, type PdfTextItem } from './convert/pdf-text';
 export { safeFileName, decodeDataUrl, extForMime, AssetBag, type Asset, type Converted, type ConvertOptions } from './convert/types';
 export type { ParseHtml } from './convert/dom';

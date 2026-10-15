@@ -62,7 +62,9 @@
     {#if menu === 'export'}
       <div class="menu" role="menu">
         <button role="menuitem" onclick={() => { menu = null; void files.exportNote(path, 'docx'); }}>Word (.docx)<small>Docs, LibreOffice</small></button>
-        <button role="menuitem" onclick={() => { menu = null; void files.exportNote(path, 'html'); }}>Página (.html)<small>imprime em PDF</small></button>
+        <button role="menuitem" onclick={() => { menu = null; void files.exportNote(path, 'pdf'); }}>PDF<small>pela janela de impressão</small></button>
+        <button role="menuitem" onclick={() => { menu = null; void files.exportNote(path, 'html'); }}>Página (.html)<small>abre em qualquer lugar</small></button>
+        <button role="menuitem" onclick={() => { menu = null; void files.exportNote(path, 'md'); }}>Markdown (.md)<small>Obsidian, GitHub</small></button>
         {#if isDeck(path, engine.content)}
           <button role="menuitem" onclick={() => { menu = null; slides.show(path); }}>Abrir nos slides<small>apresentar, .pptx, PDF</small></button>
         {:else}

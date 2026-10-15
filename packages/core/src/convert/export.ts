@@ -71,8 +71,8 @@ const HTML_CSS = `
   @media print { main { padding: 0; } a { color: inherit; } }
 `;
 
-/** Nota → página HTML completa, com as imagens embutidas (um arquivo só). */
-export function markdownToHtml(md: string, opts: ExportOptions): string {
+/** Nota → HTML do corpo (sem <html>), com a sintaxe do Obsidian traduzida. */
+export function markdownToFragment(md: string, opts: Omit<ExportOptions, 'title'> = {}): string {
   const marked = new Marked({ gfm: true, breaks: false });
   marked.use({
     renderer: {
@@ -87,7 +87,12 @@ export function markdownToHtml(md: string, opts: ExportOptions): string {
       },
     },
   });
-  const body = marked.parse(obsidianToCommonMark(md), { async: false }) as string;
+  return marked.parse(obsidianToCommonMark(md), { async: false }) as string;
+}
+
+/** Nota → página HTML completa, com as imagens embutidas (um arquivo só). */
+export function markdownToHtml(md: string, opts: ExportOptions): string {
+  const body = markdownToFragment(md, opts);
   return `<!doctype html>
 <html lang="pt-BR">
 <head>

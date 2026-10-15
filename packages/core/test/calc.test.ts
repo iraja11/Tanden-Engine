@@ -63,6 +63,11 @@ describe('folha', () => {
     expect(last(['y + 1'])).toMatchObject({ kind: 'error', error: 'y não está definido' });
     expect(last(['(2 + 3'])).toMatchObject({ kind: 'error' });
   });
+  it('dinheiro e apelidos em inglês', () => {
+    expect(last(['preço = 120 reais', 'qtd = 7', 'preço * qtd'])).toMatchObject({ text: '840' });
+    expect(last(['R$ 10,50 + US$ 2'])).toMatchObject({ text: '12,5' });
+    expect(last(['derive(x^3; x)'])).toMatchObject({ kind: 'symbolic' });
+  });
   it('matrizes e complexos', () => {
     expect(last(['det([1, 2; 3, 4])'])).toMatchObject({ text: '−2' });
     expect(last(['raiz(-4)'])).toMatchObject({ text: '2i' });

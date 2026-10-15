@@ -21,6 +21,9 @@ function outsideStrings(src: string, fn: (s: string) => string): string {
 
 function symbols(s: string): string {
   return s
+    // dinheiro: R$ 120, US$ 5, € 3, 120 reais → só o número (a conta segue normal)
+    .replace(/(?:R|US)?\$\s*(?=\d)|€\s*(?=\d)/g, '')
+    .replace(/(\d)\s*(?:reais|real|d[óo]lares|d[óo]lar|euros?)(?![\p{L}\p{N}_])/gu, '$1')
     .replace(/[×⋅∙]/g, '*')
     .replace(/·(?=\s*[\p{L}(\d])/gu, '*')
     .replace(/÷/g, '/')
@@ -110,7 +113,7 @@ export const FN_ALIASES: Record<string, string> = {
   arranjo: 'permutations', perm: 'permutations', transp: 'transpose', transposta: 'transpose', inversa: 'inv',
   determinante: 'det', vetorial: 'cross', escalar: 'dot', norma: 'norm', imag: 'im', conjugado: 'conj',
   aleatorio: 'random', aleatório: 'random', hipot: 'hypot', resto: 'mod', abs: 'abs', modulo: 'abs', módulo: 'abs',
-  derivative: 'derivada', deriv: 'derivada', diff: 'derivada', simplify: 'simplificar', expand: 'expandir',
+  derivative: 'derivada', deriv: 'derivada', derive: 'derivada', derivar: 'derivada', diff: 'derivada', simplify: 'simplificar', expand: 'expandir',
   solve: 'resolver', raizes: 'resolver', raízes: 'resolver', integrar: 'integral', integrate: 'integral',
   limit: 'limite', lim: 'limite', somatorio: 'somatorio', somatório: 'somatorio', sum_: 'somatorio', produtorio: 'produtorio', produtório: 'produtorio',
 };

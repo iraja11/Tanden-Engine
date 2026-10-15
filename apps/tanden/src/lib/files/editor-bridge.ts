@@ -6,6 +6,8 @@ interface EditorApi {
   insert(text: string, caret?: number): boolean;
   /** leva o cursor para o começo da linha (a partir de 0) e mostra ela */
   goto?(line: number): void;
+  /** devolve o foco ao texto (atEnd: cursor no fim) */
+  focus?(atEnd?: boolean): void;
 }
 
 let current: EditorApi | null = null;
@@ -22,5 +24,8 @@ export const editorBridge = {
   },
   goto(line: number): void {
     current?.goto?.(line);
+  },
+  focus(atEnd?: boolean): void {
+    current?.focus?.(atEnd);
   },
 };

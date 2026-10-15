@@ -41,8 +41,56 @@ A pasta é um cofre comum do Obsidian: pode abrir a mesma pasta nele.
 .tanden/crdt/<nota>/<aparelho>.bin      histórico de edição de cada aparelho
 .tanden/crdt/<nota>/<aparelho>.json     o que cada aparelho escreveu no .md
 .tanden/annot/<pdf>/<aparelho>.bin      anotações de PDF de cada aparelho
+.tanden/crdt/<nota>/del/<aparelho>.json lápides: notas apagadas (cada geração da nota)
+.tanden/local/<aparelho>/versoes/       histórico de versões das notas (só neste aparelho)
+.trash/                                 notas apagadas (como a lixeira do Obsidian)
 PDFs/  Importados/  Anexos/  Web/       arquivos, conversões e páginas salvas
 ```
+
+## Editor de notas
+
+O editor funciona como o Notion, mas o arquivo continua sendo Markdown comum, que o Obsidian abre igual.
+
+- **Prévia ao vivo.** Os títulos, o negrito, os links, as tarefas, as tabelas e as fórmulas já aparecem formatados, e a marcação só volta na linha do cursor. O **Ctrl+Shift+E** alterna para o Markdown puro.
+- **Menu `/`.** Ele insere títulos, listas, tarefas, citação, callouts (`> [!dica]`), toggle (`> [!toggle]-`), colunas, tabela, divisor, imagem, vídeo, arquivo, página web, nota embutida, fórmula, cálculo, gráfico, código, data e lembrete.
+- **Blocos.**
+  - A alça ⋮⋮ à esquerda arrasta o bloco; o + cria um bloco embaixo.
+  - O menu da alça transforma, duplica, move, apaga, copia o texto ou copia um link para o bloco (`[[Nota#^id]]`).
+  - **Alt+↑/↓** move o bloco e **Ctrl+D** duplica.
+- **Seleção.** Selecionar um texto abre uma barra para mudar o tipo do bloco, aplicar negrito, itálico, riscado, código ou realce, e criar um link, um `[[ ]]` ou uma fórmula.
+- **Tabelas.** A tabela é editada direto nas células: Tab e as setas andam entre elas, e o + adiciona linha ou coluna. O botão direito insere, apaga, alinha, ordena ou abre a tabela como Markdown.
+- **Imagens.**
+  - Para inserir uma imagem, cole, arraste ou use `/imagem`.
+  - A legenda é editada embaixo da imagem e o canto muda o tamanho. O resultado fica salvo como `![[foto.png|legenda|400]]`.
+  - Links do YouTube e do Vimeo viram um player, e `![[Nota#Seção]]` mostra o trecho de outra nota.
+- **Links e menções.**
+  - `[[` sugere notas e títulos, e cria a nota se ela ainda não existe.
+  - `@` insere datas (hoje, amanhã, dias da semana) e, dentro de uma tarefa, um lembrete.
+  - `#` sugere as tags que já existem.
+  - Colar uma página da web converte o conteúdo para Markdown, e colar um link sobre um texto selecionado cria o link.
+- **A nota.**
+  - O título é o nome do arquivo, e editar o título renomeia a nota e atualiza todos os links para ela.
+  - O ⋯ tem as opções favoritar, mover, duplicar, histórico, apagar (que manda a nota para `.trash/`) e Markdown puro.
+  - O painel lateral tem o sumário e as conexões: as notas que apontam para esta, com o contexto, e as menções sem link, que um botão transforma em link.
+- **Histórico de versões.** O editor guarda uma versão a cada 5 minutos de edição. O histórico compara qualquer versão com a nota atual e restaura a versão escolhida; o **Ctrl+Z** desfaz a restauração.
+- **Paleta.**
+  - **Ctrl+K** ou **Ctrl+O** procura uma nota pelo nome ou pelo texto.
+  - **Ctrl+P** lista os comandos, **Ctrl+Shift+F** busca no texto e **Ctrl+Enter** cria uma nota com o nome digitado.
+- **Exportar.** A nota sai como PDF, Word (`.docx`), página `.html` ou Markdown.
+- **Atalhos de formatação.**
+
+  | Atalho | O que faz |
+  | --- | --- |
+  | Ctrl+B / Ctrl+I / Ctrl+E | negrito, itálico, código |
+  | Ctrl+Shift+X / Ctrl+Shift+H | riscado, realce |
+  | Ctrl+Shift+M | fórmula |
+  | Ctrl+K com texto selecionado | link |
+  | Ctrl+Shift+K | link `[[ ]]` |
+  | Ctrl+Alt+1 / 2 / 3 | título 1, 2 e 3 |
+  | Ctrl+Alt+4…9 | tarefa, lista, lista numerada, toggle, código e citação |
+  | Ctrl+Alt+0 | texto comum |
+  | Ctrl+Shift+7 / 8 / 9 | lista numerada, lista e tarefa |
+  | Ctrl+Enter | marca ou desmarca a tarefa |
 
 ## Como o merge funciona
 
@@ -178,6 +226,7 @@ O merge segue o das notas, por célula: duas edições em células diferentes nu
 Funciona em qualquer nota, e o Obsidian continua lendo tudo como texto (os blocos aparecem como código). O botão **∑ Inserir** da nota coloca cada tipo de bloco.
 
 - **Blocos de cálculo** (` ```calc `): uma conta por linha, com o resultado à direita (clique copia). Vírgula decimal (`2,5`), milhar com ponto ou espaço (`1.234,56`), `;` entre argumentos, `Rótulo: conta`, variáveis (`L = 6 m`), funções (`f(x) = x^2 - 3x + 2`), `total` (soma desde o último título) e `ans`. As variáveis passam de um bloco para o próximo.
+- **Dinheiro:** `preço = R$ 120` ou `120 reais`, e a conta segue normal. Os nomes em inglês (`solve`, `derive`, `integrate`) também valem.
 - **Unidades:** `100 km/h em m/s`, `25 °C para °F`, `5 kN/m * (4 m)^2 / 8 em kN*m`, `12 V / 4 kΩ em mA`. Valem as do mathjs mais cv, kgf, tf, mca, rpm, ha, cal e Ah, e constantes curtas (`g0`, `c0`, `NA`, `kB`, `qe`, `Rgas`, `eps0`, `mu0`).
 - **Funções em português:** `sen`, `cos`, `tg`, `arcsen`, `raiz`, `log` (base 10), `ln`, `arred`, `media`… Matrizes (`[1, 2; 3, 4]`, `det`, `inv`) e complexos (`raiz(-4)` dá `2i`).
 - **Simbólico:** `derivada(f(x); x)`, `integral(x^2; x)` (inclusive por partes simples), `simplificar`, `expandir`, `taylor(sen(x); x; 0; 7)`. **Numérico:** `integral(f(x); x; 0; 2)` (aceita `inf`), `resolver(x^2 = 4; x)` (polinômios exatos, o resto por varredura), `limite(sen(x)/x; x; 0)`, `somatorio(k^2; k; 1; 10)`. `v(t) = derivada(s(t); t)` guarda a derivada como função.
@@ -250,4 +299,4 @@ Código: `apps/tanden/src/lib/theme.svelte.ts`, `sound.svelte.ts`, `feel.svelte.
 
 1. Agenda com Google Agenda.
 2. Ferramentas do Tanden para a IA via MCP (buscar, criar e ligar notas, mexer na agenda).
-3. Busca e grafo (os links `[[ ]]` já abrem com Ctrl+clique).
+3. Grafo das notas.

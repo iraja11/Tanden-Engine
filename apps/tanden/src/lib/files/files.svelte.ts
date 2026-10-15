@@ -37,6 +37,25 @@ import { slides } from '../slides/slides.svelte';
 
 export const parse: ParseHtml = (text, type) => new DOMParser().parseFromString(text, type === 'application/xml' ? 'application/xml' : 'text/html');
 
+/** Imprime uma página (a janela de impressão salva em PDF). */
+function printHtml(html: string): void {
+  const frame = document.createElement('iframe');
+  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  document.body.append(frame);
+  const doc = frame.contentDocument!;
+  doc.open();
+  doc.write(html);
+  doc.close();
+  const go = () => {
+    frame.contentWindow!.focus();
+    frame.contentWindow!.print();
+    setTimeout(() => frame.remove(), 60_000);
+  };
+  // espera as imagens embutidas carregarem
+  if (doc.readyState === 'complete') setTimeout(go, 150);
+  else frame.onload = () => setTimeout(go, 150);
+}
+
 export type View = 'notas' | 'planilhas' | 'quadros' | 'arquivos';
 
 interface Fetched {
@@ -405,11 +424,15 @@ class Files {
     return null;
   }
 
-  /** Nota → .html (abre em qualquer lugar e imprime em PDF) ou .docx. */
-  async exportNote(notePath: string, format: 'html' | 'docx'): Promise<void> {
+  /** Nota → .html (abre em qualquer lugar), .docx, PDF (pela impressão) ou o próprio .md. */
+  async exportNote(notePath: string, format: 'html' | 'docx' | 'pdf' | 'md'): Promise<void> {
     try {
       const md = engine.vault.read(notePath);
       const title = stem(notePath);
+      if (format === 'md') {
+        await this.deliver(`${title}.md`, new TextEncoder().encode(md), 'text/markdown');
+        return;
+      }
       const all = [...engine.notes, ...this.list];
       const images = new Map<string, { data: Uint8Array; mime: string }>();
       for (const m of md.matchAll(/!\[\[([^\]|#]+)/g)) {
@@ -420,7 +443,8 @@ class Files {
         }
       }
       const opts = { title, image: (t: string) => images.get(t.trim()) ?? null };
-      if (format === 'html') await this.deliver(`${title}.html`, new TextEncoder().encode(markdownToHtml(md, opts)), 'text/html');
+      if (format === 'pdf') printHtml(markdownToHtml(md, opts));
+      else if (format === 'html') await this.deliver(`${title}.html`, new TextEncoder().encode(markdownToHtml(md, opts)), 'text/html');
       else await this.deliver(`${title}.docx`, markdownToDocx(md, opts), mimeOf('x.docx'));
     } catch (e) {
       this.say(`Não consegui exportar: ${e instanceof Error ? e.message : String(e)}`, { error: true });

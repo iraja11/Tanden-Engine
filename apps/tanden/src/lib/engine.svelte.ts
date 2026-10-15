@@ -129,6 +129,10 @@ class Engine {
         this.refresh();
         this.pulse('notes', 'out');
         break;
+      case 'note.deleted':
+        this.refresh();
+        if (e.path === this.active) this.open(this.notes[0] ?? null);
+        break;
       case 'board.created':
         this.boardList = this.boards.list();
         break;
@@ -194,12 +198,34 @@ class Engine {
 
   newNote(): void {
     let n = 1;
-    let path = 'Nova nota.md';
-    while (this.vault.has(path)) path = `Nova nota ${++n}.md`;
-    this.vault.create(path, `# ${path.replace(/\.md$/, '')}\n\n`);
+    let path = 'Sem título.md';
+    while (this.vault.has(path)) path = `Sem título ${++n}.md`;
+    // o título é o nome do arquivo (editável no topo da nota), como no Obsidian
+    this.vault.create(path, '');
     this.refresh();
     this.open(path);
     this.pulse('notes', 'in');
+    this.titleFocus = path;
+    void this.syncNow();
+  }
+
+  /** nota recém-criada que pede o foco no título */
+  titleFocus = $state<string | null>(null);
+
+  /** Apaga a nota (vai para .trash/). Devolve onde ficou a cópia. */
+  async deleteNote(path: string): Promise<string | null> {
+    const trashed = await this.vault.remove(path);
+    this.pulse('notes', 'in');
+    void this.syncNow();
+    return trashed;
+  }
+
+  /** Renomeia ou move a nota; quem chama cuida dos links. */
+  async renameNote(from: string, to: string): Promise<void> {
+    const wasActive = this.active === from;
+    await this.vault.rename(from, to);
+    this.refresh();
+    if (wasActive) this.open(to);
     void this.syncNow();
   }
 
@@ -249,3 +275,6 @@ class Engine {
 }
 
 export const engine = new Engine();
+
+// só no modo de desenvolvimento: deixa os testes de interface mexerem no cofre
+if (import.meta.env.DEV) (globalThis as { __tanden?: Engine }).__tanden = engine;
