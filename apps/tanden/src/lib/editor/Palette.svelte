@@ -3,6 +3,7 @@
   import { files } from '../files/files.svelte';
   import { editorBridge } from '../files/editor-bridge';
   import { notes } from './notes.svelte';
+  import { vida } from '../vida/vida.svelte';
   import { fold, noteName } from './host';
 
   // Paleta (Ctrl+K / Ctrl+P): achar nota pelo nome ou pelo conteúdo e rodar comandos.
@@ -35,8 +36,13 @@
     { label: 'Exportar como Markdown (.md)', when: cur, run: () => void files.exportNote(cur()!, 'md') },
     { label: 'Copiar link [[ ]] da nota', when: cur, run: () => void navigator.clipboard?.writeText(`[[${noteName(cur()!)}]]`) },
     { label: 'Anexar arquivo', when: cur, run: () => notes.host.pickFiles?.() },
-    { label: 'Salvar página web', when: cur, run: () => (notes.clip = true) },
-    ...[['notas', 'Notas'], ['ia', 'IA'], ['lembretes', 'Lembretes'], ['quadros', 'Quadros'], ['planilhas', 'Planilhas'], ['calculo', 'Cálculo'], ['slides', 'Slides'], ['mundos', 'Mundos'], ['luta', 'Luta'], ['arquivos', 'Arquivos'], ['plugins', 'Plugins']].map(([id, name]) => ({
+    { label: 'Salvar página web', keys: 'recortar clipper web clip link artigo', run: () => (files.clipDialog = true) },
+    { label: 'Recortador do navegador (favorito ✂)', keys: 'bookmarklet clipper web extensao', run: () => (files.clipDialog = true) },
+    { label: 'Juntar destaques da nota', keys: 'highlights marcacoes realces ==', when: cur, run: () => files.gatherHighlights(cur()!) },
+    { label: 'Nova tarefa', keys: 'todo tarefa capturar hoje', run: () => { go('hoje'); setTimeout(() => (document.querySelector('.hoje .quick input') as HTMLInputElement | null)?.focus(), 120); } },
+    { label: 'Revisão da semana', keys: 'semanal review weekly', run: () => { vida.review(); go('notas'); } },
+    { label: 'Montar sistema de vida (tarefas, projetos, hábitos, metas, diário)', keys: 'setup bancos life gtd', run: () => { vida.setup(); go('hoje'); } },
+    ...[['hoje', 'Hoje'], ['notas', 'Notas'], ['bancos', 'Bancos'], ['grafo', 'Grafo'], ['ia', 'IA'], ['lembretes', 'Lembretes'], ['quadros', 'Quadros'], ['planilhas', 'Planilhas'], ['calculo', 'Cálculo'], ['slides', 'Slides'], ['mundos', 'Mundos'], ['luta', 'Luta'], ['arquivos', 'Arquivos'], ['plugins', 'Plugins']].map(([id, name]) => ({
       label: `Ir para ${name}`,
       keys: 'abrir tela modulo',
       run: () => go(id!),

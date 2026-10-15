@@ -553,7 +553,8 @@ export function weeklyReview(s: LifeSnapshot, opts: { habitsWeek?: LifeHabit[] }
   const done = s.tasks.filter((t) => t.done && inWeek(t.doneOn));
   const late = s.tasks.filter((t) => !t.done && t.due && t.due < s.day).sort(byUrgency);
   const nextWeek = s.tasks.filter((t) => !t.done && t.due && t.due >= s.day && t.due <= addDays(w.sunday, 7)).sort(byUrgency);
-  const line = (t: LifeTask, box: string) => `- [${box}] ${t.title}${t.due ? ` · ${dm(t.due)}` : ''}${t.project ? ` · ${link(t.project)}` : ''}${t.source === 'banco' ? ` · ${link(t.path)}` : ` (em ${link(t.path)})`}`;
+  // a tarefa do banco é a própria nota; a da nota diz onde está
+  const line = (t: LifeTask, box: string) => `- [${box}] ${t.source === 'banco' ? link(t.path) : t.title}${t.due ? ` · ${dm(t.due)}` : ''}${t.project ? ` · ${link(t.project)}` : ''}${t.source === 'nota' ? ` (em ${link(t.path)})` : ''}`;
   const out: string[] = [];
   out.push(`---\ntipo: revisão\nsemana: ${w.year}-W${String(w.week).padStart(2, '0')}\ndata: ${s.day}\ntags:\n  - revisão\n---`);
   out.push(`# Revisão da semana ${w.week} (${dm(w.monday)} a ${dm(w.sunday)})`);

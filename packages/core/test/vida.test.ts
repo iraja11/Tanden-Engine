@@ -142,9 +142,9 @@ describe('revisão semanal', () => {
     expect(parseProps(r.text)).toMatchObject({ tipo: 'revisão', semana: '2026-W42' });
     expect(r.text).toContain('# Revisão da semana 42 (12/10 a 18/10)');
     expect(r.text).toContain('## Feito (2)');
-    expect(r.text).toContain('- [x] Revisar PR · 13/10 · [[Bancos/Projetos/Tanden|Tanden]]');
+    expect(r.text).toContain('- [x] [[Bancos/Tarefas/Revisar PR|Revisar PR]] · 13/10 · [[Bancos/Projetos/Tanden|Tanden]]');
     expect(r.text).toContain('- [x] Ligar pro banco · 12/10 (em [[Lembretes|Lembretes]])');
-    expect(r.text).toContain('## Atrasado (1)\n- [ ] Escrever testes');
+    expect(r.text).toContain('## Atrasado (1)\n- [ ] [[Bancos/Tarefas/Escrever testes|Escrever testes]]');
     expect(r.text).toMatch(/\| Exercício \| ● ● ● ○ \| 3 \| 10% \|/);
     expect(r.text).toContain('- [[Bancos/Projetos/Tanden|Tanden]] · Ativo · 50% · próximo: Escrever testes · ⚠ 1 atrasada');
     expect(r.text).toContain('- [[Bancos/Metas/Ler 12 livros|Ler 12 livros]] · 25% (3/12 livros) · até 31/12');
