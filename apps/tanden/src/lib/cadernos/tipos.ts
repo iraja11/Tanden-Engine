@@ -8,6 +8,7 @@ const COLORS: Record<string, string> = {
   item: '#c8c7cf',
   especie: '#b59cff',
   conceito: '#7fb6ff',
+  criatura: '#d98fb0',
 };
 
 export function typeColor(type: string): string {

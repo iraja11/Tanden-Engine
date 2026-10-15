@@ -21,6 +21,7 @@ const MEDIA = S('Mídia e links', 2);
 const LAYOUT = S('Layout', 3);
 const MATH = S('Matemática', 4);
 const DATES = S('Datas e lembretes', 5);
+const GAMES = S('Jogos', 6);
 
 const pad = (n: number) => String(n).padStart(2, '0');
 export const isoDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -132,6 +133,9 @@ const ITEMS: Item[] = [
   { label: 'Fórmula na linha', icon: '𝑥', keys: 'formula equacao latex inline matematica', section: MATH, hint: '$x$', run: (v, f, t) => putInline(v, f, t, '$$', 1) },
   { label: 'Cálculo', icon: '=', keys: 'calculo conta calculadora unidades numeros', section: MATH, hint: 'contas com unidades', run: (v, f, t) => putBlock(v, f, t, '```calc\n\n```', 8) },
   { label: 'Gráfico', icon: '📈', keys: 'grafico funcao plot curva', section: MATH, hint: 'funções e pontos', run: (v, f, t) => putBlock(v, f, t, '```grafico\ny = \nx: -10..10\n```', '```grafico\ny = '.length) },
+  { label: 'Rolagem de dados', icon: '🎲', keys: 'dado dados rolar rpg d20 dice roller', section: GAMES, hint: '`dice: 1d20`', run: (v, f, t) => putInline(v, f, t, '`dice: 1d20`', '`dice: '.length) },
+  { label: 'Rolagem numa tabela', icon: '🎲', keys: 'dado tabela gerador sortear rpg dice', section: GAMES, hint: '`dice: [[tabela]]`', run: (v, f, t) => { putInline(v, f, t, '`dice: [[]]`', '`dice: [['.length); startCompletion(v); } },
+  { label: 'Tabela de rolagem', icon: '⚄', keys: 'tabela rolagem d6 d20 encontros aleatoria rpg', section: GAMES, hint: '| d6 | ... |', run: (v, f, t) => putBlock(v, f, t, '| d6 | Resultado |\n| --- | --- |\n| 1-2 |  |\n| 3-4 |  |\n| 5-6 |  |\n', '| d6 | Resultado |\n| --- | --- |\n| 1-2 | '.length) },
   { label: 'Hoje', icon: '📅', keys: 'hoje data dia', section: DATES, hint: isoDate(new Date()), run: (v, f, t) => putInline(v, f, t, `[[${isoDate(new Date())}]]`) },
   {
     label: 'Lembrete', icon: '⏰', keys: 'lembrete alarme aviso tarefa com data notificacao', section: DATES, hint: 'tarefa com aviso',

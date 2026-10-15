@@ -239,6 +239,7 @@ Texto no meio.
     expect(findTable(all, 'clima', 'Outra.md')!.path).toBe('Outra.md');
     expect(findTable(all, 'Estrada')!.name).toBe('Encontros');
     expect(findTable(all, 'Nada')).toBeNull();
+    expect(findTable(all, '[[Estrada^tabela-1]]')!.name).toBe('Encontros');
   });
 
   it('geradores de exemplo funcionam inteiros', () => {

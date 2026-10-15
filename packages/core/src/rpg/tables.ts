@@ -169,7 +169,8 @@ export function tableIndex(notes: Array<{ path: string; text: string }>): RollTa
  * maiúsculas). Com nomes repetidos, prefere a da mesma nota.
  */
 export function findTable(tables: RollTable[], ref: string, fromPath?: string): RollTable | null {
-  const r = ref.replace(/^\[\[|\]\]$/g, '').split('|')[0]!.trim();
+  // "[[Nota^id]]" (bloco, formato do Dice Roller) cai na primeira tabela da nota
+  const r = ref.trim().replace(/^\[\[|\]\]$/g, '').split('|')[0]!.replace(/\^[\w-]+$/, '').trim();
   const [a, b] = r.includes('#') ? [r.slice(0, r.indexOf('#')), r.slice(r.indexOf('#') + 1)] : [r, null];
   const noteMatch = (t: RollTable, n: string) => sameTitle(t.note, n) || sameTitle(t.path.replace(/\.md$/i, ''), n) || sameTitle(t.path, n);
   let hits: RollTable[];

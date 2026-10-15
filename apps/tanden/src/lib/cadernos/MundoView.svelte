@@ -3,7 +3,9 @@
     ENTITY_TYPES, RESERVED, asList, backlinks, bodyOf, entityFolder, entityTemplate, linkTarget, normalizeType, parseProps,
     renameProp, setProp, timeline, typeInfo, withBody, worldTemplate, type Entity, type PropValue,
   } from '@tanden/core';
+  import { hasSheet } from '@tanden/core';
   import Editor from '../Editor.svelte';
+  import SheetPanel from '../rpg/SheetPanel.svelte';
   import { cadernos } from './cadernos.svelte';
   import Graph from './Graph.svelte';
   import { guessTypeFromLabel, typeColor } from './tipos';
@@ -286,6 +288,15 @@
         </div>
       </div>
 
+      {#if entity.type === 'personagem' || entity.type === 'criatura' || hasSheet(fm)}
+        {#key entity.path}
+          <div class="game">
+            <h3>Ficha de jogo</h3>
+            <SheetPanel path={entity.path} compact />
+          </div>
+        {/key}
+      {/if}
+
       <div class="text">
         <Editor value={body} docKey={entityKey} onchange={typedBody} />
       </div>
@@ -477,6 +488,7 @@
   .rel { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 4px 0; }
   .lbl { font: 11px var(--f-mono); color: var(--ember-soft); }
 
+  .game { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 10px 12px; margin-bottom: 8px; }
   .text { flex: 1; min-height: 300px; display: flex; flex-direction: column; border-top: 1px solid var(--line); margin: 0 -28px; }
   .text :global(.editor) { flex: 1; }
 

@@ -129,7 +129,7 @@ export interface Sheet {
   attacks: Attack[];
   rolls: CustomRoll[];
   /** nomes das propriedades na nota, para gravar no mesmo lugar */
-  keys: { hp: string; hpMax: string; hpTemp: string; ac: string };
+  keys: { hp: string; hpMax: string; hpTemp: string; ac: string; saves: string; skills: string; expertise: string };
 }
 
 /** Tem números de jogo? (PV, CA ou atributos) */
@@ -205,7 +205,10 @@ export function readSheet(text: string, fallbackSystem?: string): Sheet {
     expertise: list('expertise'),
     attacks,
     rolls,
-    keys: { hp: key('hp') ?? 'pv', hpMax: key('hpMax') ?? 'pv máx', hpTemp: key('hpTemp') ?? 'pv temp', ac: key('ac') ?? 'ca' },
+    keys: {
+      hp: key('hp') ?? 'pv', hpMax: key('hpMax') ?? 'pv máx', hpTemp: key('hpTemp') ?? 'pv temp', ac: key('ac') ?? 'ca',
+      saves: key('saves') ?? 'salvaguardas', skills: key('skills') ?? 'perícias', expertise: key('expertise') ?? 'especialidades',
+    },
   };
 }
 

@@ -19,6 +19,7 @@
   import { calcLoaded, loadCalc } from './calc/load';
   import { notionLike, preview, previewSlot, type EditorHost } from './editor';
   import { baseBlocks } from './bases/cm-base';
+  import { diceRolls } from './rpg/dice-ext';
 
   let { value, docKey, onchange, host, onfiles, oncursor, rich = false, livePreview = true }: {
     value: string;
@@ -123,6 +124,7 @@
     markdown({ base: markdownLanguage }), syntaxHighlighting(isRich ? richLook : look), theme, ...(isRich ? [richTheme] : []), attachments,
     ...(embedHost ? [embeds(embedHost)] : []),
     baseBlocks(() => docKey),
+    diceRolls(() => docKey),
     calcSlot.of(calcLoaded() ?? []),
     EditorView.updateListener.of((u) => {
       if (u.docChanged) onchange(u.state.doc.toString());

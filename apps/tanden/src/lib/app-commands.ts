@@ -5,6 +5,7 @@ import { notes } from './editor/notes.svelte';
 import { noteName } from './editor/host';
 import { copyBlockLink, insertTemplate, linkAllMentions } from './editor/note-actions';
 import { quadros } from './quadro/quadros.svelte';
+import { mesa } from './rpg/mesa.svelte';
 import { snippets } from './snippets.svelte';
 import { sound } from './sound.svelte';
 import { theme } from './theme.svelte';
@@ -25,10 +26,16 @@ export interface AppActions {
 
 const MODULES: [string, string][] = [
   ['hoje', 'Hoje'], ['notas', 'Notas'], ['bancos', 'Bancos'], ['grafo', 'Grafo'], ['ia', 'IA'], ['lembretes', 'Lembretes'], ['quadros', 'Quadros'],
-  ['planilhas', 'Planilhas'], ['calculo', 'Cálculo'], ['slides', 'Slides'], ['mundos', 'Mundos'], ['luta', 'Luta'], ['arquivos', 'Arquivos'], ['plugins', 'Plugins'],
+  ['planilhas', 'Planilhas'], ['calculo', 'Cálculo'], ['slides', 'Slides'], ['mundos', 'Mundos'], ['mesa', 'Mesa (RPG)'], ['luta', 'Luta'], ['arquivos', 'Arquivos'], ['plugins', 'Plugins'],
 ];
 
-const roll = (sides: number) => 1 + Math.floor(Math.random() * sides);
+/** rola pela mesa (entra no histórico) e mostra o resultado num aviso */
+function rollSay(formula: string, label: string) {
+  const r = mesa.roll(formula, { label });
+  if (typeof r === 'string') return;
+  const x = r[0]!;
+  files.say(x.critical === 'max' ? `🎲 ${label}: ${x.total}. Crítico!` : x.critical === 'min' ? `🎲 ${label}: ${x.total}. Falha crítica.` : `🎲 ${label}: ${x.total}${x.groups[0] && x.groups[0].dice.length > 1 ? ` (${x.groups[0].dice.map((d) => d.value).join(' + ')})` : ''}`);
+}
 
 export function registerAppCommands(a: AppActions): () => void {
   const cur = () => engine.active;
@@ -114,9 +121,23 @@ export function registerAppCommands(a: AppActions): () => void {
     { id: 'som.alternar', label: 'Ligar / desligar sons', keys: 'mudo silencio audio', run: () => { sound.set({ on: !sound.on }); files.say(sound.on ? 'Sons ligados.' : 'Sons desligados.'); } },
 
     // brinquedos
-    { id: 'dado.d20', label: 'Rolar d20', keys: 'dado rpg sorte', run: () => { const n = roll(20); sound.play(n === 20 ? 'complete' : 'tick'); files.say(n === 20 ? '🎲 d20: 20. Crítico!' : n === 1 ? '🎲 d20: 1. Falha crítica.' : `🎲 d20: ${n}`); } },
-    { id: 'dado.2d6', label: 'Rolar 2d6', keys: 'dado rpg', run: () => { const x = roll(6), y = roll(6); sound.play('tick'); files.say(`🎲 2d6: ${x} + ${y} = ${x + y}`); } },
+    { id: 'dado.d20', label: 'Rolar d20', keys: 'dado rpg sorte', run: () => rollSay('1d20', 'd20') },
+    { id: 'dado.2d6', label: 'Rolar 2d6', keys: 'dado rpg', run: () => rollSay('2d6', '2d6') },
     { id: 'dado.moeda', label: 'Cara ou coroa', keys: 'moeda sorte decidir', run: () => { sound.play('tick'); files.say(Math.random() < 0.5 ? '🪙 Cara' : '🪙 Coroa'); } },
+
+    // mesa de RPG
+    { id: 'mesa.dados', label: 'Rolar dados (fórmula)', keys: 'dado rpg rolagem formula vantagem mesa', run: () => mesa.open('dados') },
+    { id: 'mesa.combate', label: 'Combate e iniciativa', keys: 'rpg iniciativa encontro turno mesa', run: () => mesa.open('combate') },
+    { id: 'mesa.fichas', label: 'Fichas de jogo da campanha', keys: 'rpg personagem ficha mesa', run: () => mesa.open('fichas') },
+    { id: 'mesa.tabelas', label: 'Tabelas de rolagem e geradores', keys: 'rpg tabela gerador nome taverna npc mesa', run: () => mesa.open('tabelas') },
+    {
+      id: 'mesa.sessao', label: 'Nova sessão de RPG', keys: 'rpg sessao campanha mesa', run: () => {
+        const p = mesa.newSession();
+        if (!p) { files.say('Crie uma campanha na Mesa primeiro.'); mesa.open('sessoes'); return; }
+        engine.open(p);
+        a.go('notas');
+      },
+    },
   ];
   return commands.register(list);
 }

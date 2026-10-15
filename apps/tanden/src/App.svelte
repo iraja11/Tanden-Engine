@@ -22,6 +22,8 @@
   import LutaView from './lib/cadernos/LutaView.svelte';
   import MundoView from './lib/cadernos/MundoView.svelte';
   import { cadernos } from './lib/cadernos/cadernos.svelte';
+  import MesaView from './lib/rpg/MesaView.svelte';
+  import { mesa } from './lib/rpg/mesa.svelte';
   import SlidesView from './lib/slides/SlidesView.svelte';
   import Presenter from './lib/slides/Presenter.svelte';
   import { slides } from './lib/slides/slides.svelte';
@@ -63,7 +65,7 @@
   /** marcador que desliza até o módulo ativo na barra */
   let mark = $state<{ x: number; y: number; w: number; h: number } | null>(null);
   let error = $state('');
-  type View = 'hoje' | 'notas' | 'bancos' | 'grafo' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'calculo' | 'arquivos' | 'luta' | 'mundos' | 'slides' | 'plugins' | `plugin:${string}`;
+  type View = 'hoje' | 'notas' | 'bancos' | 'grafo' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'calculo' | 'arquivos' | 'luta' | 'mundos' | 'mesa' | 'slides' | 'plugins' | `plugin:${string}`;
   let view = $state<View>('notas');
   /** id do plugin cuja tela está aberta */
   const pluginView = $derived(view.startsWith('plugin:') ? view.slice(7) : null);
@@ -83,6 +85,7 @@
     { id: 'calculo', label: 'Cálculo', ready: true },
     { id: 'slides', label: 'Slides', ready: true },
     { id: 'mundos', label: 'Mundos', ready: true },
+    { id: 'mesa', label: 'Mesa', ready: true },
     { id: 'luta', label: 'Luta', ready: true },
     { id: 'arquivos', label: 'Arquivos', ready: true },
   ];
@@ -97,6 +100,9 @@
   $effect(() => { if (engine.ready) void reminders.start(); });
   $effect(() => { if (engine.ready) sheets.start(); });
   $effect(() => { if (engine.ready) cadernos.start(); });
+  $effect(() => { if (engine.ready) mesa.start(); });
+  // "rolar dados" e afins pela paleta abrem a mesa
+  $effect(() => { if (mesa.goto) untrack(() => go('mesa')); });
   $effect(() => { if (engine.ready) files.start(); });
   $effect(() => { if (engine.ready) notes.start(); });
   $effect(() => { if (engine.ready) slides.start(); });
@@ -338,6 +344,8 @@
           <LutaView onOpenNote={(p) => { engine.open(p); go('notas'); }} />
         {:else if view === 'mundos' && engine.ready}
           <MundoView onOpenNote={(p) => { engine.open(p); go('notas'); }} />
+        {:else if view === 'mesa' && engine.ready}
+          <MesaView onOpenNote={(p) => { engine.open(p); go('notas'); }} />
         {:else if view === 'quadros' && engine.ready}
           <Quadro onOpenNote={(p) => { engine.open(p); go('notas'); }} />
         {:else if error}
