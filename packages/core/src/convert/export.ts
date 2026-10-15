@@ -16,7 +16,7 @@ export interface ExportOptions {
 }
 
 const FRONTMATTER = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/;
-const EMBED_PREFIX = 'tanden-embed:';
+export const EMBED_PREFIX = 'tanden-embed:';
 
 /** Troca a sintaxe do Obsidian por Markdown comum, fora dos blocos de código. */
 export function obsidianToCommonMark(md: string): string {
@@ -361,7 +361,7 @@ class DocxWriter {
 }
 
 /** Entidades que o marked deixa no texto (&amp;, &quot;...). */
-function decode(s: string): string {
+export function decode(s: string): string {
   return s
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')

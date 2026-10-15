@@ -14,6 +14,7 @@ interface Look {
   i?: boolean;
   s?: boolean;
   code?: boolean;
+  mark?: boolean;
 }
 
 const escMd = (s: string) => s.replace(/([*_`[\]\\])/g, '\\$1');
@@ -30,7 +31,43 @@ function styles(doc: Document): Map<string, Look> {
       i: attr(tp, 'font-style') === 'italic',
       s: !!attr(tp, 'text-line-through-style') && attr(tp, 'text-line-through-style') !== 'none',
       code: /mono|courier|consolas|code/i.test(font),
+      mark: /^#(?!fff(fff)?$)[0-9a-f]{3,6}$/i.test(attr(tp, 'background-color') ?? ''),
     });
+  }
+  return out;
+}
+
+type ParaKind = 'quote' | 'code' | 'hr' | 'title' | 'subtitle';
+
+/** Estilos de parágrafo que mudam o bloco (citação, código, linha, título), seguindo os pais. */
+function paraKinds(docs: Array<Document | null>): Map<string, ParaKind> {
+  const parent = new Map<string, string>();
+  for (const d of docs) {
+    if (!d) continue;
+    for (const st of descendants(d, 'style')) {
+      const name = attr(st, 'name');
+      if (name && attr(st, 'family') === 'paragraph') parent.set(name, attr(st, 'parent-style-name') ?? '');
+    }
+  }
+  const direct = (name: string): ParaKind | null => {
+    const n = name.replace(/_20_/g, ' ').toLowerCase();
+    if (n === 'quotations' || n === 'quote' || n === 'citação' || n === 'citações') return 'quote';
+    if (n === 'preformatted text' || n === 'source code' || n === 'code' || n === 'código') return 'code';
+    if (n === 'horizontal line' || n === 'linha horizontal') return 'hr';
+    if (n === 'title' || n === 'título') return 'title';
+    if (n === 'subtitle' || n === 'subtítulo') return 'subtitle';
+    return null;
+  };
+  const out = new Map<string, ParaKind>();
+  for (const name of new Set([...parent.keys(), ...parent.values()])) {
+    let n: string | undefined = name;
+    for (let i = 0; n && i < 20; i++, n = parent.get(n)) {
+      const k = direct(n);
+      if (k) {
+        out.set(name, k);
+        break;
+      }
+    }
   }
   return out;
 }
@@ -39,6 +76,7 @@ interface Ctx {
   zip: Zip;
   bag: AssetBag;
   looks: Map<string, Look>;
+  paras: Map<string, ParaKind>;
   /** estilos de lista numerada (text:list-level-style-number) */
   numbered: Set<string>;
 }
@@ -74,6 +112,7 @@ function inline(el: Element, ctx: Ctx): string {
             if (look.b) core = `**${core}**`;
             if (look.i) core = `*${core}*`;
             if (look.s) core = `~~${core}~~`;
+            if (look.mark) core = `==${core}==`;
           }
           t = `${lead}${core}${trail}`;
         }
@@ -132,6 +171,8 @@ function list(el: Element, ctx: Ctx, depth: number, ordered: boolean): string {
       }
     }
     if (!parts.length) continue;
+    const start = Number(attr(item, 'start-value'));
+    if (start > 0) n = start - 1;
     const marker = ordered ? `${++n}. ` : '- ';
     const first = parts[0]!.startsWith('  ') || parts[0]!.startsWith('- ') ? '' : parts.shift()!;
     lines.push(`${'  '.repeat(depth)}${marker}${first}`, ...parts);
@@ -150,9 +191,51 @@ function table(el: Element, ctx: Ctx): string {
   return [line(rows[0]!), `|${' --- |'.repeat(cols)}`, ...rows.slice(1).map(line)].join('\n');
 }
 
+/** Texto cru de um parágrafo de código (sem escapes do Markdown). */
+function codeText(el: Element): string {
+  let out = '';
+  for (let c = el.firstChild; c; c = c.nextSibling) {
+    if (c.nodeType === 3) out += c.textContent ?? '';
+    else if (c.nodeType === 1) {
+      const e = c as Element;
+      const name = ln(e);
+      if (name === 's') out += ' '.repeat(Number(attr(e, 'c') ?? 1) || 1);
+      else if (name === 'tab') out += '\t';
+      else if (name === 'line-break') out += '\n';
+      else if (name !== 'note' && name !== 'annotation') out += codeText(e);
+    }
+  }
+  return out;
+}
+
 function blocks(els: Element[], ctx: Ctx): string {
   const out: string[] = [];
+  let code: string[] | null = null;
+  const flushCode = () => {
+    if (!code) return;
+    const fence = code.some((l) => l.includes('```')) ? '~~~' : '```';
+    out.push(`${fence}\n${code.join('\n').replace(/\s+$/, '')}\n${fence}`);
+    code = null;
+  };
   for (const e of els) {
+    const kind = ln(e) === 'p' ? ctx.paras.get(attr(e, 'style-name') ?? '') : undefined;
+    if (kind === 'code') {
+      (code ??= []).push(codeText(e));
+      continue;
+    }
+    flushCode();
+    if (kind === 'hr' && !(e.textContent ?? '').trim()) {
+      out.push('---');
+      continue;
+    }
+    if (kind && kind !== 'hr') {
+      const t = inline(e, ctx).trim();
+      if (!t) continue;
+      if (kind === 'quote') out.push(t.split('<br>').map((l) => `> ${l}`).join('\n'));
+      else if (kind === 'title') out.push(`# ${t.replace(/<br>/g, ' ')}`);
+      else out.push(`*${t.replace(/<br>/g, ' ')}*`);
+      continue;
+    }
     switch (ln(e)) {
       case 'h': {
         const level = Math.min(6, Math.max(1, Number(attr(e, 'outline-level') ?? 1) || 1));
@@ -178,6 +261,7 @@ function blocks(els: Element[], ctx: Ctx): string {
         break;
     }
   }
+  flushCode();
   return out.filter(Boolean).join('\n\n');
 }
 
@@ -197,7 +281,7 @@ export function odtToMarkdown(bytes: Uint8Array, opts: ConvertOptions): Converte
       if (first && ln(first) === 'list-level-style-number') numbered.add(attr(ls, 'name') ?? '');
     }
   }
-  const ctx: Ctx = { zip, bag: new AssetBag(opts.assetDir), looks, numbered };
+  const ctx: Ctx = { zip, bag: new AssetBag(opts.assetDir), looks, numbered, paras: paraKinds([stylesXml, doc]) };
   const body = descendants(doc, 'text')[0] ?? doc.documentElement;
   const md = blocks(kids(body), ctx);
   const meta = zip['meta.xml'] ? descendants(parse(strFromU8(zip['meta.xml']), 'application/xml'), 'title')[0]?.textContent?.trim() ?? '' : '';

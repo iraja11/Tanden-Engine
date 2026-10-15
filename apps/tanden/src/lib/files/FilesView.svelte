@@ -81,7 +81,8 @@
   }
 
   const size = (n: number) => (n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(1)} MB`);
-  const convertible = (p: string) => /\.(docx|pptx|odt|epub|html?|xhtml|txt)$/i.test(p);
+  const convertible = (p: string) => /\.(docx|pptx|odt|odp|epub|html?|xhtml|txt)$/i.test(p);
+  const spreadsheet = (p: string) => /\.(xlsx|xlsm|ods|csv|tsv)$/i.test(p);
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -140,15 +141,21 @@
             <i class="tag big {openKind}">{ICON[openKind ?? 'other'] ?? 'ARQ'}</i>
             <h2>{base(files.open)}</h2>
             <p class="muted">{dir(files.open) || 'pasta principal'}{#if info} · {size(info.size)}{/if}</p>
-            {#if convertible(files.open)}
+            {#if /\.(pptx|odp)$/i.test(files.open)}
+              <p>Vire esta apresentação slides do Tanden para editar, apresentar e exportar de novo. O original continua aqui.</p>
+            {:else if convertible(files.open)}
               <p>Vire este arquivo uma nota para ler, buscar, anotar e mandar para a IA. O original continua aqui.</p>
-            {:else if /\.(doc|ppt|rtf)$/i.test(files.open)}
-              <p>Este é um formato antigo. Abra no programa do sistema e salve como .docx ou .pptx para converter.</p>
+            {:else if spreadsheet(files.open)}
+              <p>Abra esta planilha nas Planilhas para editar, com fórmulas e gráficos. O original continua aqui.</p>
+            {:else if /\.(doc|ppt|xls|rtf)$/i.test(files.open)}
+              <p>Este é um formato antigo. Abra no programa do sistema (Office ou LibreOffice) e salve como .docx, .xlsx e .pptx ou .odt, .ods e .odp para converter.</p>
             {/if}
           </div>
         {/if}
         <footer>
-          {#if convertible(files.open)}<button class="pri" onclick={() => void convertOpen()}>Converter em nota</button>{/if}
+          {#if /\.(pptx|odp)$/i.test(files.open)}<button class="pri" onclick={() => void convertOpen()}>Abrir nos Slides</button>
+          {:else if convertible(files.open)}<button class="pri" onclick={() => void convertOpen()}>Converter em nota</button>
+          {:else if spreadsheet(files.open)}<button class="pri" onclick={() => void convertOpen()}>Abrir nas Planilhas</button>{/if}
           {#if desktop}<button onclick={() => void invoke('vault_open_external', { path: files.open }).catch((e) => files.say(String(e), { error: true }))}>Abrir no programa padrão</button>{/if}
           <button onclick={() => void navigator.clipboard.writeText(`![[${files.open}]]`).then(() => files.say('Link copiado: cole numa nota.'))}>Copiar link para nota</button>
         </footer>
@@ -157,12 +164,12 @@
       <div class="empty">
         <svg viewBox="0 0 64 64" width="58" height="58" aria-hidden="true"><path d="M14 8h24l12 12v36H14z" /><path d="M38 8v12h12M22 34h20M22 42h20M22 26h8" /></svg>
         <h2>Arquivos</h2>
-        <p>Solte aqui PDFs, documentos do Word, apresentações, livros, páginas e imagens. PDFs abrem com anotações que sincronizam; documentos viram notas que o Obsidian também lê.</p>
+        <p>Solte aqui PDFs, documentos do Word e do LibreOffice, apresentações, planilhas, livros, páginas e imagens. PDFs abrem com anotações que sincronizam; documentos viram notas que o Obsidian também lê.</p>
         <div class="row">
           <button class="pri" onclick={() => input?.click()}>Importar arquivos</button>
           <button onclick={() => (clip = true)}>Salvar página web</button>
         </div>
-        <p class="formats">PDF · DOCX · PPTX · ODT · EPUB · HTML · TXT · imagens · XLSX/CSV vão para Planilhas</p>
+        <p class="formats">PDF · DOCX · ODT · EPUB · HTML · TXT · imagens · PPTX/ODP vão para Slides · XLSX/ODS/CSV vão para Planilhas</p>
       </div>
     {/if}
   </section>

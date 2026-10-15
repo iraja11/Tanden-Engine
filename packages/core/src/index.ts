@@ -42,6 +42,7 @@ export {
 } from './webclip';
 export { htmlToMarkdown, tidyMarkdown } from './convert/html';
 export { markdownToHtml, markdownToFragment, markdownToDocx, obsidianToCommonMark, imageSize, type ExportOptions } from './convert/export';
+export { markdownToOdt } from './convert/odt-out';
 export { pdfTextToMarkdown, type PdfTextItem } from './convert/pdf-text';
 export { safeFileName, decodeDataUrl, extForMime, AssetBag, type Asset, type Converted, type ConvertOptions } from './convert/types';
 export type { ParseHtml } from './convert/dom';
