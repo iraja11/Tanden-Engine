@@ -11,6 +11,7 @@ import { snippets } from './snippets.svelte';
 import { sound } from './sound.svelte';
 import { theme } from './theme.svelte';
 import { vida } from './vida/vida.svelte';
+import { saude } from './saude/saude.svelte';
 import { flashcards } from './flashcards/flashcards.svelte';
 
 /*
@@ -27,7 +28,7 @@ export interface AppActions {
 }
 
 const MODULES: [string, string][] = [
-  ['hoje', 'Hoje'], ['notas', 'Notas'], ['bancos', 'Bancos'], ['grafo', 'Grafo'], ['ia', 'IA'], ['lembretes', 'Lembretes'], ['quadros', 'Quadros'],
+  ['hoje', 'Hoje'], ['notas', 'Notas'], ['bancos', 'Bancos'], ['grafo', 'Grafo'], ['ia', 'IA'], ['lembretes', 'Lembretes'], ['saude', 'Saúde'], ['quadros', 'Quadros'],
   ['planilhas', 'Planilhas'], ['calculo', 'Cálculo'], ['flashcards', 'Flashcards'], ['slides', 'Slides'], ['mundos', 'Mundos'], ['mesa', 'Mesa (RPG)'], ['luta', 'Luta'], ['biblioteca', 'Biblioteca'], ['arquivos', 'Arquivos'], ['plugins', 'Plugins'],
 ];
 
@@ -97,6 +98,11 @@ export function registerAppCommands(a: AppActions): () => void {
     { id: 'nota.linkar-mencoes', label: 'Linkar menções desta nota em todo o cofre', keys: 'mencoes sem link backlinks', when: cur, run: () => linkAllMentions(cur()!) },
     { id: 'nota.link-trecho', label: 'Copiar link do trecho no cursor', keys: 'bloco block referencia', when: cur, run: () => void copyBlockLink() },
     { id: 'nota.destaques', label: 'Juntar destaques da nota', keys: 'highlights marcacoes realces ==', when: cur, run: () => files.gatherHighlights(cur()!) },
+
+    // saúde
+    { id: 'saude.agua', label: 'Registrar um copo d\'água', keys: 'agua beber copo hidratar saude', run: () => saude.drink() },
+    { id: 'saude.pausa', label: 'Registrar pausa (levantei)', keys: 'levantar alongar pausa saude', run: () => saude.stood() },
+    { id: 'saude.treino', label: 'Treino de hoje', keys: 'exercicio academia malhar treino saude', run: () => a.go('saude') },
 
     // vida (Hoje)
     { id: 'vida.tarefa', label: 'Nova tarefa', keys: 'todo tarefa capturar hoje', run: () => { a.go('hoje'); setTimeout(() => (document.querySelector('.hoje .quick input') as HTMLInputElement | null)?.focus(), 120); } },

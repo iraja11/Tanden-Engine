@@ -39,6 +39,8 @@
   import Popover from './lib/bases/Popover.svelte';
   import { bases } from './lib/bases/bases.svelte';
   import HojeView from './lib/vida/HojeView.svelte';
+  import SaudeView from './lib/saude/SaudeView.svelte';
+  import { saude } from './lib/saude/saude.svelte';
   import FlashcardsView from './lib/flashcards/FlashcardsView.svelte';
   import { flashcards } from './lib/flashcards/flashcards.svelte';
   import WebClipDialog from './lib/files/WebClipDialog.svelte';
@@ -69,7 +71,7 @@
   /** marcador que desliza até o módulo ativo na barra */
   let mark = $state<{ x: number; y: number; w: number; h: number } | null>(null);
   let error = $state('');
-  type View = 'hoje' | 'notas' | 'bancos' | 'grafo' | 'ia' | 'lembretes' | 'quadros' | 'planilhas' | 'calculo' | 'flashcards' | 'biblioteca' | 'arquivos' | 'luta' | 'mundos' | 'mesa' | 'slides' | 'plugins' | `plugin:${string}`;
+  type View = 'hoje' | 'notas' | 'bancos' | 'grafo' | 'ia' | 'lembretes' | 'saude' | 'quadros' | 'planilhas' | 'calculo' | 'flashcards' | 'biblioteca' | 'arquivos' | 'luta' | 'mundos' | 'mesa' | 'slides' | 'plugins' | `plugin:${string}`;
   let view = $state<View>('notas');
   /** id do plugin cuja tela está aberta */
   const pluginView = $derived(view.startsWith('plugin:') ? view.slice(7) : null);
@@ -83,6 +85,7 @@
     { id: 'grafo', label: 'Grafo', ready: true },
     { id: 'ia', label: 'IA', ready: true },
     { id: 'lembretes', label: 'Lembretes', ready: true },
+    { id: 'saude', label: 'Saúde', ready: true },
     { id: 'quadros', label: 'Quadros', ready: true },
     { id: 'agenda', label: 'Agenda', ready: false },
     { id: 'planilhas', label: 'Planilhas', ready: true },
@@ -104,6 +107,8 @@
   const badgeOf = (id: string) => (id === 'lembretes' ? reminders.attention : id === 'flashcards' ? (engine.ready ? flashcards.pending() : 0) : id.startsWith('plugin:') ? plugins.badges[id.slice(7)] ?? 0 : 0);
 
   $effect(() => { if (engine.ready) void reminders.start(); });
+  // depois dos lembretes, que registram os botões dos avisos de água e pausa
+  $effect(() => { if (engine.ready) void saude.start(); });
   $effect(() => { if (engine.ready) sheets.start(); });
   $effect(() => { if (engine.ready) cadernos.start(); });
   $effect(() => { if (engine.ready) mesa.start(); });
@@ -132,6 +137,8 @@
   $effect(() => { if (files.goto) view = files.goto.view; });
   // clicar num aviso de lembrete abre a tela de lembretes
   $effect(() => { if (reminders.openRequests) view = 'lembretes'; });
+  // aviso de água/pausa tocado, ou o cartão de saúde do Hoje
+  $effect(() => { if (saude.openRequests) untrack(() => go('saude')); });
 
   function placeMark() {
     const b = railBtns[view];
@@ -337,6 +344,8 @@
           {#await import('./lib/calc/CalcView.svelte') then m}
             <m.default onOpenNote={(p: string) => { engine.open(p); go('notas'); }} />
           {/await}
+        {:else if view === 'saude' && engine.ready}
+          <SaudeView onOpenNote={openNote} />
         {:else if view === 'flashcards' && engine.ready}
           <FlashcardsView onOpenNote={openNote} />
         {:else if view === 'hoje' && engine.ready}

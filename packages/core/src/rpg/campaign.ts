@@ -14,7 +14,7 @@ import { hasSheet, findPropKey } from './sheet';
  * têm números de jogo, mais as que estiverem na pasta da campanha.
  */
 
-export interface Session {
+export interface GameSession {
   path: string;
   name: string;
   number: number | null;
@@ -36,7 +36,7 @@ export interface Campaign {
   world: string;
   system: string;
   folder: string;
-  sessions: Session[];
+  sessions: GameSession[];
   encounters: Array<{ path: string; name: string; round: number }>;
   sheets: SheetRef[];
 }

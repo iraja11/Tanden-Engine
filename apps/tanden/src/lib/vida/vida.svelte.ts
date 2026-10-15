@@ -133,6 +133,22 @@ class Vida {
     sound.play('complete');
   }
 
+  /**
+   * Marca um hábito como feito no dia, se o banco tiver uma caixa com um destes
+   * nomes (sem acento, sem maiúscula). Já marcado ou sem banco: não faz nada.
+   */
+  markHabit(names: string[], day: string): void {
+    const s = this.snap;
+    if (!s.dbs.habitos) return;
+    const fold = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    const want = new Set(names.map(fold));
+    const h = s.habits.find((x) => want.has(fold(x.key)) || want.has(fold(x.label)));
+    if (!h) return;
+    const row = s.habitRows.get(day);
+    if (row && /^(true|x|sim|yes|1)$/i.test(String(bases.index.byPath.get(row)?.props[h.key] ?? ''))) return;
+    this.toggleHabit(h.key, day);
+  }
+
   // ---------------------------------------------------------------- metas
 
   bump(path: string, delta: number): void {

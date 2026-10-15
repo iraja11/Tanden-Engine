@@ -352,6 +352,28 @@ A tela **Hoje** (primeira da barra) junta o dia num lugar só. Ela não tem form
 
 Na paleta (**Ctrl+P**): *Nova tarefa*, *Revisão da semana*, *Montar sistema de vida*, *Salvar página web*, *Recortador do navegador* e *Juntar destaques da nota*. Código: `packages/core/src/vida/` (testes em `test/vida.test.ts`) e `apps/tanden/src/lib/vida/`.
 
+## Saúde: água, pausas e treino
+
+A aba **Saúde** cuida de três coisas: beber água, levantar da cadeira e treinar. Como o resto do Tanden, tudo mora em notas comuns, que sincronizam e abrem no Obsidian.
+
+- **Água.** O botão **+ Copo** registra um copo (o tamanho é configurável; também há +150 e +500, e **desfazer**). O anel mostra quanto falta para a meta do dia e se você está atrás do ritmo, e as barras mostram os últimos 7 dias. Bater a meta marca o hábito *Água* do dia, se o banco de hábitos tiver essa caixa.
+- **Pausas.** **Levantei** registra uma pausa. O aviso sugere um movimento rápido (alongar, 10 agachamentos, descansar os olhos).
+- **Avisos inteligentes.** A água e a pausa avisam a cada intervalo, só dentro do horário e dos dias escolhidos. A contagem recomeça a cada copo ou pausa registrada, a água para de avisar quando a meta é batida, e dá para adiar ou silenciar só hoje. No aviso, **Bebi um copo** e **Levantei** registram sem abrir o app.
+- **Por aparelho.** A configuração (intervalo, janela, dias, meta) vale para todos, mas cada aparelho escolhe se avisa. No celular, a pausa começa desligada, para não avisar em dobro com o PC. No Android, os avisos vão para o agendador do sistema e chegam com o app fechado; no computador, chegam com o Tanden na bandeja.
+- **Planner de treino.** Você escolhe objetivo (massa, força, condicionamento, emagrecer, saúde), nível, dias da semana, tempo por treino, equipamento (academia, halteres, elásticos, barra fixa, ou só o peso do corpo) e o que poupar (joelho, lombar, ombro, punho). O Tanden monta a divisão da semana (corpo inteiro, superiores e inferiores, ou empurrar, puxar e pernas), escolhe os exercícios de uma biblioteca com mais de 70, define séries, faixas de repetição e descanso pelo objetivo e corta o que não cabe no tempo. **↻** troca um exercício por outro do mesmo tipo.
+- **Treinar.** O próximo treino segue o rodízio (A → B → C), mesmo se você pulou um dia. Cada exercício já vem com a carga e as repetições sugeridas pela progressão dupla: fez o topo da faixa em todas as séries, a carga sobe; ficou abaixo da faixa duas vezes seguidas, ela baixa 10%; no peso do corpo, as repetições sobem até a hora de uma variação mais difícil. Toque em cada série para marcar (o número já vem preenchido e pode ser editado). O treino em andamento sobrevive a fechar o app. **Concluir** grava a sessão e marca o hábito *Exercício*.
+- **Semana.** Dias treinados contra os planejados, séries por músculo nos últimos 7 dias comparadas com a faixa do objetivo, e os últimos treinos.
+- **Lembrete de treino.** Com um horário no perfil, o plano cria em `Lembretes.md` a linha `Hora do treino 🏋` repetida nos dias de treino, que avisa como qualquer lembrete.
+
+```
+Saúde/Saúde.md                 configuração dos avisos (propriedades no topo)
+Saúde/Registro/2026-10.md      - 2026-10-15 14:30 💧 250 ml   /   - 2026-10-15 15:10 🧍 pausa
+Saúde/Treino.md                perfil no topo; plano em "## A · Corpo inteiro" + "- Leg press · 3×6-10 · 120s"
+Saúde/Treinos/2026-10-15 A.md  - [x] Leg press: 10, 10, 9 @ 80 kg
+```
+
+O plano pode ser editado à mão (trocar exercício, séries, descanso), e o Tanden lê de novo. Na paleta: *Registrar um copo d'água*, *Registrar pausa* e *Treino de hoje*. O Hoje ganhou um cartão com a água, as pausas e o treino do dia. Código: `packages/core/src/saude/` (testes em `test/saude.test.ts`) e `apps/tanden/src/lib/saude/`.
+
 ## Bancos de dados (estilo Notion)
 
 Um banco é um bloco ` ```base ` dentro de uma nota, no formato das **Bases do Obsidian**: o Obsidian abre e mostra o mesmo banco. As linhas são notas comuns e as colunas são as propriedades do topo delas.
