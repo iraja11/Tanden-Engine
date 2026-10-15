@@ -18,6 +18,7 @@
     "mathjs": "15.2.0",
     "pdf-lib": "1.17.1",
     "turndown": "7.2.4",
+    "yaml": "2.8.1",
     "yjs": "13.6.33"
   },
   "devDependencies": {
