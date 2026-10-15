@@ -503,3 +503,22 @@ export function normalizeUrl(input: string): string | null {
     return null;
   }
 }
+
+// ------------------------------------------------------------------ recortador do navegador
+
+/**
+ * Favorito ("bookmarklet") que manda a página aberta no navegador para o
+ * Tanden do computador: o HTML como está na tela e o trecho selecionado, que
+ * vira destaque. Clicar de novo na mesma página com outro trecho selecionado
+ * acrescenta o destaque à mesma nota. Se o site bloquear o envio, abre uma aba
+ * curta que manda só o endereço e a seleção.
+ */
+export function clipperBookmarklet(port: number, token: string): string {
+  const base = `http://127.0.0.1:${port}/clip`;
+  const code = `(()=>{const T=${JSON.stringify(token)},B=${JSON.stringify(base)},s=String(getSelection()||'').trim(),u=location.href,`
+    + `say=(m,ok)=>{const d=document.createElement('div');d.textContent=m;d.style.cssText='position:fixed;z-index:2147483647;top:16px;right:16px;padding:10px 16px;border-radius:12px;font:600 14px sans-serif;color:#fff;background:'+(ok?'#ff7a1a':'#e5484d')+';box-shadow:0 10px 30px #0006';document.body.append(d);setTimeout(()=>d.remove(),2600)},`
+    + `alt=()=>open(B+'?token='+T+'&url='+encodeURIComponent(u)+'&title='+encodeURIComponent(document.title.slice(0,300))+'&sel='+encodeURIComponent(s.slice(0,6000)),'_blank','width=420,height=240');`
+    + `fetch(B,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({token:T,url:u,title:document.title,html:document.documentElement.outerHTML,selection:s})})`
+    + `.then(r=>r.json()).then(j=>j.ok?say(s?'Destaque enviado ao Tanden ✂':'Página enviada ao Tanden ✂',1):say(j.erro||'O Tanden recusou',0)).catch(alt)})()`;
+  return `javascript:${encodeURIComponent(code).replace(/%20/g, ' ').replace(/%2C/g, ',').replace(/%3D/g, '=').replace(/%3A/g, ':').replace(/%2F/g, '/')}`;
+}

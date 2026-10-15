@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DOMParser } from 'linkedom';
 import {
   addHighlight, canonicalUrl, clipToMarkdown, collectHighlights, findClip, parseClipTemplate, parseProps, pickClipTemplate,
-  prepareClip, syncHighlights, youtubeId,
+  prepareClip, syncHighlights, youtubeId, clipperBookmarklet,
 } from '../src/index';
 
 const parse = (t: string, type: 'text/html' | 'application/xml') => new DOMParser().parseFromString(t, type === 'application/xml' ? 'text/xml' : type) as unknown as Document;
@@ -109,9 +109,20 @@ describe('mesma página', () => {
   it('compara endereços sem rastreio, # e www', () => {
     expect(canonicalUrl('https://www.site.com/a/?utm_source=x&b=2#topo')).toBe('site.com/a?b=2');
     expect(canonicalUrl('https://youtu.be/dQw4w9WgXcQ?si=abc')).toBe('youtube.com/watch?v=dQw4w9WgXcQ');
-    const notes = [{ path: 'Web/A.md', props: { source: 'https://site.com/a?b=2' } }, { path: 'Leituras/B.md', props: { url: 'https://youtube.com/watch?v=dQw4w9WgXcQ' } }];
+    const notes: Array<{ path: string; props: Record<string, string> }> = [{ path: 'Web/A.md', props: { source: 'https://site.com/a?b=2' } }, { path: 'Leituras/B.md', props: { url: 'https://youtube.com/watch?v=dQw4w9WgXcQ' } }];
     expect(findClip(notes, 'https://www.site.com/a/?b=2&utm_medium=y')).toBe('Web/A.md');
     expect(findClip(notes, 'https://youtu.be/dQw4w9WgXcQ')).toBe('Leituras/B.md');
     expect(findClip(notes, 'https://site.com/c')).toBeNull();
+  });
+});
+
+describe('favorito do recortador', () => {
+  it('é um javascript: válido com a porta e a chave', () => {
+    const b = clipperBookmarklet(27183, 'abc123');
+    expect(b.startsWith('javascript:')).toBe(true);
+    const code = decodeURIComponent(b.slice('javascript:'.length));
+    expect(code).toContain('"http://127.0.0.1:27183/clip"');
+    expect(code).toContain('"abc123"');
+    expect(() => new Function(code)).not.toThrow();
   });
 });

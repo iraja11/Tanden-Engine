@@ -33,7 +33,7 @@ export { exportAnnotatedPdf } from './pdf-export';
 export { fileKind, mimeOf, freePath, convertToNote, decodeText, resolveLink, CONVERTIBLE, FOLDERS, type FileKind } from './files';
 export {
   prepareClip, clipToMarkdown, linkCard, readPageMeta, normalizeUrl, localStamp, youtubeId, addHighlight, collectHighlights, syncHighlights,
-  parseClipTemplate, pickClipTemplate, canonicalUrl, findClip, HIGHLIGHTS_TITLE, CLIP_UNREAD, CLIP_TEMPLATES_DIR,
+  parseClipTemplate, pickClipTemplate, canonicalUrl, findClip, clipperBookmarklet, HIGHLIGHTS_TITLE, CLIP_UNREAD, CLIP_TEMPLATES_DIR,
   type PageMeta, type PreparedClip, type ClipOptions, type ClipTemplate,
 } from './webclip';
 export { htmlToMarkdown, tidyMarkdown } from './convert/html';
@@ -47,3 +47,4 @@ export { parseFeed, discoverFeeds, looksLikeFeed, type Feed, type FeedItem } fro
 export * from './plugins';
 export * from './base';
 export * from './graph';
+export * from './vida';
