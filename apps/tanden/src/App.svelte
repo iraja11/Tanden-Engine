@@ -425,8 +425,8 @@
     <button class="drive" class:on={engine.driveOn} class:warn={!!engine.driveError} onclick={toggleDrive}>
       {engine.driveOn ? (engine.driveError ? 'Drive: sem conexão' : 'Drive conectado') : 'Conectar Google Drive'}
     </button>
-    <span class="sep">·</span> {engine.vault?.deviceId ?? ''}
-    <span class="sep">·</span> <span class="loc">{engine.location}</span>
+    <span class="extra"><span class="sep">·</span> {engine.vault?.deviceId ?? ''}</span>
+    <span class="extra loc"><span class="sep">·</span> {engine.location}</span>
   </footer>
 
   {#if drivePanel}<DrivePanel onclose={toggleDrive} />{/if}
@@ -543,6 +543,7 @@
       transform: translateX(-100%); transition: transform var(--dur-slow) var(--ease); box-shadow: 0 0 40px var(--shadow); }
     .side.open { transform: none; }
     .status { padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+    .status .extra { display: none; }
   }
   .toast { position: fixed; z-index: 70; left: 50%; bottom: 44px; transform: translateX(-50%); max-width: min(560px, calc(100vw - 32px));
     display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 14px; border-radius: 12px; font-size: 13px;
