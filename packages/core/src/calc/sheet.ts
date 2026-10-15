@@ -175,4 +175,11 @@ export class CalcSheet implements Ctx {
       .filter(([, d]) => d.params.length === 1)
       .map(([name, d]) => ({ name, param: d.params[0]!, text: nodeText(d.expr) }));
   }
+
+  /** Funções de duas variáveis, como g(x; y) = x² − y²: viram superfícies no gráfico 3D. */
+  surfaces(): { name: string; params: [string, string]; text: string }[] {
+    return [...this.defs.entries()]
+      .filter(([, d]) => d.params.length === 2)
+      .map(([name, d]) => ({ name, params: [d.params[0]!, d.params[1]!] as [string, string], text: nodeText(d.expr) }));
+  }
 }

@@ -1,7 +1,8 @@
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { StateEffect, StateField, type EditorState, type Extension, type Range, type Text } from '@codemirror/state';
 import { analyzeNote, isCalcNote, type CalcResult, type NoteCalc, type PlotSpec } from '@tanden/core/src/calc';
-import { PlotView } from './plot-view';
+import type { AnyPlot } from './plot-view';
+import { makePlot, sameDim } from './make-plot';
 import { renderTex } from './tex';
 
 /*
@@ -104,7 +105,7 @@ class ResultWidget extends WidgetType {
   }
 }
 
-const plots = new WeakMap<HTMLElement, PlotView>();
+const plots = new WeakMap<HTMLElement, AnyPlot>();
 
 class PlotWidget extends WidgetType {
   constructor(readonly key: string, readonly spec: PlotSpec) {
@@ -114,15 +115,14 @@ class PlotWidget extends WidgetType {
     return o.key === this.key;
   }
   toDOM() {
-    const pv = new PlotView({ height: 280, wheel: 'ctrl' });
+    const pv = makePlot(this.spec, { height: this.spec.dim === 3 ? 340 : 280, wheel: 'ctrl' });
     pv.el.classList.add('cm-plot');
-    pv.setSpec(this.spec);
     plots.set(pv.el, pv);
     return pv.el;
   }
   updateDOM(dom: HTMLElement) {
     const pv = plots.get(dom);
-    if (!pv) return false;
+    if (!pv || !sameDim(pv, this.spec)) return false;
     pv.setSpec(this.spec);
     return true;
   }
@@ -130,7 +130,7 @@ class PlotWidget extends WidgetType {
     plots.get(dom)?.destroy();
   }
   get estimatedHeight() {
-    return 300;
+    return this.spec.dim === 3 ? 360 : 300;
   }
   ignoreEvent() {
     return true;

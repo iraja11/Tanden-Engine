@@ -522,6 +522,20 @@ export function fnOf(node: MathNode, scope: Scope, v: string, strictUnits = fals
   };
 }
 
+/** Compila uma expressão como função de duas variáveis (superfícies 3D). */
+export function fnOf2(node: MathNode, scope: Scope, a: string, b: string): (u: number, v: number) => number {
+  const code = node.compile();
+  const sc = new Overlay(scope);
+  return (u: number, v: number) => {
+    sc.set(a, u).set(b, v);
+    try {
+      return toNumber(code.evaluate(sc as never));
+    } catch {
+      return NaN;
+    }
+  };
+}
+
 const evalNum = (n: MathNode, scope: Scope, what: string) => {
   const v = toNumber(n.compile().evaluate(scope as never));
   if (Number.isNaN(v)) throw new Error(`${what} precisa ser um número`);

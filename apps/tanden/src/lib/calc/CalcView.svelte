@@ -1,12 +1,13 @@
 <script lang="ts">
   import { onDestroy, untrack } from 'svelte';
-  import { analyzeNote, plotFn, type PlotSeries } from '@tanden/core/src/calc';
+  import { analyzeNote, plotFn, plotFn2, type PlotSeries } from '@tanden/core/src/calc';
   import { engine } from '../engine.svelte';
   import Editor from '../Editor.svelte';
   import { files } from '../files/files.svelte';
   import { editorBridge } from '../files/editor-bridge';
   import { sound } from '../sound.svelte';
-  import { PlotView } from './plot-view';
+  import type { AnyPlot } from './plot-view';
+  import { makePlot } from './make-plot';
   import { PLOT_HELP, REFERENCE, TEX_HELP } from './reference';
 
   /*
@@ -22,8 +23,12 @@
   let extra = $state('');
   let extraError = $state('');
   let plotEl = $state<HTMLDivElement>();
-  let plot: PlotView | null = null;
+  let plot: AnyPlot | null = null;
   let funcs = $state<{ name: string; param: string; text: string }[]>([]);
+  let surfs = $state<{ name: string; params: [string, string]; text: string }[]>([]);
+  /** 2D ou 3D; "auto" segue a folha (3D quando só há funções de duas variáveis) */
+  let dimPick = $state<'auto' | 2 | 3>('auto');
+  const dim = $derived(dimPick !== 'auto' ? dimPick : surfs.length && !funcs.length ? 3 : 2);
 
   const TEMPLATE = (title: string) => `---
 tipo: cálculo
@@ -40,6 +45,8 @@ v = 100 km/h em m/s
 f(x) = x^2 - 3x + 2
 resolver(f(x) = 0; x)
 derivada(f(x); x)
+
+g(x; y) = sen(x) * cos(y)
 `;
 
   function newSheet() {
@@ -70,16 +77,36 @@ derivada(f(x); x)
   });
 
   function redraw(text: string, extraSrc: string) {
-    if (!plot) return;
     const { sheet } = analyzeNote(text);
     funcs = sheet.functions();
+    surfs = sheet.surfaces();
+    if (!plotEl || side !== 'grafico') return;
     const series: PlotSeries[] = [];
+    extraError = '';
+    if (dim === 3) {
+      for (const f of surfs) {
+        try {
+          series.push({ kind: 'surface', label: `${f.name}(${f.params.join('; ')}) = ${f.text}`, f: plotFn2(sheet, `${f.name}(x; y)`) });
+        } catch { /* fica fora */ }
+      }
+      if (extraSrc.trim()) {
+        try {
+          const src = extraSrc.replace(/^\s*z\s*=\s*/, '');
+          const fn = plotFn2(sheet, src);
+          fn(0.5, 0.5);
+          series.unshift({ kind: 'surface', label: `z = ${src}`, f: fn });
+        } catch (e) {
+          extraError = e instanceof Error ? e.message : String(e);
+        }
+      }
+      setSpec({ series, equal: false, grid: true, errors: [], dim: 3, x: [-5, 5], y: [-5, 5] });
+      return;
+    }
     for (const f of funcs) {
       try {
         series.push({ kind: 'fx', label: `${f.name}(${f.param}) = ${f.text}`, f: plotFn(sheet, `${f.name}(x)`) });
       } catch { /* função com parâmetros extras: fica fora do gráfico */ }
     }
-    extraError = '';
     if (extraSrc.trim()) {
       try {
         const src = extraSrc.replace(/^\s*y\s*=\s*/, '');
@@ -90,14 +117,28 @@ derivada(f(x); x)
         extraError = e instanceof Error ? e.message : String(e);
       }
     }
-    plot.setSpec({ series, equal: false, grid: true, errors: [] });
+    setSpec({ series, equal: false, grid: true, errors: [], dim: 2 });
+  }
+
+  /** troca o tipo de gráfico (2D/3D) recriando a vista quando precisa */
+  function setSpec(spec: Parameters<AnyPlot['setSpec']>[0]) {
+    if (!plotEl) return;
+    if (plot && plot.el.dataset.dim !== String(spec.dim)) {
+      plot.destroy();
+      plot.el.remove();
+      plot = null;
+    }
+    if (!plot) {
+      plot = makePlot(spec, { wheel: 'always' });
+      plot.el.classList.add('big');
+      plotEl.appendChild(plot.el);
+    } else plot.setSpec(spec);
   }
 
   $effect(() => {
     if (!plotEl || side !== 'grafico') return;
-    plot = new PlotView({ wheel: 'always' });
-    plot.el.classList.add('big');
-    plotEl.appendChild(plot.el);
+    void dim;
+    // o gráfico nasce no redraw (2D ou 3D)
     untrack(() => redraw(engine.content, extra));
     return () => {
       plot?.destroy();
@@ -148,14 +189,22 @@ derivada(f(x); x)
       <button class:on={side === 'cola'} onclick={() => (side = 'cola')}>Cola</button>
     </nav>
     {#if side === 'grafico'}
-      <label class="extra">
-        <span>y =</span>
-        <input bind:value={extra} placeholder="outra curva, ex.: derivada(f(x); x)" spellcheck="false" />
-      </label>
+      <div class="row">
+        <label class="extra">
+          <span>{dim === 3 ? 'z =' : 'y ='}</span>
+          <input bind:value={extra} placeholder={dim === 3 ? 'superfície, ex.: x^2 - y^2' : 'outra curva, ex.: derivada(f(x); x)'} spellcheck="false" />
+        </label>
+        <div class="dims" role="group" aria-label="Tipo de gráfico">
+          <button class:on={dim === 2} onclick={() => (dimPick = 2)} title="Funções de x">2D</button>
+          <button class:on={dim === 3} onclick={() => (dimPick = 3)} title="Superfícies z = g(x; y)">3D</button>
+        </div>
+      </div>
       {#if extraError}<p class="err">{extraError}</p>{/if}
       <div class="plot" bind:this={plotEl}></div>
-      {#if !funcs.length && !extra.trim()}
+      {#if dim === 2 && !funcs.length && !extra.trim()}
         <p class="hint">Defina uma função na folha, como <code>f(x) = x^2</code>, e ela aparece aqui. Arraste para mover, roda para aproximar.</p>
+      {:else if dim === 3 && !surfs.length && !extra.trim()}
+        <p class="hint">Defina uma função de duas variáveis, como <code>g(x; y) = x^2 - y^2</code>, ou escreva acima. Arraste para girar, roda para aproximar.</p>
       {/if}
     {:else}
       <div class="ref">
@@ -202,6 +251,11 @@ derivada(f(x); x)
   nav button { border: 1px solid var(--line); background: none; border-radius: 9px; padding: 5px 12px; font: 500 11px var(--f-display); letter-spacing: .1em;
     text-transform: uppercase; color: var(--muted); transition: color var(--dur), border-color var(--dur), background var(--dur); }
   nav button.on { color: var(--ember); border-color: var(--ember); background: color-mix(in srgb, var(--ember) 9%, transparent); }
+  .row { display: flex; gap: 6px; align-items: stretch; }
+  .row .extra { flex: 1; min-width: 0; }
+  .dims { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .dims button { border: 0; background: none; padding: 0 10px; font: 600 11px var(--f-mono); color: var(--muted); transition: color var(--dur), background var(--dur); }
+  .dims button.on { color: var(--ember); background: color-mix(in srgb, var(--ember) 10%, transparent); }
   .extra { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 4px 10px; background: var(--surface);
     font: 13px var(--f-mono); color: var(--muted); transition: border-color var(--dur); }
   .extra:focus-within { border-color: var(--ember); }

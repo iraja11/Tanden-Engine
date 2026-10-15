@@ -4,5 +4,5 @@ export { formatNumber, formatValue, prettyUnit, nodeTex, nodeText } from './form
 export { integrate, polyRoots, findRoots, limit } from './numeric';
 export { integrateSymbolic } from './symbolic';
 export { CalcSheet, translateError, type CalcResult, type CalcKind } from './sheet';
-export { parsePlot, plotFn, sampleFx, sampleParam, type PlotSpec, type PlotSeries } from './plot';
+export { parsePlot, plotFn, plotFn2, sampleFx, sampleParam, sampleSurface, is3D, type PlotSpec, type PlotSeries, type Fn2 } from './plot';
 export { analyzeNote, isCalcNote, type NoteCalc, type PlotBlock } from './note';
