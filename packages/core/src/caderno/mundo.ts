@@ -37,6 +37,7 @@ export const ENTITY_TYPES: EntityType[] = [
   { id: 'item', label: 'Item', plural: 'Itens', fields: ['dono', 'origem', 'poder'], sections: ['Descrição', 'História'] },
   { id: 'especie', label: 'Espécie', plural: 'Espécies', fields: ['habitat', 'expectativa de vida'], sections: ['Biologia', 'Cultura'] },
   { id: 'conceito', label: 'Conceito', plural: 'Conceitos', fields: ['categoria'], sections: ['Como funciona', 'Limites'] },
+  { id: 'criatura', label: 'Criatura', plural: 'Criaturas', fields: ['nd', 'habitat', 'pv', 'pv máx', 'ca'], sections: ['Descrição', 'Táticas'] },
 ];
 
 const TYPE_ALIASES: Record<string, string> = {
@@ -46,6 +47,7 @@ const TYPE_ALIASES: Record<string, string> = {
   eventos: 'evento', event: 'evento', acontecimento: 'evento',
   itens: 'item', objeto: 'item', artefato: 'item',
   espécie: 'especie', especies: 'especie', espécies: 'especie', raça: 'especie', raca: 'especie', species: 'especie',
+  criaturas: 'criatura', monstro: 'criatura', monstros: 'criatura', monster: 'criatura', creature: 'criatura', besta: 'criatura', inimigo: 'criatura',
   conceitos: 'conceito', magia: 'conceito', sistema: 'conceito', religião: 'conceito', idioma: 'conceito',
 };
 
