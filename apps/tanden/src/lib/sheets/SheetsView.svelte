@@ -85,13 +85,14 @@
         {#each sheets.list as p (p)}<option value={p}>{title(p)}</option>{/each}
       </select>
       <button class="icon" onclick={() => sheets.create()} title="Nova planilha" aria-label="Nova planilha">+</button>
-      <button onclick={() => fileInput?.click()} title="Importar .xlsx ou .csv">Importar</button>
-      <input bind:this={fileInput} type="file" accept=".xlsx,.csv,.tsv,.txt,text/csv" multiple hidden onchange={onFile} />
+      <button onclick={() => fileInput?.click()} title="Importar .xlsx, .ods ou .csv">Importar</button>
+      <input bind:this={fileInput} type="file" accept=".xlsx,.xlsm,.ods,.csv,.tsv,.txt,text/csv" multiple hidden onchange={onFile} />
       <div class="menu-wrap">
         <button onclick={() => (menu = menu === 'export' ? null : 'export')} disabled={!wb} aria-haspopup="menu">Exportar ▾</button>
         {#if menu === 'export'}
           <div class="menu" role="menu">
             <button role="menuitem" onclick={() => { menu = null; void sheets.export('xlsx'); }}>Excel / Sheets (.xlsx)</button>
+            <button role="menuitem" onclick={() => { menu = null; void sheets.export('ods'); }}>LibreOffice Calc (.ods)</button>
             <button role="menuitem" onclick={() => { menu = null; void sheets.export('csv', ctl.sheet); }}>CSV (vírgula)</button>
             <button role="menuitem" onclick={() => { menu = null; void sheets.export('csv-br', ctl.sheet); }}>CSV do Excel brasileiro (;)</button>
           </div>
@@ -212,10 +213,10 @@
     <div class="empty">
       <svg viewBox="0 0 64 64" width="56" height="56" aria-hidden="true"><rect x="8" y="10" width="48" height="44" rx="6" /><path d="M8 24h48M8 38h48M24 10v44M40 10v44" /></svg>
       <h2>Planilhas</h2>
-      <p>Fórmulas em português (SOMA, PROCV, SE…) ou em inglês, gráficos e arquivos .xlsx que abrem no Excel e no Sheets. Tudo sincroniza entre seus aparelhos.</p>
+      <p>Fórmulas em português (SOMA, PROCV, SE…) ou em inglês, gráficos e arquivos .xlsx e .ods que abrem no Excel, no Sheets e no LibreOffice. Tudo sincroniza entre seus aparelhos.</p>
       <div class="row">
         <button class="pri" onclick={() => sheets.create()}>Nova planilha</button>
-        <button onclick={() => fileInput?.click()}>Importar .xlsx ou .csv</button>
+        <button onclick={() => fileInput?.click()}>Importar .xlsx, .ods ou .csv</button>
       </div>
       {#if sheets.notice}<p class="notice">{sheets.notice}</p>{/if}
     </div>

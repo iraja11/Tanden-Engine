@@ -77,7 +77,7 @@ O editor funciona como o Notion, mas o arquivo continua sendo Markdown comum, qu
 - **Paleta.**
   - **Ctrl+K** ou **Ctrl+O** procura uma nota pelo nome ou pelo texto.
   - **Ctrl+P** lista os comandos, **Ctrl+Shift+F** busca no texto e **Ctrl+Enter** cria uma nota com o nome digitado.
-- **Exportar.** A nota sai como PDF, Word (`.docx`), página `.html` ou Markdown.
+- **Exportar.** A nota sai como PDF, Word (`.docx`), LibreOffice Writer (`.odt`), página `.html` ou Markdown.
 - **Atalhos de formatação.**
 
   | Atalho | O que faz |
@@ -135,8 +135,8 @@ O arranjo de cada slide sai do conteúdo: só um `#` vira capa, só um `##` vira
 
 - **Da nota:** em *Exportar ▾ → Slides* (ou *Da nota…* na tela de slides), a nota vira uma apresentação nova: o título vira a capa, cada seção vira um slide e seções longas continuam no slide seguinte. A nota original não muda.
 - **Apresentar:** *Apresentar* ou F5. Setas, espaço e clique avançam; Esc sai; **N** abre as notas do apresentador com cronômetro e o próximo slide; **B** apaga a tela; um número + Enter pula para o slide. No celular, arraste para o lado.
-- **Importar:** `.pptx` vira apresentação (títulos, listas, tabelas, imagens, código e notas). PDF vira uma apresentação com uma página por slide (`![[PDFs/aula.pdf#page=3]]`).
-- **Exportar:** `.pptx` (PowerPoint, Google Slides, Impress) com as notas do apresentador, PDF com o tema do app e PDF claro para imprimir. Ficam em `Exportados/`.
+- **Importar:** `.pptx` e `.odp` (LibreOffice Impress) viram apresentação (títulos, listas, tabelas, imagens, código e notas). PDF vira uma apresentação com uma página por slide (`![[PDFs/aula.pdf#page=3]]`).
+- **Exportar:** `.pptx` (PowerPoint, Google Slides) e `.odp` (Impress) com as notas do apresentador, PDF com o tema do app e PDF claro para imprimir. Ficam em `Exportados/`.
 
 O código fica em `packages/core/src/slides/` (testes em `test/slides.test.ts`) e `apps/tanden/src/lib/slides/`.
 ## Plugins
@@ -213,7 +213,7 @@ Cada planilha é um `.xlsx` comum no cofre (as novas vão para `Planilhas/`), en
 - **Digitação no padrão brasileiro:** `1.234,56`, `15%`, `R$ 10,50`, `14/10/2026` e `08:30` viram número com o formato certo.
 - **Teclado:** setas, Ctrl+setas, Enter/Tab, F2, Ctrl+D/Ctrl+R (preencher), Ctrl+Z/Y, Ctrl+B/I, Ctrl+C/V (com fórmulas deslocadas, e colando tabelas do Sheets ou de sites). Com uma fórmula aberta, clicar ou usar as setas insere a referência.
 - **Gráficos:** colunas, barras, linha, área, rosca e dispersão, a partir da seleção. Ficam guardados na planilha e acompanham os dados.
-- **Importar/exportar:** `.xlsx`, `.csv` (vírgula) e o `.csv` do Excel brasileiro (`;`). No app instalado, a exportação vai para `Exportados/` no cofre.
+- **Importar/exportar:** `.xlsx`, `.ods` (LibreOffice Calc, com fórmulas, formatos e larguras), `.csv` (vírgula) e o `.csv` do Excel brasileiro (`;`). No app instalado, a exportação vai para `Exportados/` no cofre.
 
 O merge segue o das notas, por célula: duas edições em células diferentes nunca conflitam, e numa mesma célula vence a última. Uma edição feita no Excel ou no Sheets entra no merge só com as células que mudaram lá. Os gráficos ainda não vão para dentro do `.xlsx`.
 
@@ -283,7 +283,7 @@ A aba **Flashcards** mostra os baralhos, a previsão dos próximos 7 dias e um f
 A aba **Arquivos** lista tudo no cofre que não é nota: PDFs, documentos, imagens, áudio e vídeo. **Importar** (ou arrastar para a janela) leva cada arquivo para o lugar dele:
 
 - **PDF** vai para `PDFs/` e abre no leitor da Biblioteca.
-- **Word (.docx), PowerPoint (.pptx), LibreOffice (.odt), ePub, HTML e texto** viram nota em `Importados/`, com títulos, listas, tabelas, links, notas de rodapé e imagens. O original e as imagens ficam em `Anexos/<título>/`, e a nota aponta para o original no campo `original`. Em apresentações, cada slide vira uma seção e as notas do apresentador viram um bloco `[!note]`. Os formatos antigos `.doc` e `.ppt` não entram: salve como `.docx`/`.pptx` antes.
+- **Word (.docx), PowerPoint (.pptx), LibreOffice (.odt e .odp), ePub, HTML e texto** viram nota em `Importados/`, com títulos, listas, tabelas, links, notas de rodapé e imagens. O original e as imagens ficam em `Anexos/<título>/`, e a nota aponta para o original no campo `original`. Em apresentações, cada slide vira uma seção e as notas do apresentador viram um bloco `[!note]`. Os formatos antigos `.doc`, `.xls` e `.ppt` não entram: salve como `.docx`/`.xlsx`/`.pptx` ou `.odt`/`.ods`/`.odp` antes.
 - **Planilhas** vão para a aba Planilhas, como antes.
 - O resto fica em `Anexos/`.
 
@@ -293,7 +293,7 @@ A aba **Arquivos** lista tudo no cofre que não é nota: PDFs, documentos, image
 
 **No leitor**, o painel lateral tem **Páginas** (miniaturas), **Sumário**, **Marcadores** (Ctrl+D marca a página com o nome do capítulo) e **Anotações**. As cores da página alternam entre normal, sépia e noite, F liga a tela cheia, e ao chegar na última página o app pergunta se o livro terminou.
 
-**Nas notas.** O botão **Anexar** coloca um arquivo ou uma página web na nota aberta; arrastar ou colar um arquivo no editor faz o mesmo. Imagens aparecem dentro da nota e PDFs viram um cartão. Ctrl+clique (Cmd no Mac) em um link abre a nota, o arquivo ou o site. **Exportar** gera um `.docx` (abre no Word, Google Docs e LibreOffice) ou uma página `.html`, com as imagens dentro.
+**Nas notas.** O botão **Anexar** coloca um arquivo ou uma página web na nota aberta; arrastar ou colar um arquivo no editor faz o mesmo. Imagens aparecem dentro da nota e PDFs viram um cartão. Ctrl+clique (Cmd no Mac) em um link abre a nota, o arquivo ou o site. **Exportar** gera um `.docx` (Word, Google Docs), um `.odt` (LibreOffice Writer, com os estilos dele: títulos, citações, listas e tabelas) ou uma página `.html`, com as imagens dentro.
 
 **Páginas web.** Cole um endereço em **Página web** (botão Anexar, tela Hoje ou *Salvar página web* na paleta; um endereço copiado já vem preenchido). *Salvar como nota* guarda o texto do artigo e as imagens em `Web/`, com título, site, autor e data no topo, no mesmo formato do Obsidian Web Clipper, e `status: Para ler`, que coloca a página na lista *Para ler* da tela Hoje. *Só o link* coloca um cartão com título e resumo na nota aberta. Um link direto para um PDF ou imagem vira arquivo do cofre.
 

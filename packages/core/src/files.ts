@@ -2,6 +2,7 @@ import { descendants } from './convert/dom';
 import { docxToMarkdown } from './convert/docx';
 import { epubToMarkdown } from './convert/epub';
 import { htmlToMarkdown, tidyMarkdown } from './convert/html';
+import { odpToMarkdown } from './convert/odp';
 import { odtToMarkdown } from './convert/odt';
 import { pptxToMarkdown } from './convert/pptx';
 import { decodeDataUrl, extForMime, safeFileName, type ConvertOptions, type Converted } from './convert/types';
@@ -17,7 +18,7 @@ export type FileKind = 'note' | 'pdf' | 'sheet' | 'board' | 'image' | 'document'
 const KINDS: Array<[FileKind, RegExp]> = [
   ['note', /\.md$/i],
   ['pdf', /\.pdf$/i],
-  ['sheet', /\.(xlsx|xlsm|csv|tsv|ods)$/i],
+  ['sheet', /\.(xlsx|xlsm|xls|csv|tsv|ods)$/i],
   ['board', /\.canvas$/i],
   ['image', /\.(png|jpe?g|gif|webp|avif|svg|bmp|ico|heic)$/i],
   ['document', /\.(docx|odt|rtf|doc)$/i],
@@ -35,7 +36,7 @@ export function fileKind(path: string): FileKind {
 }
 
 /** Formatos que viram nota ao importar. */
-export const CONVERTIBLE = /\.(docx|pptx|odt|epub|html?|xhtml|txt|md|markdown)$/i;
+export const CONVERTIBLE = /\.(docx|pptx|odt|odp|epub|html?|xhtml|txt|md|markdown)$/i;
 
 export const MIME: Record<string, string> = {
   pdf: 'application/pdf',
@@ -64,6 +65,10 @@ export const MIME: Record<string, string> = {
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  odt: 'application/vnd.oasis.opendocument.text',
+  ods: 'application/vnd.oasis.opendocument.spreadsheet',
+  odp: 'application/vnd.oasis.opendocument.presentation',
+  csv: 'text/csv',
 };
 export const mimeOf = (path: string): string => MIME[path.split('.').pop()!.toLowerCase()] ?? 'application/octet-stream';
 
@@ -102,6 +107,9 @@ export async function convertToNote(fileName: string, bytes: Uint8Array, opts: C
     case 'odt':
       r = odtToMarkdown(bytes, opts);
       break;
+    case 'odp':
+      r = odpToMarkdown(bytes, opts);
+      break;
     case 'epub':
       r = epubToMarkdown(bytes, opts);
       break;
@@ -133,7 +141,7 @@ export async function convertToNote(fileName: string, bytes: Uint8Array, opts: C
       break;
     case 'doc':
     case 'ppt':
-      throw new Error(`O formato .${ext} é o antigo do Office. Abra no Word/PowerPoint ou no Google Docs e salve como .${ext}x.`);
+      throw new Error(`O formato .${ext} é o antigo do Office. Abra no Word/PowerPoint, no LibreOffice ou no Google Docs e salve como .${ext}x ou .od${ext === 'doc' ? 't' : 'p'}.`);
     default:
       throw new Error(`Ainda não sei converter arquivos .${ext} em nota.`);
   }

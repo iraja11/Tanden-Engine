@@ -7,6 +7,7 @@ import {
   deckFromPdf,
   deckToPdf,
   deckToPptx,
+  deckToOdp,
   freePath,
   imageSize,
   imageTargets,
@@ -30,7 +31,7 @@ import { sound } from '../sound.svelte';
 
 /*
  * Apresentações: notas .md com slides separados por ---. Este módulo acha
- * as apresentações do cofre, cria a partir de notas, importa .pptx e PDF,
+ * as apresentações do cofre, cria a partir de notas, importa .pptx, .odp e PDF,
  * exporta e guarda o pedido de "apresentar" que o App mostra em tela cheia.
  */
 
@@ -189,7 +190,7 @@ class Slides {
           path = this.newPath(stem(name));
           engine.writeNote(path, deckFromPdf(pdfPath, pages, stem(name)));
           files.say(`${name} virou uma apresentação de ${pages} slide${pages > 1 ? 's' : ''}. O PDF ficou em ${pdfPath}.`, { path });
-        } else if (/\.pptx$/i.test(name)) {
+        } else if (/\.(pptx|odp)$/i.test(name)) {
           const folder = freePath(files.exists, FOLDERS.attachments, stem(name), 'dir').replace(/\.dir$/, '');
           const r = await convertToNote(name, bytes, { parse, assetDir: folder });
           const original = `${folder}/${name}`;
@@ -199,8 +200,8 @@ class Slides {
           path = this.newPath(r.title || stem(name));
           engine.writeNote(path, deckFromImported(r.markdown, original));
           const n = parseDeck(engine.vault.read(path)).slides.length;
-          files.say(`${name} virou uma apresentação de ${n} slide${n > 1 ? 's' : ''}${r.assets.length ? ` com ${r.assets.length} imagens` : ''}.`, { path });
-        } else throw new Error('use um arquivo .pptx ou .pdf');
+          files.say(`${name} virou uma apresentação de ${n} slide${n > 1 ? 's' : ''}${r.assets.length ? ` com ${r.assets.length} imagem${r.assets.length > 1 ? 'ns' : ''}` : ''}.`, { path });
+        } else throw new Error('use um arquivo .pptx, .odp ou .pdf');
         engine.bus.emit({ type: 'file.imported', path, from: f.name });
         sound.play('create');
         this.refresh();
@@ -326,9 +327,9 @@ class Slides {
     };
   }
 
-  async export(path: string, format: 'pptx' | 'pdf' | 'pdf-claro'): Promise<void> {
+  async export(path: string, format: 'pptx' | 'odp' | 'pdf' | 'pdf-claro'): Promise<void> {
     const deck = this.deck(path);
-    const label = format === 'pptx' ? 'PowerPoint' : 'PDF';
+    const label = format === 'pptx' ? 'PowerPoint' : format === 'odp' ? 'Impress' : 'PDF';
     try {
       await engine.bus.process(`slides-export:${path}`, `Gerando ${label}`, async () => {
         files.busy = `Gerando ${label}…`;
@@ -340,6 +341,7 @@ class Slides {
         const opts = { look: format === 'pdf-claro' ? { ...LOOK_PAPEL, accent: this.look().dark ? LOOK_PAPEL.accent : this.look().accent } : this.look(), image: (t: string) => images.get(t) ?? null, author: engine.vault.deviceId };
         const name = deck.title || stem(path);
         if (format === 'pptx') await files.deliver(`${name}.pptx`, deckToPptx(deck, opts), mimeOf('x.pptx'));
+        else if (format === 'odp') await files.deliver(`${name}.odp`, deckToOdp(deck, opts), mimeOf('x.odp'));
         else await files.deliver(`${name}${format === 'pdf-claro' ? ' (claro)' : ''}.pdf`, await deckToPdf(deck, opts), 'application/pdf');
       });
     } catch (e) {
