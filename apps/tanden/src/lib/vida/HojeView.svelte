@@ -5,6 +5,7 @@
   import { files } from '../files/files.svelte';
   import { rise } from '../motion';
   import { dayLabel, vida } from './vida.svelte';
+  import { saude } from '../saude/saude.svelte';
 
   // Tela Hoje: tarefas, hábitos, diário, projetos, metas e leituras num lugar só.
   let { onOpenNote }: { onOpenNote: (path: string) => void } = $props();
@@ -45,6 +46,9 @@
   const dailyPath = $derived(vida.dailyPath(day, snap));
   const mood = $derived(dailyPath ? String(bases.index.byPath.get(dailyPath)?.props.humor ?? '') : '');
   const reading = $derived(vida.reading);
+  const care = $derived(saude.todayCare);
+  const waterPct = $derived(Math.min(1, care.ml / Math.max(1, saude.config.agua.goalMl)));
+  const workout = $derived(saude.hasPlan ? saude.nextWorkout : null);
 
   const hello = $derived.by(() => {
     const h = vida.now.getHours();
@@ -193,6 +197,22 @@
           {/if}
         </section>
       {/if}
+
+      <section class="card health">
+        <h3>Saúde <button class="link" onclick={() => saude.openRequests++}>abrir</button></h3>
+        <div class="row">
+          <span class="wl">💧 <b>{care.ml}</b> / {saude.config.agua.goalMl} ml</span>
+          <button class="ghost plus" onclick={() => saude.drink()} title="Registrar {saude.config.agua.cupMl} ml">+ copo</button>
+          <button class="ghost plus" onclick={() => saude.stood()} title="Registrar uma pausa">🧍 levantei</button>
+        </div>
+        <div class="bar water"><i style:width="{waterPct * 100}%"></i></div>
+        <small>
+          {care.breaks} {care.breaks === 1 ? 'pausa' : 'pausas'} hoje
+          {#if saude.doneToday.length} · treino feito 💪
+          {:else if workout && saude.trainingToday}<button class="link" onclick={() => saude.openRequests++}>· treino de hoje: {workout.key} · {workout.name}</button>
+          {:else if !saude.hasPlan}<button class="link" onclick={() => saude.openRequests++}>· montar plano de treino</button>{/if}
+        </small>
+      </section>
 
       <section class="card">
           <h3>Diário</h3>
@@ -345,6 +365,10 @@
   .plus { font: 600 11px var(--f-mono); border: 1px solid var(--line); }
   .bar { height: 6px; border-radius: 99px; background: var(--void); overflow: hidden; margin: 6px 0 4px; }
   .bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--ember-soft), var(--ember)); transition: width var(--dur-slow) var(--spring); }
+  .bar.water i { background: linear-gradient(90deg, color-mix(in srgb, #4fb3ff 60%, var(--void)), #4fb3ff); }
+  .health .wl { flex: 1; font-size: 13px; color: var(--silver); }
+  .health .wl b { font-family: var(--f-mono); color: var(--ink); }
+  .health small { display: flex; gap: 6px; flex-wrap: wrap; font: 11px var(--f-mono); color: var(--muted); }
   .bar.goal i { background: linear-gradient(90deg, var(--ok), color-mix(in srgb, var(--ok) 60%, var(--ember))); }
   .read li { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; column-gap: 8px; padding: 4px 0; }
   .read .ghost { grid-row: 1 / 3; grid-column: 2; align-self: center; }

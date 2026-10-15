@@ -10,6 +10,7 @@ import {
   reminderLine,
   rescheduleIn,
   CATCH_UP_MS,
+  isCareNotificationId,
   type Reminder,
   type Repeat,
 } from '@tanden/core';
@@ -19,6 +20,7 @@ import * as autostart from '@tauri-apps/plugin-autostart';
 import { engine } from './engine.svelte';
 import { desktop } from './platform';
 import { isTauri } from './storage-tauri';
+import { CARE_ACTION_TYPES } from './saude/acoes';
 
 // Lembretes: lê as tarefas com data de todas as notas e avisa na hora.
 // - Computador: o app avisa enquanto roda (na bandeja, se a janela for fechada).
@@ -151,9 +153,12 @@ class ReminderCenter {
     }
     await notif.registerActionTypes([
       { id: ACTION_TYPE, actions: [{ id: 'feito', title: 'Feito' }, { id: 'adiar', title: 'Adiar 10 min' }] },
+      ...CARE_ACTION_TYPES,
     ]);
     await notif.onAction((a) => {
       const id = a.notification?.id;
+      // água e pausa são da tela Saúde, que ouve as próprias ações
+      if (id !== undefined && isCareNotificationId(id)) return;
       const r = this.items.find((x) => notificationId(x) === id);
       if (a.actionId === 'feito' && r) this.complete(r);
       else if (a.actionId === 'adiar' && r) this.snooze(r, Date.now() + SNOOZE_MS);
