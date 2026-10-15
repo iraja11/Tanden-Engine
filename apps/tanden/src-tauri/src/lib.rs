@@ -4,6 +4,8 @@
 
 #[cfg(desktop)]
 mod background;
+#[cfg(desktop)]
+mod clipper;
 mod google;
 mod ollama;
 mod plugin;
@@ -51,6 +53,15 @@ pub fn run() {
                         background::show_main(&handle);
                     }
                 })?;
+                // recortador do navegador: o favorito manda a página para cá
+                let token = clipper::load_token(&app.path().app_data_dir()?);
+                let handle = app.handle().clone();
+                let port = clipper::start(token.clone(), move |req| {
+                    use tauri::Emitter;
+                    let _ = handle.emit("clip-request", req);
+                    background::show_main(&handle);
+                });
+                app.manage(clipper::ClipperInfo { port: port.unwrap_or(clipper::PORT), token, running: port.is_some() });
             }
             // TANDEN_VAULT aponta para outra pasta (ex.: uma pasta sincronizada do Drive).
             let root = match std::env::var("TANDEN_VAULT") {
@@ -94,6 +105,8 @@ pub fn run() {
             #[cfg(desktop)]
             background::background_set,
             #[cfg(desktop)]
+            clipper_info,
+            #[cfg(desktop)]
             vault::vault_open_external,
             #[cfg(desktop)]
             pty::pty_spawn,
@@ -106,6 +119,13 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o Tanden Engine");
+}
+
+/// Porta e chave do recortador, para a interface montar o favorito.
+#[cfg(desktop)]
+#[tauri::command]
+fn clipper_info(info: tauri::State<'_, clipper::ClipperInfo>) -> clipper::ClipperInfo {
+    info.inner().clone()
 }
 
 #[cfg(desktop)]

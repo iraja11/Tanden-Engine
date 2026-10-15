@@ -3,6 +3,7 @@
   import { files } from '../files/files.svelte';
   import { editorBridge } from '../files/editor-bridge';
   import { notes } from './notes.svelte';
+  import { vida } from '../vida/vida.svelte';
   import { fold, noteName } from './host';
   import { ensureBlockId, instantiate, searchVault } from '@tanden/core';
   import { bases } from '../bases/bases.svelte';
@@ -38,14 +39,19 @@
     { label: 'Exportar como Markdown (.md)', when: cur, run: () => void files.exportNote(cur()!, 'md') },
     { label: 'Copiar link [[ ]] da nota', when: cur, run: () => void navigator.clipboard?.writeText(`[[${noteName(cur()!)}]]`) },
     { label: 'Anexar arquivo', when: cur, run: () => notes.host.pickFiles?.() },
-    { label: 'Salvar página web', when: cur, run: () => (notes.clip = true) },
+    { label: 'Salvar página web', keys: 'recortar clipper web clip link artigo', run: () => (files.clipDialog = true) },
+    { label: 'Recortador do navegador (favorito ✂)', keys: 'bookmarklet clipper web extensao', run: () => (files.clipDialog = true) },
+    { label: 'Juntar destaques da nota', keys: 'highlights marcacoes realces ==', when: cur, run: () => files.gatherHighlights(cur()!) },
+    { label: 'Nova tarefa', keys: 'todo tarefa capturar hoje', run: () => { go('hoje'); setTimeout(() => (document.querySelector('.hoje .quick input') as HTMLInputElement | null)?.focus(), 120); } },
+    { label: 'Revisão da semana', keys: 'semanal review weekly', run: () => { vida.review(); go('notas'); } },
+    { label: 'Montar sistema de vida (tarefas, projetos, hábitos, metas, diário)', keys: 'setup bancos life gtd', run: () => { vida.setup(); go('hoje'); } },
     { label: 'Buscar no cofre (painel)', hint: 'Ctrl+Shift+F', keys: 'procurar pesquisar search', run: () => notes.searchFor(q.trim().startsWith('>') ? '' : q.trim()) },
     { label: 'Explorar tags, links sem nota e notas soltas', keys: 'tags orfas cerebro', run: () => (notes.sidebar = 'tags') },
     { label: 'Abrir nota aleatória', keys: 'random sorte acaso', run: () => { const all = engine.notes.filter((p) => !p.startsWith('Modelos/')); if (all.length) engine.open(all[Math.floor(Math.random() * all.length)]!); } },
     { label: 'Inserir modelo na nota', keys: 'template', when: cur, run: () => setTimeout(() => insertTemplate()) },
     { label: 'Linkar menções desta nota em todo o cofre', keys: 'mencoes sem link backlinks', when: cur, run: () => { const p = cur()!; const u = notes.unlinked(p); for (const x of u) notes.linkMentions(x.path, p); files.say(u.length ? `Links criados em ${u.length} ${u.length === 1 ? 'nota' : 'notas'}.` : 'Nenhuma menção sem link.'); } },
     { label: 'Copiar link do trecho no cursor', keys: 'bloco block referencia', when: cur, run: () => void copyBlockLink() },
-    ...[['notas', 'Notas'], ['bancos', 'Bancos'], ['grafo', 'Grafo'], ['ia', 'IA'], ['lembretes', 'Lembretes'], ['quadros', 'Quadros'], ['planilhas', 'Planilhas'], ['calculo', 'Cálculo'], ['slides', 'Slides'], ['mundos', 'Mundos'], ['luta', 'Luta'], ['arquivos', 'Arquivos'], ['plugins', 'Plugins']].map(([id, name]) => ({
+    ...[['hoje', 'Hoje'], ['notas', 'Notas'], ['bancos', 'Bancos'], ['grafo', 'Grafo'], ['ia', 'IA'], ['lembretes', 'Lembretes'], ['quadros', 'Quadros'], ['planilhas', 'Planilhas'], ['calculo', 'Cálculo'], ['slides', 'Slides'], ['mundos', 'Mundos'], ['luta', 'Luta'], ['arquivos', 'Arquivos'], ['plugins', 'Plugins']].map(([id, name]) => ({
       label: `Ir para ${name}`,
       keys: 'abrir tela modulo',
       run: () => go(id!),

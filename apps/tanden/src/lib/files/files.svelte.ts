@@ -1,5 +1,12 @@
 import {
+  CLIP_TEMPLATES_DIR,
   CONVERTIBLE,
+  addHighlight,
+  findClip,
+  parseClipTemplate,
+  pickClipTemplate,
+  syncHighlights,
+  type ClipTemplate,
   FOLDERS,
   annotationsToMarkdown,
   clipToMarkdown,
@@ -28,6 +35,7 @@ import { sheets } from '../sheets/sheets.svelte';
 import { isTauri } from '../storage-tauri';
 import { editorBridge } from './editor-bridge';
 import { slides } from '../slides/slides.svelte';
+import { bases } from '../bases/bases.svelte';
 
 /*
  * Arquivos do cofre que não são notas (PDFs, imagens, documentos) e tudo que
@@ -67,6 +75,7 @@ interface Fetched {
 
 const b64bytes = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 const stem = (name: string) => name.split('/').pop()!.replace(/\.[^.]+$/, '');
+const noteTitle = (p: string) => p.split('/').pop()!.replace(/\.md$/, '');
 const isHidden = (p: string) => p.split('/').some((x) => x.startsWith('.'));
 
 /** Baixa um endereço pelo lado nativo (sem CORS); na versão web tenta direto. */
@@ -121,6 +130,8 @@ class Files {
   /** pedido para o app trocar de tela (o App observa) */
   goto = $state<{ view: View; seq: number } | null>(null);
   notice = $state<{ text: string; error?: boolean; path?: string } | null>(null);
+  /** janela "Página web" aberta fora de uma nota (paleta, tela Hoje) */
+  clipDialog = $state(false);
   busy = $state('');
   private started = false;
   private seq = 0;
@@ -133,6 +144,11 @@ class Files {
     void this.refresh();
     engine.bus.on('sync.finished', () => void this.refresh());
     if (isTauri()) {
+      // o favorito do navegador mandou uma página (com o trecho selecionado)
+      void listen<{ url: string; title: string; html: string; selection: string }>('clip-request', (e) => {
+        const r = e.payload;
+        void this.clip(r.url, 'note', null, { html: r.html || undefined, highlights: r.selection ? [r.selection] : [] });
+      });
       void listen<string[]>('vault-changed', (e) => {
         if (e.payload.some((p) => !p.endsWith('.md') && !p.endsWith('.tmp'))) void this.refresh();
         // arquivo trocado por fora: a imagem em cache fica velha
@@ -332,25 +348,75 @@ class Files {
 
   /* --------------------------------------------------------- páginas web */
 
+  /** Modelos de recorte do cofre (Modelos/Recortes/ ou com "recorte-sites"). */
+  clipTemplates(): ClipTemplate[] {
+    const out: ClipTemplate[] = [];
+    for (const p of engine.vault.list()) {
+      if (!p.startsWith('Modelos/')) continue;
+      const t = parseClipTemplate(p, engine.vault.read(p));
+      if (t) out.push(t);
+    }
+    return out;
+  }
+
+  /** Nota que já guarda essa página, se houver. */
+  clipped(url: string): string | null {
+    const u = normalizeUrl(url);
+    return u ? findClip(bases.index.notes, u) : null;
+  }
+
   /**
    * Página web → nota em Web/ (texto e imagens, para ler offline) ou só um
    * cartão com o link. Nos dois casos, a nota aberta ganha o cartão.
+   * Página já salva não duplica: os destaques novos entram na nota que existe.
+   * `html` é a página como o navegador mostrou (o recortador do navegador manda),
+   * o que serve também para páginas que pedem login.
    */
   async clip(
     input: string,
     mode: 'note' | 'card',
     attachTo: string | null,
-    opts: { folder?: string; open?: boolean; allowPrivate?: boolean } = {},
+    opts: {
+      folder?: string; open?: boolean; allowPrivate?: boolean; html?: string; tags?: string[];
+      comment?: string; highlights?: string[]; again?: boolean;
+    } = {},
   ): Promise<string | null> {
     const url = normalizeUrl(input);
     if (!url) {
       this.say('Esse endereço não parece uma página (comece com https://).', { error: true });
       return null;
     }
+    const highlights = (opts.highlights ?? []).map((h) => h.trim()).filter(Boolean);
+    const known = mode === 'note' && !opts.again ? this.clipped(url) : null;
+    if (known) {
+      if (highlights.length || opts.comment?.trim()) {
+        let n = 0;
+        this.update(known, (t) => {
+          for (const h of highlights) {
+            const r = addHighlight(t, h);
+            if (r.added) n++;
+            t = r.text;
+          }
+          if (opts.comment?.trim()) t = t.replace(/\n*$/, `\n\n> [!quote] Minha nota\n${opts.comment.trim().split('\n').map((l) => `> ${l}`).join('\n')}\n`);
+          return t;
+        });
+        this.say(n ? `${n === 1 ? 'Destaque adicionado' : `${n} destaques adicionados`} em "${noteTitle(known)}".` : `"${noteTitle(known)}" atualizada.`, { path: known });
+      } else {
+        this.say(`Essa página já está no cofre: ${known}.`, { path: known });
+      }
+      if (attachTo && attachTo !== known) this.insertInto(attachTo, `> [!link] [[${known.replace(/\.md$/, '')}]]\n`);
+      else if (!attachTo && opts.open !== false) this.openPath(known);
+      return known;
+    }
     try {
       return await engine.bus.process(`clip:${url}`, 'Baixando a página', async () => {
-        this.busy = 'Baixando a página…';
-        const page = await fetchUrl(url, opts.allowPrivate ?? true);
+        let page: { url: string; type: string; data: Uint8Array };
+        if (opts.html) {
+          page = { url, type: 'text/html; charset=utf-8', data: new TextEncoder().encode(opts.html) };
+        } else {
+          this.busy = 'Baixando a página…';
+          page = await fetchUrl(url, opts.allowPrivate ?? true);
+        }
         // link direto para um PDF ou imagem: vira arquivo, não recorte
         const kind = page.type.includes('pdf') ? 'pdf' : page.type.startsWith('image/') ? 'image' : null;
         if (kind) {
@@ -368,14 +434,15 @@ class Files {
           this.say(`Cartão de "${clip.meta.title}" adicionado.`);
           return null;
         }
+        const template = pickClipTemplate(this.clipTemplates(), clip.meta.url);
         const title = safeFileName(clip.meta.title) || 'Página';
-        const folder = opts.folder ?? FOLDERS.web;
+        const folder = opts.folder ?? template?.folder ?? FOLDERS.web;
         const notePath = freePath(this.exists, folder, title, 'md');
         const dir = `${FOLDERS.attachments}/${folder}/${stem(notePath)}`;
         const images = new Map<string, string>();
         let n = 0;
         const queue = clip.images.slice(0, 40);
-        this.busy = `Baixando ${queue.length} imagens…`;
+        if (queue.length) this.busy = `Baixando ${queue.length} ${queue.length === 1 ? 'imagem' : 'imagens'}…`;
         const worker = async () => {
           for (let src = queue.shift(); src; src = queue.shift()) {
             try {
@@ -391,7 +458,7 @@ class Files {
           }
         };
         await Promise.all([worker(), worker(), worker(), worker()]);
-        this.createNote(notePath, clipToMarkdown(clip, { parse, images }));
+        this.createNote(notePath, clipToMarkdown(clip, { parse, images, tags: opts.tags, comment: opts.comment, highlights, template }));
         engine.bus.emit({ type: 'file.imported', path: notePath, from: url });
         if (attachTo) this.insertInto(attachTo, linkCard(clip.meta, { note: notePath.replace(/\.md$/, '') }));
         this.say(`"${clip.meta.title}" salva em ${notePath}${images.size ? ` com ${images.size} ${images.size === 1 ? 'imagem' : 'imagens'}` : ''}.`, { path: notePath });
@@ -405,6 +472,20 @@ class Files {
       this.busy = '';
       void engine.syncNow();
     }
+  }
+
+  /** Refaz a seção Destaques da nota a partir dos ==trechos== marcados. */
+  gatherHighlights(path: string): void {
+    const before = engine.vault.has(path) ? engine.vault.read(path) : '';
+    this.update(path, syncHighlights);
+    this.say(engine.vault.read(path) === before ? 'Nenhum ==destaque== novo nesta nota.' : 'Destaques juntados no topo da nota.', { path });
+  }
+
+  /** Lê, aplica e grava uma nota (aberta ou não). */
+  private update(path: string, fn: (t: string) => string): void {
+    const cur = engine.vault.has(path) ? engine.vault.read(path) : '';
+    const next = fn(cur);
+    if (next !== cur) engine.writeNote(path, next);
   }
 
   /** Coloca um trecho na nota: no cursor, se ela está aberta; senão, no fim. */
