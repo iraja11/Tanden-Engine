@@ -24,10 +24,15 @@ export async function fullSync(vault: Vault, replicator: Replicator, extras: Syn
     const merged = await vault.sync(opts);
     let extraWritten = 0;
     for (const x of extras) extraWritten += (await x.sync(opts)).written;
-    const second = first.downloaded.length > 0 || merged.written > 0 || extraWritten > 0 ? await replicator.sync() : { uploaded: [], downloaded: [] };
+    const second: ReplicaReport = first.downloaded.length > 0 || merged.written > 0 || extraWritten > 0 ? await replicator.sync() : { uploaded: [], downloaded: [] };
+    const removed = [...(first.removed ?? []), ...(second.removed ?? [])];
     return {
       vault: merged,
-      replica: { uploaded: [...first.uploaded, ...second.uploaded], downloaded: [...first.downloaded, ...second.downloaded] },
+      replica: {
+        uploaded: [...first.uploaded, ...second.uploaded],
+        downloaded: [...first.downloaded, ...second.downloaded],
+        ...(removed.length ? { removed } : {}),
+      },
     };
   });
 }

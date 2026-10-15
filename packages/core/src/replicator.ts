@@ -12,6 +12,8 @@ import { fromBytes, readText, toBytes, type Storage } from './storage';
  *   Se os dois mudaram, desce a versão remota: o histórico CRDT já guarda o
  *   que este aparelho escreveu, e o Vault absorve a remota no próximo sync.
  * - .tanden/local/ nunca sai do aparelho.
+ * - Arquivo apagado aqui (nota apagada, plugin removido) e intocado lá: vai
+ *   para a lixeira do Drive. Se mudou lá, desce de novo (nada se perde).
  */
 
 export interface RemoteFile {
@@ -27,12 +29,19 @@ export interface RemoteStore {
   upload(path: string, data: Uint8Array): Promise<string>;
   /** conteúdos anteriores do arquivo, do mais novo ao mais antigo (sem o atual) */
   history(path: string, limit: number): Promise<Uint8Array[]>;
+  /** manda o arquivo para a lixeira (opcional: sem isso, nada é apagado lá) */
+  remove?(path: string): Promise<void>;
 }
 
 export interface ReplicaReport {
   uploaded: string[];
   downloaded: string[];
+  /** apagados no remoto porque foram apagados aqui */
+  removed?: string[];
 }
+
+/** Acima disso, sumiço em massa na pasta local parece acidente: não apaga nada lá. */
+const MASS_REMOVAL = 20;
 
 interface ReplicaState {
   /** rev remota de cada arquivo na última vez que este aparelho o viu ou enviou */
@@ -81,14 +90,27 @@ export class Replicator {
     const stats = this.local.stat ? await this.local.stat().catch(() => null) : null;
     const knownStat = state.stat ?? {};
     const nextStat: Record<string, string> = {};
-    const report: ReplicaReport = { uploaded: [], downloaded: [] };
+    const report: ReplicaReport = { uploaded: [], downloaded: [], removed: [] };
     const remoteRevs = new Map((await this.remote.list()).map((f) => [f.path, f.rev]));
     const localPaths = (await this.local.list()).filter((p) => !p.startsWith(LOCAL_DIR));
     const paths = new Set([...localPaths, ...remoteRevs.keys()]);
     const now = Date.now();
+    // apagados aqui desde a última vez, sem mudança lá
+    const present = new Set(localPaths);
+    const gone = [...remoteRevs].filter(([p, rev]) => !present.has(p) && state.local[p] !== undefined && state.remote[p] === rev).map(([p]) => p);
+    const known = Object.keys(state.local).length;
+    const removeGone = !!this.remote.remove && !(gone.length > MASS_REMOVAL && gone.length > known / 2);
+    const goneSet = new Set(removeGone ? gone : []);
 
     for (const path of [...paths].sort()) {
       if (path.startsWith(LOCAL_DIR)) continue;
+      if (goneSet.has(path)) {
+        await this.remote.remove!(path);
+        delete state.local[path];
+        delete state.remote[path];
+        report.removed!.push(path);
+        continue;
+      }
       // arquivo grande que não mudou desde a última vez: usa o hash guardado, sem ler
       const st = stats?.[path];
       let data: Uint8Array | null | undefined;
@@ -142,6 +164,7 @@ export class Replicator {
       }
     }
 
+    if (!report.removed!.length) delete report.removed;
     state.stat = nextStat;
     await this.local.write(this.statePath, toBytes(JSON.stringify(state)));
     return report;
@@ -160,6 +183,11 @@ export class MemoryRemote implements RemoteStore {
 
   async list(): Promise<RemoteFile[]> {
     return [...this.files].map(([path, f]) => ({ path, rev: f.rev }));
+  }
+  async remove(path: string): Promise<void> {
+    const old = this.files.get(path);
+    if (old) this.past.set(path, [...(this.past.get(path) ?? []), old.data]);
+    this.files.delete(path);
   }
   async download(path: string): Promise<Uint8Array | null> {
     return this.files.get(path)?.data.slice() ?? null;

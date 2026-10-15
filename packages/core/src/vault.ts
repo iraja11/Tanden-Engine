@@ -11,6 +11,8 @@ import { readText, toBytes, type Storage } from './storage';
  *   **\/*.md                                notas, legíveis por qualquer app (Obsidian incluso)
  *   .tanden/crdt/<chave>/<aparelho>.bin    estado CRDT completo que aquele aparelho conhece
  *   .tanden/crdt/<chave>/<aparelho>.json   o que aquele aparelho escreveu no .md e quando
+ *   .tanden/crdt/<chave>/del/<aparelho>.json  notas que aquele aparelho apagou (lápides)
+ *   .trash/                                 cópia de cada nota apagada (a lixeira do Obsidian)
  *
  * Cada aparelho só escreve os próprios arquivos em .tanden/, então dois aparelhos
  * nunca brigam pelo mesmo arquivo. O merge acontece ao ler: o CRDT funde
@@ -21,11 +23,20 @@ import { readText, toBytes, type Storage } from './storage';
  * vira operações CRDT sobre a versão de onde ela partiu, com um clientID
  * determinístico: se dois aparelhos detectarem a mesma edição externa, geram
  * operações idênticas e o CRDT não duplica o texto.
+ *
+ * Apagar: cada nota tem uma geração (gen). Quem apaga grava uma lápide com as
+ * gerações que viu e o vetor de estado do momento. Uma geração está morta se a
+ * lápide cobre tudo o que existe dela; uma edição feita em outro aparelho ao
+ * mesmo tempo (que a lápide não viu) ressuscita a nota, sem perder nada. Criar
+ * de novo uma nota no mesmo caminho começa uma geração nova, sem o texto velho.
  */
 
 const META_DIR = '.tanden/';
 const CRDT_DIR = '.tanden/crdt/';
 const LOCAL_DIR = '.tanden/local/';
+const TRASH_DIR = '.trash/';
+/** subpasta das lápides dentro de .tanden/crdt/<chave>/ */
+const TOMB_SUB = 'del/';
 const MIRRORS_KEPT = 8;
 
 interface DeviceMeta {
@@ -42,7 +53,19 @@ interface DeviceMeta {
   mirrors?: Array<{ h: string; s: string }>;
   /** hashes de .md editados fora do Tanden que este aparelho já incorporou */
   absorbed?: string[];
+  /** geração da nota; notas de antes das gerações contam como '' */
+  gen?: string;
 }
+
+interface Tomb {
+  /** gerações que a lápide mata */
+  gens: string[];
+  /** vetor de estado (base64) de tudo o que quem apagou conhecia */
+  sv: string;
+  at: number;
+}
+
+const TOMBS_KEPT = 10;
 
 const toB64 = (b: Uint8Array): string => {
   let s = '';
@@ -63,7 +86,16 @@ export interface SyncReport {
 }
 
 const keyFor = (path: string): string => hashHex(path);
-const isNotePath = (p: string): boolean => p.endsWith('.md') && !p.startsWith(META_DIR);
+/** pastas que começam com ponto (.tanden, .trash, .obsidian) não têm notas */
+const isNotePath = (p: string): boolean => p.endsWith('.md') && !p.split('/').some((s) => s.startsWith('.'));
+const newGen = (): string => Math.random().toString(36).slice(2, 10);
+
+/** A lápide (vetor `tomb`) já viu tudo o que o vetor `sv` tem? */
+function covers(tomb: Uint8Array, sv: Uint8Array): boolean {
+  const t = Y.decodeStateVector(tomb);
+  for (const [client, clock] of Y.decodeStateVector(sv)) if (clock > (t.get(client) ?? 0)) return false;
+  return true;
+}
 
 function textOf(doc: Y.Doc): Y.Text {
   return doc.getText('body');
@@ -113,6 +145,8 @@ export class Vault {
   private docs = new Map<string, Y.Doc>();
   /** estado que este aparelho gravou por último, para não reescrever à toa */
   private lastWritten = new Map<string, { state: string; mdHash: string }>();
+  /** geração de cada nota aberta neste aparelho */
+  private gens = new Map<string, string>();
 
   constructor(
     readonly storage: Storage,
@@ -145,7 +179,69 @@ export class Vault {
     const doc = newDoc();
     textOf(doc).insert(0, content);
     this.docs.set(path, doc);
+    this.gens.set(path, newGen());
     this.bus.emit({ type: 'note.created', path });
+  }
+
+  /**
+   * Apaga a nota. Uma cópia vai para .trash/ (a mesma lixeira do Obsidian) e os
+   * outros aparelhos apagam no próximo sync. Devolve onde ficou a cópia.
+   */
+  async remove(path: string, opts: { trash?: boolean } = {}): Promise<string | null> {
+    const doc = this.docs.get(path);
+    if (!doc) throw new Error(`Nota não encontrada: ${path}`);
+    const text = textOf(doc).toString();
+    let trashed: string | null = null;
+    if (opts.trash !== false && text.trim()) {
+      const all = new Set(await this.storage.list(TRASH_DIR));
+      const base = `${TRASH_DIR}${path.replace(/\.md$/, '')}`;
+      let n = 1;
+      trashed = `${base}.md`;
+      while (all.has(trashed)) trashed = `${base} ${++n}.md`;
+      await this.storage.write(trashed, toBytes(text));
+    }
+    const key = keyFor(path);
+    const tombPath = `${CRDT_DIR}${key}/${TOMB_SUB}${this.deviceId}.json`;
+    let old: Tomb[] = [];
+    try {
+      old = (JSON.parse((await readText(this.storage, tombPath)) ?? '{}') as { tombs?: Tomb[] }).tombs ?? [];
+    } catch {
+      old = [];
+    }
+    // mata a geração deste aparelho e todas as que ele já fundiu
+    const metas = await this.metasOf(key);
+    const gens = [...new Set([this.gens.get(path) ?? '', ...metas.map((m) => m.gen ?? '')])];
+    const tomb: Tomb = { gens, sv: toB64(Y.encodeStateVector(doc)), at: Date.now() };
+    await this.storage.write(tombPath, toBytes(JSON.stringify({ path, tombs: [...old, tomb].slice(-TOMBS_KEPT) })));
+    await this.storage.remove(path);
+    this.forget(path);
+    this.bus.emit({ type: 'note.deleted', path });
+    return trashed;
+  }
+
+  /** Renomeia ou move a nota. Os links nas outras notas ficam por conta de quem chama. */
+  async rename(from: string, to: string): Promise<void> {
+    if (from === to) return;
+    if (!isNotePath(to)) throw new Error(`Caminho de nota inválido: ${to}`);
+    if (this.docs.has(to)) throw new Error(`Já existe uma nota em ${to}`);
+    this.create(to, this.read(from));
+    await this.remove(from, { trash: false });
+  }
+
+  private forget(path: string): void {
+    this.docs.delete(path);
+    this.gens.delete(path);
+    this.lastWritten.delete(path);
+  }
+
+  private async metasOf(key: string): Promise<Array<DeviceMeta & { device: string }>> {
+    const out: Array<DeviceMeta & { device: string }> = [];
+    for (const f of await this.storage.list(`${CRDT_DIR}${key}/`)) {
+      if (f.includes(`/${TOMB_SUB}`) || !f.endsWith('.json')) continue;
+      const m = await this.readMeta(f);
+      if (m) out.push({ ...m, device: f.slice(f.lastIndexOf('/') + 1, -5) });
+    }
+    return out;
   }
 
   /** Substitui o conteúdo da nota; só a diferença vira operação CRDT. */
@@ -211,6 +307,14 @@ export class Vault {
     return report;
   }
 
+  /** Tira a nota apagada deste aparelho: o .md e o estado próprio dele. */
+  private async dropLocal(path: string, key: string, md: string | null, disk: Record<string, string>): Promise<void> {
+    this.forget(path);
+    if (md !== null) await this.storage.remove(path);
+    for (const f of [`${CRDT_DIR}${key}/${this.deviceId}.bin`, `${CRDT_DIR}${key}/${this.deviceId}.json`]) await this.storage.remove(f);
+    delete disk[path];
+  }
+
   private async readMeta(file: string): Promise<DeviceMeta | null> {
     const raw = await readText(this.storage, file);
     if (raw === null) return null;
@@ -223,21 +327,22 @@ export class Vault {
 
   private async syncNote(path: string, files: string[], disk: Record<string, string>, opts: SyncOptions) {
     const key = keyFor(path);
-    let doc = this.docs.get(path);
-    const isNew = !doc;
-    if (!doc) {
-      doc = newDoc();
-      this.docs.set(path, doc);
-    }
-    const text = textOf(doc);
-    const before = text.toString();
+    const none = { merged: false, external: false, written: false };
 
-    // 1. funde o estado de todos os aparelhos
+    // 0. lê o estado e as lápides de cada aparelho
     const states = new Map<string, Uint8Array>();
     const metas: Array<DeviceMeta & { device: string }> = [];
+    const tombs: Tomb[] = [];
     for (const f of files) {
       const device = f.slice(f.lastIndexOf('/') + 1).replace(/\.(bin|json)$/, '');
-      if (f.endsWith('.bin')) {
+      if (f.includes(`/${TOMB_SUB}`)) {
+        if (!f.endsWith('.json')) continue;
+        try {
+          tombs.push(...((JSON.parse((await readText(this.storage, f)) ?? '{}') as { tombs?: Tomb[] }).tombs ?? []));
+        } catch {
+          // lápide ilegível: ignora (nunca apaga por engano)
+        }
+      } else if (f.endsWith('.bin')) {
         const b = await this.storage.read(f);
         if (b) states.set(device, b);
       } else if (f.endsWith('.json')) {
@@ -245,7 +350,53 @@ export class Vault {
         if (m) metas.push({ ...m, device });
       }
     }
-    for (const b of states.values()) Y.applyUpdate(doc, b, 'remote');
+    const genOf = (device: string) => metas.find((m) => m.device === device)?.gen ?? '';
+    let doc = this.docs.get(path);
+
+    // gerações mortas: a lápide cobre tudo o que existe delas
+    const dead = new Set<string>();
+    let deadText: string | null = null;
+    for (const t of tombs) {
+      const probe = newDoc();
+      for (const [dev, b] of states) if (t.gens.includes(genOf(dev))) Y.applyUpdate(probe, b);
+      if (doc && t.gens.includes(this.gens.get(path) ?? '')) Y.applyUpdate(probe, Y.encodeStateAsUpdate(doc));
+      if (covers(fromB64(t.sv), Y.encodeStateVector(probe))) {
+        for (const g of t.gens) dead.add(g);
+        deadText ??= textOf(probe).toString();
+      }
+    }
+    const md0 = dead.size ? await readText(this.storage, path) : null;
+    if (doc && dead.has(this.gens.get(path) ?? '')) {
+      // apagada em outro aparelho
+      await this.dropLocal(path, key, md0, disk);
+      this.bus.emit({ type: 'note.deleted', path });
+      return none;
+    }
+    const live = [...states].filter(([dev]) => !dead.has(genOf(dev)));
+    if (!doc && dead.size) {
+      // o .md que sobrou é da nota apagada, ou uma nota nova criada fora do Tanden?
+      const stale =
+        md0 === null ||
+        md0 === deadText ||
+        hashHex(md0) === disk[path] ||
+        metas.some((m) => dead.has(m.gen ?? '') && (m.mdHash === hashHex(md0) || m.mirrors?.some((x) => x.h === hashHex(md0))));
+      if (!live.length && stale) {
+        await this.dropLocal(path, key, md0, disk);
+        return none;
+      }
+    }
+    const isNew = !doc;
+    if (!doc) {
+      doc = newDoc();
+      this.docs.set(path, doc);
+      const newest = metas.filter((m) => !dead.has(m.gen ?? '') && states.has(m.device)).sort((a, b) => b.writtenAt - a.writtenAt)[0];
+      this.gens.set(path, newest ? newest.gen ?? '' : dead.size ? newGen() : '');
+    }
+    const text = textOf(doc);
+    const before = text.toString();
+
+    // 1. funde o estado de todos os aparelhos (menos o das gerações apagadas)
+    for (const [, b] of live) Y.applyUpdate(doc, b, 'remote');
     const merged = text.toString() !== before;
 
     // 2. o .md mudou fora do Tanden?
@@ -254,11 +405,12 @@ export class Vault {
     const md = await readText(this.storage, path);
     if (md !== null && md !== text.toString()) {
       const mdHash = hashHex(md);
-      const mirrors = metas.flatMap((m) => m.mirrors ?? []);
+      const liveMetas = metas.filter((m) => !dead.has(m.gen ?? ''));
+      const mirrors = liveMetas.flatMap((m) => m.mirrors ?? []);
       // já é um espelho conhecido, ou outro aparelho já incorporou esta mesma edição
       // (as operações dele chegaram junto com o estado que acabamos de fundir)
       const known =
-        metas.some((m) => m.mdHash === mdHash || m.absorbed?.includes(mdHash)) || mirrors.some((m) => m.h === mdHash);
+        liveMetas.some((m) => m.mdHash === mdHash || m.absorbed?.includes(mdHash)) || mirrors.some((m) => m.h === mdHash);
       if (!known) {
         // A edição partiu de algum .md que um aparelho escreveu antes. Qual?
         // - .md baixado agora: a versão anterior daquele arquivo no Drive;
@@ -316,10 +468,10 @@ export class Vault {
     let written = false;
     if (!prev || prev.state !== stateSig || md !== finalText) {
       await this.storage.write(`${CRDT_DIR}${key}/${this.deviceId}.bin`, state);
-      const own = metas.find((m) => m.device === this.deviceId);
+      const own = metas.find((m) => m.device === this.deviceId && (m.gen ?? '') === (this.gens.get(path) ?? ''));
       const mirrors = [...(own?.mirrors ?? []).filter((m) => m.h !== mdHash), { h: mdHash, s: toB64(Y.encodeSnapshot(Y.snapshot(doc))) }];
       const absorbed = [...(own?.absorbed ?? []), ...(absorbedNow ? [absorbedNow] : [])].slice(-MIRRORS_KEPT * 2);
-      const meta: DeviceMeta = { path, mdHash, writtenAt: Date.now(), mirrors: mirrors.slice(-MIRRORS_KEPT), absorbed };
+      const meta: DeviceMeta = { path, mdHash, writtenAt: Date.now(), mirrors: mirrors.slice(-MIRRORS_KEPT), absorbed, gen: this.gens.get(path) ?? '' };
       await this.storage.write(`${CRDT_DIR}${key}/${this.deviceId}.json`, toBytes(JSON.stringify(meta)));
       if (md !== finalText) await this.storage.write(path, toBytes(finalText));
       this.lastWritten.set(path, { state: stateSig, mdHash });

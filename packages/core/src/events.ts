@@ -3,6 +3,7 @@
 export type TandenEvent =
   | { type: 'note.created'; path: string }
   | { type: 'note.changed'; path: string; origin: 'local' | 'remote' | 'external' }
+  | { type: 'note.deleted'; path: string }
   | { type: 'board.created'; path: string }
   | { type: 'board.changed'; path: string; origin: 'local' | 'remote' | 'external' }
   | { type: 'process.started'; id: string; label: string }

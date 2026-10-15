@@ -155,6 +155,19 @@ export class DriveRemote implements RemoteStore {
     return out;
   }
 
+  /** Vai para a lixeira do Drive (recuperável por 30 dias). */
+  async remove(path: string): Promise<void> {
+    const index = await this.entries();
+    const e = index.get(path);
+    if (!e || e.folder) return;
+    await this.call(`${API}/files/${e.id}?fields=id`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trashed: true }),
+    });
+    index.delete(path);
+  }
+
   /** Garante a pasta (e as de cima) e devolve o id dela. */
   private async folder(dir: string): Promise<string> {
     const index = await this.entries();
