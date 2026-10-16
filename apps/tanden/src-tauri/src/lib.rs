@@ -87,6 +87,7 @@ pub fn run() {
             vault::vault_remove,
             vault::vault_read_raw,
             vault::vault_write_raw,
+            vault::vault_write_b64,
             vault::vault_stat,
             web::web_fetch,
             web::web_open,

@@ -3,6 +3,15 @@ import type { Storage } from '@tanden/core';
 
 // Armazenamento no app (Linux, Windows, Android): a pasta do cofre, via comandos Rust.
 // Os bytes vão e voltam crus (sem JSON), o que importa para PDFs e imagens grandes.
+// Exceção: o WebView do Android não lê o corpo cru do IPC, então lá a escrita vai em base64.
+const android = /Android/i.test(navigator.userAgent);
+
+const toB64 = (b: Uint8Array): string => {
+  let s = '';
+  for (let i = 0; i < b.length; i += 4096) s += String.fromCharCode(...b.subarray(i, i + 4096));
+  return btoa(s);
+};
+
 export class TauriStorage implements Storage {
   list(prefix = ''): Promise<string[]> {
     return invoke('vault_list', { prefix });
@@ -16,6 +25,7 @@ export class TauriStorage implements Storage {
     }
   }
   write(path: string, data: Uint8Array): Promise<void> {
+    if (android) return invoke('vault_write_b64', { path, data: toB64(data) });
     return invoke('vault_write_raw', data, { headers: { path: encodeURIComponent(path) } });
   }
   remove(path: string): Promise<void> {

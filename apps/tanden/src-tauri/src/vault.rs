@@ -140,6 +140,20 @@ pub fn vault_write_raw(root: State<VaultRoot>, request: Request<'_>) -> Result<(
     }
 }
 
+/// Gravação a partir de base64. O Android não lê o corpo cru do IPC, então lá os
+/// bytes viajam como texto (é o que o próprio Tauri recomenda para o Android).
+#[tauri::command]
+pub fn vault_write_b64(root: State<VaultRoot>, path: String, data: String) -> Result<(), String> {
+    write(&root.0, &path, &decode_b64(&data)?)
+}
+
+fn decode_b64(data: &str) -> Result<Vec<u8>, String> {
+    use base64::Engine;
+    base64::engine::general_purpose::STANDARD
+        .decode(data)
+        .map_err(|e| format!("base64 inválido: {e}"))
+}
+
 /// Abre um arquivo do cofre no programa padrão do sistema (Word, LibreOffice...).
 #[cfg(desktop)]
 #[tauri::command]
@@ -194,6 +208,14 @@ mod tests {
         assert_eq!(percent_decode("Anexos%2FRelat%C3%B3rio%20final.pdf").unwrap(), "Anexos/Relatório final.pdf");
         assert_eq!(percent_decode("a%").unwrap(), "a%");
         assert!(percent_decode("%ZZ").is_err());
+    }
+
+    #[test]
+    fn grava_a_partir_de_base64() {
+        let dir = tempfile::tempdir().unwrap();
+        write(dir.path(), "Anexos/img.png", &decode_b64("AAECAw==").unwrap()).unwrap();
+        assert_eq!(read(dir.path(), "Anexos/img.png").unwrap().unwrap(), vec![0, 1, 2, 3]);
+        assert!(decode_b64("%%%").is_err());
     }
 
     #[test]
