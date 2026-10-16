@@ -101,6 +101,13 @@
       onfiles(list);
       return true;
     },
+    compositionend() {
+      // o teclado do celular confirmou a palavra: agora sim cabe a mudança de fora
+      if (!remoteWhileComposing) return false;
+      remoteWhileComposing = false;
+      requestAnimationFrame(() => applyValue(value));
+      return false;
+    },
     mousedown(e, v) {
       if (!(e.ctrlKey || e.metaKey) || e.button !== 0 || !host) return false;
       const pos = v.posAtCoords({ x: e.clientX, y: e.clientY });
@@ -180,6 +187,19 @@
     return changes;
   }
 
+  // Mudança que chegou de outro aparelho durante a composição do teclado: guarda
+  // para aplicar quando o IME fechar. Mexer no texto no meio de uma palavra (o
+  // teclado do celular compõe antes de confirmar) interrompe a digitação.
+  let remoteWhileComposing = false;
+
+  /** Aplica o texto do estado (outro aparelho/undo) só na diferença, sem tirar o cursor. */
+  function applyValue(next: string): void {
+    if (!view) return;
+    const cur = view.state.doc.toString();
+    if (cur === next) return;
+    view.dispatch({ changes: diffChanges(cur, next), userEvent: 'input.sync' });
+  }
+
   let currentKey: string | null = null;
 
   $effect(() => {
@@ -247,9 +267,9 @@
   $effect(() => {
     const next = value;
     if (!view) return;
-    const cur = view.state.doc.toString();
-    if (cur === next) return;
-    view.dispatch({ changes: diffChanges(cur, next) });
+    // compondo uma palavra no teclado: aplica depois (compositionend)
+    if (view.composing) { remoteWhileComposing = true; return; }
+    applyValue(next);
   });
 </script>
 

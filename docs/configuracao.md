@@ -1,0 +1,91 @@
+# Configuração
+
+Guia de instalação e configuração: dependências, onde ficam as notas, Google
+Drive, Android e atualização automática. Para a parte técnica do sync e do
+merge, veja [../architecture.md](../architecture.md).
+
+## Rodar
+
+Requisitos: Node 22+, pnpm 10+, Rust estável.
+
+```bash
+pnpm install
+pnpm test                       # testes do núcleo
+pnpm dev                        # versão web em http://localhost:1420
+pnpm --filter @tanden/app tauri dev     # app de desktop
+pnpm --filter @tanden/app tauri build   # gera AppImage/deb (Linux) ou instalador (Windows)
+```
+
+No **Arch Linux**, as bibliotecas do Tauri:
+
+```bash
+sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl appmenu-gtk-module libappindicator-gtk3 librsvg xdotool gst-plugins-base gst-plugins-good
+```
+
+## Onde ficam as notas
+
+- Desktop: `~/Tanden` (mude com a variável `TANDEN_VAULT=/outra/pasta`).
+- Web: dentro do navegador (IndexedDB), até o sync com o Drive ficar pronto.
+
+A pasta é um cofre comum do Obsidian: pode abrir a mesma pasta nele.
+
+```
+**/*.md                                 suas notas
+.tanden/crdt/<nota>/<aparelho>.bin      histórico de edição de cada aparelho
+.tanden/crdt/<nota>/<aparelho>.json     o que cada aparelho escreveu no .md
+.tanden/annot/<pdf>/<aparelho>.bin      anotações de PDF de cada aparelho
+.tanden/library/<aparelho>.bin          biblioteca: status, estantes, posição e marcadores dos PDFs
+.tanden/crdt/<nota>/del/<aparelho>.json lápides: notas apagadas (cada geração da nota)
+.tanden/local/<aparelho>/versoes/       histórico de versões das notas (só neste aparelho)
+.trash/                                 notas apagadas (como a lixeira do Obsidian)
+PDFs/  Importados/  Anexos/  Web/       arquivos, conversões e páginas salvas
+```
+
+O layout completo (incluindo quadros e planilhas) está em
+[../architecture.md](../architecture.md#5-armazenamento-e-modelo-de-dados).
+
+## Atualização automática
+
+Cada push na branch `main` do GitHub dispara `.github/workflows/release.yml`, que testa, compila para Linux (AppImage), Windows e Android (APK) e publica uma release. No computador, o app verifica ao abrir e a cada 6 horas e mostra **Atualizar e reiniciar**. No Android, mostra **Baixar e instalar**: o navegador baixa o APK novo e o Android instala por cima, sem perder as notas.
+
+Configuração, uma vez só. Tudo fica nos secrets do GitHub (*Settings → Secrets and variables → Actions*); nenhum arquivo do código precisa ser editado.
+
+1. Chave do atualizador do computador (dentro de `apps/tanden`):
+   `pnpm tauri signer generate -w ~/.tauri/tanden.key`
+   - `TAURI_SIGNING_PRIVATE_KEY`: conteúdo de `~/.tauri/tanden.key`
+   - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`: a senha que você escolheu
+   - `TAURI_UPDATER_PUBKEY`: conteúdo de `~/.tauri/tanden.key.pub`
+2. Chave do APK (precisa do Java; no Arch, `sudo pacman -S jre-openjdk-headless`):
+   `keytool -genkeypair -keystore ~/.tauri/tanden-android.jks -alias tanden -keyalg RSA -keysize 2048 -validity 10000`
+   - `ANDROID_KEYSTORE`: saída de `base64 -w0 ~/.tauri/tanden-android.jks`
+   - `ANDROID_KEY_PASSWORD`: a senha que você escolheu
+3. Em *Settings → Actions → General → Workflow permissions*, marque *Read and write permissions*.
+4. Faça push. Instale a primeira versão pela página de Releases (no celular, abra o `.apk` e permita que o navegador instale apps); dali em diante ela se atualiza sozinha.
+
+Guarde as duas chaves num lugar seguro fora do repositório. Se a chave do APK se perder, o Android não aceita a próxima versão por cima e será preciso desinstalar e instalar de novo. Sem `ANDROID_KEYSTORE`, o build pula o APK e segue com o computador. O repositório precisa ser público para o app baixar as atualizações sem senha.
+
+## Android
+
+O APK é compilado pelo GitHub Actions (o projeto Android está em `apps/tanden/src-tauri/gen/android`). No celular, o cofre fica na pasta interna do app e conversa com o computador pelo Google Drive. Para compilar na sua máquina, instale o Android Studio (SDK e NDK) e rode `pnpm tauri android dev` dentro de `apps/tanden`.
+
+## Sync com o Google Drive
+
+As notas vão para uma pasta **Tanden** visível no seu Drive, com a mesma árvore da pasta local. O app usa o escopo `drive.file`: ele só enxerga os arquivos que ele mesmo criou, nada além disso no seu Drive. O sync roda ao abrir, 1,5 s depois de você parar de digitar e a cada 30 s. Sem internet, tudo continua funcionando e sobe quando a conexão voltar.
+
+Configuração, uma vez só (é gratuito):
+
+1. Entre em https://console.cloud.google.com e crie um projeto (ex.: "Tanden").
+2. Em *APIs e serviços → Biblioteca*, ative a **Google Drive API**.
+3. Em *APIs e serviços → Tela de consentimento OAuth* (ou *Google Auth Platform*), escolha **Externo**, preencha nome e e-mail, e em *Público-alvo / Usuários de teste* adicione o seu próprio e-mail.
+4. Em *Credenciais → Criar credenciais → ID do cliente OAuth*, escolha o tipo **App para computador**. Copie o *ID do cliente* e a *Chave secreta*.
+5. No Tanden, clique em **Conectar Google Drive** na barra de baixo, cole os dois campos e entre com a sua conta.
+
+Enquanto o app estiver em modo "Teste", o Google pede para entrar de novo a cada 7 dias. Para evitar isso, publique o app na tela de consentimento (*Publicar app*); como é só para você, não precisa de verificação, e o Google só mostra um aviso de "app não verificado" no login.
+
+Opcional: para não colar as credenciais em cada aparelho, crie os secrets `TANDEN_GOOGLE_CLIENT_ID` e `TANDEN_GOOGLE_CLIENT_SECRET` no GitHub; o build já as embute. Para um app de computador, o Google não considera essa "chave secreta" confidencial.
+
+## Robustez do sync
+
+- Um `.md` apagado fora do Tanden (Obsidian, terminal, gerenciador de arquivos) vira um apagar de verdade, com cópia em `.trash/`. Renomear no Obsidian não deixa cópia. Se mais de 20 notas somem de uma vez (pasta desmontada), nada é apagado.
+- O sync com o Drive ignora `.git/`, `node_modules/`, o layout de janelas do Obsidian (`.obsidian/workspace*.json`), arquivos temporários e lixo do sistema.
+- Se a rede cai no meio do sync, o que já foi enviado fica registrado e não sobe de novo.

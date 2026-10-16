@@ -20,6 +20,11 @@ function deviceId(): string {
   }
 }
 
+/** O sync de fundo não roda enquanto o usuário digita (espera esta pausa). */
+const TYPING_IDLE_MS = 5000;
+/** Intervalo do sync de fundo. Mais espaçado: o sync das edições já é imediato. */
+const BACKGROUND_SYNC_MS = 60_000;
+
 const WELCOME = `# Bem-vinda ao Tanden Engine
 
 Este é o seu cofre. Cada nota é um arquivo **.md** comum, então o Obsidian abre a mesma pasta.
@@ -64,9 +69,16 @@ class Engine {
   private watchTimer: ReturnType<typeof setTimeout> | null = null;
   /** pedido de sync que chegou enquanto outro rodava */
   private syncAgain = false;
+  /** instante da última digitação; o sync de fundo espera o usuário parar */
+  private lastEditAt = 0;
 
   get busy(): boolean {
     return Object.keys(this.running).length > 0;
+  }
+
+  /** O usuário digitou há pouco? Enquanto for verdade, o sync de fundo não roda. */
+  private typing(): boolean {
+    return Date.now() - this.lastEditAt < TYPING_IDLE_MS;
   }
 
   async start(): Promise<void> {
@@ -99,13 +111,17 @@ class Engine {
     this.refresh();
     this.open(this.notes[0] ?? null);
     this.ready = true;
-    setInterval(() => void this.syncNow(), 30_000);
+    // Sync de fundo espaçado; enquanto o usuário digita ele nem começa, para não
+    // tirar o foco nem fechar o teclado. O sync das edições roda após a pausa.
+    setInterval(() => {
+      if (this.typing()) return;
+      void this.syncNow();
+    }, BACKGROUND_SYNC_MS);
     if (isTauri()) {
       // outro programa (Claude Code, Gemini CLI, Obsidian) mexeu numa nota
       await listen<string[]>('vault-changed', (e) => {
         if (!e.payload.some((p) => p.endsWith('.md') || p.endsWith('.canvas') || p.endsWith('.xlsx'))) return;
-        if (this.watchTimer) clearTimeout(this.watchTimer);
-        this.watchTimer = setTimeout(() => void this.syncNow(), 400);
+        this.syncWhenIdle(400);
       });
     }
   }
@@ -161,7 +177,11 @@ class Engine {
   }
 
   refresh(): void {
-    this.notes = this.vault.list();
+    const next = this.vault.list();
+    // mesma lista: mantém a identidade para o índice, os bancos e a árvore não
+    // refazerem tudo a cada sync (era o que travava a digitação)
+    if (next.length === this.notes.length && next.every((p, i) => p === this.notes[i])) return;
+    this.notes = next;
   }
 
   open(path: string | null): void {
@@ -173,6 +193,7 @@ class Engine {
   edit(text: string): void {
     if (!this.active || text === this.content) return;
     this.content = text;
+    this.lastEditAt = Date.now();
     this.vault.write(this.active, text);
     if (this.syncTimer) clearTimeout(this.syncTimer);
     this.syncTimer = setTimeout(() => {
@@ -194,6 +215,7 @@ class Engine {
 
   /** Um quadro foi editado aqui: avisa as veias e sincroniza depois de uma pausa. */
   boardEdited(): void {
+    this.lastEditAt = Date.now();
     if (this.syncTimer) clearTimeout(this.syncTimer);
     this.syncTimer = setTimeout(() => {
       this.pulse('editor', 'in');
@@ -240,6 +262,18 @@ class Engine {
       ? new Replicator(this.storage, new DriveRemote({ getToken: google.token }), this.vault.deviceId)
       : null;
     this.driveOn = this.replicator !== null;
+  }
+
+  /** Aguarda o usuário parar de digitar antes de sincronizar (não interrompe). */
+  private syncWhenIdle(delay = 400): void {
+    if (this.watchTimer) clearTimeout(this.watchTimer);
+    this.watchTimer = setTimeout(() => {
+      if (this.typing()) {
+        this.syncWhenIdle(TYPING_IDLE_MS);
+        return;
+      }
+      void this.syncNow();
+    }, delay);
   }
 
   async syncNow(): Promise<void> {

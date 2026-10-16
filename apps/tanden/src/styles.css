@@ -17,6 +17,14 @@
 * { box-sizing: border-box; }
 html, body, #app { height: 100%; margin: 0; }
 body { background: var(--void); color: var(--ink); font: 14px/1.5 var(--f-body); overflow: hidden; }
+
+/* Telas que cobrem tudo (diálogos, gavetas, abertura) também respeitam as barras
+   do sistema no celular (edge-to-edge). No computador as áreas são zero. */
+.scrim, .peek, .details, .splash { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+
+/* Resguardo do Android: se o WebView não informar a área segura de cima, reserva
+   um mínimo para a barra de status não cobrir o topo do app (edge-to-edge). */
+html.is-android .shell { padding-top: max(env(safe-area-inset-top), 30px); }
 button { font: inherit; color: inherit; cursor: pointer; }
 :focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
 ::selection { background: color-mix(in srgb, var(--ember) 35%, transparent); }

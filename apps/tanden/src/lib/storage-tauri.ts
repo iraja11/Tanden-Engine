@@ -4,7 +4,7 @@ import type { Storage } from '@tanden/core';
 // Armazenamento no app (Linux, Windows, Android): a pasta do cofre, via comandos Rust.
 // Os bytes vão e voltam crus (sem JSON), o que importa para PDFs e imagens grandes.
 // Exceção: o WebView do Android não lê o corpo cru do IPC, então lá a escrita vai em base64.
-const android = /Android/i.test(navigator.userAgent);
+export const android = /Android/i.test(navigator.userAgent);
 
 const toB64 = (b: Uint8Array): string => {
   let s = '';

@@ -48,8 +48,11 @@ class Bases {
     engine.bus.on('*', (e) => {
       if (e.type === 'note.changed' || e.type === 'note.created' || e.type === 'note.deleted') this.schedule();
       if (e.type === 'sync.finished') {
-        void this.loadTimes();
-        this.schedule();
+        // só refaz o índice (leitura de todo o cofre) se algo mudou de fato
+        if (e.merged || e.external || e.written) {
+          void this.loadTimes();
+          this.schedule();
+        }
       }
     });
     this.rebuild();

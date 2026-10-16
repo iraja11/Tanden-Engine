@@ -447,6 +447,8 @@
 
 <style>
   .shell { position: relative; height: 100%; display: grid; overflow: hidden;
+    /* edge-to-edge (Android 15+): nada fica sob a barra de status/navegação */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     grid-template: "rail side main" 1fr "rail side status" auto / 76px 260px 1fr; }
   .rail, .side, .main, .status { position: relative; }
   .shell.focus { grid-template: "main" 1fr "status" auto / 1fr; }
@@ -532,7 +534,7 @@
 
   @media (max-width: 720px) {
     .shell { grid-template: "rail" auto "main" 1fr "status" auto / 1fr; }
-    .rail { flex-direction: row; padding: 10px 16px; padding-top: max(10px, env(safe-area-inset-top)); border-right: 0; border-bottom: 1px solid var(--line); }
+    .rail { flex-direction: row; padding: 10px 16px; border-right: 0; border-bottom: 1px solid var(--line); }
     .rail { min-width: 0; }
     .rail ul { display: flex; margin-left: auto; min-width: 0; overflow-x: auto; scrollbar-width: none; padding-top: 6px; }
     .rail ul button { width: auto; padding: 8px 8px; }
@@ -542,7 +544,7 @@
     .side { position: absolute; z-index: 5; top: 0; bottom: 0; left: 0; width: min(300px, 85vw);
       transform: translateX(-100%); transition: transform var(--dur-slow) var(--ease); box-shadow: 0 0 40px var(--shadow); }
     .side.open { transform: none; }
-    .status { padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+    .status { padding-bottom: 6px; }
     .status .extra { display: none; }
   }
   .toast { position: fixed; z-index: 70; left: 50%; bottom: 44px; transform: translateX(-50%); max-width: min(560px, calc(100vw - 32px));
