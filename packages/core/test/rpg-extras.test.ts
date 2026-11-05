@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addItem, campaignIndex, carryCapacity, parseCoins, spendCoins, changeQty, coinsValue, crXp, encounterMultiplier, formatCoins, formatMoney, imageOf, inventoryWeight,
   itemLabel, makeChange, noCoins, parseMoney, parseProps, pay, purseProps, rarityOf, rateEncounter, readInventory, readItemCard,
-  readPurse, splitLoot, writeInventory,
+  readPurse, splitLoot, worldIndex, writeInventory,
 } from '../src/index';
 
 describe('moedas', () => {
@@ -187,5 +187,15 @@ describe('campanha', () => {
       { path: 'Campanhas/X/Kael.md', text: '---\ntipo: personagem\nca: 17\npv: 20\n---\n' },
     ]);
     expect(c[0]!.sheets.map((s) => s.name)).toEqual(['Kael']);
+  });
+});
+
+describe('mundos', () => {
+  it('a imagem não vira ligação nem ficha que falta', () => {
+    const [w] = worldIndex([
+      { path: 'Mundos/A/A.md', text: '---\ntipo: mundo\n---\n' },
+      { path: 'Mundos/A/Kael.md', text: '---\ntipo: personagem\nimagem: "[[kael.png]]"\nafiliação: "[[Ordem]]"\n---\n' },
+    ]);
+    expect(w!.relations.map((r) => r.target)).toEqual(['Ordem']);
   });
 });

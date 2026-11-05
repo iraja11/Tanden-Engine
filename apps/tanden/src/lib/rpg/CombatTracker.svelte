@@ -1,7 +1,7 @@
 <script lang="ts">
   import {
     CONDITIONS, addCombatants, appendLog, applyHp, changeHp, endCombat, hasSheet, isOut, nextTurn, parseProps, prevTurn, readEncounter,
-    readSheet, removeCombatant, resolveLink, rollInitiative, setProps, sortByInit, toggleCondition, update, writeEncounter,
+    rateEncounter, readSheet, removeCombatant, resolveLink, rollInitiative, setProps, sortByInit, systemOf, toggleCondition, update, writeEncounter,
     type Combatant, type Encounter,
   } from '@tanden/core';
   import { cadernos } from '../cadernos/cadernos.svelte';
@@ -156,6 +156,28 @@
 
   const pct = (c: Combatant) => (c.hp !== null && c.hpMax ? Math.max(0, Math.min(1, c.hp / c.hpMax)) : null);
   const sides: Record<string, string> = { grupo: 'Grupo', aliado: 'Aliado', inimigo: 'Inimigo' };
+
+  /** ficha de um combatente: pelo [[link]], ou pelo nome sem número ("Goblin 2" → Goblin) */
+  function sheetFor(c: Combatant): string | null {
+    const linked = sheetOf(c.name);
+    if (linked) return linked;
+    const stem = plain(c.name).replace(/\s+\d+$/, '').toLowerCase();
+    return camp?.sheets.find((r) => r.name.toLowerCase() === stem)?.path ?? null;
+  }
+
+  // Dificuldade (regras 5e): níveis de quem é do grupo, ND de cada inimigo.
+  const rating = $derived.by(() => {
+    void cadernos.rev;
+    if (!enc || systemOf(camp?.system) !== '5e') return null;
+    const read = (c: Combatant) => { const p = sheetFor(c); return p ? readSheet(cadernos.read(p), camp?.system) : null; };
+    let levels = enc.list.filter((c) => c.side === 'grupo').map((c) => read(c)?.level ?? null).filter((l): l is number => l !== null);
+    // ninguém do grupo no combate ainda: usa os personagens da campanha
+    if (!levels.length) levels = (camp?.sheets ?? []).filter((r) => r.pc).map((r) => readSheet(cadernos.read(r.path), camp?.system).level).filter((l): l is number => l !== null);
+    const foes = enc.list.filter((c) => c.side === 'inimigo');
+    if (!levels.length || !foes.length) return null;
+    return rateEncounter(levels, foes.map((c) => read(c)?.cr || null));
+  });
+  const DIFF_LABEL: Record<string, string> = { trivial: 'Trivial', 'fácil': 'Fácil', 'médio': 'Médio', 'difícil': 'Difícil', mortal: 'Mortal' };
   const withoutSheet = $derived((camp?.sheets ?? []).filter((r) => !enc?.list.some((c) => sheetOf(c.name) === r.path)));
 </script>
 
@@ -187,6 +209,21 @@
         {#if enc.round > 0}<button class="ghost sm" onclick={() => save(endCombat(enc!), 'Fim do combate')}>Encerrar</button>{/if}
       </div>
     </div>
+
+    {#if rating}
+      {@const top = Math.max(rating.budget.deadly * 1.25, rating.adjusted)}
+      <div class="diff" data-d={rating.difficulty} title={`Limites do grupo: fácil ${rating.budget.easy} · médio ${rating.budget.medium} · difícil ${rating.budget.hard} · mortal ${rating.budget.deadly} XP`}>
+        <div class="dtop">
+          <b>{DIFF_LABEL[rating.difficulty]}</b>
+          <span class="dim small mono">{rating.adjusted.toLocaleString('pt-BR')} XP ajustado ({rating.xp.toLocaleString('pt-BR')} × {String(rating.multiplier).replace('.', ',')}) · {rating.xpEach.toLocaleString('pt-BR')} XP cada</span>
+          {#if rating.unknown}<span class="dim small">· {rating.unknown} sem ND</span>{/if}
+        </div>
+        <div class="meter" aria-hidden="true">
+          {#each [rating.budget.easy, rating.budget.medium, rating.budget.hard, rating.budget.deadly] as t, i (i)}<i class="tick" style:left="{(t / top) * 100}%"></i>{/each}
+          <span class="fill" style:width="{Math.min(100, (rating.adjusted / top) * 100)}%"></span>
+        </div>
+      </div>
+    {/if}
 
     <ol class="list">
       {#each order as c (c.name)}
@@ -293,6 +330,19 @@
   .combat { display: grid; gap: 12px; align-content: start; }
   .head { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .head select { flex: 1 1 200px; max-width: 360px; }
+  .diff { --d: var(--ok); display: grid; gap: 6px; margin: 4px 0 10px; padding: 9px 12px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--d) 40%, var(--line));
+    background: color-mix(in srgb, var(--d) 7%, var(--surface)); }
+  .diff[data-d='trivial'] { --d: var(--muted); }
+  .diff[data-d='médio'] { --d: #f5c26b; }
+  .diff[data-d='difícil'] { --d: #ff9a4a; }
+  .diff[data-d='mortal'] { --d: var(--crit); }
+  .dtop { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .dtop b { font: 700 13px var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--d); }
+  .meter { position: relative; height: 7px; border-radius: 4px; background: linear-gradient(90deg, var(--void), color-mix(in srgb, var(--crit) 22%, var(--void))); }
+  .meter .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--d); box-shadow: 0 0 10px -2px var(--d); transition: width var(--dur-slow) var(--ease); }
+  .meter .tick { position: absolute; top: -3px; bottom: -3px; width: 1.5px; background: var(--line); z-index: 1; }
+  .diff[data-d='mortal'] .fill { animation: throb 1.6s ease-in-out infinite; }
+  @keyframes throb { 50% { box-shadow: 0 0 16px 1px var(--d); } }
   .turnbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
   .round { display: flex; align-items: baseline; gap: 8px; }
   .round .lbl { font: 600 10.5px var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }

@@ -61,8 +61,9 @@ export function normalizeType(t: string): string {
 export const typeInfo = (id: string): EntityType =>
   ENTITY_TYPES.find((t) => t.id === id) ?? { id, label: id.charAt(0).toUpperCase() + id.slice(1), plural: id.charAt(0).toUpperCase() + id.slice(1), fields: [], sections: [] };
 
-/** Propriedades que não viram ligação nem aparecem como campo comum. */
-export const RESERVED = new Set(['tipo', 'type', 'mundo', 'world', 'aliases', 'apelidos', 'tags', 'cssclasses']);
+/** Propriedades que não viram ligação nem aparecem como campo comum (a imagem vira o retrato). */
+export const RESERVED = new Set(['tipo', 'type', 'mundo', 'world', 'aliases', 'apelidos', 'tags', 'cssclasses',
+  'imagem', 'retrato', 'capa', 'image', 'portrait', 'cover', 'img', 'foto']);
 
 export interface Relation {
   from: string;

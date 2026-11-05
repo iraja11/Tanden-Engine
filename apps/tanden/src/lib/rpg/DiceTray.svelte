@@ -94,6 +94,7 @@
 
   // animação: números embaralhando antes de assentar
   let shown = $state<LogEntry[] | null>(null);
+  let resultEl = $state<HTMLElement>();
   let spinning = $state(false);
   let scramble = $state<number[]>([]);
   let lastSeq = 0;
@@ -103,6 +104,8 @@
     lastSeq = l.seq;
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     shown = l.entries;
+    // no celular o resultado cai abaixo da dobra: rola até ele
+    requestAnimationFrame(() => resultEl?.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' }));
     if (reduce) return;
     spinning = true;
     let n = 0;
@@ -173,7 +176,7 @@
   {/if}
 
   {#if shown}
-    <div class="result" class:spin={spinning}>
+    <div class="result" class:spin={spinning} bind:this={resultEl}>
       {#each shown as e, i (e.id)}
         {@const crit = e.critical === 'max' && !spinning}
         {@const fumble = e.critical === 'min' && !spinning}

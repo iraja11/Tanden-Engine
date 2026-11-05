@@ -11,7 +11,13 @@
   import Portrait from './Portrait.svelte';
   import './mesa.css';
 
-  let { path, compact = false, onOpenNote }: { path: string; compact?: boolean; onOpenNote?: (p: string) => void } = $props();
+  let { path, compact = false, portrait = true, onOpenNote }: {
+    path: string;
+    compact?: boolean;
+    /** false quando a tela em volta já mostra o retrato (Mundos) */
+    portrait?: boolean;
+    onOpenNote?: (p: string) => void;
+  } = $props();
 
   const text = $derived.by(() => { void cadernos.rev; void mesa.rev; return cadernos.read(path); });
   const fm = $derived(parseProps(text));
@@ -88,7 +94,7 @@
     </div>
   {:else}
     <div class="bar">
-      <Portrait target={imageOf(fm)} {name} size={compact ? 56 : 68} onpick={(p) => write({ imagem: `[[${p}]]` })} />
+      {#if portrait}<Portrait target={imageOf(fm)} {name} size={compact ? 56 : 68} onpick={(p) => write({ imagem: `[[${p}]]` })} />{/if}
       <div class="hp">
         <div class="hpnum">
           <span class="lbl">PV</span>
