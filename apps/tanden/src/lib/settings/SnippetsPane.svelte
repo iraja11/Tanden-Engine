@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ask } from '../ask.svelte';
   import { name, snippets } from '../snippets.svelte';
   import { sound } from '../sound.svelte';
 
@@ -37,7 +38,7 @@
   }
 
   async function remove(p: string) {
-    if (!confirm(`Apagar o snippet "${name(p)}"?`)) return;
+    if (!(await ask.confirm(`Apagar o snippet "${name(p)}"?`, { ok: 'Apagar', danger: true }))) return;
     if (editing === p) editing = null;
     await snippets.remove(p);
   }

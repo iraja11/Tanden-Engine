@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import { back } from '../back';
   import diff from 'fast-diff';
   import { untrack } from 'svelte';
   import { engine } from '../engine.svelte';
@@ -8,6 +10,8 @@
 
   // Histórico de versões da nota: escolhe uma, vê o que muda e restaura.
   let { path, onclose }: { path: string; onclose: () => void } = $props();
+  // o voltar do celular fecha
+  onMount(() => back.layer(() => onclose()));
 
   let list = $state<Version[]>([]);
   let pick = $state(0);

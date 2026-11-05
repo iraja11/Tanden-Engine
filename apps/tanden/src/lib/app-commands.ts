@@ -1,3 +1,4 @@
+import { ask } from './ask.svelte';
 import { commands, type Command } from './commands.svelte';
 import { engine } from './engine.svelte';
 import { files } from './files/files.svelte';
@@ -87,7 +88,7 @@ export function registerAppCommands(a: AppActions): () => void {
     { id: 'nota.renomear', label: 'Renomear nota', when: cur, run: () => { a.go('notas'); setTimeout(() => (document.querySelector('.page .title') as HTMLTextAreaElement | null)?.select(), 60); } },
     { id: 'nota.duplicar', label: 'Duplicar nota', when: cur, run: () => notes.duplicate(cur()!) },
     { id: 'nota.favoritar', label: 'Favoritar / desfavoritar', when: cur, run: () => notes.toggleFavorite(cur()!) },
-    { id: 'nota.apagar', label: 'Apagar nota', keys: 'excluir deletar lixeira', when: cur, run: () => { if (confirm(`Apagar "${noteName(cur()!)}"? Uma cópia fica na lixeira (.trash).`)) void notes.remove(cur()!); } },
+    { id: 'nota.apagar', label: 'Apagar nota', keys: 'excluir deletar lixeira', when: cur, run: async () => { const p = cur()!; if (await ask.confirm(`Apagar "${noteName(p)}"?`, { detail: 'Uma cópia fica na lixeira (.trash).', ok: 'Apagar', danger: true })) void notes.remove(p); } },
     { id: 'nota.historico', label: 'Histórico de versões', keys: 'versao restaurar desfazer', when: cur, run: () => (notes.history = cur()) },
     { id: 'nota.sumario', label: 'Mostrar sumário', keys: 'indice titulos outline', run: () => notes.setAside('sumario') },
     { id: 'nota.conexoes', label: 'Mostrar conexões e backlinks', keys: 'links grafo', run: () => notes.setAside('conexoes') },

@@ -55,6 +55,9 @@
   import { registerAppCommands } from './lib/app-commands';
   import { snippets } from './lib/snippets.svelte';
   import { pop, rise, vanish } from './lib/motion';
+  import { back } from './lib/back';
+  import { ask } from './lib/ask.svelte';
+  import AskDialog from './lib/AskDialog.svelte';
 
   let host = $state<HTMLElement>();
   let orbWrap = $state<HTMLElement>();
@@ -152,6 +155,26 @@
   $effect(() => {
     view;
     placeMark();
+    // no celular a barra rola de lado: traz o módulo aberto para a vista
+    const b = railBtns[view];
+    if (b && railList && railList.scrollWidth > railList.clientWidth) {
+      const left = b.offsetLeft - (railList.clientWidth - b.offsetWidth) / 2;
+      railList.scrollTo({ left, behavior: 'smooth' });
+    }
+  });
+  /** a barra de módulos tem mais coisa para os lados (sombras nas pontas) */
+  let railMore = $state({ left: false, right: false });
+  function railEdges() {
+    const el = railList;
+    if (!el) return;
+    railMore = { left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 };
+  }
+  $effect(() => {
+    if (!railList) return;
+    railEdges();
+    const ro = new ResizeObserver(railEdges);
+    ro.observe(railList);
+    return () => ro.disconnect();
   });
   $effect(() => {
     if (!railList) return;
@@ -165,6 +188,48 @@
     view = id;
     if (view === 'ia') aiOpened = true;
     if (id.startsWith('plugin:') && !plugins.opened[id.slice(7)]) plugins.opened = { ...plugins.opened, [id.slice(7)]: true };
+  }
+
+  /** tela estreita: a lista de notas vira gaveta */
+  const narrow = () => matchMedia('(max-width: 720px)').matches;
+  function toggleDrawer(open = !drawer) {
+    if (open === drawer) return;
+    drawer = open;
+    sound.play(drawer ? 'open' : 'close');
+  }
+  // o voltar do celular fecha a gaveta e os painéis, em vez de sair do app
+  $effect(() => { if (drawer && narrow()) return back.layer(() => { drawer = false; sound.play('close'); }); });
+  $effect(() => { if (settings) return back.layer(() => { settings = false; sound.play('close'); }); });
+  $effect(() => { if (drivePanel) return back.layer(() => { drivePanel = false; sound.play('close'); }); });
+
+  /** arrastar a gaveta para a esquerda fecha (no celular) */
+  let swipe: { x: number; y: number; dx: number } | null = null;
+  let drag = $state(0);
+  // eventos de toque (e não de ponteiro): a lista rola sozinha e o navegador cancelaria o ponteiro
+  function swipeStart(e: TouchEvent) {
+    const t = e.touches[0];
+    if (!drawer || !t || e.touches.length > 1) return;
+    swipe = { x: t.clientX, y: t.clientY, dx: 0 };
+  }
+  function swipeMove(e: TouchEvent) {
+    const t = e.touches[0];
+    if (!swipe || !t) return;
+    const dx = t.clientX - swipe.x;
+    const dy = t.clientY - swipe.y;
+    // rolagem vertical da lista: não é arrasto
+    if (!drag && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 6) {
+      swipe = null;
+      return;
+    }
+    swipe.dx = Math.min(0, dx);
+    drag = swipe.dx;
+  }
+  function swipeEnd() {
+    if (!swipe) return;
+    const dx = swipe.dx;
+    swipe = null;
+    drag = 0;
+    if (dx < -70) toggleDrawer(false);
   }
 
   let treeFilter = $state('');
@@ -232,6 +297,7 @@
     const onKey = (e: KeyboardEvent) => {
       if (commands.handle(e)) return;
       if (e.key === 'Escape' && drivePanel) { drivePanel = false; sound.play('close'); }
+      else if (e.key === 'Escape' && drawer && narrow() && !e.defaultPrevented) toggleDrawer(false);
       else if (e.key === 'Escape' && focus && !e.defaultPrevented) focus = false;
     };
     addEventListener('keydown', onKey);
@@ -252,8 +318,8 @@
     <div bind:this={orbWrap} class="orb-wrap" class:hide={splash}>
       <Orb load={feel.load} kick={feel.kick} flash={feel.flash} onclick={syncByHand} />
     </div>
-    <button class="menu" onclick={() => { drawer = !drawer; sound.play(drawer ? 'open' : 'close'); }} aria-label="Notas">☰</button>
-    <ul bind:this={railList}>
+    <button class="menu" onclick={() => toggleDrawer()} aria-label={drawer ? 'Fechar notas' : 'Abrir notas'} aria-expanded={drawer}>☰</button>
+    <ul bind:this={railList} class:more-l={railMore.left} class:more-r={railMore.right} onscroll={railEdges}>
       {#if mark}
         <span class="mark" aria-hidden="true" style:transform="translate({mark.x}px, {mark.y}px)"
           style:width="{mark.w}px" style:height="{mark.h}px"></span>
@@ -269,11 +335,17 @@
     </button>
   </nav>
 
-  <aside class="side" class:open={drawer} bind:this={notesEl}>
+  {#if drawer}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="side-scrim" onclick={() => toggleDrawer(false)} transition:vanish={{ duration: 180 }}></div>
+  {/if}
+  <aside class="side" class:open={drawer} class:dragging={drag !== 0} bind:this={notesEl}
+    style:transform={drag ? `translateX(${drag}px)` : null}
+    ontouchstart={swipeStart} ontouchmove={swipeMove} ontouchend={swipeEnd} ontouchcancel={swipeEnd}>
     <header>
       <h2>Notas <span>{engine.notes.length}</span></h2>
       <span class="hb">
-        <button class="new" onclick={() => { newNote(); drawer = false; }} title="Nova nota (Ctrl+N)" aria-label="Nova nota">+</button>
+        <button class="new" onclick={() => { newNote(); toggleDrawer(false); }} title="Nova nota (Ctrl+N)" aria-label="Nova nota">+</button>
         <button class="new more" onclick={(e) => (newMenu = newMenu ? null : e.currentTarget as HTMLElement)} title="Nova a partir de modelo" aria-label="Mais opções de criação">▾</button>
       </span>
     </header>
@@ -412,6 +484,9 @@
           {@const p = files.notice.path}
           <button onclick={() => { files.openPath(p); files.notice = null; }}>Abrir</button>
         {/if}
+        {#if files.notice.action}
+          <button onclick={() => { const act = files.notice?.action; files.notice = null; act?.run(); }}>{files.notice.action.label}</button>
+        {/if}
         <button class="x" aria-label="Fechar" onclick={() => (files.notice = null)}>×</button>
       {:else}
         <i></i><span>{files.busy}</span>
@@ -436,6 +511,11 @@
     <span class="extra loc"><span class="sep">·</span> {engine.location}</span>
   </footer>
 
+  {#if drivePanel || settings}
+    <!-- clique fora dos painéis flutuantes fecha -->
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="veil" onclick={() => (drivePanel ? toggleDrive() : toggleSettings())}></div>
+  {/if}
   {#if drivePanel}<DrivePanel onclose={toggleDrive} />{/if}
   {#if settings}<SettingsPanel bind:tab={settingsTab} onclose={toggleSettings} />{/if}
 </div>
@@ -446,6 +526,10 @@
 
 {#if slides.presenting}
   <Presenter path={slides.presenting.path} start={slides.presenting.index} />
+{/if}
+
+{#if ask.current}
+  {#key ask.current}<AskDialog req={ask.current} />{/key}
 {/if}
 
 {#if splash}
@@ -484,6 +568,8 @@
   .badge { position: absolute; top: -6px; right: 0; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 8px; background: var(--ember);
     color: var(--on-ember); font: 600 9.5px/15px var(--f-mono); font-style: normal; letter-spacing: 0; box-shadow: 0 0 10px -2px var(--ember-glow); }
   .menu { display: none; border: 0; background: none; font-size: 20px; color: var(--muted); }
+  .side-scrim { display: none; }
+  .veil { position: absolute; inset: 0; z-index: 9; }
 
   .side { grid-area: side; display: flex; flex-direction: column; min-height: 0; background: var(--surface);
     border-right: 1px solid var(--line); }
@@ -543,22 +629,36 @@
     .shell { grid-template: "rail" auto "main" 1fr "status" auto / 1fr; }
     .rail { flex-direction: row; padding: 10px 16px; border-right: 0; border-bottom: 1px solid var(--line); }
     .rail { min-width: 0; }
-    .rail ul { display: flex; margin-left: auto; min-width: 0; overflow-x: auto; scrollbar-width: none; padding-top: 6px; }
-    .rail ul button { width: auto; padding: 8px 8px; }
-    .menu { display: block; }
+    .rail ul { display: flex; margin-left: auto; min-width: 0; overflow-x: auto; scrollbar-width: none; padding-top: 6px;
+      overscroll-behavior-x: contain; --fl: 0px; --fr: 0px;
+      mask-image: linear-gradient(to right, transparent, #000 var(--fl), #000 calc(100% - var(--fr)), transparent);
+      -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fl), #000 calc(100% - var(--fr)), transparent); }
+    .rail ul::-webkit-scrollbar { display: none; }
+    .rail ul.more-l { --fl: 22px; }
+    .rail ul.more-r { --fr: 28px; }
+    .rail ul button { width: auto; padding: 10px 9px; white-space: nowrap; }
+    .rail { gap: 10px; }
+    .menu { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 10px; }
+    .menu:active { background: var(--surface-2); }
+    .side-scrim { display: block; position: absolute; inset: 0; z-index: 4; background: var(--scrim); backdrop-filter: blur(1px); }
+    .veil { background: color-mix(in srgb, var(--scrim) 60%, transparent); }
     .gear { margin: 0; flex: none; }
     .mark { box-shadow: inset 0 -2px 0 var(--ember); }
     .side { position: absolute; z-index: 5; top: 0; bottom: 0; left: 0; width: min(300px, 85vw);
       transform: translateX(-100%); transition: transform var(--dur-slow) var(--ease); box-shadow: 0 0 40px var(--shadow); }
     .side.open { transform: none; }
+    .side.dragging { transition: none; }
+    .side { padding-top: env(safe-area-inset-top); }
+    :global(html.is-android) .side { padding-top: max(env(safe-area-inset-top), 30px); }
     .status { padding-bottom: 6px; }
     .status .extra { display: none; }
   }
-  .toast { position: fixed; z-index: 70; left: 50%; bottom: 44px; transform: translateX(-50%); max-width: min(560px, calc(100vw - 32px));
+  .toast { position: fixed; z-index: 70; left: 50%; bottom: calc(44px + env(safe-area-inset-bottom)); transform: translateX(-50%); max-width: min(560px, calc(100vw - 32px));
     display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 14px; border-radius: 12px; font-size: 13px;
     background: var(--surface); border: 1px solid var(--line); box-shadow: 0 18px 40px -16px #000, 0 0 0 1px var(--ember-glow); animation: toast .2s ease-out; }
   .toast.error { border-color: color-mix(in srgb, #e5484d 60%, var(--line)); }
-  .toast span { overflow: hidden; text-overflow: ellipsis; }
+  .toast span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 720px) { .toast { width: calc(100vw - 24px); max-width: none; } }
   .toast button { border: 1px solid var(--line); background: var(--surface-2); color: var(--ember); border-radius: 8px; padding: 3px 10px; font-size: 12px; white-space: nowrap; }
   .toast button.x { border: none; background: none; color: var(--muted); font-size: 16px; padding: 0 4px; }
   .toast i { width: 8px; height: 8px; border-radius: 50%; background: var(--ember); animation: pulse 1s ease-in-out infinite; flex: none; }

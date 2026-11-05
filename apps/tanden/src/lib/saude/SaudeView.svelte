@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ask } from '../ask.svelte';
   import {
     CARE_NOTE, GEAR_CHOICES, GOALS, LEVELS, LIMITS, MUSCLES, PLAN_NOTE, estimateMinutes, exerciseByName, volumeTarget, weekdayName,
     weeklyVolume, isoWeek, type NudgeKind, type PlanDay, type Profile,
@@ -43,10 +44,10 @@
     return list.includes(x) ? list.filter((y) => y !== x) : [...list, x];
   }
 
-  function savePlan(e: SubmitEvent) {
+  async function savePlan(e: SubmitEvent) {
     e.preventDefault();
     if (!form.days.length) return;
-    if (saude.hasPlan && saude.plan.days.length && !confirm('Refazer o plano? Mudanças feitas à mão nos exercícios serão substituídas (os treinos já feitos ficam).')) return;
+    if (saude.hasPlan && saude.plan.days.length && !(await ask.confirm('Refazer o plano?', { detail: 'Mudanças feitas à mão nos exercícios serão substituídas (os treinos já feitos ficam).', ok: 'Refazer' }))) return;
     saude.makePlan($state.snapshot(form) as Profile);
     editing = false;
   }
@@ -245,7 +246,7 @@
           </div>
           <textarea rows="2" placeholder="Notas do treino (opcional)" value={d.notes} oninput={(e) => { d.notes = e.currentTarget.value; saude.saveDraft(); }}></textarea>
           <div class="end">
-            <button class="ghost" onclick={() => { if (confirm('Descartar este treino?')) saude.cancelWorkout(); }}>Descartar</button>
+            <button class="ghost" onclick={async () => { if (await ask.confirm('Descartar este treino?', { ok: 'Descartar', danger: true })) saude.cancelWorkout(); }}>Descartar</button>
             <button class="pri" onclick={() => { const p = saude.finishWorkout(); if (p) openDay = null; }}>Concluir treino</button>
           </div>
         </section>

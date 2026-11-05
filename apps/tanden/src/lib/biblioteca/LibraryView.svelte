@@ -8,6 +8,7 @@
   import { biblioteca, type ContentHit, type Shelf, type Sort } from './biblioteca.svelte';
   import BookDetails from './BookDetails.svelte';
   import Cover from './Cover.svelte';
+  import { back } from '../back';
 
   let input = $state<HTMLInputElement>();
   let query = $state('');
@@ -94,6 +95,9 @@
     for (const h of hits) (m.get(h.path) ?? m.set(h.path, []).get(h.path)!).push(h);
     return [...m].map(([path, list]) => ({ book: books.find((b) => b.path === path)!, list })).filter((g) => g.book);
   });
+
+  // o voltar do celular sai do leitor para a estante
+  $effect(() => { if (biblioteca.reading) return back.layer(() => biblioteca.close()); });
 
   async function onPick(e: Event) {
     const el = e.currentTarget as HTMLInputElement;
@@ -359,6 +363,7 @@
   .tx { display: grid; gap: 2px; min-width: 0; flex: 1; }
   .more { border: 0; background: none; padding: 0 6px; color: var(--muted); font-size: 16px; line-height: 1.2; }
   .more:hover { color: var(--ember); }
+  @media (hover: none) { .more { padding: 4px 12px; font-size: 20px; } }
 
   .rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
   .rows li { display: flex; align-items: center; border-radius: 10px; }
@@ -401,6 +406,8 @@
     .nav li button.on { border-color: var(--ember); }
     .top { padding: 10px 12px; }
     .search { min-width: 100%; }
+    .search > input { font-size: 16px; } /* menos de 16px faz o iOS dar zoom ao focar */
+    .back { padding: 8px 10px; font-size: 14px; }
     .tools { margin-left: auto; }
     .scroll { padding: 6px 12px 40px; }
     .grid { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 18px 12px; }

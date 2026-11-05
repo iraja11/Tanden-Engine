@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ask } from '../ask.svelte';
   import { engine } from '../engine.svelte';
   import { hhmm, mesa, plainDetail } from './mesa.svelte';
 
@@ -19,7 +20,7 @@
 <div class="log">
   <header>
     <h2>Histórico</h2>
-    {#if mesa.log.length}<button class="icon" onclick={() => { if (confirm('Limpar o histórico deste aparelho? O registro das sessões fica.')) mesa.clearLog(); }} title="Limpar histórico" aria-label="Limpar histórico">⌫</button>{/if}
+    {#if mesa.log.length}<button class="icon" onclick={async () => { if (await ask.confirm('Limpar o histórico deste aparelho?', { detail: 'O registro das sessões fica.', ok: 'Limpar', danger: true })) mesa.clearLog(); }} title="Limpar histórico" aria-label="Limpar histórico">⌫</button>{/if}
   </header>
   {#if session}
     <div class="rec">

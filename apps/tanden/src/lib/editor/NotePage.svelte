@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ask } from '../ask.svelte';
   import { untrack } from 'svelte';
   import Editor from '../Editor.svelte';
   import NoteTools from '../files/NoteTools.svelte';
@@ -105,8 +106,8 @@
     ]);
   }
 
-  function movePrompt() {
-    const to = prompt('Mover para qual pasta? (vazio = raiz do cofre)', dir);
+  async function movePrompt() {
+    const to = await ask.text('Mover para qual pasta?', dir, { detail: 'Vazio = raiz do cofre. Use / para subpastas.', ok: 'Mover', placeholder: 'Pasta/Subpasta' });
     if (to === null) return;
     const clean = to.trim().replace(/^\/+|\/+$/g, '');
     void notes.rename(path, `${clean ? `${clean}/` : ''}${noteName(path)}.md`);
@@ -115,7 +116,7 @@
   async function confirmDelete() {
     const back = notes.backlinks(path).length;
     const msg = back ? `Apagar "${noteName(path)}"? ${back} ${back === 1 ? 'nota tem link' : 'notas têm links'} para ela. Uma cópia fica na lixeira (.trash).` : `Apagar "${noteName(path)}"? Uma cópia fica na lixeira (.trash).`;
-    if (!confirm(msg)) return;
+    if (!(await ask.confirm(msg, { ok: 'Apagar', danger: true }))) return;
     sound.play('close');
     await notes.remove(path);
   }

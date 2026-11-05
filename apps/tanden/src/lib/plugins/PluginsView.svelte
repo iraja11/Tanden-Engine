@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ask } from '../ask.svelte';
   import { describePermission, PLUGIN_API } from '@tanden/core';
   import { plugins, PLUGIN_DIR, type PluginEntry } from './plugins.svelte';
   import { sound } from '../sound.svelte';
@@ -47,7 +48,7 @@
   }
 
   async function remove(e: PluginEntry) {
-    if (!confirm(`Remover "${e.manifest.nome}" deste aparelho?`)) return;
+    if (!(await ask.confirm(`Remover "${e.manifest.nome}" deste aparelho?`, { ok: 'Remover', danger: true }))) return;
     await plugins.remove(e);
     sound.play('close');
   }

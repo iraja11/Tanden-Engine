@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { back as backNav } from '../back';
   import './bases.css';
   import { ancestors, bodyOf, noteName, parseProps, safeName, withBody } from '@tanden/core';
   import { engine } from '../engine.svelte';
@@ -12,6 +13,8 @@
 
   // Painel lateral (como o "abrir ao lado" do Notion): propriedades e texto da linha.
   let { path, onOpenNote }: { path: string; onOpenNote: (p: string) => void } = $props();
+  // o voltar do celular fecha
+  onMount(() => backNav.layer(() => close()));
 
   const text = $derived.by(() => { void bases.rev; return bases.read(path); });
   const archived = $derived(parseProps(text).arquivado === 'true');
