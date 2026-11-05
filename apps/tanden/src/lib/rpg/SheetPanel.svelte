@@ -1,14 +1,23 @@
 <script lang="ts">
   import {
     ATTRS, SKILLS_5E, addSheet, applyHp, attackFormula, d20, hasSheet, initFormula, noteName, parseProps, readSheet,
-    saveBonus, setProps, signed, skillBonus, systemOf, type PropValue,
+    imageOf, saveBonus, setProps, signed, skillBonus, systemOf, type PropValue,
   } from '@tanden/core';
   import { untrack } from 'svelte';
   import { cadernos } from '../cadernos/cadernos.svelte';
   import { mesa } from './mesa.svelte';
+  import CoinPurse from './CoinPurse.svelte';
+  import Inventory from './Inventory.svelte';
+  import Portrait from './Portrait.svelte';
   import './mesa.css';
 
-  let { path, compact = false, onOpenNote }: { path: string; compact?: boolean; onOpenNote?: (p: string) => void } = $props();
+  let { path, compact = false, portrait = true, onOpenNote }: {
+    path: string;
+    compact?: boolean;
+    /** false quando a tela em volta já mostra o retrato (Mundos) */
+    portrait?: boolean;
+    onOpenNote?: (p: string) => void;
+  } = $props();
 
   const text = $derived.by(() => { void cadernos.rev; void mesa.rev; return cadernos.read(path); });
   const fm = $derived(parseProps(text));
@@ -85,6 +94,7 @@
     </div>
   {:else}
     <div class="bar">
+      {#if portrait}<Portrait target={imageOf(fm)} {name} size={compact ? 56 : 68} onpick={(p) => write({ imagem: `[[${p}]]` })} />{/if}
       <div class="hp">
         <div class="hpnum">
           <span class="lbl">PV</span>
@@ -187,6 +197,11 @@
       <div class="chips">{#each s.rolls as r (r.name)}<button class="chip" onclick={() => rollF(r.formula, r.name, /d20/i.test(r.formula))} title={r.formula}>{r.name}</button>{/each}</div>
     {/if}
 
+    <h3>Bolsa</h3>
+    <CoinPurse {path} {text} />
+    <h3>Inventário</h3>
+    <Inventory {path} {text} {compact} {onOpenNote} strength={is5e ? s.attrs.find((a) => a.key === 'for')?.score ?? null : null} />
+
     {#if is5e && s.attrs.length >= 6}
       <h3><button class="fold" onclick={() => (showSkills = !showSkills)} aria-expanded={showSkills}>{showSkills ? '▾' : '▸'} Perícias</button></h3>
       {#if showSkills}
@@ -214,7 +229,8 @@
   .sheet { display: grid; gap: 10px; }
   .nosheet { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .nosheet p { margin: 0; }
-  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .bar > :not(:global(.portrait)) { align-self: stretch; }
   .hp { flex: 1 1 220px; display: grid; gap: 6px; border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; background: var(--surface); }
   .hpnum { display: flex; align-items: baseline; gap: 6px; }
   .stat { display: grid; justify-items: center; align-content: center; gap: 2px; min-width: 62px; border: 1px solid var(--line); border-radius: 12px; padding: 6px 10px; background: var(--surface); }

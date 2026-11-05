@@ -3,7 +3,9 @@
     ENTITY_TYPES, RESERVED, asList, backlinks, bodyOf, entityFolder, entityTemplate, linkTarget, normalizeType, parseProps,
     renameProp, setProp, timeline, typeInfo, withBody, worldTemplate, type Entity, type PropValue,
   } from '@tanden/core';
-  import { hasSheet } from '@tanden/core';
+  import { hasSheet, imageOf, readItemCard } from '@tanden/core';
+  import ItemCard from '../rpg/ItemCard.svelte';
+  import Portrait from '../rpg/Portrait.svelte';
   import Editor from '../Editor.svelte';
   import SheetPanel from '../rpg/SheetPanel.svelte';
   import { cadernos } from './cadernos.svelte';
@@ -210,7 +212,10 @@
       <header class="top">
         <div>
           <p class="sub crumbs"><button onclick={() => (entityPath = null)}>{world.name}</button> / {typeInfo(entity.type).plural}</p>
-          <h1><i class="dot" style:--c={typeColor(entity.type)}></i>{entity.name}</h1>
+          <div class="who">
+            <Portrait target={imageOf(fm)} name={entity.name} size={64} onpick={(p) => cadernos.update(entity!.path, (t) => setProp(t, 'imagem', `[[${p}]]`))} />
+            <h1><i class="dot" style:--c={typeColor(entity.type)}></i>{entity.name}</h1>
+          </div>
         </div>
         <div class="acts">
           <select value={entity.type} onchange={(e) => setType((e.currentTarget as HTMLSelectElement).value)} aria-label="Tipo">
@@ -292,9 +297,17 @@
         {#key entity.path}
           <div class="game">
             <h3>Ficha de jogo</h3>
-            <SheetPanel path={entity.path} compact />
+            <SheetPanel path={entity.path} compact portrait={false} {onOpenNote} />
           </div>
         {/key}
+      {/if}
+
+      {#if entity.type === 'item'}
+        <div class="game">
+          <h3>Carta</h3>
+          <ItemCard name={entity.name} card={readItemCard(entity.name, text)} />
+          <p class="dim small">Raridade, categoria, dano, valor, peso e <code>sintonização</code> vêm das propriedades; a descrição, da seção <code>## Descrição</code>.</p>
+        </div>
       {/if}
 
       <div class="text">
@@ -322,7 +335,9 @@
         {#if shown.length}
           <div class="cards">
             {#each shown as e (e.path)}
-              <button class="card" style:--c={typeColor(e.type)} onclick={() => openEntity(e.path)}>
+              {@const img = imageOf(e.props)}
+              <button class="card" class:pic={!!img} style:--c={typeColor(e.type)} onclick={() => openEntity(e.path)}>
+                {#if img}<span class="thumb"><Portrait target={img} name={e.name} size={44} /></span>{/if}
                 <span class="kind">{typeInfo(e.type).label}</span>
                 <b>{e.name}</b>
                 {#if e.summary}<span class="sum">{e.summary}</span>{/if}
@@ -424,6 +439,7 @@
   .body > * { flex-shrink: 0; }
   .top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
   h1 { margin: 0; font: 600 26px/1.15 var(--f-display); letter-spacing: .02em; display: flex; align-items: center; gap: 10px; }
+  .who { display: flex; align-items: center; gap: 14px; }
   h1 .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--c); box-shadow: 0 0 12px var(--c); }
   h3 { margin: 14px 0 6px; font: 600 10.5px var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
   h3:first-child { margin-top: 0; }
@@ -459,6 +475,9 @@
   .card:hover { border-color: color-mix(in srgb, var(--c) 60%, var(--line)); }
   .kind { font: 600 10px var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--c); }
   .card b, .peek b { font: 600 16px var(--f-display); }
+  .card { position: relative; }
+  .card.pic { padding-right: 64px; }
+  .card .thumb { position: absolute; right: 12px; top: 12px; }
   .sum { color: var(--muted); font-size: 12.5px; }
   .cnt { color: var(--muted); font: 11px var(--f-mono); }
 

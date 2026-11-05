@@ -162,7 +162,9 @@ class Files {
 
   async refresh(): Promise<void> {
     const all = await engine.storage.list();
-    this.list = all.filter((p) => !isHidden(p) && !p.endsWith('.md') && !p.endsWith('.tmp')).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const next = all.filter((p) => !isHidden(p) && !p.endsWith('.md') && !p.endsWith('.tmp')).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    // mesma lista: mantém a identidade (o índice de links e as telas não refazem tudo a cada sync)
+    if (next.length !== this.list.length || next.some((p, i) => p !== this.list[i])) this.list = next;
   }
 
   say(text: string, opts: { error?: boolean; path?: string } = {}): void {
