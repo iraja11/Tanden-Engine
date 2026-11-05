@@ -1,5 +1,5 @@
 import { hoverTooltip } from '@codemirror/view';
-import { noteSection, splitLink } from '@tanden/core';
+import { ENTITY_TYPES, asList, normalizeType, noteSection, parseProps, splitLink } from '@tanden/core';
 import { hostFacet } from './host';
 
 /*
@@ -16,6 +16,39 @@ const decode = (s: string) => {
     return s;
   }
 };
+
+// propriedades que não ajudam numa prévia
+const SKIP = new Set(['aliases', 'apelidos', 'cssclasses', 'imagem', 'retrato', 'capa', 'image', 'cover', 'img', 'foto', 'semente', 'mundo', 'world']);
+const plain = (v: string) => v.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '$2').replace(/\[\[([^\]]+)\]\]/g, '$1');
+
+/** As propriedades da nota em poucas linhas (o tipo vira um selo), como uma ficha. */
+function propsBox(text: string): HTMLElement | null {
+  if (!text.startsWith('---')) return null;
+  const p = parseProps(text);
+  const keys = Object.keys(p).filter((k) => !SKIP.has(k.toLowerCase()) && asList(p[k]).join('').trim());
+  if (!keys.length) return null;
+  const box = document.createElement('div');
+  box.className = 'props';
+  const type = keys.find((k) => /^(tipo|type)$/i.test(k));
+  if (type) {
+    const badge = document.createElement('span');
+    badge.className = 'badge';
+    // "faccao" vira "Facção" quando é um tipo do world building
+    const raw = asList(p[type]).join(', ');
+    badge.textContent = ENTITY_TYPES.find((t) => t.id === normalizeType(raw))?.label ?? raw;
+    box.append(badge);
+  }
+  const dl = document.createElement('dl');
+  for (const k of keys.filter((k) => k !== type).slice(0, 6)) {
+    const dt = document.createElement('dt');
+    dt.textContent = k;
+    const dd = document.createElement('dd');
+    dd.textContent = asList(p[k]).map(plain).join(', ');
+    dl.append(dt, dd);
+  }
+  if (dl.childElementCount) box.append(dl);
+  return box;
+}
 
 export const linkPreview = hoverTooltip(
   (view, pos) => {
@@ -51,7 +84,8 @@ export const linkPreview = hoverTooltip(
           else if (!md.trim()) body.textContent = 'Nota vazia.';
           else body.innerHTML = host.render!(md.length > 6000 ? `${md.slice(0, 6000)}\n\n…` : md);
           if (text === null || md === null || !md.trim()) body.classList.add('muted');
-          dom.append(head, body);
+          const props = text === null || sub ? null : propsBox(text);
+          dom.append(head, ...(props ? [props] : []), body);
           return { dom };
         },
       };

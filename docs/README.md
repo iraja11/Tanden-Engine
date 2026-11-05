@@ -12,3 +12,4 @@
 | [funcionalidades.md](funcionalidades.md) | Usuários | O que cada tela e recurso faz. |
 | [configuracao.md](configuracao.md) | Usuários/admin | Google Drive, Android, atualização, dependências. |
 | [plugins.md](plugins.md) | Autores de plugin | Manifesto, permissões e API `tanden`. |
+| [regras.md](regras.md) | Quem escreve mundos | A linguagem das regras do mundo: tipos, grupos, ações, eventos, interações, bancos de texto. |

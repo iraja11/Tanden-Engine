@@ -16,6 +16,7 @@ export type Backlink = Backref;
 const FAV_KEY = 'tanden.favoritas';
 const RECENT_KEY = 'tanden.recentes';
 const PREVIEW_KEY = 'tanden.previa';
+const FOCUS_KEY = 'tanden.notes.focus';
 const ASIDE_KEY = 'tanden.painel';
 
 const load = <T>(k: string, d: T): T => {
@@ -77,6 +78,8 @@ class Notes {
   recent = $state<string[]>(load(RECENT_KEY, []));
   /** prévia ao vivo (false: Markdown cru, "modo código-fonte") */
   preview = $state<boolean>(load(PREVIEW_KEY, true));
+  /** foco no parágrafo: o resto do texto esmaece e o cursor fica no meio */
+  focus = $state<boolean>(load(FOCUS_KEY, false));
   /** painel lateral da nota: sumário, conexões ou fechado */
   aside = $state<'sumario' | 'conexoes' | null>(load(ASIDE_KEY, null));
   palette = $state<{ mode: 'tudo' | 'comandos' | 'busca'; seq: number } | null>(null);
@@ -108,6 +111,11 @@ class Notes {
   setPreview(on: boolean): void {
     this.preview = on;
     save(PREVIEW_KEY, on);
+  }
+
+  setFocus(on: boolean): void {
+    this.focus = on;
+    save(FOCUS_KEY, on);
   }
 
   setAside(v: 'sumario' | 'conexoes' | null): void {

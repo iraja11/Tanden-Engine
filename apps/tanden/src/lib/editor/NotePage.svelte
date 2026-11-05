@@ -101,6 +101,8 @@
       { label: 'Conexões e backlinks', icon: '⇆', on: notes.aside === 'conexoes', run: () => notes.setAside(notes.aside === 'conexoes' ? null : 'conexoes') },
       { label: 'Histórico de versões', icon: '⟲', run: () => (notes.history = path) },
       { label: notes.preview ? 'Ver Markdown (código-fonte)' : 'Voltar à prévia ao vivo', icon: notes.preview ? 'MD' : '👁', hint: 'Ctrl+Shift+E', run: () => notes.setPreview(!notes.preview) },
+      { label: notes.focus ? 'Desligar foco no parágrafo' : 'Foco no parágrafo', icon: '◉', hint: 'Ctrl+Shift+L', on: notes.focus, run: () => notes.setFocus(!notes.focus) },
+      { label: 'Buscar e substituir na nota', icon: '⌕', hint: 'Ctrl+F', run: () => editorBridge.find() },
       null,
       { label: 'Apagar nota', icon: '🗑', danger: true, run: () => void confirmDelete() },
     ]);
@@ -153,7 +155,7 @@
       <div class="props"><PropertiesPanel {path} onopen={(p) => (bases.peek = p)} /></div>
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
       <div class="ed" onclick={(e) => { if (e.target === e.currentTarget) editorBridge.focus(true); }}>
-        <Editor value={engine.content} docKey={path} onchange={(v) => engine.edit(v)} rich livePreview={notes.preview}
+        <Editor value={engine.content} docKey={path} onchange={(v) => engine.edit(v)} rich livePreview={notes.preview} focusMode={notes.focus}
           host={notes.host} oncursor={(l) => (line = l)} onfiles={(f) => void files.importFiles(f, { attach: true })} />
       </div>
     </div>

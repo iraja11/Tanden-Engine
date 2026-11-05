@@ -18,10 +18,13 @@
   import { editorBridge } from './files/editor-bridge';
   import { calcLoaded, loadCalc } from './calc/load';
   import { notionLike, preview, previewSlot, type EditorHost } from './editor';
+  import { findReplace } from './editor/find';
+  import { openSearchPanel } from '@codemirror/search';
+  import { paragraphFocus } from './editor/focus';
   import { baseBlocks } from './bases/cm-base';
   import { diceRolls } from './rpg/dice-ext';
 
-  let { value, docKey, onchange, host, onfiles, oncursor, rich = false, livePreview = true }: {
+  let { value, docKey, onchange, host, onfiles, oncursor, rich = false, livePreview = true, focusMode = false }: {
     value: string;
     docKey: string | null;
     onchange: (v: string) => void;
@@ -35,6 +38,8 @@
     rich?: boolean;
     /** com `rich`: false mostra o Markdown cru (modo código-fonte) */
     livePreview?: boolean;
+    /** foco no parágrafo: esmaece o resto e mantém o cursor no meio da tela */
+    focusMode?: boolean;
   } = $props();
   let el: HTMLDivElement;
   let view: EditorView | undefined;
@@ -124,11 +129,14 @@
   const isRich = untrack(() => rich && !!host && 'notes' in host);
   // cálculo, fórmulas e gráficos: entram quando o pedaço deles termina de carregar
   const calcSlot = new Compartment();
+  const focusSlot = new Compartment();
   const extensions = () => [
     history(), drawSelection(), dropCursor(), ...(isRich ? [] : [highlightActiveLine()]), EditorView.lineWrapping,
     ...(isRich ? [notionLike(embedHost as EditorHost, { preview: untrack(() => livePreview) })] : []),
     keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
     markdown({ base: markdownLanguage }), syntaxHighlighting(isRich ? richLook : look), theme, ...(isRich ? [richTheme] : []), attachments,
+    findReplace,
+    focusSlot.of(untrack(() => focusMode) ? paragraphFocus : []),
     ...(embedHost ? [embeds(embedHost)] : []),
     baseBlocks(() => docKey),
     diceRolls(() => docKey),
@@ -242,6 +250,11 @@
       line() {
         return view ? view.state.doc.lineAt(view.state.selection.main.head).number - 1 : -1;
       },
+      find() {
+        if (!view) return;
+        view.focus();
+        openSearchPanel(view);
+      },
     });
     return () => {
       remember();
@@ -265,6 +278,12 @@
   $effect(() => {
     const on = livePreview;
     if (view && isRich) untrack(() => view!.dispatch({ effects: previewSlot.reconfigure(on ? preview : []) }));
+  });
+
+  // Foco no parágrafo ligado/desligado.
+  $effect(() => {
+    const on = focusMode;
+    if (view) untrack(() => view!.dispatch({ effects: focusSlot.reconfigure(on ? paragraphFocus : []) }));
   });
 
   // Mesma nota, mudança vinda de outro aparelho: aplica só a diferença, preservando o cursor.

@@ -127,7 +127,7 @@ Domínios em subpastas (cada um exporta por um `index.ts`):
 
 | Pasta | Domínio |
 |---|---|
-| `caderno/` | Cadernos de jogos de luta e de world building (frontmatter, `luta`, `mundo`). |
+| `caderno/` | Cadernos de jogos de luta e de world building (frontmatter, `luta`, `mundo`) e as ferramentas do mundo: `conflitos` (tensões e alianças), `mapa` (marcadores, distância, terreno por semente), `simulacao` (facções ao longo dos anos), `revisao` (contradições), `gerador` (nomes, traços, ganchos) e `regras/` (a linguagem dos blocos ```regras: `parse.ts` lê, `run.ts` interpreta, sem `eval`; ver [docs/regras.md](docs/regras.md)). |
 | `calc/` | Cálculo: linguagem, numérico, simbólico, gráficos, formatação, folhas. |
 | `sheet/` | Planilhas `.xlsx`/`.ods`/`.csv`: fórmula, funções, valores, workbook, store. |
 | `slides/` | Apresentações: deck, modelo, aparência, exportação `.pptx`/`.odp`/PDF. |
@@ -297,7 +297,7 @@ interface; a lógica de domínio vem de `@tanden/core`.
 | `biblioteca/` | Biblioteca de PDFs. |
 | `pdf/` | Leitor de PDF (`PdfView`, `PdfPage`). |
 | `files/` | Arquivos, importação, ferramentas da nota, recorte de web. |
-| `cadernos/` | Cadernos de luta (`LutaView`) e mundos (`MundoView`). |
+| `cadernos/` | Cadernos de luta (`LutaView`) e mundos (`MundoView`); as abas do mundo (mapas, cartas, conflitos, simulação, ideias) ficam em `cadernos/mundo/`. |
 | `rpg/` | Mesa (`MesaView`, bandeja de dados, combate, fichas, sessões, tabelas). |
 | `vida/` | Tela Hoje. |
 | `saude/` | Saúde (água, pausas, treino). |
