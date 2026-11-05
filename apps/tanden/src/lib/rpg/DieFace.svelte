@@ -12,7 +12,7 @@
 </script>
 
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
 
   // Um dado que cai na bandeja: gira, embaralha a face e assenta com um quique.
   let {
@@ -38,7 +38,7 @@
   // giro e desvio aleatórios para cada dado não cair igual
   const spin = Math.round((Math.random() < 0.5 ? -1 : 1) * (360 + Math.random() * 360));
   const drift = Math.round((Math.random() - 0.5) * 60);
-  const delay = Math.min(index, 10) * 45;
+  const delay = untrack(() => Math.min(index, 10) * 45);
   let shown = $state(0);
   let rolling = $state(false);
 

@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { addSheet, entityFolder, entityTemplate, hasSheet, readSheet, setProps, systemOf, typeInfo, type Campaign } from '@tanden/core';
+  import { addSheet, entityFolder, entityTemplate, hasSheet, imageOf, parseProps, readSheet, setProps, systemOf, typeInfo, type Campaign } from '@tanden/core';
   import { cadernos } from '../cadernos/cadernos.svelte';
   import { typeColor } from '../cadernos/tipos';
   import { mesa } from './mesa.svelte';
+  import Portrait from './Portrait.svelte';
   import SheetPanel from './SheetPanel.svelte';
 
   let { campaign, onOpenNote }: { campaign: Campaign; onOpenNote: (path: string) => void } = $props();
@@ -16,7 +17,10 @@
 
   const sheets = $derived.by(() => {
     void cadernos.rev;
-    return campaign.sheets.map((r) => ({ ...r, s: readSheet(cadernos.read(r.path), campaign.system) }));
+    return campaign.sheets.map((r) => {
+      const t = cadernos.read(r.path);
+      return { ...r, s: readSheet(t, campaign.system), img: imageOf(parseProps(t)) };
+    });
   });
   const current = $derived(sheets.find((x) => x.path === selected) ?? null);
   const world = $derived(cadernos.worlds.find((w) => w.name.toLowerCase() === campaign.world.toLowerCase()) ?? null);
@@ -62,6 +66,7 @@
     {#each sheets as x (x.path)}
       {@const p = pct(x.s.hp, x.s.hpMax)}
       <button class="card" class:on={selected === x.path} style:--c={typeColor(x.type)} onclick={() => (selected = selected === x.path ? null : x.path)}>
+        <span class="pic"><Portrait target={x.img} name={x.name} size={34} /></span>
         <span class="kind">{x.pc ? `Jogador${x.s.player && x.s.player !== 'jogador' ? ` · ${x.s.player}` : ''}` : typeInfo(x.type).label}</span>
         <b>{x.name}</b>
         <span class="nums mono">
@@ -128,6 +133,9 @@
   .card { text-align: left; display: grid; gap: 4px; align-content: start; border: 1px solid var(--line); background: var(--surface); border-radius: 13px;
     padding: 10px 12px 10px 14px; position: relative; overflow: hidden; }
   .card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--c); }
+  .card .pic { position: absolute; right: 10px; top: 10px; }
+  .card .pic :global(.portrait) { box-shadow: none; border-width: 1.5px; }
+  .card > b { padding-right: 40px; }
   .card:hover, .card.on { border-color: color-mix(in srgb, var(--c) 60%, var(--line)); }
   .card.on { background: color-mix(in srgb, var(--c) 7%, var(--surface)); }
   .card.add { --c: transparent; border-style: dashed; color: var(--muted); place-content: center; text-align: center; min-height: 72px; }

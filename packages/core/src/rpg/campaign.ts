@@ -89,7 +89,8 @@ export function campaignIndex(notes: Array<{ path: string; text: string }>): Cam
     } else if (isEncounter(type)) {
       const c = owner(path, props);
       if (c) c.encounters.push({ path, name: noteName(path), round: Number(asText(props['rodada'])) || 0 });
-    } else if (hasSheet(props)) {
+    } else if (hasSheet(props) && type !== 'item') {
+      // itens têm CA/PV às vezes (escudos, golens de bolso), mas não são fichas
       const world = worldOf(path, props);
       const ref: SheetRef = { path, name: noteName(path), type: type || 'personagem', pc: !!findPropKey(props, PC) };
       for (const c of camps) {

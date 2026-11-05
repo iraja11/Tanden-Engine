@@ -109,6 +109,19 @@ export function pay(have: Coins, cost: number): Coins | null {
   return left;
 }
 
+/**
+ * Gasta moedas escritas ("3 pp 5 pc"): se a bolsa tem essas moedas, paga com
+ * elas mesmas; senão paga o valor com troco (`pay`). Null se não dá.
+ */
+export function spendCoins(have: Coins, written: Coins): Coins | null {
+  if (COINS.every((c) => have[c.key] >= written[c.key])) {
+    const out = { ...have };
+    for (const c of COINS) out[c.key] -= written[c.key];
+    return out;
+  }
+  return pay(have, coinsValue(written));
+}
+
 /** Soma moedas. */
 export function addCoins(a: Coins, b: Partial<Coins>): Coins {
   const out = { ...a };
@@ -117,26 +130,43 @@ export function addCoins(a: Coins, b: Partial<Coins>): Coins {
 }
 
 /**
- * Lê um valor escrito à mão: "12 po", "3po 5pp", "1.500 po", "2,5 po", "40" (ouro).
- * Devolve cobre, ou null se não entendeu.
+ * Lê moedas escritas à mão, do jeito que vieram: "3 po 5 pp" → 3 po e 5 pp;
+ * "1.500 po"; "40" (ouro); "2,5 po" → 2 po 5 pp. Devolve null se não entendeu.
  */
-export function parseMoney(s: string): number | null {
+export function parseCoins(s: string): Coins | null {
   const text = s.trim().toLowerCase().replace(/(\d)\.(?=\d{3}\b)/g, '$1');
   if (!text) return null;
-  if (/^\d+(?:[.,]\d+)?$/.test(text)) return Math.round(Number(text.replace(',', '.')) * 100);
-  let total = 0;
+  const bag = noCoins();
+  const put = (n: number, coin: CoinType) => {
+    if (Number.isInteger(n)) bag[coin.key] += n;
+    else {
+      const extra = makeChange(Math.round(n * coin.value), coin.key);
+      for (const c of COINS) bag[c.key] += extra[c.key];
+    }
+  };
+  if (/^\d+(?:[.,]\d+)?$/.test(text)) {
+    put(Number(text.replace(',', '.')), coinOf('po'));
+    return bag;
+  }
   let found = false;
-  const re = /(\d+(?:[.,]\d+)?)\s*([a-zçãõáéíóú$]+(?:\s+de\s+[a-zç]+)?)/g;
   let rest = text;
+  const re = /(\d+(?:[.,]\d+)?)\s*([a-zçãõáéíóú$]+(?:\s+de\s+[a-zç]+)?)/g;
   for (let m = re.exec(text); m; m = re.exec(text)) {
-    const coin = COINS.find((c) => c.aliases.includes(m![2]!.trim()) || c.aliases.includes(m![2]!.replace(/s$/, '')));
+    const word = m[2]!.trim();
+    const coin = COINS.find((c) => c.aliases.includes(word) || c.aliases.includes(word.replace(/s$/, '')));
     if (!coin) return null;
-    total += Number(m[1]!.replace(',', '.')) * coin.value;
+    put(Number(m[1]!.replace(',', '.')), coin);
     rest = rest.replace(m[0], '');
     found = true;
   }
   if (!found || rest.replace(/[\s,e+]/g, '')) return null;
-  return Math.round(total);
+  return bag;
+}
+
+/** O mesmo valor em cobre ("12 po" → 1200), ou null. */
+export function parseMoney(s: string): number | null {
+  const c = parseCoins(s);
+  return c ? coinsValue(c) : null;
 }
 
 /** "12 po 5 pp" (o jeito curto); zero vira "0 po". */

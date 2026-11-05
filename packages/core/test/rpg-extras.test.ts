@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  addItem, carryCapacity, changeQty, coinsValue, crXp, encounterMultiplier, formatCoins, formatMoney, imageOf, inventoryWeight,
+  addItem, campaignIndex, carryCapacity, parseCoins, spendCoins, changeQty, coinsValue, crXp, encounterMultiplier, formatCoins, formatMoney, imageOf, inventoryWeight,
   itemLabel, makeChange, noCoins, parseMoney, parseProps, pay, purseProps, rarityOf, rateEncounter, readInventory, readItemCard,
   readPurse, splitLoot, writeInventory,
 } from '../src/index';
@@ -28,6 +28,13 @@ describe('moedas', () => {
     expect(coinsValue(before) - coinsValue(after)).toBe(777);
   });
 
+  it('gasta com as moedas escritas quando tem, senão com troco', () => {
+    const have = { ...noCoins(), po: 47, pp: 12, pc: 30 };
+    expect(spendCoins(have, { ...noCoins(), pp: 3, pc: 5 })).toEqual({ ...noCoins(), po: 47, pp: 9, pc: 25 });
+    expect(spendCoins(have, { ...noCoins(), pl: 1 })).toEqual(pay(have, 1000));
+    expect(spendCoins({ ...noCoins(), pc: 3 }, { ...noCoins(), po: 1 })).toBeNull();
+  });
+
   it('entende valores escritos à mão', () => {
     expect(parseMoney('12 po')).toBe(1200);
     expect(parseMoney('3po 5pp')).toBe(350);
@@ -37,6 +44,14 @@ describe('moedas', () => {
     expect(parseMoney('7 pc e 2 pp')).toBe(27);
     expect(parseMoney('dez dragões')).toBeNull();
     expect(parseMoney('5 peças de ouro')).toBe(500);
+  });
+
+  it('mantém as moedas como vieram escritas', () => {
+    expect(parseCoins('3 po 5 pp')).toEqual({ ...noCoins(), po: 3, pp: 5 });
+    expect(parseCoins('40')).toEqual({ ...noCoins(), po: 40 });
+    expect(parseCoins('2,5 po')).toEqual({ ...noCoins(), po: 2, pp: 5 });
+    expect(parseCoins('2 platina')).toEqual({ ...noCoins(), pl: 2 });
+    expect(parseCoins('muito ouro')).toBeNull();
   });
 
   it('formata, troca e divide tesouro', () => {
@@ -161,5 +176,16 @@ describe('dificuldade de encontro (5e)', () => {
     expect(rateEncounter([3, 3, 3, 3], ['5']).difficulty).toBe('mortal');
     expect(rateEncounter([3, 3, 3, 3], ['1/8']).difficulty).toBe('trivial');
     expect(rateEncounter([1], [null, '1/4']).unknown).toBe(1);
+  });
+});
+
+describe('campanha', () => {
+  it('itens com CA não viram fichas da campanha', () => {
+    const c = campaignIndex([
+      { path: 'Campanhas/X/X.md', text: '---\ntipo: campanha\n---\n' },
+      { path: 'Campanhas/X/Escudo.md', text: '---\ntipo: item\nca: 2\n---\n' },
+      { path: 'Campanhas/X/Kael.md', text: '---\ntipo: personagem\nca: 17\npv: 20\n---\n' },
+    ]);
+    expect(c[0]!.sheets.map((s) => s.name)).toEqual(['Kael']);
   });
 });
