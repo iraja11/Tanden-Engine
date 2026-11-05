@@ -58,4 +58,5 @@ export * from './search';
 export { comboOf, normalizeCombo } from './hotkeys';
 export * from './vida';
 export * from './saude';
+export * from './agenda';
 export * from './flashcards';

@@ -119,6 +119,7 @@ A API pública é o `src/index.ts`; o resto é interno. Arquivos raiz:
 | `reminders.ts` | Formato e agenda de lembretes (formato Reminder/Tasks do Obsidian). |
 | `quick-reminder.ts` | Parser em português de lembretes rápidos ("amanhã 9h comprar pão"). |
 | `flashcards.ts` | Flashcards e agendamento SM-2. |
+| `agenda/` | Agenda: eventos em notas (formato Full Calendar), repetição, grade/colunas, captura em português e cliente REST do Google Agenda. |
 | `hotkeys.ts` | `comboOf` / `normalizeCombo` (atalhos de teclado). |
 | `feed.ts` | Leitura de feeds RSS / Atom / JSON Feed. |
 
@@ -301,6 +302,7 @@ interface; a lógica de domínio vem de `@tanden/core`.
 | `vida/` | Tela Hoje. |
 | `saude/` | Saúde (água, pausas, treino). |
 | `flashcards/` | Flashcards (baralhos e estudo). |
+| `agenda/` | Agenda: mês, semana, dia e lista; eventos do cofre, Google Agenda e tarefas com prazo. |
 | `plugins/` | Registro, aprovação e a janela (`<iframe sandbox>`) dos plugins. |
 | `settings/` | Atalhos e snippets. |
 | `theme.svelte.ts`, `sound.svelte.ts`, `feel.svelte.ts`, `motion.ts`, `Orb.svelte`, `Splash.svelte`, `Veins.svelte` | Aparência, sons, gestos do símbolo e as veias/pulsos. |
@@ -326,7 +328,7 @@ preso à pasta do cofre. Arquivos de `src/`:
 | `watch.rs` | Vigia de arquivos; emite `vault-changed` quando algo muda por fora. |
 | `background.rs` | Bandeja, "abrir com o sistema" e janela oculta. |
 | `pty.rs` | Terminal (PTY) para o painel IA. |
-| `google.rs` | OAuth do Google Drive e refresh do token. |
+| `google.rs` | OAuth do Google (Drive e Agenda), refresh do token e escopos concedidos. |
 | `ollama.rs` | Chamadas ao Ollama local. |
 | `web.rs` | `web_fetch` / `web_open` (buscar páginas sem CORS, abrir no navegador). |
 | `plugin.rs` | Serve as páginas de plugin em `tplugin://localhost/<id>`. |
@@ -411,6 +413,7 @@ Detalhes de configuração (Drive, Android, chaves, dependências do Arch) em
 
 ## 13. Próximos passos (fase 1)
 
-1. Agenda com Google Agenda.
+1. ~~Agenda com Google Agenda.~~ Feito (`core/agenda/`, `lib/agenda/`).
 2. Ferramentas do Tanden para a IA via MCP (buscar, criar e ligar notas, mexer
    na agenda).
+3. Avisos dos eventos da agenda (hoje só os lembretes avisam).

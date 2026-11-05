@@ -42,6 +42,8 @@
   import SaudeView from './lib/saude/SaudeView.svelte';
   import { saude } from './lib/saude/saude.svelte';
   import FlashcardsView from './lib/flashcards/FlashcardsView.svelte';
+  import AgendaView from './lib/agenda/AgendaView.svelte';
+  import { agenda } from './lib/agenda/agenda.svelte';
   import { flashcards } from './lib/flashcards/flashcards.svelte';
   import WebClipDialog from './lib/files/WebClipDialog.svelte';
   import Splash from './lib/Splash.svelte';
@@ -71,7 +73,7 @@
   /** marcador que desliza até o módulo ativo na barra */
   let mark = $state<{ x: number; y: number; w: number; h: number } | null>(null);
   let error = $state('');
-  type View = 'hoje' | 'notas' | 'bancos' | 'grafo' | 'ia' | 'lembretes' | 'saude' | 'quadros' | 'planilhas' | 'calculo' | 'flashcards' | 'biblioteca' | 'arquivos' | 'luta' | 'mundos' | 'mesa' | 'slides' | 'plugins' | `plugin:${string}`;
+  type View = 'hoje' | 'notas' | 'bancos' | 'grafo' | 'ia' | 'lembretes' | 'saude' | 'quadros' | 'agenda' | 'planilhas' | 'calculo' | 'flashcards' | 'biblioteca' | 'arquivos' | 'luta' | 'mundos' | 'mesa' | 'slides' | 'plugins' | `plugin:${string}`;
   let view = $state<View>('notas');
   /** id do plugin cuja tela está aberta */
   const pluginView = $derived(view.startsWith('plugin:') ? view.slice(7) : null);
@@ -87,7 +89,7 @@
     { id: 'lembretes', label: 'Lembretes', ready: true },
     { id: 'saude', label: 'Saúde', ready: true },
     { id: 'quadros', label: 'Quadros', ready: true },
-    { id: 'agenda', label: 'Agenda', ready: false },
+    { id: 'agenda', label: 'Agenda', ready: true },
     { id: 'planilhas', label: 'Planilhas', ready: true },
     { id: 'calculo', label: 'Cálculo', ready: true },
     { id: 'flashcards', label: 'Flashcards', ready: true },
@@ -119,6 +121,9 @@
   $effect(() => { if (engine.ready) notes.start(); });
   $effect(() => { if (engine.ready) slides.start(); });
   $effect(() => { if (engine.ready) bases.start(); });
+  $effect(() => { if (engine.ready) agenda.start(); });
+  // "novo evento" da paleta ou o cartão da agenda no Hoje
+  $effect(() => { if (agenda.goto) untrack(() => go('agenda')); });
   // "abrir banco" de outras telas
   $effect(() => { if (bases.goto) untrack(() => go('bancos')); });
   // "criar slides da nota" e importações de .pptx abrem a tela de slides
@@ -348,6 +353,8 @@
           <SaudeView onOpenNote={openNote} />
         {:else if view === 'flashcards' && engine.ready}
           <FlashcardsView onOpenNote={openNote} />
+        {:else if view === 'agenda' && engine.ready}
+          <AgendaView onOpenNote={openNote} />
         {:else if view === 'hoje' && engine.ready}
           <HojeView onOpenNote={openNote} />
         {:else if view === 'bancos' && engine.ready}

@@ -2,11 +2,11 @@ import { invoke } from '@tauri-apps/api/core';
 import { isTauri } from './storage-tauri';
 
 // Conexão com a conta Google (só no app instalado; o login roda no lado Rust).
-type Status = { configured: boolean; signed_in: boolean; email: string | null };
+type Status = { configured: boolean; signed_in: boolean; email: string | null; calendar: boolean };
 
 class Google {
   available = isTauri();
-  status = $state<Status>({ configured: false, signed_in: false, email: null });
+  status = $state<Status>({ configured: false, signed_in: false, email: null, calendar: false });
   busy = $state(false);
   error = $state('');
 

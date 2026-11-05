@@ -13,6 +13,7 @@ import { theme } from './theme.svelte';
 import { vida } from './vida/vida.svelte';
 import { saude } from './saude/saude.svelte';
 import { flashcards } from './flashcards/flashcards.svelte';
+import { agenda } from './agenda/agenda.svelte';
 
 /*
  * Os comandos do app inteiro: a paleta (Ctrl+P) lista todos, e qualquer um
@@ -28,7 +29,7 @@ export interface AppActions {
 }
 
 const MODULES: [string, string][] = [
-  ['hoje', 'Hoje'], ['notas', 'Notas'], ['bancos', 'Bancos'], ['grafo', 'Grafo'], ['ia', 'IA'], ['lembretes', 'Lembretes'], ['saude', 'Saúde'], ['quadros', 'Quadros'],
+  ['hoje', 'Hoje'], ['notas', 'Notas'], ['bancos', 'Bancos'], ['grafo', 'Grafo'], ['ia', 'IA'], ['lembretes', 'Lembretes'], ['saude', 'Saúde'], ['quadros', 'Quadros'], ['agenda', 'Agenda'],
   ['planilhas', 'Planilhas'], ['calculo', 'Cálculo'], ['flashcards', 'Flashcards'], ['slides', 'Slides'], ['mundos', 'Mundos'], ['mesa', 'Mesa (RPG)'], ['luta', 'Luta'], ['biblioteca', 'Biblioteca'], ['arquivos', 'Arquivos'], ['plugins', 'Plugins'],
 ];
 
@@ -62,6 +63,11 @@ export function registerAppCommands(a: AppActions): () => void {
         a.go('biblioteca');
       },
     },
+
+    // agenda
+    { id: 'agenda.novo', label: 'Novo evento na agenda', keys: 'calendario compromisso reuniao marcar', run: () => { a.go('agenda'); agenda.create(); } },
+    { id: 'agenda.hoje', label: 'Agenda de hoje', keys: 'calendario compromissos dia', run: () => { agenda.cursor = agenda.today; agenda.setPrefs({ mode: 'dia' }); a.go('agenda'); } },
+    { id: 'agenda.semana', label: 'Agenda da semana', keys: 'calendario compromissos', run: () => { agenda.cursor = agenda.today; agenda.setPrefs({ mode: 'semana' }); a.go('agenda'); } },
 
     // notas
     { id: 'nota.nova', label: 'Nova nota', hotkeys: ['Ctrl+N'], run: () => { a.newNote(); a.go('notas'); } },

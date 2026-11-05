@@ -8,6 +8,8 @@
   import { dayLabel, vida } from './vida.svelte';
   import { saude } from '../saude/saude.svelte';
   import { flashcards } from '../flashcards/flashcards.svelte';
+  import { agenda, hhmm } from '../agenda/agenda.svelte';
+  import { dayTime, shiftDay, type Occurrence } from '@tanden/core';
 
   // Tela Hoje: tarefas, hábitos, diário, projetos, metas e leituras num lugar só.
   let { onOpenNote }: { onOpenNote: (path: string) => void } = $props();
@@ -54,6 +56,20 @@
   /** PDFs em leitura na Biblioteca, do mais recente */
   const books = $derived(biblioteca.books.filter((b) => b.status === 'lendo').sort((a, b) => Math.max(b.opened ?? 0, b.pageAt ?? 0) - Math.max(a.opened ?? 0, a.pageAt ?? 0)));
   const cardsDue = $derived(flashcards.pending());
+  /** eventos de hoje e amanhã (as tarefas já estão na lista ao lado) */
+  const evToday = $derived(agenda.occurrences(dayTime(day, null), dayTime(shiftDay(day, 1), null)).filter((o) => o.source !== 'tarefa'));
+  const evTomorrow = $derived(agenda.occurrences(dayTime(shiftDay(day, 1), null), dayTime(shiftDay(day, 2), null)).filter((o) => o.source !== 'tarefa'));
+  const nowMs = $derived(vida.now.getTime());
+  function openEvent(o: Occurrence) {
+    agenda.goto++;
+    agenda.cursor = day;
+    agenda.edit(o);
+  }
+  function openAgenda(newEvent = false) {
+    agenda.cursor = day;
+    agenda.goto++;
+    if (newEvent) agenda.create(day);
+  }
 
   const hello = $derived.by(() => {
     const h = vida.now.getHours();
@@ -179,6 +195,26 @@
     </div>
 
     <div class="col">
+      <section class="card agenda">
+        <h3>Agenda <button class="link" onclick={() => openAgenda()}>abrir</button></h3>
+        {#if evToday.length}
+          <ul class="evs">
+            {#each evToday as o (o.key)}
+              <li class:past={o.end <= nowMs} class:now={o.start <= nowMs && o.end > nowMs} style:--c={agenda.colorOf(o)}>
+                <time>{o.allDay ? 'dia todo' : hhmm(o.start)}</time>
+                <button class="title" onclick={() => openEvent(o)} title={o.location || o.title}>{o.title}</button>
+                {#if o.start <= nowMs && o.end > nowMs}<small class="p">agora</small>{/if}
+              </li>
+            {/each}
+          </ul>
+        {:else}
+          <p class="empty">Nada marcado para hoje. <button class="link" onclick={() => openAgenda(true)}>+ evento</button></p>
+        {/if}
+        {#if evTomorrow.length}
+          <small class="tmw">Amanhã: {evTomorrow.slice(0, 3).map((o) => (o.allDay ? o.title : `${hhmm(o.start)} ${o.title}`)).join(' · ')}{evTomorrow.length > 3 ? ` e mais ${evTomorrow.length - 3}` : ''}</small>
+        {/if}
+      </section>
+
       {#if snap.dbs.habitos}
         <section class="card">
           <h3>Hábitos <button class="link" onclick={() => bases.openDatabase(snap.dbs.habitos!.note)}>abrir</button></h3>
@@ -392,6 +428,12 @@
   .bar.goal i { background: linear-gradient(90deg, var(--ok), color-mix(in srgb, var(--ok) 60%, var(--ember))); }
   .read li { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; column-gap: 8px; padding: 4px 0; }
   .read .ghost { grid-row: 1 / 3; grid-column: 2; align-self: center; }
+  .evs li { display: flex; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 9px; background: var(--void); border-left: 3px solid var(--c); }
+  .evs li.past { opacity: .5; }
+  .evs li.now { box-shadow: 0 0 0 1px var(--ember); }
+  .evs time { flex: none; width: 58px; font: 12px var(--f-mono); color: var(--muted); }
+  .evs .title { flex: 1; min-width: 0; font-size: 13.5px; }
+  .tmw { display: block; margin-top: 8px; font: 11px var(--f-mono); color: var(--muted); }
   @media (max-width: 860px) {
     .grid { grid-template-columns: 1fr; }
     .hoje { padding: 14px 14px 28px; }

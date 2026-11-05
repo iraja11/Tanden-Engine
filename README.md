@@ -49,5 +49,6 @@ nele. O layout completo está em [architecture.md](architecture.md#5-armazenamen
 
 ## Próximos passos (fase 1)
 
-1. Agenda com Google Agenda.
+1. ~~Agenda com Google Agenda.~~ Feito: veja [Agenda](docs/funcionalidades.md#agenda).
 2. Ferramentas do Tanden para a IA via MCP (buscar, criar e ligar notas, mexer na agenda).
+3. Avisos dos eventos da agenda (hoje só os lembretes avisam).

@@ -19,7 +19,11 @@ use tauri::{AppHandle, Manager, State};
 use tauri_plugin_opener::OpenerExt;
 
 /// drive.file: o app só enxerga os arquivos que ele mesmo criou no seu Drive.
-const SCOPES: &str = "https://www.googleapis.com/auth/drive.file";
+/// calendar.events + calendarlist.readonly: a Agenda lê e grava eventos e lista
+/// as suas agendas, sem mexer nas configurações delas.
+const SCOPES: &str = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly";
+/// Sem este escopo concedido, a Agenda pede para entrar de novo.
+const CALENDAR_SCOPE: &str = "https://www.googleapis.com/auth/calendar.events";
 const AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
 
@@ -34,6 +38,9 @@ struct Stored {
     credentials: Option<Credentials>,
     refresh_token: Option<String>,
     email: Option<String>,
+    /// escopos que o Google concedeu (a tela de consentimento deixa desmarcar)
+    #[serde(default)]
+    scopes: Option<String>,
 }
 
 #[derive(Default)]
@@ -46,6 +53,8 @@ pub struct Status {
     configured: bool,
     signed_in: bool,
     email: Option<String>,
+    /// o login atual libera a Agenda
+    calendar: bool,
 }
 
 #[derive(Deserialize)]
@@ -54,6 +63,7 @@ struct TokenResponse {
     expires_in: u64,
     refresh_token: Option<String>,
     id_token: Option<String>,
+    scope: Option<String>,
 }
 
 fn store_path(app: &AppHandle) -> Result<PathBuf, String> {
@@ -116,6 +126,11 @@ fn random_b64(n: usize) -> String {
     URL_SAFE_NO_PAD.encode(b)
 }
 
+/// O escopo está na lista separada por espaços que o Google devolve?
+fn has_scope(granted: Option<&str>, scope: &str) -> bool {
+    granted.is_some_and(|g| g.split_whitespace().any(|s| s == scope))
+}
+
 /// Lê o e-mail de dentro do id_token (JWT); não precisa validar, veio direto do Google por HTTPS.
 fn email_from_id_token(token: &str) -> Option<String> {
     let payload = token.split('.').nth(1)?;
@@ -160,7 +175,8 @@ fn wait_for_code(listener: TcpListener, expected_state: &str) -> Result<String, 
 #[tauri::command]
 pub fn google_status(app: AppHandle) -> Status {
     let s = load(&app);
-    Status { configured: credentials(&s).is_some(), signed_in: s.refresh_token.is_some(), email: s.email }
+    let calendar = s.refresh_token.is_some() && has_scope(s.scopes.as_deref(), CALENDAR_SCOPE);
+    Status { configured: credentials(&s).is_some(), signed_in: s.refresh_token.is_some(), email: s.email, calendar }
 }
 
 #[tauri::command]
@@ -188,6 +204,7 @@ pub async fn google_sign_in(app: AppHandle, state: State<'_, GoogleState>) -> Re
         .append_pair("code_challenge", &challenge)
         .append_pair("code_challenge_method", "S256")
         .append_pair("access_type", "offline")
+        .append_pair("include_granted_scopes", "true")
         .append_pair("prompt", "consent")
         .append_pair("state", &csrf);
     app.opener().open_url(auth.as_str(), None::<&str>).map_err(|e| e.to_string())?;
@@ -208,6 +225,7 @@ pub async fn google_sign_in(app: AppHandle, state: State<'_, GoogleState>) -> Re
 
     stored.refresh_token = res.refresh_token.or(stored.refresh_token);
     stored.email = res.id_token.as_deref().and_then(email_from_id_token);
+    stored.scopes = res.scope.clone();
     save(&app, &stored)?;
     *state.access.lock().unwrap() = Some((res.access_token, Instant::now() + Duration::from_secs(res.expires_in.saturating_sub(60))));
     Ok(google_status(app))
@@ -220,9 +238,9 @@ pub async fn google_access_token(app: AppHandle, state: State<'_, GoogleState>) 
             return Ok(tok);
         }
     }
-    let stored = load(&app);
+    let mut stored = load(&app);
     let creds = credentials(&stored).ok_or("falta a credencial do Google")?;
-    let refresh = stored.refresh_token.ok_or("não conectado ao Google")?;
+    let refresh = stored.refresh_token.clone().ok_or("não conectado ao Google")?;
     let res = token_request(&[
         ("client_id", creds.client_id.as_str()),
         ("client_secret", &creds.client_secret),
@@ -230,6 +248,11 @@ pub async fn google_access_token(app: AppHandle, state: State<'_, GoogleState>) 
         ("grant_type", "refresh_token"),
     ])
     .await?;
+    // a renovação também diz os escopos; guarda se mudaram (ex.: revogou a agenda)
+    if res.scope.is_some() && res.scope != stored.scopes {
+        stored.scopes = res.scope.clone();
+        let _ = save(&app, &stored);
+    }
     let tok = res.access_token.clone();
     *state.access.lock().unwrap() = Some((res.access_token, Instant::now() + Duration::from_secs(res.expires_in.saturating_sub(60))));
     Ok(tok)
@@ -240,6 +263,7 @@ pub fn google_sign_out(app: AppHandle, state: State<'_, GoogleState>) -> Result<
     let mut s = load(&app);
     s.refresh_token = None;
     s.email = None;
+    s.scopes = None;
     *state.access.lock().unwrap() = None;
     save(&app, &s)
 }
@@ -252,6 +276,14 @@ mod tests {
     fn le_o_email_do_id_token() {
         let payload = URL_SAFE_NO_PAD.encode(br#"{"email":"girlene@example.com"}"#);
         assert_eq!(email_from_id_token(&format!("x.{payload}.y")).as_deref(), Some("girlene@example.com"));
+    }
+
+    #[test]
+    fn confere_o_escopo_da_agenda() {
+        let g = "openid https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.events";
+        assert!(has_scope(Some(g), CALENDAR_SCOPE));
+        assert!(!has_scope(Some("https://www.googleapis.com/auth/drive.file"), CALENDAR_SCOPE));
+        assert!(!has_scope(None, CALENDAR_SCOPE));
     }
 
     #[test]
