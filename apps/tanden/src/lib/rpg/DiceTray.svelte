@@ -1,6 +1,7 @@
 <script lang="ts">
   import { checkRoll, chanceAtLeast, getSection, parseTable, rollStats, type RollStats } from '@tanden/core';
   import { mesa, type LogEntry } from './mesa.svelte';
+  import DieFace from './DieFace.svelte';
 
   let { autofocus = false }: { autofocus?: boolean } = $props();
 
@@ -105,17 +106,24 @@
     if (reduce) return;
     spinning = true;
     let n = 0;
+    // o total embaralha enquanto os dados caem (o último assenta em ~0,5 s + escalonamento)
+    const dice = l.entries.reduce((a, e) => a + (e.groups ?? []).reduce((b, g) => b + g.dice.length, 0), 0);
+    const ticks = Math.ceil((520 + Math.min(dice, 10) * 45) / 55);
     const tick = setInterval(() => {
       scramble = l.entries.map((e) => (typeof e.total === 'number' ? Math.round(e.total + (Math.random() - 0.5) * Math.max(6, Math.abs(e.total))) : 0));
-      if (++n > 7) {
+      if (++n > ticks) {
         clearInterval(tick);
         spinning = false;
       }
-    }, 45);
+    }, 55);
     return () => clearInterval(tick);
   });
 
-  const faceText = (v: number, sides: number) => (sides === 0 ? (v > 0 ? '+' : v < 0 ? '−' : '0') : String(v));
+  /** quantos dados na rolagem: muitos ficam menores */
+  const diceIn = (e: LogEntry) => (e.groups ?? []).reduce((a, g) => a + g.dice.length, 0);
+  const dieSize = (e: LogEntry) => { const n = diceIn(e); return n <= 4 ? 52 : n <= 10 ? 42 : n <= 24 ? 34 : 28; };
+  // faíscas do crítico: ângulos e distâncias fixos por rolagem
+  const SPARKS = Array.from({ length: 18 }, (_, i) => ({ a: (360 / 18) * i + (i % 2 ? 6 : -6), d: 70 + (i % 3) * 26, s: 4 + (i % 4) }));
   /** a conta sem os dados abertos: "1d20 + 5" */
   const plainOps = (detail: string) => detail.replace(/\s*\[[^\]]*\]/g, '');
 </script>
@@ -167,22 +175,31 @@
   {#if shown}
     <div class="result" class:spin={spinning}>
       {#each shown as e, i (e.id)}
-        <div class="res" class:crit={e.critical === 'max' && !spinning} class:fumble={e.critical === 'min' && !spinning}>
+        {@const crit = e.critical === 'max' && !spinning}
+        {@const fumble = e.critical === 'min' && !spinning}
+        <div class="res" class:crit class:fumble>
+          {#if crit}
+            <span class="burst" aria-hidden="true">
+              <i class="ring"></i>
+              {#each SPARKS as k, j (j)}<i class="spark" style:--a="{k.a}deg" style:--d="{k.d}px" style:--z="{k.s}px"></i>{/each}
+            </span>
+          {/if}
+          {#if fumble}<span class="crack" aria-hidden="true"><svg viewBox="0 0 100 40" preserveAspectRatio="none"><path d="M0 22 14 18 22 26 35 14 46 24 58 12 70 22 82 16 100 24" /></svg></span>{/if}
           <span class="total">{spinning && typeof e.total === 'number' ? scramble[i] ?? '' : e.total}</span>
           <span class="what">
             {#if e.label}<b>{e.label}</b>{/if}
             <span class="faces">
               {#each e.groups ?? [] as g, j (j)}
+                {@const offset = (e.groups ?? []).slice(0, j).reduce((a, x) => a + x.dice.length, 0)}
                 <span class="grp" title={g.notation}>
                   {#each g.dice as d, k (k)}
-                    <span class="face" class:drop={!d.kept} class:hit={d.success} class:boom={d.exploded} class:max={g.sides > 1 && d.value === g.sides && d.kept}
-                      title={d.rerolled?.length ? `rolado de novo: ${d.rerolled.join(', ')}` : undefined}>{faceText(d.value, g.sides)}{#if d.rerolled?.length}<sup>↻</sup>{/if}</span>
+                    <DieFace sides={g.sides} value={d.value} kept={d.kept} success={!!d.success} exploded={!!d.exploded} index={offset + k} size={dieSize(e)} />
                   {/each}
                 </span>
               {/each}
               <span class="op">{plainOps(e.detail)}</span>
             </span>
-            {#if e.critical === 'max' && !spinning}<em>Crítico!</em>{:else if e.critical === 'min' && !spinning}<em>Falha crítica</em>{/if}
+            {#if crit}<em>Crítico!</em>{:else if fumble}<em>Falha crítica</em>{/if}
           </span>
         </div>
       {/each}
@@ -246,29 +263,44 @@
   .dist i { flex: 1; min-width: 1px; background: color-mix(in srgb, var(--muted) 45%, transparent); border-radius: 2px 2px 0 0; transition: height var(--dur) var(--ease); }
   .dist i.hit { background: var(--ember); }
 
-  .result { display: grid; gap: 8px; max-height: 340px; overflow-y: auto; padding: 4px 2px; }
-  .res { display: flex; align-items: center; gap: 16px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface);
-    animation: land .35s var(--spring); }
-  .res.crit { border-color: var(--ember); box-shadow: 0 0 28px -8px var(--ember-glow), inset 0 0 0 1px var(--ember-glow); }
-  .res.fumble { border-color: color-mix(in srgb, var(--crit) 60%, var(--line)); }
-  .total { min-width: 64px; text-align: center; font: 700 34px/1 var(--f-display); color: var(--ink); font-variant-numeric: tabular-nums; }
-  .spin .total { color: var(--muted); }
-  .res.crit .total { color: var(--ember); text-shadow: 0 0 18px var(--ember-glow); }
+  .result { display: grid; gap: 10px; max-height: 420px; overflow-y: auto; padding: 6px 2px 10px; }
+  /* a bandeja: feltro escuro com borda de madeira */
+  .res { position: relative; display: flex; align-items: center; gap: 18px; padding: 14px 16px; border-radius: 16px; overflow: visible;
+    border: 1px solid color-mix(in srgb, var(--ember) 22%, var(--line));
+    background: radial-gradient(120% 140% at 30% 0%, color-mix(in srgb, var(--ember) 7%, var(--surface)) 0%, var(--surface) 55%, color-mix(in srgb, var(--void) 70%, var(--surface)) 100%);
+    box-shadow: inset 0 2px 14px -6px rgba(0, 0, 0, .5); animation: land .35s var(--spring); }
+  .res.crit { border-color: #ffcf5a; box-shadow: 0 0 34px -6px rgba(255, 200, 80, .55), inset 0 0 0 1px rgba(255, 200, 80, .4); animation: land .35s var(--spring), flash .9s ease-out; }
+  .res.fumble { border-color: color-mix(in srgb, var(--crit) 70%, var(--line)); animation: land .35s var(--spring), shake .5s cubic-bezier(.36, .07, .19, .97) both; }
+  .total { position: relative; z-index: 1; min-width: 68px; text-align: center; font: 700 38px/1 var(--f-display); color: var(--ink); font-variant-numeric: tabular-nums; }
+  .spin .total { color: var(--muted); filter: blur(.4px); }
+  .res:not(.spin) .total { animation: pop .4s var(--spring); }
+  .res.crit .total { color: #ffd76e; text-shadow: 0 0 22px rgba(255, 200, 80, .8); font-size: 46px; }
   .res.fumble .total { color: var(--crit); }
+  @keyframes pop { from { transform: scale(1.35); } }
+  @keyframes flash { 0% { background-color: rgba(255, 210, 100, .28); } }
+  @keyframes shake { 10%, 90% { transform: translateX(-1px); } 20%, 80% { transform: translateX(3px); } 30%, 50%, 70% { transform: translateX(-6px); } 40%, 60% { transform: translateX(6px); } }
+
+  .burst { position: absolute; left: 50px; top: 50%; width: 0; height: 0; pointer-events: none; z-index: 2; }
+  .burst .ring { position: absolute; left: -40px; top: -40px; width: 80px; height: 80px; border-radius: 50%; border: 3px solid #ffcf5a;
+    animation: ring .8s ease-out forwards; }
+  .burst .spark { position: absolute; left: calc(var(--z) / -2); top: calc(var(--z) / -2); width: var(--z); height: var(--z); border-radius: 50%;
+    background: radial-gradient(circle, #fff6d6, #ffcf5a 55%, transparent 70%); animation: spark .9s cubic-bezier(.15, .8, .3, 1) forwards; }
+  @keyframes ring { from { transform: scale(.2); opacity: 1; } to { transform: scale(2.4); opacity: 0; } }
+  @keyframes spark { from { transform: rotate(var(--a)) translateX(0); opacity: 1; } 70% { opacity: 1; } to { transform: rotate(var(--a)) translateX(var(--d)) scale(.3); opacity: 0; } }
+  .crack { position: absolute; inset: 0; pointer-events: none; overflow: hidden; border-radius: inherit; }
+  .crack svg { width: 100%; height: 100%; }
+  .crack path { fill: none; stroke: var(--crit); stroke-width: .6; vector-effect: non-scaling-stroke; stroke-dasharray: 200; stroke-dashoffset: 200; opacity: .55;
+    animation: crack .5s ease-out .15s forwards; }
+  @keyframes crack { to { stroke-dashoffset: 0; } }
+  @media (prefers-reduced-motion: reduce) { .burst, .crack, .res.crit, .res.fumble, .total { animation: none !important; } }
   .what { display: grid; gap: 4px; min-width: 0; }
   .what b { font: 600 13px var(--f-display); letter-spacing: .04em; }
-  .what em { font: 600 11px var(--f-display); letter-spacing: .1em; text-transform: uppercase; font-style: normal; color: var(--ember); }
+  .what em { font: 700 12px var(--f-display); letter-spacing: .14em; text-transform: uppercase; font-style: normal; color: #ffcf5a; animation: pop .4s var(--spring); }
   .res.fumble em { color: var(--crit); }
-  .faces { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font: 12.5px var(--f-mono); color: var(--muted); }
-  .face { min-width: 24px; height: 24px; padding: 0 5px; display: inline-grid; place-items: center; border-radius: 7px; color: var(--ink);
-    border: 1px solid var(--line); background: var(--surface-2); }
-  .face.drop { opacity: .45; text-decoration: line-through; }
-  .face.hit { border-color: var(--ok); color: var(--ok); }
-  .face.max { border-color: color-mix(in srgb, var(--ember) 60%, var(--line)); }
-  .face.boom { border-style: dashed; border-color: var(--ember); }
-  .face sup { font-size: 9px; color: var(--ember-soft); margin-left: 1px; }
-  .grp { display: inline-flex; flex-wrap: wrap; gap: 3px; }
-  .grp + .grp { padding-left: 6px; border-left: 1px solid var(--line); }
+  .faces { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font: 12.5px var(--f-mono); color: var(--muted); }
+  .grp { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .grp + .grp { padding-left: 8px; border-left: 1px solid var(--line); }
+  .what { position: relative; z-index: 1; }
   .op { margin-left: 4px; }
   @keyframes land { from { transform: translateY(6px) scale(.98); opacity: .3; } }
 
