@@ -9,7 +9,16 @@ const COLORS: Record<string, string> = {
   especie: '#b59cff',
   conceito: '#7fb6ff',
   criatura: '#d98fb0',
+  conflito: '#ff4f6d',
+  cultura: '#e6c86e',
+  mapa: '#6fc3c9',
 };
+
+/** Símbolo de cada tipo, para cartas e marcadores do mapa. */
+const GLYPHS: Record<string, string> = {
+  personagem: '☺', lugar: '⌂', faccao: '⚑', evento: '✦', item: '◆', especie: '❦', conceito: '✺', criatura: '☠', conflito: '⚔', cultura: '♫', mapa: '⌖',
+};
+export const typeGlyph = (type: string): string => GLYPHS[type] ?? '●';
 
 export function typeColor(type: string): string {
   let base = COLORS[type];
@@ -30,6 +39,8 @@ export function guessTypeFromLabel(label: string): string {
   if (/local|lugar|origem|sede|parte de|regi|cidade|habitat|reino|terra/.test(l)) return 'lugar';
   if (/afilia|fac|ordem|grupo|guild|clã|cla|líder de|organiza/.test(l)) return 'faccao';
   if (/espécie|especie|raça|raca/.test(l)) return 'especie';
+  if (/cultura|povo|tradi/.test(l)) return 'cultura';
+  if (/conflito|rivalidade/.test(l)) return 'conflito';
   if (/evento|batalha|guerra/.test(l)) return 'evento';
   if (/item|arma|artefato|poder/.test(l)) return 'item';
   if (/magia|conceito|idioma|religi/.test(l)) return 'conceito';

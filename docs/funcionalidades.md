@@ -11,7 +11,9 @@ configurar (Drive, Android, atualização), veja
 O editor funciona como o Notion, mas o arquivo continua sendo Markdown comum, que o Obsidian abre igual.
 
 - **Prévia ao vivo.** Os títulos, o negrito, os links, as tarefas, as tabelas e as fórmulas já aparecem formatados, e a marcação só volta na linha do cursor. O **Ctrl+Shift+E** alterna para o Markdown puro.
-- **Menu `/`.** Ele insere títulos, listas, tarefas, citação, callouts (`> [!dica]`), toggle (`> [!toggle]-`), colunas, tabela, divisor, imagem, vídeo, arquivo, página web, nota embutida, fórmula, cálculo, gráfico, código, data e lembrete.
+- **Menu `/`.** Ele insere títulos, listas, tarefas, citação, callouts (`> [!dica]`), toggle (`> [!toggle]-`), colunas, tabela, divisor, imagem, vídeo, arquivo, página web, nota embutida, fórmula, cálculo, gráfico, código, data e lembrete. Em **Escrita criativa**: nome sorteado (élfico, anão, nórdico, latino), personalidade sorteada (motivação, medo, segredo…) e linha de diálogo.
+- **Buscar e substituir.** **Ctrl+F** (ou **Ctrl+H**) abre a busca dentro da nota, com substituir, maiúsculas/minúsculas, palavra inteira e regex. **F3** e **Ctrl+G** andam entre os resultados; **todos** seleciona cada ocorrência de uma vez.
+- **Foco no parágrafo** (**Ctrl+Shift+L**, ou no ⋯ da nota): só o parágrafo do cursor fica aceso, o resto esmaece, e a linha em que você escreve fica no meio da tela, como numa máquina de escrever. Vale também para o texto das fichas dos Mundos.
 - **Blocos.**
   - A alça ⋮⋮ à esquerda arrasta o bloco; o + cria um bloco embaixo.
   - O menu da alça transforma, duplica, move, apaga, copia o texto ou copia um link para o bloco (`[[Nota#^id]]`).
@@ -24,6 +26,7 @@ O editor funciona como o Notion, mas o arquivo continua sendo Markdown comum, qu
   - Links do YouTube e do Vimeo viram um player, e `![[Nota#Seção]]` mostra o trecho de outra nota.
 - **Links e menções.**
   - `[[` sugere notas e títulos, e cria a nota se ela ainda não existe.
+  - Passar o mouse num link mostra a nota, e as propriedades dela num mini-cartão (numa ficha do mundo: o tipo, o líder, a sede...).
   - `@` insere datas (hoje, amanhã, dias da semana) e, dentro de uma tarefa, um lembrete.
   - `#` sugere as tags que já existem.
   - Colar uma página da web converte o conteúdo para Markdown, e colar um link sobre um texto selecionado cria o link.
@@ -57,7 +60,14 @@ Os dois cadernos são notas `.md` comuns com propriedades no topo, então o Obsi
 
 **Luta** (`Luta/<jogo>/<personagem>.md`, `tipo: lutador`): combos em notação numpad (`2MK xx 236HP`, `[4]6P`, `j.HK`) que viram ícones de direção e botão, frame data, matchups e uma aba de punições que cruza o bloqueio dos golpes do oponente com o startup dos seus. A nota do jogo (`tipo: jogo`) define a notação: `sf`, `tekken`, `gg`, `kof`, `dbfz` ou `livre` com `botões: [...]`. Frame data entra por CSV ou colando uma tabela de site; nomes de coluna em inglês ou português servem, e reimportar atualiza sem apagar suas notas.
 
-**Mundos** (`Mundos/<mundo>/<Tipo>/<nome>.md`): cada ficha tem `tipo` (personagem, lugar, facção, evento, item, espécie, conceito ou um seu) e `mundo`. Uma propriedade com `[[link]]` vira uma ligação com o nome da propriedade (`afiliação: "[[Ordem do Sol]]"`); links no texto viram "menciona". Datas (`data`, `nascimento`, `morte`, `fundação`, `fim`) montam a linha do tempo e aceitam qualquer calendário: `342`, `-50`, `50 a.C.`, `12/03/342`.
+**Mundos** (`Mundos/<mundo>/<Tipo>/<nome>.md`): cada ficha tem `tipo` (personagem, lugar, facção, evento, conflito, item, espécie, cultura, conceito, criatura, mapa ou um seu) e `mundo`. Uma propriedade com `[[link]]` vira uma ligação com o nome da propriedade (`afiliação: "[[Ordem do Sol]]"`); links no texto viram "menciona". Datas (`data`, `nascimento`, `morte`, `fundação`, `fim`) montam a linha do tempo e aceitam qualquer calendário: `342`, `-50`, `50 a.C.`, `12/03/342`.
+
+- **Fichas.** Cada tipo sugere campos (com uma dica do que escrever) e campos extras como botão: `motivação`, `medo`, `segredo`, `pai`, `mãe` no personagem; `poder`, `riqueza`, `território` na facção. **Aprofundar** traz perguntas por tipo ("Qual mentira ela conta para si mesma?") que viram seções para responder, e **🎲 Personalidade** preenche motivação, medo, segredo e maneirismo vazios. O anel mostra quanto a ficha está preenchida (resumo, imagem, campos, seções, ligações). O texto da ficha usa o editor completo: menu `/`, `[[` com sugestões e prévia ao vivo.
+- **Cartas.** Na aba Fichas, **Cartas** mostra cada ficha como uma carta que inclina com o mouse; um clique vira a carta e mostra as ligações no verso. **menos completas primeiro** ordena pelo que falta escrever.
+- **Mapas** (`tipo: mapa`). Sem imagem, o mapa é um continente gerado pela `semente` (relevo, biomas e rios; a mesma semente dá o mesmo mapa em todo aparelho); **Usar minha imagem** troca por uma imagem sua. Os marcadores ficam na tabela `## Marcadores` da nota (`| [[Vale]] | 42.5 | 61 |`, X e Y em %), então o Obsidian lê normal. **Marcar** põe um marcador, arrastar move, **Medir** dá a distância pela `escala` (largura do mapa) e `unidade`, com o tempo de viagem a pé, a cavalo e de barco. **Espalhar lugares** põe em terra firme os lugares que ainda não estão no mapa. A ficha mostra em que mapas ela aparece.
+- **Conflitos.** Fichas `tipo: conflito` com `lados: [[A]], [[B]]`, `status` e `intensidade` (1 a 5). A aba junta os conflitos, as rivalidades (campos como `inimigos`, `rival`, `contra`) e as alianças (`aliados`, `aliança com`), e uma matriz de quem está com quem entre as facções.
+- **Simulação.** Roda as facções por N anos: cada uma cresce, ataca inimigos, faz alianças, sofre crises, pestes e traições, a partir de `poder`, `riqueza` e `estabilidade` (1 a 10, ou estimados pelas ligações) e do território (`governante`/`controle` no lugar, `sede`/`território` na facção). Mostra o gráfico do poder e a crônica com `[[links]]`; **+ evento** transforma um acontecimento em ficha de evento, e **Salvar como nota** grava a crônica em `Simulações/` (sem `tipo`, então não vira cânone). A mesma semente conta a mesma história.
+- **Ideias.** A **revisão** aponta contradições (morreu antes de nascer, participou de um evento depois de morto, filho que nasce antes do pai, idade além da expectativa de vida da espécie), nomes repetidos, conflitos de um lado só, aliados que também são inimigos e fichas soltas ou citadas sem existir (com o botão de criar). Os **geradores** fazem ganchos de história com as fichas reais, nomes num estilo ou **no estilo do mundo** (aprendidos dos nomes que você já usa) e personalidades.
 
 ## Mesa de RPG
 

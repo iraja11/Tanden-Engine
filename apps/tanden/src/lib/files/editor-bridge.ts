@@ -12,6 +12,8 @@ interface EditorApi {
   focus?(atEnd?: boolean): void;
   /** linha (a partir de 0) onde o cursor está */
   line?(): number;
+  /** abre o painel de buscar e substituir */
+  find?(): void;
 }
 
 const stack: EditorApi[] = [];
@@ -36,5 +38,8 @@ export const editorBridge = {
   },
   line(): number {
     return current()?.line?.() ?? -1;
+  },
+  find(): void {
+    current()?.find?.();
   },
 };

@@ -93,6 +93,7 @@ export function registerAppCommands(a: AppActions): () => void {
     { id: 'nota.sumario', label: 'Mostrar sumário', keys: 'indice titulos outline', run: () => notes.setAside('sumario') },
     { id: 'nota.conexoes', label: 'Mostrar conexões e backlinks', keys: 'links grafo', run: () => notes.setAside('conexoes') },
     { id: 'nota.markdown', label: 'Alternar prévia ao vivo / Markdown', keys: 'codigo fonte source modo leitura', hotkeys: ['Ctrl+Shift+E'], run: () => notes.setPreview(!notes.preview) },
+    { id: 'nota.foco', label: 'Foco no parágrafo (máquina de escrever)', keys: 'escrita concentrar esmaecer typewriter', hotkeys: ['Ctrl+Shift+L'], run: () => notes.setFocus(!notes.focus) },
     { id: 'nota.pdf', label: 'Exportar como PDF', when: cur, run: () => void files.exportNote(cur()!, 'pdf') },
     { id: 'nota.docx', label: 'Exportar como Word (.docx)', when: cur, run: () => void files.exportNote(cur()!, 'docx') },
     { id: 'nota.html', label: 'Exportar como página (.html)', when: cur, run: () => void files.exportNote(cur()!, 'html') },

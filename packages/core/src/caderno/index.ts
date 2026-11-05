@@ -2,3 +2,8 @@ export * from './frontmatter';
 export * from './markdown';
 export * from './luta';
 export * from './mundo';
+export * from './conflitos';
+export * from './gerador';
+export * from './revisao';
+export * from './mapa';
+export * from './simulacao';
