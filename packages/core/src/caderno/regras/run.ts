@@ -31,8 +31,24 @@ export interface RuleHost {
   notify?(text: string): void;
   /** guerra, aliança e paz entre duas fichas (a simulação usa) */
   stance?(kind: 'guerra' | 'alianca' | 'paz', a: string, b: string): void;
-  /** campos que moram em outro lugar (poder/riqueza/estabilidade das facções na simulação) */
-  virtual?: { get(path: string, field: string): number | undefined; set(path: string, field: string, v: number): boolean };
+  /**
+   * Campos que moram em outro lugar: poder/riqueza/estabilidade das facções na
+   * simulação, idade/humor/traços das pessoas na simulação de vidas, ou os
+   * eixos de uma relação (`relação(a, b).afeto`). `field` chega normalizado
+   * (sem acento, minúsculas, `_` vira espaço). `undefined` = não é comigo.
+   */
+  virtual?: { get(path: string, field: string): Val | undefined; set(path: string, field: string, v: Val): boolean };
+  /** funções extras da linguagem (nome sem acento → implementação); a simulação de vidas põe `casar`, `relação`... */
+  fns?: Record<string, (args: Val[], rt: Rules) => Val>;
+  /** nome de fichas que não estão no mundo (ex.: `rel:a>b`) */
+  label?(path: string): string | undefined;
+  /**
+   * Com quem `a` pode interagir nesta volta (ex.: quem está no mesmo lugar).
+   * `null` = todos do tipo. Serve para mundos grandes não virarem n².
+   */
+  candidates?(a: string, type: string): string[] | null;
+  /** fração do ano de cada volta das interações (1/12 = mensal); a `chance` continua sendo por ano */
+  period?: number;
   /** posição das fichas no mapa (em %), para distância() */
   positions?: Map<string, { x: number; y: number }>;
   /** limite de passos por chamada (laços infinitos param aqui) */
@@ -58,13 +74,27 @@ export class Rules {
   private depth = 0;
   private memberCache = new Map<string, Ent[]>();
 
-  constructor(readonly program: Program, readonly world: World, readonly host: RuleHost) {
-    this.byPath = new Map(world.entities.map((e) => [e.path, e]));
-    for (const e of world.entities) for (const n of [e.name, ...e.aliases]) this.byName.set(norm(n), e);
+  constructor(readonly program: Program, public world: World, readonly host: RuleHost) {
+    this.byPath = new Map();
+    this.refresh(world);
     this.globals.set('mundo', world.name);
     for (const g of program.globals) {
       this.guard(g.src, () => this.globals.set(g.name, this.eval(g.value, new Map(), null)));
     }
+  }
+
+  /** Troca o mundo visto pelas regras (nasceu ou morreu gente na simulação de vidas). */
+  refresh(world: World = this.world): void {
+    this.world = world;
+    this.byPath = new Map(world.entities.map((e) => [e.path, e]));
+    this.byName.clear();
+    for (const e of world.entities) for (const n of [e.name, ...e.aliases]) this.byName.set(norm(n), e);
+    this.memberCache.clear();
+  }
+
+  /** O nome de uma ficha (ou de algo que o anfitrião conhece). */
+  nameOf(path: string): string {
+    return this.byPath.get(path)?.name ?? this.host.label?.(path) ?? path;
   }
 
   // ---------------------------------------------------------------- portas de entrada
@@ -106,6 +136,19 @@ export class Rules {
     this.interact();
   }
 
+  /**
+   * Um mês da simulação de vidas: `quando mês`, `quando ano` (em janeiro) e as
+   * interações, com a chance anual repartida pelos meses (`period`).
+   */
+  month(year: number, newYear: boolean): void {
+    this.host.year = year;
+    this.memberCache.clear();
+    if (newYear) this.emit('ano');
+    this.emit('mes');
+    this.memberCache.clear();
+    this.interact();
+  }
+
   /** Ações que aparecem como botão nesta ficha. */
   actionsFor(path: string): string[] {
     const e = this.byPath.get(path);
@@ -131,6 +174,12 @@ export class Rules {
     return this.program.computed
       .filter((c) => this.isA(ent, c.type))
       .map((c) => ({ name: c.name, value: this.show(this.guard(c.src, () => this.eval(c.expr, this.subjectEnv(c.type, ent), ent))) }));
+  }
+
+  /** Avalia uma condição com `isto` (e o nome do tipo) apontando para a ficha. Erros viram falso (e entram em `issues`). */
+  check(expr: Expr, path: string, type = 'personagem', src: Src = { path: '', line: 0 }): boolean {
+    const ent = new Ent(path);
+    return this.truthy(this.guard(src, () => this.eval(expr, this.subjectEnv(type, ent), ent)));
   }
 
   /** Console: avalia uma expressão (ou roda linhas) e devolve o resultado em texto. */
@@ -169,13 +218,16 @@ export class Rules {
       this.guard(it.src, () => {
         const as = this.shuffle(this.members(it.a.type));
         const bs = it.b ? this.members(it.b.type) : [];
+        const bSet = it.b && this.host.candidates ? new Set(bs.map((x) => x.path)) : null;
         for (const a of as) {
           const env: Env = new Map([[it.a.v, a]]);
           let partner: Ent | null = null;
           if (it.b) {
             // cada um escolhe um parceiro, puxado pela atração (peso > 0)
             const cands: Array<{ b: Ent; w: number }> = [];
-            for (const b of bs) {
+            const near = this.host.candidates?.(a.path, it.b.type);
+            const pool = near && bSet ? near.filter((p) => bSet.has(p)).map((p) => new Ent(p)) : bs;
+            for (const b of pool) {
               if (b.path === a.path) continue;
               const e2: Env = new Map([[it.a.v, a], [it.b.v, b]]);
               if (it.where && !this.truthy(this.eval(it.where, e2, null))) continue;
@@ -191,6 +243,9 @@ export class Rules {
           else if (it.attraction && this.num(this.eval(it.attraction, env, null)) <= 0) continue;
           let p = it.chance ? this.num(this.eval(it.chance, env, null)) : 0.1;
           if (p > 1) p /= 100;
+          // chance por ano; numa volta mensal, a parte do mês (12 meses a 1,4% ≈ 15% no ano)
+          const per = this.host.period ?? 1;
+          if (per < 1 && p > 0) p = p >= 1 ? 1 : 1 - Math.pow(1 - p, per);
           if (rng() >= p) continue;
           this.exec(it.body, env, null);
         }
@@ -247,13 +302,13 @@ export class Rules {
 
   private field(ent: Ent, name: string): Val {
     const k = norm(name);
+    const v = this.host.virtual?.get(ent.path, k);
+    if (v !== undefined) return v;
     const e = this.byPath.get(ent.path);
     if (!e) return null;
     if (k === 'nome') return e.name;
     if (k === 'tipo') return e.type;
     if (k === 'caminho') return e.path;
-    const v = this.host.virtual?.get(ent.path, k);
-    if (v !== undefined) return v;
     const o = this.over.get(ent.path)?.get(k);
     if (o) return o.v;
     const key = Object.keys(e.props).find((p) => norm(p) === k);
@@ -280,7 +335,10 @@ export class Rules {
   private setField(ent: Ent, name: string, v: Val): void {
     const k = norm(name);
     if (['nome', 'tipo', 'caminho'].includes(k)) throw new RuleError(`"${name}" não muda por regra`);
-    if (typeof v === 'number' && this.host.virtual?.set(ent.path, k, v)) return;
+    if (this.host.virtual?.set(ent.path, k, v)) {
+      this.memberCache.clear();
+      return;
+    }
     const e = this.byPath.get(ent.path);
     const shown = (e && Object.keys(e.props).find((p) => norm(p) === k)) ?? name.replace(/_/g, ' ');
     let m = this.over.get(ent.path);
@@ -291,7 +349,7 @@ export class Rules {
 
   private toProp(v: Val): PropValue | null {
     if (v === null) return null;
-    if (v instanceof Ent) return `[[${this.byPath.get(v.path)?.name ?? v.path}]]`;
+    if (v instanceof Ent) return `[[${this.nameOf(v.path)}]]`;
     if (Array.isArray(v)) return v.map((x) => (this.toProp(x) as string | null) ?? '').filter(Boolean) as string[];
     if (typeof v === 'number') return String(Math.round(v * 100) / 100);
     if (typeof v === 'boolean') return v ? 'true' : 'false';
@@ -649,11 +707,13 @@ export class Rules {
         return this.fill(roll.text, env, subject);
       }
       case 'existe': return args()[0] !== null;
-      case 'nome': { const x = args()[0]; return x instanceof Ent ? this.byPath.get(x.path)?.name ?? null : this.show(x ?? null); }
+      case 'nome': { const x = args()[0]; return x instanceof Ent ? this.nameOf(x.path) : this.show(x ?? null); }
       case 'texto': return this.show(args()[0] ?? null);
       case 'numero': return this.num(args()[0] ?? null);
       case 'lista': return args().flat();
     }
+    const fn = this.host.fns?.[e.name];
+    if (fn) return fn(args(), this);
     throw new RuleError(`não conheço a função "${e.raw}"`);
   }
 
@@ -705,7 +765,7 @@ export class Rules {
     if (a instanceof Ent || b instanceof Ent) {
       if (a instanceof Ent && b instanceof Ent) return a.path === b.path;
       const [x, s] = a instanceof Ent ? [a, b] : [b as Ent, a];
-      return typeof s === 'string' && norm(this.byPath.get(x.path)?.name ?? '') === norm(s);
+      return typeof s === 'string' && norm(this.nameOf(x.path)) === norm(s);
     }
     if (typeof a === 'string' && typeof b === 'string') return norm(a) === norm(b);
     if (typeof a === 'number' || typeof b === 'number') return a !== null && b !== null && this.num(a) === this.num(b);
@@ -738,7 +798,7 @@ export class Rules {
     if (v === null || v === undefined) return '—';
     if (v instanceof Ent) {
       actors?.push(v.path);
-      const n = this.byPath.get(v.path)?.name ?? v.path;
+      const n = this.nameOf(v.path);
       return links ? `[[${n}]]` : n;
     }
     if (Array.isArray(v)) return v.map((x) => this.show(x, links, actors)).join(', ');

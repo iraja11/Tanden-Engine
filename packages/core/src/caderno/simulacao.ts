@@ -227,7 +227,7 @@ export function simulateWorld(w: World, opts: SimOptions): SimResult {
         get: (path, f) => (VIRTUAL[f] && A.get(path) ? Math.round(A.get(path)![VIRTUAL[f]] / 10 * 10) / 10 : undefined),
         set: (path, f, v) => {
           const a = A.get(path);
-          if (!VIRTUAL[f] || !a) return false;
+          if (!VIRTUAL[f] || !a || typeof v !== 'number') return false;
           a[VIRTUAL[f]] = Math.max(0, Math.min(VIRTUAL[f] === 'power' ? 400 : 100, v * 10));
           return true;
         },

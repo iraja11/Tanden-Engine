@@ -3,6 +3,7 @@
   import { rise } from '../../motion';
   import { cadernos } from '../cadernos.svelte';
   import { typeColor, typeGlyph } from '../tipos';
+  import Construtor from './Construtor.svelte';
   import LinkText from './LinkText.svelte';
 
   // Regras do mundo: o que está declarado nos blocos ```regras, os erros
@@ -99,12 +100,14 @@
   <section class="head">
     <div>
       <h3>Regras do mundo</h3>
-      <p class="dim">Blocos <code>```regras</code> em qualquer nota do mundo criam tipos, grupos, campos calculados, botões nas fichas, eventos e interações entre personagens. Elas rodam na Simulação e nos botões; nada muda nas notas sem você pedir.</p>
+      <p class="dim">Blocos <code>```regras</code> em qualquer nota do mundo criam tipos, grupos, campos calculados, botões nas fichas, eventos, interações entre personagens, traços, profissões e gostos. Elas rodam nas duas simulações (vidas e facções) e nos botões; nada muda nas notas sem você pedir.</p>
     </div>
     <div class="acts">
       <button class="primary" onclick={createExample}>{files.length ? '+ Nota de regras' : 'Começar com um exemplo'}</button>
     </div>
   </section>
+
+  <Construtor {world} {onOpenNote} />
 
   {#if files.length}
     <div class="files">

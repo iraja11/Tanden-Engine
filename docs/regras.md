@@ -2,7 +2,8 @@
 
 Uma linguagem pequena, em português, para dar comportamento ao mundo: tipos
 novos de ficha, campos calculados, botões nas fichas, eventos, interações entre
-personagens e acontecimentos que surgem sozinhos na **Simulação**.
+personagens, traços, profissões e acontecimentos que surgem sozinhos na
+**Simulação** (de facções e de [vidas](vidas.md)).
 
 As regras moram em blocos ` ```regras ` em qualquer nota do mundo (dentro de
 `Mundos/<mundo>/` ou com `mundo: <mundo>`). O Obsidian mostra o bloco como
@@ -63,6 +64,7 @@ quando roubo(ladrão, vítima, coisa):
 | `interação "Nome" entre a em X, b em Y onde ...:` | A cada ano, cada `a` escolhe um `b`, sorteado com peso pela `atração`, e o efeito acontece com a `chance`. Dentro, antes do efeito: `atração = expressão` (padrão 1; zero ou menos = não se atrai) e `chance = 15%` (padrão 10%). |
 | `interação "Visões" de p em personagem onde fé > 8:` | Acontecimento ocasional de uma ficha só. |
 | `seja limite = 7` | Constante do mundo. |
+| `traço "Nome":`, `profissão "Nome":`, `gosto "Nome"` | Catálogo da simulação de vidas (ver abaixo). |
 
 ## Comandos (dentro dos blocos, recuados)
 
@@ -129,6 +131,125 @@ tipo: tabela
 ```
 
 Notas `tipo: tabela` dentro da pasta do mundo não viram fichas.
+
+## Na simulação de vidas
+
+As mesmas regras rodam na [simulação de vidas](vidas.md), mês a mês, com as
+pessoas da simulação no lugar das fichas de personagem (inclusive figurantes e
+quem nasceu lá). `personagem` é quem está vivo.
+
+- **Interações** acontecem todo mês, só entre quem está no mesmo lugar; a
+  `chance` continua sendo **por ano** (15% ao ano ≈ 1,3% ao mês).
+- `quando mês:` roda todo mês; `quando ano:` em janeiro.
+
+### Declarações novas
+
+```regras
+traço "Sonâmbulo" "Sonâmbula":
+  descrição "Anda dormindo."
+  oposto "insone"
+  herdável 25%
+  categoria personalidade      # ou adquirido, congenito, marca, reputacao
+  peso flertar -50%            # muda a vontade de uma interação (+50%, -30%, * 2)
+  afinidade "devoto" -10       # opinião sobre quem tem outro traço ("" = o mesmo)
+  humor -5
+  estresse +5
+  surge onde isto.idade > 30 e isto.estresse > 70
+  chance 20%                   # por ano, quando a condição vale
+
+profissão "Alquimista" "Alquimista":
+  renda 12                     # moedas por mês
+  habilidade saber             # combate, lábia, intriga, ofício ou saber
+  status 3                     # prestígio, 0 a 5
+  risco 1%                     # acidente por mês
+  viaja                        # vive na estrada (como mercadores e bardos)
+  requer isto.saber pelo menos 6
+
+gosto "Falcoaria"
+gostos "Xadrez", "Ópera"
+```
+
+Os ids das interações para `peso`: `conversar`, `atividade`, `elogiar`,
+`presentear`, `ajudar`, `confidenciar`, `fofocar`, `insultar`, `discutir`,
+`reconciliar`, `ensinar`, `brincar`, `cuidar`, `flertar`, `cortejar`,
+`intimidade`, `pedir_casamento`, `seduzir`, `encontro_secreto`, `terminar`,
+`divorciar`, `brigar`, `duelar`, `ameacar`, `roubar`, `assassinar`,
+`trabalhar`, `treinar`, `estudar`, `rezar`, `beber`, `viajar`.
+
+### Campos das pessoas
+
+Leitura: `idade`, `sexo`, `gênero`, `orientação`, `vivo`, `morto`, `adulto`,
+`criança`, `local` (onde está agora), `casa` (onde mora), `viajando`,
+`profissão`, `dinheiro`, `saúde`, `humor`, `estresse`, `traços`, `gostos`,
+`força`, `agilidade`, `intelecto`, `beleza`, `fertilidade`, `altura`, `olhos`,
+`cabelo`, `combate`, `lábia`, `intriga`, `ofício`, `saber`, `abertura`,
+`conscienciosidade`, `extroversão`, `amabilidade`, `neuroticismo`, `cônjuge`,
+`parceiro` (cônjuge, noivo ou namorado), `mãe`, `pai` (o oficial),
+`pai_biológico`, `pais`, `filhos`, `irmãos`, `amantes`, `amigos`, `rivais`,
+`inimigos`, `grávida`, `família` (sobrenome), `meta`, `alvo`, `comprometido`,
+`casado`, `conduzido`, `protegido`, `perto` (quem está no mesmo lugar).
+
+Dá para mudar: `dinheiro`, `saúde`, `humor`, `estresse`, as habilidades, os
+cinco grandes, `traços` (`p.traços += "ciumento"`), `gostos`, `profissão`,
+`local`, `família`, `conduzido`, `protegido`. Qualquer outro nome vira um campo
+livre da pessoa (`p.rancor += 1`). Família, casamento e morte mudam pelas
+funções abaixo.
+
+Nos traços, o nome sem acento e no masculino é o que a lista guarda
+(`p.traços tem "irascivel"`); `traço(p, "irascível")` aceita qualquer forma.
+
+### Relações
+
+`relação(a, b)` é como `a` vê `b`, com os campos `afeto`, `atração`,
+`confiança`, `respeito`, `intimidade`, `opinião` (só leitura), `vínculos` e
+`parentesco`:
+
+```regras
+relação(a, b).afeto += 20
+se relação(b, a).confiança < 0:
+  crônica "{b} não acredita numa palavra de {a}."
+```
+
+### Funções
+
+| Função | O que faz |
+|---|---|
+| `opinião(a, b)`, `atração(a, b)` | números de −100 a 100 / 0 a 100 |
+| `traço(p, "nome")` | p tem o traço? |
+| `ganhar(p, "traço")`, `perder(p, "traço")` | dá ou tira um traço |
+| `namorar(a, b)`, `noivar(a, b)`, `casar(a, b)`, `terminar(a, b)`, `divorciar(a, b)` | romance (só entre adultos que podem) |
+| `caso(a, b)` | começa um caso em segredo |
+| `engravidar(mãe, pai)` | engravida, se der |
+| `lutar(a, b, "duelo")` | luta (`briga`, `duelo`, `emboscada`); devolve quem venceu |
+| `ferir(p)`, `ferir(p, "manco")`, `matar(p, "envenenado")` | corpo e morte |
+| `lembrar(a, b, "me salvou", 30)` | memória de `a` sobre `b` (pontos; meia-vida opcional em meses) |
+| `meta(p, "vinganca", alvo)` | dá uma meta |
+| `mudar(p, lugar)`, `viajar(p, lugar)` | muda de vez ou viaja |
+| `parente(a, b)` | "irmão", "mãe", "primo"... ou vazio |
+| `parentes(p)`, `presentes(p ou lugar)` | listas de pessoas |
+| `segredo(p)`, `segredo(p, quem)` | p está num segredo (que `quem` sabe)? |
+| `revelar(p)` | os segredos de p caem na boca do povo |
+| `atividade(a, b)` | o que os dois gostam de fazer juntos (texto) |
+
+### Eventos
+
+`quando nascimento(bebê, mãe, pai)`, `morte(morto)`, `casamento(a, b)`,
+`namoro(a, b)`, `noivado(a, b)`, `divorcio(quem pediu, outro)`,
+`termino(quem terminou, outro)`, `caso(a, b)`, `descoberta(vítima, traidor,
+amante)`, `traicao(traidor, vítima, amante)`, `gravidez(mãe, pai)`,
+`paternidade(pai oficial, filho, pai biológico)`, `flerte(a, b)`,
+`briga(vencedor, perdedor)`, `duelo(...)`, `emboscada(...)`,
+`assassinato(assassino, vítima)`, `atentado(assassino, alvo)`,
+`roubo(ladrão, vítima)`, `amizade(a, b)`, `rivalidade(a, b)`,
+`inimizade(a, b)`, `reconciliacao(a, b)`, `maioridade(p)`, `doenca(p)`,
+`crise(p)`, `traco(p, "nome")`, `viagem(p, "lugar")`, `festa`, `peste`,
+`fome`, `guerra`, `fartura`, `inicio`, `mes`, `ano`.
+
+### O construtor
+
+A aba **Regras** tem um construtor que escreve estes blocos por você (condições
+e efeitos escolhidos em listas) e receitas prontas. O texto gerado é esta mesma
+linguagem: dá para abrir a nota e ajustar.
 
 ## Limites
 
