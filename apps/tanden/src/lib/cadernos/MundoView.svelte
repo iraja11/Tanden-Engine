@@ -567,7 +567,7 @@
       {:else if tab === 'conflitos'}
         <ConflitosView {world} {byPath} onopen={openEntity} onnew={() => startEntity('', 'conflito')} />
       {:else if tab === 'sim'}
-        <SimView {world} {byPath} onopen={openEntity} />
+        <SimView {world} {byPath} onopen={openEntity} {onOpenNote} onregras={() => (tab = 'regras')} />
       {:else if tab === 'ideias'}
         <IdeiasView {world} {byPath} onopen={openEntity} oncreate={(n, t) => startEntity(n, t)} />
       {:else if tab === 'regras'}

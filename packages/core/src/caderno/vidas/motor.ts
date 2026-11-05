@@ -164,6 +164,7 @@ export class Vidas {
       } else if (l.v) this.liga(l.a, l.b, l.v);
     }
     this.ligarRegras();
+    this.mapearPresenca();
     this.rt?.emit('inicio');
     this.coletarIssues();
   }
@@ -1122,6 +1123,8 @@ export class Vidas {
       this.podar();
     }
     this.t++;
+    // quem está onde no começo do mês seguinte (a tela e as intervenções usam)
+    this.mapearPresenca();
   }
 
   private embaralhar<T>(l: T[]): T[] {
@@ -1780,6 +1783,11 @@ export class Vidas {
   }
 
   private executar(cmd: Comando): void {
+    this.executarCmd(cmd);
+    this.mapearPresenca();
+  }
+
+  private executarCmd(cmd: Comando): void {
     const P = (id: string) => this.pessoas.get(id);
     switch (cmd.c) {
       case 'agir': {

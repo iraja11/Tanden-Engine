@@ -41,7 +41,14 @@ export interface Traco {
 
 const T = (id: string, f: string | null, cat: TracoCat, desc: string, x: Partial<Traco> = {}): Traco => ({ id, m: id, f: f ?? id, cat, desc, ...x });
 
-export const TRACOS: Traco[] = [
+// forma masculina com acento (o id é sem acento, para as regras acharem do jeito que for escrito)
+const MASC: Record<string, string> = {
+  irascivel: 'irascível', sociavel: 'sociável', timido: 'tímido', preguicoso: 'preguiçoso', cinico: 'cínico', traicoeiro: 'traiçoeiro', ingenuo: 'ingênuo',
+  melancolico: 'melancólico', romantico: 'romântico', pragmatico: 'pragmático', fragil: 'frágil', miudo: 'miúdo', esteril: 'estéril', sabio: 'sábio',
+  consanguineo: 'consanguíneo', gemeo: 'gêmeo', heroi: 'herói', alcoolatra: 'alcoólatra', brigao: 'brigão',
+};
+
+const TRACOS_BASE: Traco[] = [
   // ---- personalidade (em pares de opostos)
   T('corajoso', 'corajosa', 'personalidade', 'Encara o perigo de frente.', { oposto: 'covarde', herda: 0.12, peso: { brigar: 1.5, duelar: 1.8, ameacar: 1.3 }, big5: [5, 0, 5, 0, -15], combate: 3, visto: 3 }),
   T('covarde', null, 'personalidade', 'Foge quando o bicho pega.', { oposto: 'corajoso', herda: 0.12, peso: { brigar: 0.4, duelar: 0.15, assassinar: 0.6, ameacar: 0.5 }, big5: [0, 0, -5, 0, 15], combate: -3, visto: -3 }),
@@ -118,6 +125,8 @@ export const TRACOS: Traco[] = [
   T('caolho', 'caolha', 'marca', 'Perdeu um olho.', { combate: -3, visto: -1 }),
   T('mutilado', 'mutilada', 'marca', 'Perdeu a mão.', { combate: -6 }),
 ];
+
+export const TRACOS: Traco[] = TRACOS_BASE.map((t) => (MASC[t.id] ? { ...t, m: MASC[t.id]! } : t));
 
 export const GOSTOS = [
   'música', 'caça', 'leitura', 'bebida', 'jogos de azar', 'arte', 'natureza', 'festas', 'culinária', 'luta', 'religião', 'viagens',

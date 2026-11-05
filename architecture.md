@@ -127,7 +127,7 @@ Domínios em subpastas (cada um exporta por um `index.ts`):
 
 | Pasta | Domínio |
 |---|---|
-| `caderno/` | Cadernos de jogos de luta e de world building (frontmatter, `luta`, `mundo`) e as ferramentas do mundo: `conflitos` (tensões e alianças), `mapa` (marcadores, distância, terreno por semente), `simulacao` (facções ao longo dos anos), `revisao` (contradições), `gerador` (nomes, traços, ganchos) e `regras/` (a linguagem dos blocos ```regras: `parse.ts` lê, `run.ts` interpreta, sem `eval`; ver [docs/regras.md](docs/regras.md)). |
+| `caderno/` | Cadernos de jogos de luta e de world building (frontmatter, `luta`, `mundo`) e as ferramentas do mundo: `conflitos` (tensões e alianças), `mapa` (marcadores, distância, terreno por semente), `simulacao` (facções ao longo dos anos), `revisao` (contradições), `gerador` (nomes, traços, ganchos), `regras/` (a linguagem dos blocos ```regras: `parse.ts` lê, `run.ts` interpreta, sem `eval`; ver [docs/regras.md](docs/regras.md)) e `vidas/` (simulação de pessoas mês a mês: `catalogo` de traços/profissões/gostos, `genetica`, `motor` com o mês, influências, decisões e a ponte com as regras, `interacoes`, `combate`, `elenco` (ficha ⇄ pessoa, figurantes), `salvar` (nota `tipo: simulação` com elenco + intervenções, refeita por replay determinístico) e `mecanicas` (construtor e receitas); ver [docs/vidas.md](docs/vidas.md)). |
 | `calc/` | Cálculo: linguagem, numérico, simbólico, gráficos, formatação, folhas. |
 | `sheet/` | Planilhas `.xlsx`/`.ods`/`.csv`: fórmula, funções, valores, workbook, store. |
 | `slides/` | Apresentações: deck, modelo, aparência, exportação `.pptx`/`.odp`/PDF. |
