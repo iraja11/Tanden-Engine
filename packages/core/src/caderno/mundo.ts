@@ -171,6 +171,8 @@ export interface World {
   props?: Props;
   /** blocos ```regras das notas do mundo, com a linha onde começam */
   scripts?: Array<{ path: string; code: string; line: number }>;
+  /** notas de simulação de vidas (`tipo: simulação`) */
+  sims?: string[];
 }
 
 /** Blocos ```regras de uma nota, com a linha (a partir de 1) da primeira linha de código. */
@@ -253,6 +255,12 @@ export function worldIndex(notes: Array<{ path: string; text: string }>): World[
     const tipo = normalizeType(asText(props['tipo'] ?? props['type']));
     // bancos de texto (tabelas de rolagem) não são fichas, mesmo dentro da pasta do mundo
     if (!tipo || tipo === 'tabela') continue;
+    // simulações de vidas também não: ficam numa lista à parte
+    if (tipo.normalize('NFD').replace(/[̀-ͯ]/g, '') === 'simulacao') {
+      const wn = worldOf(path, props);
+      if (wn) (get(wn).sims ??= []).push(path);
+      continue;
+    }
     if (tipo === 'mundo' || tipo === 'world') {
       const w = get(noteName(path));
       w.path = path;

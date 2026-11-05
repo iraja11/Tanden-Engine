@@ -522,6 +522,40 @@ export interface RuleGroup { name: string; label: string; v: string; from: strin
 export interface RuleParty { v: string; type: string }
 export interface RuleInteraction { name: string; a: RuleParty; b: RuleParty | null; where: Expr | null; attraction: Expr | null; chance: Expr | null; body: Stmt[]; src: Src }
 export interface RuleGlobal { name: string; value: Expr; src: Src }
+/** Traço de personalidade declarado nas regras (entra no catálogo da simulação de vidas). */
+export interface RuleTrait {
+  id: string;
+  m: string;
+  f: string;
+  opposite: string | null;
+  /** chance de passar de pai/mãe para filho (0 a 1) */
+  inherit: number;
+  desc: string;
+  category: string;
+  /** multiplicador do peso de cada interação (id sem acento → ×) */
+  weights: Record<string, number>;
+  /** opinião extra quando o outro tem este traço (id → pontos); "" = o próprio traço */
+  affinity: Record<string, number>;
+  mood: number;
+  stress: number;
+  /** surge sozinho na pessoa quando a condição vale (conferido uma vez por ano) */
+  emerge: Expr | null;
+  emergeChance: number;
+  src: Src;
+}
+/** Profissão declarada nas regras. */
+export interface RuleProfession {
+  id: string;
+  m: string;
+  f: string;
+  income: number;
+  skill: string;
+  status: number;
+  risk: number;
+  travels: boolean;
+  requires: Expr | null;
+  src: Src;
+}
 
 export interface RuleIssue {
   path: string;
@@ -537,10 +571,51 @@ export interface Program {
   handlers: RuleHandler[];
   interactions: RuleInteraction[];
   globals: RuleGlobal[];
+  traits: RuleTrait[];
+  professions: RuleProfession[];
+  tastes: string[];
   issues: RuleIssue[];
 }
 
-export const emptyProgram = (): Program => ({ types: [], groups: [], computed: [], actions: [], handlers: [], interactions: [], globals: [], issues: [] });
+export const emptyProgram = (): Program => ({
+  types: [], groups: [], computed: [], actions: [], handlers: [], interactions: [], globals: [], traits: [], professions: [], tastes: [], issues: [],
+});
+
+/** "+50%" → 1,5; "-30%" → 0,7; "* 2" ou "x2" → 2; "2" → 2. */
+function multiplier(p: P): number {
+  const t = p.next();
+  if (t.k === 'op' && (t.v === '+' || t.v === '-')) {
+    const n = p.next();
+    if (n.k !== 'num') throw p.err('esperava um número depois do sinal (ex.: +50%)');
+    const frac = n.v.endsWith('%') || n.num! > 3 ? (n.v.endsWith('%') ? n.num! : n.num! / 100) : n.num!;
+    return Math.max(0, t.v === '+' ? 1 + frac : 1 - frac);
+  }
+  if ((t.k === 'op' && t.v === '*') || (t.k === 'id' && (t.key === 'x' || t.key === 'vezes'))) {
+    const n = p.next();
+    if (n.k !== 'num') throw p.err('esperava um número depois do "*"');
+    return n.num!;
+  }
+  if (t.k === 'num') return t.num!;
+  throw p.err(`esperava um peso como +50%, -30% ou * 2; veio "${t.v}"`);
+}
+
+/** "+10", "-5", "10" → número com sinal. */
+function signed(p: P): number {
+  const t = p.next();
+  if (t.k === 'op' && (t.v === '+' || t.v === '-')) {
+    const n = p.next();
+    if (n.k !== 'num') throw p.err('esperava um número');
+    return t.v === '-' ? -n.num! : n.num!;
+  }
+  if (t.k === 'num') return t.num!;
+  throw p.err(`esperava um número; veio "${t.v}"`);
+}
+
+const pct = (p: P): number => {
+  const n = p.next();
+  if (n.k !== 'num') throw p.err('esperava uma porcentagem (ex.: 25%)');
+  return n.v.endsWith('%') ? n.num! : n.num! > 1 ? n.num! / 100 : n.num!;
+};
 
 const str = (p: P, what: string): string => {
   const t = p.next();
@@ -707,6 +782,74 @@ function decl(prog: Program, l: Line): void {
       prog.interactions.push({ name, a, b, where, attraction, chance, body: parseBlock(rest), src });
       return;
     }
+    case 'traco': {
+      // traço "Sonâmbulo" "Sonâmbula":
+      p.next();
+      const m = str(p, 'o nome do traço entre aspas');
+      const f = p.done() ? m : str(p, 'a forma feminina entre aspas');
+      p.endHeader();
+      const t: RuleTrait = {
+        id: fold(m).trim(), m, f, opposite: null, inherit: 0, desc: '', category: 'personalidade', weights: {}, affinity: {}, mood: 0, stress: 0,
+        emerge: null, emergeChance: 1, src,
+      };
+      for (const kid of l.kids) {
+        const q = new P(kid.toks, kid.src);
+        const kk = kid.toks[0]!.key;
+        q.next();
+        if (kk === 'oposto' || kk === 'contrario') t.opposite = fold(str(q, 'o traço oposto entre aspas')).trim();
+        else if (kk === 'herdavel' || kk === 'heranca' || kk === 'hereditario') t.inherit = pct(q);
+        else if (kk === 'descricao') t.desc = str(q, 'a descrição entre aspas');
+        else if (kk === 'categoria') t.category = fold(str(q, 'a categoria'));
+        else if (kk === 'peso') t.weights[fold(q.ident('o nome de uma interação (ex.: flertar)').v)] = multiplier(q);
+        else if (kk === 'afinidade') {
+          const other = q.peek()?.k === 'str' ? fold(q.next().v).trim() : '';
+          t.affinity[other] = signed(q);
+        } else if (kk === 'humor') t.mood = signed(q);
+        else if (kk === 'estresse') t.stress = signed(q);
+        else if (kk === 'surge' || kk === 'aparece') {
+          q.key('onde', 'se', 'quando');
+          t.emerge = q.expr();
+        } else if (kk === 'chance') t.emergeChance = pct(q);
+        else throw q.err(`dentro de "traço" vale oposto, herdável, descrição, categoria, peso, afinidade, humor, estresse, surge e chance; veio "${kid.toks[0]!.v}"`);
+        q.end();
+      }
+      prog.traits.push(t);
+      return;
+    }
+    case 'profissao': {
+      // profissão "Alquimista":
+      p.next();
+      const m = str(p, 'o nome da profissão entre aspas');
+      const f = p.done() ? m : str(p, 'a forma feminina entre aspas');
+      p.endHeader();
+      const t: RuleProfession = { id: fold(m).trim(), m, f, income: 4, skill: 'oficio', status: 2, risk: 0, travels: false, requires: null, src };
+      for (const kid of l.kids) {
+        const q = new P(kid.toks, kid.src);
+        const kk = kid.toks[0]!.key;
+        q.next();
+        if (kk === 'renda' || kk === 'salario') t.income = signed(q);
+        else if (kk === 'habilidade') t.skill = fold(q.next().v);
+        else if (kk === 'status' || kk === 'prestigio') t.status = signed(q);
+        else if (kk === 'risco') t.risk = pct(q);
+        else if (kk === 'viaja' || kk === 'viajante') t.travels = true;
+        else if (kk === 'requer' || kk === 'exige') t.requires = q.expr();
+        else throw q.err(`dentro de "profissão" vale renda, habilidade, status, risco, viaja e requer; veio "${kid.toks[0]!.v}"`);
+        q.end();
+      }
+      prog.professions.push(t);
+      return;
+    }
+    case 'gosto':
+    case 'gostos': {
+      p.next();
+      for (;;) {
+        prog.tastes.push(str(p, 'o gosto entre aspas'));
+        if (!p.isOp(',')) break;
+        p.next();
+      }
+      p.end();
+      return;
+    }
     case 'seja': {
       p.next();
       const name = p.ident().key;
@@ -717,7 +860,7 @@ function decl(prog: Program, l: Line): void {
       return;
     }
   }
-  throw p.err(`não sei começar com "${l.toks[0]!.v}". Use tipo, grupo, calcular, ação, quando, interação ou seja`);
+  throw p.err(`não sei começar com "${l.toks[0]!.v}". Use tipo, grupo, calcular, ação, quando, interação, traço, profissão, gosto ou seja`);
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
