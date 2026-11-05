@@ -29,7 +29,23 @@ export interface EntityType {
   sections: string[];
   /** campos que a tela sugere como botão (não entram no modelo, para a nota nascer enxuta) */
   extras?: string[];
+  /** valores iniciais dos campos (tipos criados por regra) */
+  defaults?: Record<string, string>;
+  /** cor e símbolo (tipos criados por regra) */
+  color?: string;
+  glyph?: string;
 }
+
+// tipos declarados nas regras dos mundos (`tipo navio:`), somados aos de fábrica
+let custom: EntityType[] = [];
+
+/** Troca os tipos declarados por regra (a tela chama depois de reler as regras). */
+export function setCustomTypes(types: EntityType[]): void {
+  custom = types.filter((t) => !ENTITY_TYPES.some((x) => x.id === t.id));
+}
+
+/** Tipos de fábrica e os criados por regra. */
+export const allTypes = (): EntityType[] => [...ENTITY_TYPES, ...custom];
 
 export const ENTITY_TYPES: EntityType[] = [
   { id: 'personagem', label: 'Personagem', plural: 'Personagens', fields: ['espécie', 'nascimento', 'morte', 'origem', 'afiliação', 'status'],
@@ -109,11 +125,13 @@ const TYPE_ALIASES: Record<string, string> = {
 export function normalizeType(t: string): string {
   const k = t.trim().toLowerCase();
   if (ENTITY_TYPES.some((x) => x.id === k)) return k;
+  const plain = k.normalize('NFD').replace(/[̀-ͯ]/g, '');
+  if (custom.some((x) => x.id === plain)) return plain;
   return TYPE_ALIASES[k] ?? k;
 }
 
 export const typeInfo = (id: string): EntityType =>
-  ENTITY_TYPES.find((t) => t.id === id) ?? { id, label: id.charAt(0).toUpperCase() + id.slice(1), plural: id.charAt(0).toUpperCase() + id.slice(1), fields: [], sections: [] };
+  ENTITY_TYPES.find((t) => t.id === id) ?? custom.find((t) => t.id === id || t.id === id.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()) ?? { id, label: id.charAt(0).toUpperCase() + id.slice(1), plural: id.charAt(0).toUpperCase() + id.slice(1), fields: [], sections: [] };
 
 /** Propriedades que não viram ligação nem aparecem como campo comum (a imagem vira o retrato). */
 export const RESERVED = new Set(['tipo', 'type', 'mundo', 'world', 'aliases', 'apelidos', 'tags', 'cssclasses',
@@ -149,6 +167,34 @@ export interface World {
   path: string | null;
   entities: Entity[];
   relations: Relation[];
+  /** propriedades da nota do mundo (ex.: `ano` atual) */
+  props?: Props;
+  /** blocos ```regras das notas do mundo, com a linha onde começam */
+  scripts?: Array<{ path: string; code: string; line: number }>;
+}
+
+/** Blocos ```regras de uma nota, com a linha (a partir de 1) da primeira linha de código. */
+export function ruleBlocks(path: string, text: string): Array<{ path: string; code: string; line: number }> {
+  if (!text.includes('```regras')) return [];
+  const out: Array<{ path: string; code: string; line: number }> = [];
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    if (!/^\s*```regras\s*$/.test(lines[i]!)) continue;
+    let j = i + 1;
+    while (j < lines.length && !/^\s*```\s*$/.test(lines[j]!)) j++;
+    out.push({ path, code: lines.slice(i + 1, j).join('\n'), line: i + 2 });
+    i = j;
+  }
+  return out;
+}
+
+/** O "agora" do mundo: `ano` na nota do mundo, ou a última data da linha do tempo. */
+export function worldYear(w: World): number {
+  const raw = w.props ? asText(w.props['ano'] ?? w.props['ano atual'] ?? w.props['hoje']) : '';
+  const n = raw ? parseWorldDate(raw) : null;
+  if (n !== null) return Math.floor(n);
+  const t = timeline(w);
+  return t.length ? Math.floor(Math.max(...t.map((s) => s.end ?? s.at))) : 0;
 }
 
 const unlink = (v: string): string => linkTarget(v.replace(/^\s*\[\[|\]\]\s*$/g, ''));
@@ -189,18 +235,28 @@ export function worldIndex(notes: Array<{ path: string; text: string }>): World[
   };
   const pending: Array<{ e: Entity; text: string }> = [];
 
+  const scripts: Array<{ world: string; block: { path: string; code: string; line: number } }> = [];
   for (const { path, text } of notes) {
     add(noteName(path), path);
     add(path.replace(/\.md$/i, ''), path);
+    const blocks = ruleBlocks(path, text);
+    if (blocks.length) {
+      const fm = text.startsWith('---') ? parseProps(text) : {};
+      const isWorld = normalizeType(asText(fm['tipo'] ?? fm['type'])) === 'mundo';
+      const wn = isWorld ? noteName(path) : worldOf(path, fm);
+      if (wn) for (const b of blocks) scripts.push({ world: wn, block: b });
+    }
     if (!text.startsWith('---')) continue;
     const props = parseProps(text);
     const aliases = asList(props['aliases'] ?? props['apelidos']);
     for (const a of aliases) add(a, path);
     const tipo = normalizeType(asText(props['tipo'] ?? props['type']));
-    if (!tipo) continue;
+    // bancos de texto (tabelas de rolagem) não são fichas, mesmo dentro da pasta do mundo
+    if (!tipo || tipo === 'tabela') continue;
     if (tipo === 'mundo' || tipo === 'world') {
       const w = get(noteName(path));
       w.path = path;
+      w.props = props;
       continue;
     }
     const world = worldOf(path, props);
@@ -253,6 +309,7 @@ export function worldIndex(notes: Array<{ path: string; text: string }>): World[
     e.score = completeness(e, text, e.relations.filter((r) => r.to).length + (incoming.get(e.path) ?? 0));
   }
 
+  for (const s of scripts) (get(s.world).scripts ??= []).push(s.block);
   for (const w of worlds.values()) w.entities.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   return [...worlds.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 }
@@ -392,7 +449,7 @@ semente: ${seed}
 | -------- | - | - |
 `;
   }
-  const fields = t.fields.map((f) => `${/[:#]/.test(f) ? `"${f}"` : f}: `).join('\n');
+  const fields = t.fields.map((f) => `${/[:#]/.test(f) ? `"${f}"` : f}: ${t.defaults?.[f] ?? ''}`.trimEnd()).join('\n');
   const sections = t.sections.map((s) => `## ${s}\n\n`).join('');
   return `---
 tipo: ${type}

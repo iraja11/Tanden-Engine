@@ -7,3 +7,4 @@ export * from './gerador';
 export * from './revisao';
 export * from './mapa';
 export * from './simulacao';
+export * from './regras';

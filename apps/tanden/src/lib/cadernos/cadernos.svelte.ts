@@ -1,4 +1,7 @@
-import { fightIndex, safeName, worldIndex, type Game, type World } from '@tanden/core';
+import {
+  Rules, compileRules, emptyProgram, fairRng, fold, readMarkers, safeName, setCustomTypes, setProps, setSection, tableIndex, worldIndex, worldYear,
+  fightIndex, getSection, type Game, type Program, type RollTable, type RuleHost, type SimResult, type World,
+} from '@tanden/core';
 import { engine } from '../engine.svelte';
 import { feel } from '../feel.svelte';
 import { sound } from '../sound.svelte';
@@ -11,8 +14,15 @@ class Cadernos {
   rev = $state(0);
   games = $state<Game[]>([]);
   worlds = $state<World[]>([]);
+  /** regras compiladas de cada mundo (pelo nome) */
+  programs = $state<Map<string, Program>>(new Map());
+  /** última simulação de cada mundo (o mapa pinta os territórios dela) */
+  lastSim = $state<Map<string, SimResult>>(new Map());
+  /** tabelas de rolagem do cofre: os bancos de texto das regras */
+  tables: RollTable[] = [];
   message = $state('');
   private started = false;
+  private customIds: string[] = [];
   private timer: ReturnType<typeof setTimeout> | null = null;
   private msgTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -36,7 +46,18 @@ class Cadernos {
   rebuild(): void {
     const notes = engine.vault.list().map((path) => ({ path, text: engine.vault.read(path) }));
     this.games = fightIndex(notes);
-    this.worlds = worldIndex(notes);
+    let worlds = worldIndex(notes);
+    const programs = new Map<string, Program>();
+    for (const w of worlds) programs.set(w.name, compileRules(w.scripts ?? []));
+    const types = [...programs.values()].flatMap((p) => p.types);
+    const before = JSON.stringify(this.customIds);
+    setCustomTypes(types);
+    this.customIds = types.map((t) => t.id);
+    // tipo novo declarado por regra: reindexa para as fichas desse tipo acharem o tipo certo
+    if (JSON.stringify(this.customIds) !== before) worlds = worldIndex(notes);
+    this.worlds = worlds;
+    this.programs = programs;
+    this.tables = tableIndex(notes);
     this.rev++;
   }
 
@@ -78,6 +99,41 @@ class Cadernos {
 
   exists(path: string): boolean {
     return engine.vault.has(path);
+  }
+
+  program(w: World): Program {
+    return this.programs.get(w.name) ?? emptyProgram();
+  }
+
+  /** Posição de cada ficha no primeiro mapa em que ela aparece (para distância()). */
+  positions(w: World): Map<string, { x: number; y: number }> {
+    const out = new Map<string, { x: number; y: number }>();
+    const byName = new Map<string, string>();
+    for (const e of w.entities) for (const n of [e.name, ...e.aliases]) byName.set(fold(n), e.path);
+    for (const m of w.entities.filter((e) => e.type === 'mapa')) {
+      for (const mk of readMarkers(this.read(m.path))) {
+        const path = mk.target ? byName.get(fold(mk.target.split('/').pop()!)) : undefined;
+        if (path && !out.has(path)) out.set(path, { x: mk.x, y: mk.y });
+      }
+    }
+    return out;
+  }
+
+  /** Um interpretador das regras do mundo, pronto para ações e console. */
+  rules(w: World, host: Partial<RuleHost> = {}): Rules {
+    return new Rules(this.program(w), w, { rng: fairRng, year: worldYear(w), tables: this.tables, positions: this.positions(w), ...host });
+  }
+
+  /** Grava nas fichas o que as regras mudaram (e a crônica, na seção "Registro" de quem foi citado). */
+  applyChanges(changes: Array<{ path: string; props: Record<string, string | string[] | null> }>, log: Array<{ path: string; line: string }> = []): void {
+    for (const c of changes) if (this.exists(c.path)) this.update(c.path, (t) => setProps(t, c.props));
+    for (const { path, line } of log) {
+      if (!this.exists(path)) continue;
+      this.update(path, (t) => {
+        const cur = (getSection(t, 'Registro') ?? '').replace(/\s+$/, '');
+        return setSection(t, 'Registro', `${cur ? `${cur}\n` : ''}- ${line}`);
+      });
+    }
   }
 
   say(msg: string): void {

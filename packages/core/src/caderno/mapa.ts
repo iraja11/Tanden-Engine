@@ -240,3 +240,41 @@ export function suggestSpots(t: Terrain, n: number, taken: Array<{ x: number; y:
   }
   return out;
 }
+
+// ------------------------------------------------------------------ territórios
+
+/**
+ * Regiões de cada dono no mapa: cada célula de terra fica com o dono do
+ * marcador mais perto (até `reach` % de distância). Devolve o índice do dono
+ * por célula (-1 = mar ou terra de ninguém), linha a linha.
+ *
+ * `land` diz se a célula é terra; sem terreno (mapa de imagem), tudo é terra.
+ */
+export function territoryGrid(
+  w: number, h: number, sites: Array<{ x: number; y: number; owner: number }>,
+  opts: { land?: (x: number, y: number) => boolean; reach?: number; aspect?: number } = {},
+): Int16Array {
+  const out = new Int16Array(w * h).fill(-1);
+  if (!sites.length) return out;
+  const reach = opts.reach ?? 16;
+  const aspect = opts.aspect ?? w / h;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (opts.land && !opts.land(x, y)) continue;
+      const px = ((x + 0.5) / w) * 100;
+      const py = ((y + 0.5) / h) * 100;
+      let best = -1;
+      let bd = reach;
+      for (const s of sites) {
+        // distância em "largura": o eixo y vale menos quando o mapa é largo
+        const d = Math.hypot(s.x - px, (s.y - py) / aspect);
+        if (d < bd) {
+          bd = d;
+          best = s.owner;
+        }
+      }
+      out[y * w + x] = best;
+    }
+  }
+  return out;
+}

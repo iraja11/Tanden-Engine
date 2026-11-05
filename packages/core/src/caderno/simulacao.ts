@@ -3,6 +3,9 @@ import { asText } from './frontmatter';
 import { sameTitle } from './markdown';
 import { tensionsOf } from './conflitos';
 import { timeline, type Entity, type World } from './mundo';
+import type { PropValue } from './frontmatter';
+import type { RollTable } from '../rpg/tables';
+import { Ent, Rules, type Program, type RuleIssue } from './regras';
 
 /*
  * Simulação de facções: "e se o mundo andasse sozinho por 50 anos?"
@@ -19,7 +22,7 @@ import { timeline, type Entity, type World } from './mundo';
  * A mesma semente dá a mesma história.
  */
 
-export type SimKind = 'guerra' | 'batalha' | 'conquista' | 'alianca' | 'traicao' | 'paz' | 'crise' | 'sucessao' | 'prosperidade' | 'praga' | 'descoberta' | 'heroi' | 'queda';
+export type SimKind = 'guerra' | 'batalha' | 'conquista' | 'alianca' | 'traicao' | 'paz' | 'crise' | 'sucessao' | 'prosperidade' | 'praga' | 'descoberta' | 'heroi' | 'queda' | 'regra';
 
 export interface SimEvent {
   year: number;
@@ -52,6 +55,12 @@ export interface SimOptions {
   chaos?: number;
   /** ano inicial; padrão: logo depois da última data do mundo */
   start?: number;
+  /** regras do mundo (```regras): eventos, interações, campos que mudam */
+  rules?: Program;
+  /** bancos de texto (tabelas de rolagem do cofre) para `tabela("...")` */
+  tables?: RollTable[];
+  /** posição das fichas no mapa, para `distância(a, b)` */
+  positions?: Map<string, { x: number; y: number }>;
 }
 
 export interface SimResult {
@@ -64,6 +73,10 @@ export interface SimResult {
   actors: SimActor[];
   /** por que não deu para simular, se for o caso */
   problem?: string;
+  /** erros das regras durante a simulação */
+  ruleIssues?: RuleIssue[];
+  /** campos que as regras mudaram (para mostrar e, se quiser, aplicar nas fichas) */
+  changes?: Array<{ path: string; props: Record<string, PropValue | null> }>;
 }
 
 const pick = <T>(rng: Rng, list: readonly T[]): T => list[Math.floor(rng() * list.length)]!;
@@ -96,6 +109,25 @@ const HOLDS = /^(sede|território|territorio|domínios|dominios|terras|capital)$
 const MEMBER = /^(afiliação|afiliacao|facção|faccao|ordem|membro de|lealdade)$/i;
 const LEADER = /^(líder|lider|chefe|governante|mestre|rei|rainha)$/i;
 
+/**
+ * Quem controla cada lugar: `governante`/`controle` no lugar, ou
+ * `sede`/`território` na facção. Cada lugar tem no máximo um dono.
+ */
+export function placeOwners(w: World): Map<string, string> {
+  const byPath = new Map(w.entities.map((e) => [e.path, e]));
+  const owner = new Map<string, string>();
+  for (const e of w.entities) {
+    if (e.type !== 'lugar') continue;
+    const r = e.relations.find((x) => OWN_PLACE.test(x.label.trim()) && x.to && byPath.get(x.to)?.type === 'faccao');
+    if (r) owner.set(e.path, r.to!);
+  }
+  for (const f of w.entities) {
+    if (f.type !== 'faccao') continue;
+    for (const r of f.relations) if (HOLDS.test(r.label.trim()) && r.to && byPath.get(r.to)?.type === 'lugar' && !owner.has(r.to)) owner.set(r.to, f.path);
+  }
+  return owner;
+}
+
 export function simulateWorld(w: World, opts: SimOptions): SimResult {
   const rng = seededRng(opts.seed);
   const chaos = Math.min(1, Math.max(0, opts.chaos ?? 0.5));
@@ -107,18 +139,10 @@ export function simulateWorld(w: World, opts: SimOptions): SimResult {
 
   const byPath = new Map(w.entities.map((e) => [e.path, e]));
   const factions = w.entities.filter((e) => e.type === 'faccao');
-  if (factions.length < 2) return empty('A simulação precisa de pelo menos duas facções no mundo.');
+  const rules = opts.rules && (opts.rules.handlers.length || opts.rules.interactions.length) ? opts.rules : null;
+  if (factions.length < 2 && !rules) return empty('A simulação precisa de pelo menos duas facções no mundo (ou de regras com "quando" e "interação").');
 
-  // ---- território: cada lugar tem no máximo um dono
-  const owner = new Map<string, string>();
-  for (const e of w.entities) {
-    if (e.type !== 'lugar') continue;
-    const r = e.relations.find((x) => OWN_PLACE.test(x.label.trim()) && x.to && byPath.get(x.to)?.type === 'faccao');
-    if (r) owner.set(e.path, r.to!);
-  }
-  for (const f of factions) {
-    for (const r of f.relations) if (HOLDS.test(r.label.trim()) && r.to && byPath.get(r.to)?.type === 'lugar' && !owner.has(r.to)) owner.set(r.to, f.path);
-  }
+  const owner = placeOwners(w);
   const places = w.entities.filter((e) => e.type === 'lugar');
   const placeName = (p: string) => byPath.get(p)?.name ?? p;
 
@@ -172,7 +196,7 @@ export function simulateWorld(w: World, opts: SimOptions): SimResult {
     setRel(t.a, t.b, relOf(t.a, t.b) + (t.stance === 'hostil' ? -v : v));
   }
   // ninguém em guerra com ninguém: o acaso cria uma rivalidade (senão não há história)
-  if (![...rel.values()].some((v) => v < -0.2)) {
+  if (actors.length >= 2 && ![...rel.values()].some((v) => v < -0.2)) {
     const a = pick(rng, actors);
     const b = pick(rng, actors.filter((x) => x !== a));
     setRel(a.path, b.path, -0.4);
@@ -181,19 +205,47 @@ export function simulateWorld(w: World, opts: SimOptions): SimResult {
   const events: SimEvent[] = [];
   const history: SimResult['history'] = [];
   const snap = (year: number) => history.push({ year, power: Object.fromEntries(actors.map((a) => [a.path, a.alive ? Math.round(a.power) : 0])) });
-  const say = (year: number, kind: SimKind, text: string, actorsIn: string[], weight: number, place?: string) =>
+  let rt: Rules | null = null;
+  const say = (year: number, kind: SimKind, text: string, actorsIn: string[], weight: number, place?: string) => {
     events.push({ year, kind, text, actors: actorsIn, weight, ...(place ? { place } : {}) });
+    // cada acontecimento da simulação também é um evento para as regras: quando batalha(a, b):
+    if (rt && kind !== 'regra') rt.emit(kind, [...actorsIn.map((p) => new Ent(p)), ...(place ? [new Ent(place)] : [])]);
+  };
+  if (rules) {
+    const VIRTUAL: Record<string, 'power' | 'wealth' | 'stability'> = { poder: 'power', riqueza: 'wealth', estabilidade: 'stability' };
+    rt = new Rules(rules, w, {
+      rng, year: start, tables: opts.tables, positions: opts.positions, budget: 400_000,
+      chronicle: (text, who) => say(now, 'regra', text, [...new Set(who)], 2),
+      stance: (kind, a, b) => {
+        if (!A.has(a) || !A.has(b)) return;
+        setRel(a, b, kind === 'guerra' ? -0.8 : kind === 'alianca' ? 0.8 : 0);
+        const [x, y] = [A.get(a)!.name, A.get(b)!.name];
+        say(now, kind, kind === 'guerra' ? `${L(x)} declara guerra a ${L(y)}.` : kind === 'alianca' ? `${L(x)} e ${L(y)} se aliam.` : `${L(x)} e ${L(y)} fazem as pazes.`, [a, b], 3);
+      },
+      // poder, riqueza e estabilidade das facções moram na simulação (escala 1 a 10 das fichas)
+      virtual: {
+        get: (path, f) => (VIRTUAL[f] && A.get(path) ? Math.round(A.get(path)![VIRTUAL[f]] / 10 * 10) / 10 : undefined),
+        set: (path, f, v) => {
+          const a = A.get(path);
+          if (!VIRTUAL[f] || !a) return false;
+          a[VIRTUAL[f]] = Math.max(0, Math.min(VIRTUAL[f] === 'power' ? 400 : 100, v * 10));
+          return true;
+        },
+      },
+    });
+  }
   const someone = (f: SimActor) => {
     const l = members.get(f.path);
     return l?.length ? L(pick(rng, l)) : null;
   };
 
   snap(start);
+  rt?.emit('inicio');
   for (let i = 1; i <= years; i++) {
     const year = start + i;
     now = year;
     const alive = actors.filter((a) => a.alive);
-    if (alive.length < 2) break;
+    if (alive.length < 2 && !rt) break;
     // ordem aleatória a cada ano: ninguém tem a vantagem fixa de agir primeiro
     const order = shuffle(rng, [...alive]);
 
@@ -272,7 +324,7 @@ export function simulateWorld(w: World, opts: SimOptions): SimResult {
     }
 
     // acaso
-    if (rng() < 0.05 + chaos * 0.12) {
+    if (alive.some((a) => a.alive) && rng() < 0.05 + chaos * 0.12) {
       const roll = rng();
       const place = places.length ? pick(rng, places) : null;
       const hit = pick(rng, alive.filter((a) => a.alive));
@@ -328,6 +380,8 @@ export function simulateWorld(w: World, opts: SimOptions): SimResult {
         }
       }
     }
+    // as regras do ano (quando ano:) e as interações entre fichas
+    rt?.tick(year);
     snap(year);
   }
 
@@ -397,7 +451,10 @@ export function simulateWorld(w: World, opts: SimOptions): SimResult {
     if (a && b) events.splice(events.indexOf(firstWar), 0, { year: firstWar.year, kind: 'guerra', text: `Começa a guerra entre ${L(a)} e ${L(b)}.`, actors: firstWar.actors, weight: 3 });
   }
 
-  return { start, end: history[history.length - 1]!.year, seed: opts.seed, events, history, actors };
+  return {
+    start, end: history[history.length - 1]!.year, seed: opts.seed, events, history, actors,
+    ...(rt ? { ruleIssues: rt.issues, changes: rt.changes() } : {}),
+  };
 }
 
 /** A crônica como Markdown (para salvar como nota). */

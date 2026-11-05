@@ -170,3 +170,16 @@ describe('simulação', () => {
     expect(simulateWorld(w, { seed: 1 }).problem).toMatch(/duas facções/);
   });
 });
+
+describe('territórios', () => {
+  it('quem controla cada lugar e as regiões no mapa', async () => {
+    const { placeOwners, territoryGrid } = await import('../src/index');
+    const own = placeOwners(world);
+    expect(own.get(P('Vale Escuro'))).toBe(P('Culto da Cinza'));
+    expect(own.get(P('Porto Alto'))).toBe(P('Liga do Porto'));
+    const g = territoryGrid(10, 10, [{ x: 10, y: 50, owner: 0 }, { x: 90, y: 50, owner: 1 }], { reach: 30, aspect: 1 });
+    expect(g[5 * 10 + 0]).toBe(0);
+    expect(g[5 * 10 + 9]).toBe(1);
+    expect(g[0]).toBe(-1); // longe demais dos dois
+  });
+});

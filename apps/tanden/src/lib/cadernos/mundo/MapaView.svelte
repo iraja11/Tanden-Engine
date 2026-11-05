@@ -1,12 +1,12 @@
 <script lang="ts">
   import {
-    biomeAtPercent, generateTerrain, mapDistance, mapInfo, readMarkers, setProp, suggestSpots, travelTimes, typeInfo, writeMarkers,
+    biomeAtPercent, generateTerrain, mapDistance, mapInfo, placeOwners, readMarkers, setProp, suggestSpots, territoryGrid, travelTimes, typeInfo, writeMarkers,
     type Entity, type MapMarker, type World,
   } from '@tanden/core';
   import { files } from '../../files/files.svelte';
   import { theme } from '../../theme.svelte';
   import { cadernos } from '../cadernos.svelte';
-  import { typeColor, typeGlyph } from '../tipos';
+  import { factionColor, typeColor, typeGlyph } from '../tipos';
   import { BIOME_LABEL, paintTerrain } from './terrain-paint';
 
   // Mapas do mundo: imagem própria ou terreno gerado pela semente, com
@@ -224,6 +224,57 @@
     if (map && v.trim()) cadernos.update(map.path, (t) => setProp(t, k, v.trim()));
   }
 
+  // ---- territórios: quem controla cada lugar, pintado como regiões
+  let realm = $state<'nenhum' | 'atual' | 'simulado'>('nenhum');
+  const sim = $derived(cadernos.lastSim.get(world.name) ?? null);
+  const factionList = $derived(world.entities.filter((e) => e.type === 'faccao'));
+  const owners = $derived.by(() => {
+    if (realm === 'simulado' && sim) {
+      const m = new Map<string, string>();
+      for (const a of sim.actors) if (a.alive) for (const t of a.territory) m.set(t, a.path);
+      return m;
+    }
+    return realm === 'atual' ? placeOwners(world) : new Map<string, string>();
+  });
+  let overlay = $state<HTMLCanvasElement>();
+  const realmLegend = $derived(factionList.filter((f) => [...owners.values()].includes(f.path)));
+  $effect(() => {
+    const cv = overlay;
+    if (!cv || realm === 'nenhum') return;
+    const idx = new Map(factionList.map((f, i) => [f.path, i]));
+    const sites: Array<{ x: number; y: number; owner: number }> = [];
+    markers.forEach((mk, i) => {
+      const e = entityOf(mk);
+      if (!e) return;
+      const p = pos(i, mk);
+      const own = e.type === 'faccao' ? e.path : owners.get(e.path);
+      if (own !== undefined && idx.has(own)) sites.push({ x: p.x, y: p.y, owner: idx.get(own)! });
+    });
+    const t = terrain;
+    const w = t ? t.w : 240;
+    const h = t ? t.h : Math.round(240 / aspect);
+    const grid = territoryGrid(w, h, sites, { land: t ? (x, y) => t.height[y * t.w + x]! >= t.sea : undefined, reach: 18, aspect });
+    cv.width = w;
+    cv.height = h;
+    const ctx = cv.getContext('2d');
+    if (!ctx) return;
+    const img = ctx.createImageData(w, h);
+    const names = factionList.map((f) => f.name);
+    const rgb = factionList.map((f) => { const c = factionColor(f.name, names); return [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)] as const; });
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const o = grid[y * w + x]!;
+        if (o < 0) continue;
+        const edge = [grid[y * w + x + 1], grid[y * w + x - 1], grid[(y + 1) * w + x], grid[(y - 1) * w + x]].some((n) => n !== undefined && n !== o);
+        const i = (y * w + x) * 4;
+        const [r, g, b] = rgb[o]!;
+        img.data[i] = r; img.data[i + 1] = g; img.data[i + 2] = b;
+        img.data[i + 3] = edge ? 230 : 80;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  });
+
   // ---- medida
   const dist = $derived(ruler.length === 2 ? mapDistance(ruler[0]!, ruler[1]!, info.scale, aspect) : null);
   const trips = $derived(dist === null ? null : travelTimes(dist, info.unit));
@@ -267,6 +318,7 @@
         {:else if terrain}
           {#key seed}<canvas bind:this={canvas} class="terrain" class:anim={theme.motion !== 'parado'}></canvas>{/key}
         {/if}
+        {#if realm !== 'nenhum'}<canvas class="realm" bind:this={overlay}></canvas>{/if}
         <svg class="over" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           {#if terrain}
             {#each terrain.rivers as r, i (i)}<polyline class="river" points={r.map((p) => `${p.x},${p.y}`).join(' ')} />{/each}
@@ -306,6 +358,9 @@
         <button onclick={resetView} title="Mapa inteiro">⤢</button>
       </div>
 
+      {#if realm !== 'nenhum' && realmLegend.length}
+        <div class="realms">{#each realmLegend as f (f.path)}<button style:--c={factionColor(f.name, factionList.map((x) => x.name))} onclick={() => onopen(f.path)}><i></i>{f.name}</button>{/each}</div>
+      {/if}
       {#if mode === 'marcar' && !pending}<p class="hint">Clique onde fica o lugar.</p>{/if}
       {#if mode === 'regua' && ruler.length < 2}<p class="hint">{ruler.length ? 'Agora o destino.' : 'Clique na origem (ou num marcador).'}</p>{/if}
 
@@ -341,6 +396,13 @@
     <div class="foot">
       <label>Largura <input value={String(info.scale)} onchange={(e) => setScale('escala', (e.currentTarget as HTMLInputElement).value)} inputmode="decimal" /></label>
       <label>Unidade <input value={info.unit} onchange={(e) => setScale('unidade', (e.currentTarget as HTMLInputElement).value)} /></label>
+      <label>Territórios
+        <select bind:value={realm}>
+          <option value="nenhum">não mostrar</option>
+          <option value="atual">de hoje</option>
+          {#if sim}<option value="simulado">depois da simulação ({sim.end})</option>{/if}
+        </select>
+      </label>
       <span class="sp"></span>
       {#if terrain && unplacedPlaces.length}<button class="ghost sm" onclick={scatter} title="Põe os lugares sem marcador em pontos de terra firme">✨ Espalhar {unplacedPlaces.length} {unplacedPlaces.length === 1 ? 'lugar' : 'lugares'}</button>{/if}
       {#if !info.image}<button class="ghost sm" onclick={reseed} title="Gera outro continente (os marcadores ficam onde estão)">🎲 Outro terreno</button>{/if}
@@ -371,6 +433,12 @@
   .terrain { image-rendering: auto; filter: saturate(1.05) contrast(1.05); }
   .terrain.anim { animation: reveal .9s ease-out; }
   @keyframes reveal { from { opacity: 0; filter: blur(8px) saturate(.4); transform: scale(1.03); } }
+  .realm { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; image-rendering: auto; mix-blend-mode: normal; animation: reveal .6s ease-out; }
+  .realms { position: absolute; right: 52px; top: 10px; display: flex; flex-direction: column; gap: 3px; align-items: flex-end; }
+  .realms button { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 999px; padding: 2px 9px; font: 600 11.5px var(--f-display);
+    background: #000a; color: #fff; }
+  .realms i { width: 9px; height: 9px; border-radius: 3px; background: var(--c); box-shadow: 0 0 6px var(--c); }
+  .foot select { background: var(--surface); border: 1px solid var(--line); border-radius: 7px; color: var(--ink); padding: 3px 6px; font: inherit; font-size: 12px; }
   .over { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
   .river { fill: none; stroke: #7db8de; stroke-width: 2.4; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; opacity: .85; }
   .rule { stroke: #fff; stroke-width: 2; stroke-dasharray: 6 5; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 2px #000); animation: march 1s linear infinite; }

@@ -7,7 +7,7 @@
   import { sound } from '../../sound.svelte';
   import { cadernos } from '../cadernos.svelte';
   import LinkText from './LinkText.svelte';
-  import { typeColor } from '../tipos';
+  import { factionColor, typeColor } from '../tipos';
 
   // "E se o mundo andasse sozinho?" Simula as facções por alguns anos e conta
   // o que aconteceu. Nada vira cânone sozinho: cada acontecimento pode virar
@@ -22,13 +22,26 @@
   let run = $state(0);
 
   const factions = $derived(world.entities.filter((e) => e.type === 'faccao'));
+  const hasRules = $derived.by(() => { void cadernos.rev; const p = cadernos.program(world); return p.handlers.length + p.interactions.length > 0; });
+  let applied = $state(false);
+  const changes = $derived(result?.changes ?? []);
+  function applyAll() {
+    if (!result?.changes) return;
+    cadernos.applyChanges(result.changes);
+    applied = true;
+    cadernos.say(`${result.changes.length} ${result.changes.length === 1 ? 'ficha atualizada' : 'fichas atualizadas'} com o que as regras mudaram.`);
+  }
+  const fmtProp = (v: string | string[] | null) => (v === null ? 'apagado' : Array.isArray(v) ? v.join(', ') : v).replace(/\[\[([^\]|]+)\]\]/g, '$1');
   // o resultado é de um mundo: trocou de mundo, limpa
   let lastWorld = '';
   $effect(() => { if (world.name !== lastWorld) { lastWorld = world.name; result = null; } });
 
   function simulate(newSeed = false) {
     if (newSeed) seed = Math.floor(Math.random() * 9999) + 1;
-    result = simulateWorld(world, { seed, years, chaos });
+    const rules = cadernos.program(world);
+    result = simulateWorld(world, { seed, years, chaos, rules, tables: cadernos.tables, positions: cadernos.positions(world) });
+    applied = false;
+    if (!result.problem) cadernos.lastSim = new Map(cadernos.lastSim).set(world.name, result);
     onlyBig = result.events.length > 45;
     run++;
     sound.play(result.problem ? 'close' : 'open');
@@ -36,11 +49,11 @@
 
   const ICON: Record<SimKind, string> = {
     guerra: '⚔', batalha: '🗡', conquista: '🏴', alianca: '🤝', traicao: '🗝', paz: '🕊', crise: '🔥', sucessao: '👑',
-    prosperidade: '💰', praga: '☠', descoberta: '✧', heroi: '★', queda: '⛬',
+    prosperidade: '💰', praga: '☠', descoberta: '✧', heroi: '★', queda: '⛬', regra: '✎',
   };
   const KIND: Record<SimKind, string> = {
     guerra: 'Guerra', batalha: 'Batalha', conquista: 'Conquista', alianca: 'Aliança', traicao: 'Traição', paz: 'Paz', crise: 'Crise',
-    sucessao: 'Sucessão', prosperidade: 'Prosperidade', praga: 'Calamidade', descoberta: 'Descoberta', heroi: 'Herói', queda: 'Queda',
+    sucessao: 'Sucessão', prosperidade: 'Prosperidade', praga: 'Calamidade', descoberta: 'Descoberta', heroi: 'Herói', queda: 'Queda', regra: 'Acontecimento',
   };
 
   const shown = $derived(result ? result.events.filter((e) => !onlyBig || e.weight >= 2) : []);
@@ -55,7 +68,6 @@
   });
 
   // ---- gráfico do poder
-  const PALETTE = ['#ff8a3d', '#7fb6ff', '#7fd1a8', '#ff6b6b', '#b59cff', '#ffc08a', '#6fc3c9', '#d98fb0', '#e6c86e', '#c8c7cf'];
   let chartW = $state(600);
   // largura útil do gráfico (a seção tem 14px de respiro de cada lado)
   const W = $derived(Math.max(200, chartW - 28));
@@ -65,8 +77,8 @@
     const h = result.history;
     const max = Math.max(10, ...h.flatMap((p) => Object.values(p.power)));
     const span = Math.max(1, h[h.length - 1]!.year - h[0]!.year);
-    return result.actors.map((a, i) => ({
-      path: a.path, name: a.name, alive: a.alive, color: PALETTE[i % PALETTE.length]!, final: Math.round(a.power), land: a.territory.length,
+    return result.actors.map((a) => ({
+      path: a.path, name: a.name, alive: a.alive, color: factionColor(a.name, result!.actors.map((x) => x.name)), final: Math.round(a.power), land: a.territory.length,
       d: h.map((p, j) => `${j ? 'L' : 'M'}${(((p.year - h[0]!.year) / span) * W).toFixed(1)},${(H - ((p.power[a.path] ?? 0) / max) * (H - 8)).toFixed(1)}`).join(''),
     })).sort((x, y) => y.final - x.final);
   });
@@ -105,18 +117,40 @@
       <label>Acaso <span class="val">{chaos < 0.3 ? 'calmo' : chaos > 0.7 ? 'caótico' : 'normal'}</span><input type="range" min="0" max="1" step="0.1" bind:value={chaos} /></label>
       <label>Semente <span class="seed"><input type="number" min="1" bind:value={seed} /><button class="die" onclick={() => (seed = Math.floor(Math.random() * 9999) + 1)} title="Sortear semente" aria-label="Sortear semente">🎲</button></span></label>
       <div class="go">
-        <button class="primary" onclick={() => simulate()} disabled={factions.length < 2}>▶ Simular</button>
+        <button class="primary" onclick={() => simulate()} disabled={factions.length < 2 && !hasRules}>▶ Simular</button>
         {#if result}<button class="ghost" onclick={() => simulate(true)}>Outra história</button>{/if}
       </div>
     </div>
-    {#if factions.length < 2}<p class="warn">Crie pelo menos duas facções para simular (e diga quem é inimigo de quem).</p>{/if}
+    {#if factions.length < 2 && !hasRules}<p class="warn">Crie pelo menos duas facções para simular (e diga quem é inimigo de quem), ou escreva regras na aba Regras.</p>
+    {:else if hasRules}<p class="dim small">✎ As regras do mundo entram junto: eventos, interações entre personagens e campos que mudam.</p>{/if}
   </div>
 
   {#if result?.problem}
     <p class="warn">{result.problem}</p>
   {:else if result}
     {#key run}
-      {#if chart}
+      {#if result.ruleIssues?.length}
+        <section class="rerr">
+          <h3>Erros nas regras durante a simulação</h3>
+          {#each result.ruleIssues.slice(0, 6) as i, k (k)}<p>{i.path.split('/').pop()?.replace(/\.md$/, '')}{i.line ? `:${i.line}` : ''} · {i.message}</p>{/each}
+        </section>
+      {/if}
+      {#if changes.length}
+        <section class="changes" in:rise>
+          <header>
+            <h3>O que as regras mudaram nas fichas</h3>
+            {#if applied}<span class="ok">✓ aplicado</span>{:else}<button class="ghost sm" onclick={applyAll} title="Grava estes campos nas notas">Aplicar às fichas</button>{/if}
+          </header>
+          <ul>
+            {#each changes.slice(0, 30) as c (c.path)}
+              {@const e = byPath.get(c.path)}
+              <li><button class="who" style:--c={e ? typeColor(e.type) : 'var(--muted)'} onclick={() => onopen(c.path)}>{e?.name ?? c.path}</button>
+                {#each Object.entries(c.props) as [k, v] (k)}<span class="kv"><small>{k}</small> {fmtProp(v)}</span>{/each}</li>
+            {/each}
+          </ul>
+        </section>
+      {/if}
+      {#if chart && chart.length}
         <section class="chart" in:rise bind:clientWidth={chartW}>
           <h3>Poder de {result.start} a {result.end}</h3>
           <svg viewBox="0 0 {W} {H}" role="img" aria-label="Poder das facções ao longo do tempo">
@@ -192,6 +226,16 @@
   .legend i { width: 14px; height: 3px; border-radius: 2px; background: var(--c); }
   .legend small { color: var(--muted); font: 11px var(--f-mono); }
   .legend .dead b { text-decoration: line-through; opacity: .6; }
+  .rerr { border: 1px solid color-mix(in srgb, var(--crit) 45%, var(--line)); border-radius: 12px; padding: 8px 12px; font-size: 12.5px; color: var(--crit); }
+  .rerr p { margin: 2px 0; }
+  .changes { border: 1px solid color-mix(in srgb, #7fb6ff 40%, var(--line)); border-radius: 14px; background: var(--surface); padding: 10px 14px; }
+  .changes header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .changes ul { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 4px; max-height: 240px; overflow-y: auto; }
+  .changes li { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; font-size: 13px; }
+  .who { border: 0; background: none; padding: 0; color: var(--ink); font: 600 13px var(--f-display); box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--c) 60%, transparent); }
+  .kv small { color: var(--muted); font: 600 9.5px var(--f-display); letter-spacing: .08em; text-transform: uppercase; }
+  .ok { color: var(--ok); font-size: 12.5px; }
+  .small { font-size: 12px; margin: 0; }
   .chron header { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
   .acts { display: flex; gap: 10px; align-items: center; }
   .chk { display: inline-flex; gap: 6px; align-items: center; font-size: 12.5px; color: var(--muted); }

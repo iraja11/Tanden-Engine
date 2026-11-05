@@ -1,6 +1,6 @@
 <script lang="ts">
   import {
-    DEEP_QUESTIONS, ENTITY_TYPES, FIELD_HINTS, RESERVED, asList, backlinks, bodyOf, entityFolder, entityTemplate, getSection, linkTarget,
+    DEEP_QUESTIONS, ENTITY_TYPES, FIELD_HINTS, allTypes, worldYear, RESERVED, asList, backlinks, bodyOf, entityFolder, entityTemplate, getSection, linkTarget,
     normalizeType, parseProps, readMarkers, renameProp, reviewWorld, rollTraits, setProp, setProps, setSection, timeline, typeInfo, withBody,
     worldTemplate, type Entity, type PropValue,
   } from '@tanden/core';
@@ -22,12 +22,14 @@
   import MapaView from './mundo/MapaView.svelte';
   import Ring from './mundo/Ring.svelte';
   import SimView from './mundo/SimView.svelte';
+  import RegrasView from './mundo/RegrasView.svelte';
+  import { printCards } from './mundo/print';
 
   let { onOpenNote }: { onOpenNote: (path: string) => void } = $props();
 
-  type Tab = 'fichas' | 'mapas' | 'tempo' | 'grafo' | 'conflitos' | 'sim' | 'ideias';
+  type Tab = 'fichas' | 'mapas' | 'tempo' | 'grafo' | 'conflitos' | 'sim' | 'ideias' | 'regras';
   const TABS: Array<[Tab, string]> = [
-    ['fichas', 'Fichas'], ['mapas', 'Mapas'], ['tempo', 'Linha do tempo'], ['grafo', 'Ligações'], ['conflitos', 'Conflitos'], ['sim', 'Simulação'], ['ideias', 'Ideias'],
+    ['fichas', 'Fichas'], ['mapas', 'Mapas'], ['tempo', 'Linha do tempo'], ['grafo', 'Ligações'], ['conflitos', 'Conflitos'], ['sim', 'Simulação'], ['ideias', 'Ideias'], ['regras', 'Regras'],
   ];
   let worldName = $state<string | null>(null);
   let tab = $state<Tab>('fichas');
@@ -276,6 +278,28 @@
   });
 
   const yearsBetween = (a: number, b: number) => Math.round(b - a);
+
+  // ------------------------------------------------ regras na ficha: campos calculados e botões
+  const types = $derived.by(() => { void cadernos.rev; return allTypes(); });
+  const ruleRt = $derived.by(() => { void cadernos.rev; return world && entity ? cadernos.rules(world) : null; });
+  const ruleActions = $derived(ruleRt && entity ? ruleRt.actionsFor(entity.path) : []);
+  const computed = $derived(ruleRt && entity ? ruleRt.computedFor(entity.path) : []);
+
+  function runRule(name: string) {
+    if (!world || !entity) return;
+    const said: string[] = [];
+    const story: string[] = [];
+    const year = worldYear(world);
+    const rt = cadernos.rules(world, { notify: (t) => said.push(t), chronicle: (t) => story.push(t) });
+    rt.runAction(name, entity.path);
+    if (rt.issues.length) {
+      cadernos.say(`Erro na regra: ${rt.issues[0]!.message}${rt.issues[0]!.line ? ` (linha ${rt.issues[0]!.line})` : ''}`);
+      return;
+    }
+    cadernos.applyChanges(rt.changes(), story.map((line) => ({ path: entity!.path, line: `${year}: ${line}` })));
+    sound.play('complete');
+    cadernos.say([...said, ...story.map((x) => x.replace(/\[\[([^\]|]+)(\|[^\]]+)?\]\]/g, '$1'))].join(' · ') || `${name}: feito.`);
+  }
   const hint = (k: string) => FIELD_HINTS[k.toLowerCase()] ?? '';
 </script>
 
@@ -327,11 +351,12 @@
             {/if}
           </div>
           <div class="acts">
+            {#each ruleActions as a (a)}<button class="ghost rule" onclick={() => runRule(a)} title="Ação das regras do mundo">▶ {a}</button>{/each}
             {#if entity.type === 'personagem'}<button class="ghost die" onclick={rollPersonality} title="Sorteia motivação, medo, segredo e maneirismo (só os vazios)">🎲 Personalidade</button>{/if}
             {#if questions.length}<button class="ghost" class:on={showQuestions} onclick={() => (showQuestions = !showQuestions)} title="Perguntas para aprofundar a ficha">✎ Aprofundar</button>{/if}
             <select value={entity.type} onchange={(e) => setType((e.currentTarget as HTMLSelectElement).value)} aria-label="Tipo">
-              {#each ENTITY_TYPES as t (t.id)}<option value={t.id}>{t.label}</option>{/each}
-              {#if !ENTITY_TYPES.some((t) => t.id === entity.type)}<option value={entity.type}>{typeInfo(entity.type).label}</option>{/if}
+              {#each types as t (t.id)}<option value={t.id}>{t.label}</option>{/each}
+              {#if !types.some((t) => t.id === entity.type)}<option value={entity.type}>{typeInfo(entity.type).label}</option>{/if}
             </select>
             <button class="ghost" onclick={() => onOpenNote(entity.path)}>Abrir nota</button>
           </div>
@@ -378,6 +403,9 @@
                 <button class="edit" onclick={() => editField(k)} title="Editar" aria-label={`Editar ${k}`}>✎</button>
               </div>
             {/if}
+          {/each}
+          {#each computed as c (c.name)}
+            <div class="prop calc" title="Campo calculado pelas regras do mundo"><span class="k">{c.name}</span><span class="v">{c.value}</span><span class="fx">ƒ</span></div>
           {/each}
           {#if editingKey === ''}
             <form class="prop editing" onsubmit={(e) => { e.preventDefault(); saveField(); }}>
@@ -465,6 +493,7 @@
             <button class:on={look === 'lista'} onclick={() => (look = 'lista')}>☰ Lista</button>
             <button class:on={look === 'cartas'} onclick={() => (look = 'cartas')}>🂠 Cartas</button>
           </div>
+          {#if look === 'cartas' && shown.length}<button class="ghost" onclick={() => void printCards(shown, `Cartas de ${world!.name}`)} title="Cartas de baralho (63×88 mm), 9 por folha A4">🖨 Imprimir</button>{/if}
           <select bind:value={order} aria-label="Ordem">
             <option value="nome">por nome</option>
             <option value="vazias">menos completas primeiro</option>
@@ -539,8 +568,10 @@
         <ConflitosView {world} {byPath} onopen={openEntity} onnew={() => startEntity('', 'conflito')} />
       {:else if tab === 'sim'}
         <SimView {world} {byPath} onopen={openEntity} />
-      {:else}
+      {:else if tab === 'ideias'}
         <IdeiasView {world} {byPath} onopen={openEntity} oncreate={(n, t) => startEntity(n, t)} />
+      {:else if tab === 'regras'}
+        <RegrasView {world} {byPath} onopen={openEntity} {onOpenNote} />
       {/if}
     {/if}
   </div>
@@ -561,7 +592,7 @@
             <!-- svelte-ignore a11y_autofocus -->
             <label>Nome<input bind:value={newName} placeholder="Kael" autofocus /></label>
             <div class="types" role="radiogroup" aria-label="Tipo">
-              {#each ENTITY_TYPES as t (t.id)}
+              {#each types as t (t.id)}
                 <button type="button" class:on={newType === t.id} style:--c={typeColor(t.id)} onclick={() => (newType = t.id)}><span class="g">{typeGlyph(t.id)}</span>{t.label}</button>
               {/each}
             </div>
@@ -651,6 +682,10 @@
   .emptyv { border: 0; background: none; padding: 0; text-align: left; font-style: italic; font-size: 12.5px; color: var(--muted); opacity: .6; }
   .emptyv:hover { opacity: 1; }
   .addf button.extra { border-style: dotted; opacity: .75; }
+  .prop.calc .v { color: var(--ember-soft); font: 13px var(--f-mono); }
+  .prop.calc .fx { color: var(--muted); font: italic 13px serif; text-align: center; }
+  .ghost.rule { border-color: color-mix(in srgb, #7fb6ff 45%, var(--line)); }
+  .ghost.rule:hover { border-color: #7fb6ff; box-shadow: 0 0 14px -6px #7fb6ff; }
   @media (prefers-reduced-motion: reduce) { .orb, .fresh, .die:hover { animation: none; } }
   .empty p { color: var(--muted); margin-bottom: 18px; }
 

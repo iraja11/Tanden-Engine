@@ -147,6 +147,8 @@ const ITEMS: Item[] = [
       putBlock(v, f, t, Object.entries(tr).map(([k, x]) => `- **${k.charAt(0).toUpperCase() + k.slice(1)}:** ${x}`).join('\n') + '\n');
     },
   },
+  { label: 'Bloco de regras', icon: '📜', keys: 'regras codigo script mundo simulacao evento interacao acao', section: WRITING, hint: '```regras',
+    run: (v, f, t) => putBlock(v, f, t, '```regras\nquando ano em personagem:\n  \n```', '```regras\nquando ano em personagem:\n  '.length) },
   { label: 'Diálogo', icon: '💬', keys: 'dialogo fala conversa roteiro personagem', section: WRITING, hint: '— fala', run: (v, f, t) => putBlock(v, f, t, '— ', 2) },
   { label: 'Tabela de rolagem', icon: '⚄', keys: 'tabela rolagem d6 d20 encontros aleatoria rpg', section: GAMES, hint: '| d6 | ... |', run: (v, f, t) => putBlock(v, f, t, '| d6 | Resultado |\n| --- | --- |\n| 1-2 |  |\n| 3-4 |  |\n| 5-6 |  |\n', '| d6 | Resultado |\n| --- | --- |\n| 1-2 | '.length) },
   { label: 'Hoje', icon: '📅', keys: 'hoje data dia', section: DATES, hint: isoDate(new Date()), run: (v, f, t) => putInline(v, f, t, `[[${isoDate(new Date())}]]`) },
