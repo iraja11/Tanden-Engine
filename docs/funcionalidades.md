@@ -189,6 +189,35 @@ Como os lembretes moram nas notas, eles sincronizam pelo mesmo merge do cofre: m
 
 Cada aparelho lembra quais avisos já mostrou, então um lembrete não repete no mesmo aparelho. Adiar cria um aviso novo.
 
+## Agenda
+
+A aba **Agenda** junta numa grade só os eventos do cofre, o Google Agenda e as tarefas com prazo. Mês, semana, dia e lista (os próximos 30 dias).
+
+**Eventos do cofre** são notas em `Agenda/`, no formato do plugin **Full Calendar** do Obsidian, então o mesmo evento aparece no calendário dele e sincroniza como qualquer nota:
+
+```markdown
+---
+title: Dentista
+allDay: false
+date: 2026-11-10
+startTime: "14:00"
+endTime: "15:30"
+local: Clínica Sorriso
+---
+Levar os exames.
+```
+
+Repetição: `type: recurring` com `daysOfWeek: [M, W]` (letras U M T W R F S, de domingo a sábado), ou `type: rrule` com `rrule: FREQ=MONTHLY;INTERVAL=1` para o resto. Apagar só um dia de um evento repetido grava `skipDates`. Chaves que o Tanden não conhece (tags, links, outros plugins) ficam como estão quando você edita pela agenda.
+
+- **Escrever em português:** o campo do topo entende "sexta das 14h às 15h30 dentista @ clínica", "amanhã 9h reunião", "15/11 aniversário da Ana" (dia inteiro) e "toda segunda e quarta 7h academia". O que vem depois de "@" é o local.
+- **Arrastar:** no computador, arraste um evento na semana/dia para mudar a hora (de 15 em 15 min) ou o dia; no mês, arraste entre dias. Eventos repetidos do cofre mudam pelo formulário (vale para todos os dias).
+- **Clicar:** num horário vazio cria um evento ali; num dia vazio do mês, um evento de dia inteiro. No celular, tocar num dia do mês abre aquele dia.
+- **Fontes:** os botões coloridos acima da grade escondem ou mostram Tanden, Tarefas e cada agenda do Google.
+- **Atalhos:** N escreve um evento, E abre o formulário, T volta para hoje, ← e → andam, M/S/D/L trocam a visão.
+- **Hoje:** a tela Hoje mostra os eventos do dia (com o que está acontecendo agora) e os de amanhã.
+
+**Google Agenda** (app instalado, com a conta Google conectada): o Tanden lê as suas agendas para a janela na tela e grava direto lá quando você cria, muda, arrasta ou apaga um evento. No formulário, *Salvar em* escolhe entre o cofre e cada agenda do Google onde você pode escrever; trocar move o evento. Num evento repetido do Google, mudar ou apagar vale só para aquele dia ("Todos" apaga a série). Os eventos do Google não viram notas: o Google já sincroniza os seus aparelhos, e o Tanden só guarda uma cópia da última leitura neste aparelho para abrir rápido. Quem conectou o Google antes da agenda existir vê o aviso *Falta liberar a agenda* e entra de novo uma vez (veja [configuração](configuracao.md#google-agenda)).
+
 ## Flashcards
 
 Os cartões moram nas notas, no formato do plugin Spaced Repetition do Obsidian, então os dois apps estudam os mesmos cartões com o mesmo agendamento. Toda nota com a tag `#flashcards` entra no estudo; `#flashcards/idiomas/inglês` cria o baralho "idiomas/inglês" (e um baralho inclui os de dentro).

@@ -75,7 +75,7 @@ As notas vão para uma pasta **Tanden** visível no seu Drive, com a mesma árvo
 Configuração, uma vez só (é gratuito):
 
 1. Entre em https://console.cloud.google.com e crie um projeto (ex.: "Tanden").
-2. Em *APIs e serviços → Biblioteca*, ative a **Google Drive API**.
+2. Em *APIs e serviços → Biblioteca*, ative a **Google Drive API** e a **Google Calendar API**.
 3. Em *APIs e serviços → Tela de consentimento OAuth* (ou *Google Auth Platform*), escolha **Externo**, preencha nome e e-mail, e em *Público-alvo / Usuários de teste* adicione o seu próprio e-mail.
 4. Em *Credenciais → Criar credenciais → ID do cliente OAuth*, escolha o tipo **App para computador**. Copie o *ID do cliente* e a *Chave secreta*.
 5. No Tanden, clique em **Conectar Google Drive** na barra de baixo, cole os dois campos e entre com a sua conta.
@@ -83,6 +83,14 @@ Configuração, uma vez só (é gratuito):
 Enquanto o app estiver em modo "Teste", o Google pede para entrar de novo a cada 7 dias. Para evitar isso, publique o app na tela de consentimento (*Publicar app*); como é só para você, não precisa de verificação, e o Google só mostra um aviso de "app não verificado" no login.
 
 Opcional: para não colar as credenciais em cada aparelho, crie os secrets `TANDEN_GOOGLE_CLIENT_ID` e `TANDEN_GOOGLE_CLIENT_SECRET` no GitHub; o build já as embute. Para um app de computador, o Google não considera essa "chave secreta" confidencial.
+
+## Google Agenda
+
+A Agenda usa a mesma conta Google do Drive, com dois escopos a mais: `calendar.events` (ler e gravar eventos) e `calendar.calendarlist.readonly` (saber quais agendas você tem e as cores). Ele não mexe nas configurações das agendas nem nos compartilhamentos.
+
+- Ative a **Google Calendar API** no mesmo projeto do Google Cloud (*APIs e serviços → Biblioteca*). Sem ela, a Agenda avisa que a API está desligada.
+- Se a tela de consentimento estiver em modo de teste com escopos listados, acrescente esses dois em *Acesso a dados* (ou *Escopos*).
+- Quem já tinha conectado o Google antes precisa entrar de novo uma vez: a Agenda mostra *Falta liberar a agenda → Entrar de novo*. Na tela do Google, deixe marcada a permissão da agenda; se desmarcar, o Drive segue funcionando e a Agenda volta a pedir.
 
 ## Robustez do sync
 
