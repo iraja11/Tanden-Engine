@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ask } from '../ask.svelte';
   import { pageTree, type PageNode } from '@tanden/core';
   import { bases } from './bases.svelte';
   import { slide } from 'svelte/transition';
@@ -67,12 +68,12 @@
       { label: 'Nova subpágina', icon: '+', run: () => sub(n, e) },
       null,
       { label: fav ? 'Tirar das favoritas' : 'Favoritar', icon: fav ? '★' : '☆', run: () => noteActions.toggleFavorite(p) },
-      { label: 'Renomear…', icon: '✎', run: () => { const v = prompt('Novo nome', n.name); if (v?.trim()) void noteActions.rename(p, `${p.includes('/') ? `${p.slice(0, p.lastIndexOf('/'))}/` : ''}${v.trim().replace(/[\\/:*?"<>|#^[\]]/g, ' ').trim()}.md`); } },
-      { label: 'Mover para…', icon: '↦', run: () => { const cur = p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : ''; const v = prompt('Mover para qual pasta? (vazio = raiz)', cur); if (v !== null) void noteActions.rename(p, `${v.trim().replace(/^\/+|\/+$/g, '') ? `${v.trim().replace(/^\/+|\/+$/g, '')}/` : ''}${p.split('/').pop()}`); } },
+      { label: 'Renomear…', icon: '✎', run: async () => { const v = await ask.text('Novo nome', n.name, { ok: 'Renomear' }); if (v?.trim()) void noteActions.rename(p, `${p.includes('/') ? `${p.slice(0, p.lastIndexOf('/'))}/` : ''}${v.trim().replace(/[\\/:*?"<>|#^[\]]/g, ' ').trim()}.md`); } },
+      { label: 'Mover para…', icon: '↦', run: async () => { const cur = p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : ''; const v = await ask.text('Mover para qual pasta?', cur, { detail: 'Vazio = raiz do cofre.', ok: 'Mover' }); if (v !== null) void noteActions.rename(p, `${v.trim().replace(/^\/+|\/+$/g, '') ? `${v.trim().replace(/^\/+|\/+$/g, '')}/` : ''}${p.split('/').pop()}`); } },
       { label: 'Duplicar', icon: '⧉', run: () => onopen(noteActions.duplicate(p)) },
       { label: 'Copiar link [[ ]]', icon: '🔗', run: () => void navigator.clipboard?.writeText(`[[${n.name}]]`) },
       null,
-      { label: 'Apagar', icon: '🗑', danger: true, run: () => { if (confirm(`Apagar "${n.name}"? Uma cópia fica na lixeira (.trash).`)) void noteActions.remove(p); } },
+      { label: 'Apagar', icon: '🗑', danger: true, run: async () => { if (await ask.confirm(`Apagar "${n.name}"?`, { detail: 'Uma cópia fica na lixeira (.trash).', ok: 'Apagar', danger: true })) void noteActions.remove(p); } },
     ], { title: n.name });
   }
 

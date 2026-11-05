@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ask } from '../ask.svelte';
   import { NF, formatGeneral, parseRect, type ChartType } from '@tanden/core';
   import { sheets } from './sheets.svelte';
   import { SheetCtl } from './ctl.svelte';
@@ -198,7 +199,7 @@
         {/each}
         <button class="tab add" onclick={() => ctl.setSheet(wb.addSheet())} title="Nova aba" aria-label="Nova aba">+</button>
         {#if tabs.length > 1}
-          <button class="tab del" onclick={() => { if (confirm(`Apagar a aba "${tabs.find((t) => t.id === ctl.sheet)?.name}"?`)) wb.removeSheet(ctl.sheet); }} title="Apagar esta aba" aria-label="Apagar aba">🗑</button>
+          <button class="tab del" onclick={async () => { const id = ctl.sheet; if (await ask.confirm(`Apagar a aba "${tabs.find((t) => t.id === id)?.name}"?`, { ok: 'Apagar', danger: true })) wb.removeSheet(id); }} title="Apagar esta aba" aria-label="Apagar aba">🗑</button>
         {/if}
       </div>
       <div class="info">

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { back } from '../back';
   import { onMount, type Snippet } from 'svelte';
   import { pop } from '../motion';
 
@@ -11,6 +12,8 @@
     width?: number;
     align?: 'start' | 'end';
   } = $props();
+  // o voltar do celular fecha
+  onMount(() => back.layer(() => onclose()));
 
   let el = $state<HTMLDivElement>();
   let pos = $state({ x: 0, y: 0 });

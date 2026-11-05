@@ -1,12 +1,18 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import { back } from '../back';
   import { READ_STATUS, bookProgress, readingTime, type ReadStatus } from '@tanden/core';
   import { engine } from '../engine.svelte';
   import { files } from '../files/files.svelte';
   import { biblioteca } from './biblioteca.svelte';
   import Cover from './Cover.svelte';
+  import { ask } from '../ask.svelte';
+  import { sound } from '../sound.svelte';
 
   /** Painel com tudo de um livro: dados, status, estantes, marcadores e ações. */
   let { path, onclose }: { path: string; onclose: () => void } = $props();
+  // o voltar do celular fecha
+  onMount(() => back.layer(() => onclose()));
 
   const book = $derived(biblioteca.books.find((b) => b.path === path) ?? null);
   const annots = $derived.by(() => {
@@ -41,6 +47,23 @@
   function removeFrom(kind: 'shelves' | 'tags', v: string) {
     if (!book) return;
     engine.library.update(path, { [kind]: book[kind].filter((s) => s !== v) });
+  }
+
+  async function removeBook() {
+    if (!book) return;
+    const n = annots;
+    const ok = await ask.confirm(`Apagar "${biblioteca.title(book)}"?`, {
+      detail: `O PDF sai da biblioteca e da pasta ${path.includes('/') ? path.slice(0, path.lastIndexOf('/') + 1) : 'principal'}. Uma cópia fica na lixeira (.trash/)${n ? ` e as ${n} anotações voltam se você desfazer` : ''}.`,
+      ok: 'Apagar PDF',
+      danger: true,
+    });
+    if (!ok) return;
+    sound.play('close');
+    try {
+      await files.remove(path);
+    } catch (e) {
+      files.say(`Não consegui apagar: ${e instanceof Error ? e.message : String(e)}`, { error: true });
+    }
   }
 
   const STATUSES = Object.entries(READ_STATUS) as Array<[ReadStatus, string]>;
@@ -132,6 +155,7 @@
       <button onclick={() => biblioteca.bookNote(path)}>Nota do livro<small>Livros/, com propriedades</small></button>
       <button onclick={() => files.annotationsNote(path)} disabled={!annots}>Nota com as anotações</button>
       <button onclick={() => void files.exportAnnotated(path)} disabled={!annots}>PDF com as anotações</button>
+      <button class="danger" onclick={() => void removeBook()}>Apagar PDF<small>vai para .trash/</small></button>
     </section>
   {/if}
 </aside>
@@ -139,7 +163,7 @@
 <style>
   .scrim { position: fixed; inset: 0; z-index: 60; background: var(--scrim); animation: fade .15s; }
   .details { position: fixed; z-index: 61; top: 0; right: 0; bottom: 0; width: min(420px, 100vw); overflow-y: auto; background: var(--surface);
-    border-left: 1px solid var(--line); box-shadow: -30px 0 60px -30px #000; padding: 16px 16px 30px; display: grid; gap: 18px; align-content: start;
+    border-left: 1px solid var(--line); box-shadow: -30px 0 60px -30px #000; padding: 16px 16px 96px; display: grid; gap: 18px; align-content: start;
     animation: slide .22s cubic-bezier(.2, .8, .2, 1); }
   header { display: flex; gap: 14px; position: relative; }
   .cv { width: 104px; flex: none; }
@@ -151,7 +175,7 @@
   .author { color: var(--silver) !important; font-size: 13px !important; }
   .head small { color: var(--muted); font: 10.5px var(--f-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .head .pri { justify-self: start; margin-top: 4px; }
-  .x { position: absolute; top: -4px; right: -4px; border: 0; background: none; font-size: 20px; color: var(--muted); padding: 2px 8px; }
+  .x { position: absolute; top: -8px; right: -8px; border: 0; background: none; font-size: 22px; color: var(--muted); padding: 6px 12px; }
   button { border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; padding: 6px 11px; font-size: 12.5px; color: var(--ink); }
   button:hover:not(:disabled) { border-color: color-mix(in srgb, var(--ember) 50%, var(--line)); }
   button:disabled { opacity: .45; }
@@ -185,6 +209,8 @@
   .marks b { font: 600 11px var(--f-mono); color: var(--ember); min-width: 42px; }
   .acts { gap: 6px; }
   .acts button { text-align: left; display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 12px; }
+  .danger { color: var(--crit); margin-top: 6px; }
+  .danger:hover:not(:disabled) { border-color: var(--crit); }
   .acts small { color: var(--muted); font: 10.5px var(--f-mono); }
   @keyframes slide { from { transform: translateX(30px); opacity: 0; } }
   @keyframes fade { from { opacity: 0; } }

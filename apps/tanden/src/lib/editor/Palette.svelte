@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import { back } from '../back';
   import { engine } from '../engine.svelte';
   import { files } from '../files/files.svelte';
   import { editorBridge } from '../files/editor-bridge';
@@ -10,6 +12,8 @@
 
   // Paleta (Ctrl+K / Ctrl+P): achar nota pelo nome ou pelo conteúdo e rodar comandos.
   let { go, onclose }: { go: (view: string) => void; onclose: () => void } = $props();
+  // o voltar do celular fecha
+  onMount(() => back.layer(() => onclose()));
 
   type Row = { kind: 'nota' | 'quadro' | 'texto' | 'cmd'; label: string; hint?: string; snippet?: string; path?: string; run: () => void };
 

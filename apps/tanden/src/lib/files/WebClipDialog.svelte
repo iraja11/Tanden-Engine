@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import { back } from '../back';
   import { clipperBookmarklet, normalizeUrl } from '@tanden/core';
   import { invoke } from '@tauri-apps/api/core';
   import { engine } from '../engine.svelte';
@@ -6,6 +8,8 @@
   import { files } from './files.svelte';
 
   let { onclose, attachTo = null }: { onclose: () => void; attachTo?: string | null } = $props();
+  // o voltar do celular fecha
+  onMount(() => back.layer(() => onclose()));
 
   let url = $state('');
   let mode = $state<'note' | 'card'>('note');

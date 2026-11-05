@@ -7,6 +7,9 @@
   import PdfView from '../pdf/PdfView.svelte';
   import { files } from './files.svelte';
   import WebClipDialog from './WebClipDialog.svelte';
+  import { ask } from '../ask.svelte';
+  import { back } from '../back';
+  import { sound } from '../sound.svelte';
 
   let input = $state<HTMLInputElement>();
   let filter = $state('');
@@ -52,6 +55,34 @@
     if (fileKind(p) === 'image') void files.url(p).then((u) => { if (files.open === p) imageUrl = u; });
     if (fileKind(p) !== 'pdf') void files.read(p).then((b) => { if (files.open === p && b) info = { size: b.length }; });
   });
+
+  // no celular o arquivo aberto ocupa a tela: o voltar volta para a lista
+  $effect(() => { if (files.open) return back.layer(() => (files.open = null)); });
+
+  /** quantas notas apontam para o arquivo (para avisar antes de apagar) */
+  function usedBy(p: string): number {
+    const name = base(p);
+    return engine.notes.filter((n) => {
+      const t = engine.vault.has(n) ? engine.vault.read(n) : '';
+      return t.includes(p) || t.includes(`[[${name}`) || t.includes(`(${encodeURI(p)})`);
+    }).length;
+  }
+
+  async function removeFile(p: string) {
+    const n = usedBy(p);
+    const ok = await ask.confirm(`Apagar "${base(p)}"?`, {
+      detail: `${n ? `${n} ${n === 1 ? 'nota mostra' : 'notas mostram'} este arquivo e vão ficar com o link quebrado. ` : ''}Uma cópia fica na lixeira (.trash/) e o aviso deixa desfazer.`,
+      ok: 'Apagar',
+      danger: true,
+    });
+    if (!ok) return;
+    sound.play('close');
+    try {
+      await files.remove(p);
+    } catch (e) {
+      files.say(`Não consegui apagar: ${e instanceof Error ? e.message : String(e)}`, { error: true });
+    }
+  }
 
   async function onPick(e: Event) {
     const el = e.currentTarget as HTMLInputElement;
@@ -113,6 +144,9 @@
                   <span class="nm"><b>{base(p)}</b>{#if dir(p)}<small>{dir(p)}</small>{/if}</span>
                   {#if g.kind === 'pdf' && engine.annots.list(p).length}<em title="anotações">{engine.annots.list(p).length}</em>{/if}
                 </button>
+                <button class="del" onclick={() => void removeFile(p)} title="Apagar" aria-label="Apagar {base(p)}">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6" /></svg>
+                </button>
               </li>
             {/each}
           </ul>
@@ -158,6 +192,7 @@
           {:else if spreadsheet(files.open)}<button class="pri" onclick={() => void convertOpen()}>Abrir nas Planilhas</button>{/if}
           {#if desktop}<button onclick={() => void invoke('vault_open_external', { path: files.open }).catch((e) => files.say(String(e), { error: true }))}>Abrir no programa padrão</button>{/if}
           <button onclick={() => void navigator.clipboard.writeText(`![[${files.open}]]`).then(() => files.say('Link copiado: cole numa nota.'))}>Copiar link para nota</button>
+          <button class="danger" onclick={() => files.open && void removeFile(files.open)}>Apagar</button>
         </footer>
       </div>
     {:else}
@@ -198,10 +233,20 @@
   .scroll { overflow-y: auto; padding: 0 8px 16px; }
   h3 { margin: 12px 6px 4px; font: 600 10.5px var(--f-display); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
   ul { list-style: none; margin: 0; padding: 0; }
-  li button { width: 100%; display: flex; align-items: center; gap: 9px; text-align: left; border: 0; border-left: 2px solid transparent; border-radius: 8px;
+  li { display: flex; align-items: center; gap: 2px; border-radius: 8px; }
+  li:hover { background: var(--surface-2); }
+  li > button:first-child { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; text-align: left; border: 0; border-left: 2px solid transparent; border-radius: 8px;
     background: none; padding: 6px 8px; }
-  li button:hover { background: var(--surface-2); }
-  li button.on { background: var(--surface-2); border-left-color: var(--ember); }
+  li > button.on { background: var(--surface-2); border-left-color: var(--ember); }
+  .del { flex: none; width: 30px; height: 30px; padding: 0; display: grid; place-items: center; border: 0; background: none; color: var(--muted);
+    opacity: 0; transition: opacity var(--dur), color var(--dur); }
+  .del svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  li:hover .del, .del:focus-visible { opacity: 1; }
+  .del:hover { color: var(--crit); }
+  /* toque: sem hover, a lixeira fica sempre à vista (discreta) */
+  @media (hover: none) { .del { opacity: .7; width: 40px; height: 40px; } }
+  .danger { color: var(--crit); }
+  .danger:hover { border-color: var(--crit); }
   .nm { display: grid; min-width: 0; flex: 1; }
   .nm b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .nm small { color: var(--muted); font: 10.5px var(--f-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -244,6 +289,8 @@
     .view { display: none; }
     .viewing .list { display: none; }
     .viewing .view { display: flex; }
-    .back { display: block; align-self: flex-start; margin: 6px 8px; border: 0; background: none; color: var(--ember-soft); padding: 4px 6px; }
+    .back { display: block; align-self: flex-start; margin: 6px 8px; border: 0; background: none; color: var(--ember-soft); padding: 8px 10px; font-size: 14px; }
+    li > button:first-child { padding: 10px 8px; }
+    .filter { font-size: 16px; } /* menos de 16px faz o iOS dar zoom ao focar */
   }
 </style>

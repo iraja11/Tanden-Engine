@@ -79,6 +79,7 @@ interface Fetched {
 const b64bytes = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 const stem = (name: string) => name.split('/').pop()!.replace(/\.[^.]+$/, '');
 const noteTitle = (p: string) => p.split('/').pop()!.replace(/\.md$/, '');
+const TRASH_DIR = '.trash/';
 const isHidden = (p: string) => p.split('/').some((x) => x.startsWith('.'));
 
 /** Baixa um endereço pelo lado nativo (sem CORS); na versão web tenta direto. */
@@ -132,7 +133,7 @@ class Files {
   page = $state<{ n: number; seq: number } | null>(null);
   /** pedido para o app trocar de tela (o App observa) */
   goto = $state<{ view: View; seq: number } | null>(null);
-  notice = $state<{ text: string; error?: boolean; path?: string } | null>(null);
+  notice = $state<{ text: string; error?: boolean; path?: string; action?: { label: string; run: () => void } } | null>(null);
   /** janela "Página web" aberta fora de uma nota (paleta, tela Hoje) */
   clipDialog = $state(false);
   busy = $state('');
@@ -165,7 +166,7 @@ class Files {
     this.list = all.filter((p) => !isHidden(p) && !p.endsWith('.md') && !p.endsWith('.tmp')).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }
 
-  say(text: string, opts: { error?: boolean; path?: string } = {}): void {
+  say(text: string, opts: { error?: boolean; path?: string; action?: { label: string; run: () => void } } = {}): void {
     this.notice = { text, ...opts };
     if (this.noticeTimer) clearTimeout(this.noticeTimer);
     this.noticeTimer = setTimeout(() => (this.notice = null), opts.error ? 12000 : 7000);
@@ -215,6 +216,50 @@ class Files {
     await engine.storage.write(path, data);
     this.forget(path);
     if (!this.list.includes(path) && !path.endsWith('.md')) this.list = [...this.list, path].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }
+
+  /**
+   * Apaga um arquivo que não é nota (PDF, imagem, anexo, documento). Uma cópia
+   * vai para .trash/, como as notas e o Obsidian; no próximo sync o Drive manda
+   * o arquivo para a lixeira dele e os outros aparelhos apagam também.
+   * O aviso oferece "Desfazer". Devolve onde ficou a cópia.
+   */
+  async remove(path: string): Promise<string | null> {
+    const data = await this.read(path);
+    let trashed: string | null = null;
+    if (data) {
+      const taken = new Set(await engine.storage.list(TRASH_DIR));
+      const dot = path.lastIndexOf('.');
+      const [name, ext] = dot > path.lastIndexOf('/') ? [path.slice(0, dot), path.slice(dot)] : [path, ''];
+      trashed = `${TRASH_DIR}${path}`;
+      for (let n = 2; taken.has(trashed); n++) trashed = `${TRASH_DIR}${name} ${n}${ext}`;
+      await engine.storage.write(trashed, data);
+    }
+    await engine.storage.remove(path);
+    this.forget(path);
+    this.list = this.list.filter((p) => p !== path);
+    if (this.open === path) this.open = null;
+    if (biblioteca.reading === path) biblioteca.close();
+    if (biblioteca.details === path) biblioteca.details = null;
+    const t = trashed;
+    this.say(`"${path.split('/').pop()}" apagado${t ? ' (cópia em .trash/)' : ''}.`, t ? { action: { label: 'Desfazer', run: () => void this.restore(t, path) } } : {});
+    void engine.syncNow();
+    return trashed;
+  }
+
+  /** Traz de volta um arquivo apagado (o "Desfazer" do aviso). */
+  async restore(trashed: string, path: string): Promise<void> {
+    const data = await engine.storage.read(trashed);
+    if (!data) {
+      this.say('A cópia na lixeira sumiu; não deu para desfazer.', { error: true });
+      return;
+    }
+    const to = this.exists(path) ? freePath(this.exists, path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '', stem(path), path.split('.').pop()!.toLowerCase()) : path;
+    await this.write(to, data);
+    await engine.storage.remove(trashed);
+    this.say(`"${to.split('/').pop()}" voltou.`, { path: to });
+    if (fileKind(to) === 'pdf') void biblioteca.scan();
+    void engine.syncNow();
   }
 
   /** Grava uma nota nova pelo cofre (para entrar no merge e no sync). */

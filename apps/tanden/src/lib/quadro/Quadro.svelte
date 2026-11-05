@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ask } from '../ask.svelte';
   import type { BoardData, BoardEdit, BoardKind, BoardStore, CanvasNode, InkStroke } from '@tanden/core';
   import { untrack } from 'svelte';
   import { engine } from '../engine.svelte';
@@ -892,7 +893,7 @@
   async function removeBoard(): Promise<void> {
     if (!path) return;
     menu = null;
-    if (!confirm(`Apagar o quadro "${title(path)}"? Uma cópia fica na lixeira (.trash).`)) return;
+    if (!(await ask.confirm(`Apagar o quadro "${title(path)}"?`, { detail: 'Uma cópia fica na lixeira (.trash).', ok: 'Apagar', danger: true }))) return;
     const was = path;
     const trashed = await quadros.remove(was);
     open(engine.boardList[0] ?? null);
