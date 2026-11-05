@@ -202,9 +202,13 @@
 
   let currentKey: string | null = null;
 
-  $effect(() => {
-    currentKey = untrack(() => docKey);
-    view = new EditorView({ parent: el, state: stateFor(currentKey, untrack(() => value)) });
+  // Cria o editor uma vez. Tudo aqui dentro roda sem rastrear: as extensões leem
+  // estado do app ao montar (índice de links, lista de arquivos...) e, se o effect
+  // dependesse disso, qualquer sync recriaria o editor — o foco sumia no PC e o
+  // teclado fechava no celular.
+  $effect(() => untrack(() => {
+    currentKey = docKey;
+    view = new EditorView({ parent: el, state: stateFor(currentKey, value) });
     const scroll = currentKey ? kept.get(currentKey)?.scroll : undefined;
     if (scroll) requestAnimationFrame(() => { const sc = scroller(); if (sc) sc.scrollTop = scroll; });
     if (!calcLoaded()) void loadCalc().then((ext) => view?.dispatch({ effects: calcSlot.reconfigure(ext) }));
@@ -244,7 +248,7 @@
       detach();
       view?.destroy();
     };
-  });
+  }));
 
   // Nota trocada: guarda o estado da anterior e abre a nova como estava.
   $effect(() => {
@@ -260,7 +264,7 @@
   // Prévia ao vivo ligada/desligada sem perder nada.
   $effect(() => {
     const on = livePreview;
-    if (view && isRich) view.dispatch({ effects: previewSlot.reconfigure(on ? preview : []) });
+    if (view && isRich) untrack(() => view!.dispatch({ effects: previewSlot.reconfigure(on ? preview : []) }));
   });
 
   // Mesma nota, mudança vinda de outro aparelho: aplica só a diferença, preservando o cursor.
@@ -269,7 +273,8 @@
     if (!view) return;
     // compondo uma palavra no teclado: aplica depois (compositionend)
     if (view.composing) { remoteWhileComposing = true; return; }
-    applyValue(next);
+    // o dispatch roda as extensões; o que elas leem não pode virar dependência daqui
+    untrack(() => applyValue(next));
   });
 </script>
 
