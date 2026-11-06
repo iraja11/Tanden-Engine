@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fit } from '../fit';
   import { TRANSITIONS, isDeck, parseDeck, slideAtLine, type Transition } from '@tanden/core';
   import { engine } from '../engine.svelte';
   import Editor from '../Editor.svelte';
@@ -113,7 +114,7 @@
         <b>{path ? name(path) : 'Nenhuma apresentação'}</b> ▾
       </button>
       {#if menu === 'deck'}
-        <div class="menu" role="menu" transition:pop>
+        <div class="menu" role="menu" use:fit transition:pop>
           {#each slides.list as p (p)}
             <button role="menuitem" class:on={p === path} onclick={() => { menu = null; cur = 0; slides.open(p); sound.play('tick'); }}>
               {name(p)}<small>{p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : ''}</small>
@@ -127,7 +128,7 @@
     <div class="menu-wrap">
       <button onclick={() => { menu = menu === 'note' ? null : 'note'; query = ''; }} aria-haspopup="menu" title="Criar slides a partir de uma nota">Da nota…</button>
       {#if menu === 'note'}
-        <div class="menu notes" role="menu" transition:pop>
+        <div class="menu notes" role="menu" use:fit transition:pop>
           <!-- svelte-ignore a11y_autofocus -->
           <input bind:value={query} placeholder="Buscar nota…" autofocus />
           {#each found as p (p)}
@@ -153,7 +154,7 @@
       <div class="menu-wrap">
         <button onclick={() => (menu = menu === 'export' ? null : 'export')} aria-haspopup="menu">Exportar ▾</button>
         {#if menu === 'export'}
-          <div class="menu right" role="menu" transition:pop>
+          <div class="menu right" role="menu" use:fit transition:pop>
             <button role="menuitem" onclick={() => { menu = null; void slides.export(path, 'pptx'); }}>PowerPoint (.pptx)<small>PowerPoint, Google Slides</small></button>
             <button role="menuitem" onclick={() => { menu = null; void slides.export(path, 'odp'); }}>LibreOffice (.odp)<small>Impress</small></button>
             <button role="menuitem" onclick={() => { menu = null; void slides.export(path, 'pdf'); }}>PDF<small>com o tema do app</small></button>

@@ -118,15 +118,24 @@ export function showMenu(at: { x: number; y: number }, items: Array<MenuItem | n
   return el;
 }
 
-/** Põe o menu na tela, virando para o outro lado se não couber. */
+/**
+ * Põe o menu na tela, virando para o outro lado se não couber. No celular conta
+ * só a parte visível (o teclado aberto encolhe a tela) e o menu rola se for
+ * mais alto que ela.
+ */
 function place(el: HTMLElement, at: { x: number; y: number }, flipX?: number): void {
+  const vv = globalThis.visualViewport;
+  const top = vv?.offsetTop ?? 0;
+  const w = vv?.width ?? innerWidth;
+  const h = vv?.height ?? innerHeight;
   el.style.left = '0px';
   el.style.top = '0px';
+  el.style.maxHeight = `${Math.max(120, h - 16)}px`;
   const r = el.getBoundingClientRect();
   let x = at.x;
   let y = at.y;
-  if (x + r.width > innerWidth - 8) x = flipX !== undefined ? flipX - r.width + 4 : innerWidth - r.width - 8;
-  if (y + r.height > innerHeight - 8) y = Math.max(8, innerHeight - r.height - 8);
+  if (x + r.width > w - 8) x = flipX !== undefined && flipX - r.width + 4 >= 8 ? flipX - r.width + 4 : w - r.width - 8;
+  if (y + r.height > top + h - 8) y = top + h - r.height - 8;
   el.style.left = `${Math.max(8, x)}px`;
-  el.style.top = `${Math.max(8, y)}px`;
+  el.style.top = `${Math.max(top + 8, y)}px`;
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fit } from '../fit';
   import { ask } from '../ask.svelte';
   import { NF, formatGeneral, parseRect, type ChartType } from '@tanden/core';
   import { sheets } from './sheets.svelte';
@@ -100,7 +101,7 @@
       <div class="menu-wrap">
         <button onclick={() => (menu = menu === 'export' ? null : 'export')} disabled={!wb} aria-haspopup="menu">Exportar ▾</button>
         {#if menu === 'export'}
-          <div class="menu" role="menu">
+          <div class="menu" role="menu" use:fit>
             <button role="menuitem" onclick={() => { menu = null; void sheets.export('xlsx'); }}>Excel / Sheets (.xlsx)</button>
             <button role="menuitem" onclick={() => { menu = null; void sheets.export('ods'); }}>LibreOffice Calc (.ods)</button>
             <button role="menuitem" onclick={() => { menu = null; void sheets.export('csv', ctl.sheet); }}>CSV (vírgula)</button>
@@ -124,7 +125,7 @@
             {NUMBER_FORMATS.find((f) => f.nf === fmt.nf)?.label ?? 'Personalizado'} ▾
           </button>
           {#if menu === 'nf'}
-            <div class="menu" role="menu">
+            <div class="menu" role="menu" use:fit>
               {#each NUMBER_FORMATS as f (f.label)}
                 <button role="menuitem" class:on={f.nf === fmt.nf} onclick={() => { ctl.numberFormat(f.nf); menu = null; }}>{f.label}<small>{f.ex}</small></button>
               {/each}
@@ -135,7 +136,7 @@
         <div class="menu-wrap">
           <button class="accent" onclick={() => (menu = menu === 'chart' ? null : 'chart')} aria-haspopup="menu">Gráfico ▾</button>
           {#if menu === 'chart'}
-            <div class="menu grid2" role="menu">
+            <div class="menu grid2" role="menu" use:fit>
               {#each CHART_TYPES as t (t.type)}
                 <button role="menuitem" onclick={() => newChart(t.type)}>
                   <svg viewBox="0 0 24 24" width="18" height="18"><path d={t.icon} /></svg>{t.label}

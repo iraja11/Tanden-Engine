@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fit as fitScreen } from '../fit';
   import { ask } from '../ask.svelte';
   import type { BoardData, BoardEdit, BoardKind, BoardStore, CanvasNode, InkStroke } from '@tanden/core';
   import { untrack } from 'svelte';
@@ -1133,7 +1134,7 @@
         <span class="caret">▾</span>
       </button>
       {#if menu === 'boards'}
-        <div class="menu boards" role="menu" transition:pop>
+        <div class="menu boards" role="menu" use:fitScreen transition:pop>
           {#each boardsSorted as b (b)}
             <button class:on={b === path} onclick={() => { open(b); menu = null; }} role="menuitem">
               {title(b)}<small>{b.includes('/') ? b.slice(0, b.lastIndexOf('/')) : ''}</small>
@@ -1154,7 +1155,7 @@
       <div class="picker">
         <button class="icon-btn" onclick={() => (menu = menu === 'file' ? null : 'file')} title="Renomear, duplicar, apagar…" aria-label="Opções do quadro" aria-haspopup="true" aria-expanded={menu === 'file'}>⋯</button>
         {#if menu === 'file'}
-          <div class="menu boards" role="menu" transition:pop>
+          <div class="menu boards" role="menu" use:fitScreen transition:pop>
             {#if renaming !== null}
               <div class="new-board">
                 <input bind:value={renaming} use:focusOnMount aria-label="Nome do quadro"
@@ -1180,7 +1181,7 @@
         <span class="zoom">{Math.round(view.k * 100)}%</span>
       </div>
       {#if menu === 'notes'}
-        <div class="menu notes" role="menu" transition:pop>
+        <div class="menu notes" role="menu" use:fitScreen transition:pop>
           <input placeholder="Buscar nota" bind:value={noteQuery} use:focusOnMount />
           {#each notesFound as n (n)}<button onclick={() => insertNote(n)}>{n.replace(/\.md$/, '')}</button>{/each}
           {#if !notesFound.length}<p>Nenhuma nota com esse nome.</p>{/if}

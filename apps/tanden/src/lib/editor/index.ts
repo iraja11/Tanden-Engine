@@ -1,10 +1,10 @@
 import { EditorView, keymap } from '@codemirror/view';
-import { Compartment, type Extension } from '@codemirror/state';
+import { Compartment, Prec, type Extension } from '@codemirror/state';
 import { codeFolding, foldKeymap } from '@codemirror/language';
 import { completionKeymap } from '@codemirror/autocomplete';
 import { bubble } from './bubble';
 import { callouts } from './callouts';
-import { formatKeymap } from './format';
+import { formatKeymap, wrapSelection } from './format';
 import { blockHandle } from './handle';
 import { hostFacet, type EditorHost } from './host';
 import { hideFrontmatter, livePreview } from './live';
@@ -46,6 +46,10 @@ export function notionLike(host: EditorHost, opts: { preview?: boolean } = {}): 
       },
     }),
     keymap.of([...completionKeymap, ...formatKeymap, ...foldKeymap]),
+    // antes do [[ automático: selecionar e digitar [ duas vezes vira [[link]]
+    Prec.high(EditorView.inputHandler.of(wrapSelection)),
+    // o cursor não encosta na borda de baixo (nem no teclado do celular) ao escrever
+    EditorView.scrollMargins.of(() => ({ top: 24, bottom: 96 })),
     EditorView.contentAttributes.of({ spellcheck: 'true', autocorrect: 'on', autocapitalize: 'sentences' }),
   ];
 }
