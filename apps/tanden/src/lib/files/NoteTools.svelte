@@ -39,7 +39,7 @@
   <div class="wrap">
     <button onclick={() => (menu = menu === 'attach' ? null : 'attach')} aria-haspopup="menu" title="Anexar arquivo ou página web">
       <svg viewBox="0 0 24 24"><path d="M20 11.5 12.5 19a5 5 0 0 1-7-7L13 4.5a3.3 3.3 0 0 1 4.7 4.7L10.3 16.6a1.7 1.7 0 0 1-2.4-2.4l6.8-6.8" /></svg>
-      Anexar
+      <span class="lbl">Anexar</span>
     </button>
     {#if menu === 'attach'}
       <div class="menu" role="menu">
@@ -49,7 +49,7 @@
     {/if}
   </div>
   <div class="wrap">
-    <button onclick={() => (menu = menu === 'insert' ? null : 'insert')} aria-haspopup="menu" title="Inserir conta, gráfico ou fórmula">∑ Inserir</button>
+    <button onclick={() => (menu = menu === 'insert' ? null : 'insert')} aria-haspopup="menu" title="Inserir conta, gráfico ou fórmula">∑ <span class="lbl">Inserir</span></button>
     {#if menu === 'insert'}
       <div class="menu" role="menu">
         <button role="menuitem" onclick={() => insertBlock('calc')}>Bloco de cálculo<small>contas e unidades</small></button>
@@ -60,7 +60,10 @@
     {/if}
   </div>
   <div class="wrap">
-    <button onclick={() => (menu = menu === 'export' ? null : 'export')} aria-haspopup="menu" title="Exportar esta nota">Exportar ▾</button>
+    <button onclick={() => (menu = menu === 'export' ? null : 'export')} aria-haspopup="menu" title="Exportar esta nota">
+      <svg viewBox="0 0 24 24"><path d="M12 15V3.5M7.5 8 12 3.5 16.5 8" /><path d="M4.5 14v4.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V14" /></svg>
+      <span class="lbl">Exportar ▾</span>
+    </button>
     {#if menu === 'export'}
       <div class="menu" role="menu">
         <button role="menuitem" onclick={() => { menu = null; void files.exportNote(path, 'docx'); }}>Word (.docx)<small>Word, Google Docs</small></button>
@@ -95,4 +98,14 @@
   .menu button:hover { background: color-mix(in srgb, var(--ember) 10%, transparent); border-color: transparent; }
   .menu small { color: var(--muted); font: 11px var(--f-mono); }
   @keyframes rise { from { opacity: 0; transform: translateY(-4px); } }
+  /* celular: só os ícones, e os menus abrem para dentro da tela */
+  @media (max-width: 720px) {
+    .note-tools { gap: 0; }
+    .lbl { display: none; }
+    button { min-width: 32px; min-height: 32px; justify-content: center; padding: 0 6px; }
+    .note-tools { position: relative; }
+    .wrap { position: static; }
+    .menu { max-width: calc(100vw - 24px); }
+    .menu button { justify-content: space-between; min-height: 40px; }
+  }
 </style>

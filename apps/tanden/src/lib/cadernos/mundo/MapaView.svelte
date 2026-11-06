@@ -458,7 +458,7 @@
 
   .addpop { position: absolute; display: flex; gap: 4px; transform: translate(-50%, 14px) scale(calc(1 / var(--z))); transform-origin: 50% 0; z-index: 3;
     background: var(--surface); border: 1px solid var(--ember); border-radius: 10px; padding: 5px; box-shadow: 0 10px 30px -10px #000; }
-  .addpop input { width: 170px; background: var(--void); border: 1px solid var(--line); border-radius: 7px; color: var(--ink); padding: 4px 8px; font: 13px var(--f-body); }
+  .addpop input { width: min(170px, 50vw); background: var(--void); border: 1px solid var(--line); border-radius: 7px; color: var(--ink); padding: 4px 8px; font: 13px var(--f-body); }
 
   .rose { position: absolute; right: 12px; bottom: 12px; width: 46px; height: 46px; opacity: .8; pointer-events: none; }
   .rose path { fill: #f3e9d2; stroke: #000a; stroke-width: .6; }

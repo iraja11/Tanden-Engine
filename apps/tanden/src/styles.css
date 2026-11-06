@@ -12,8 +12,23 @@
   --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
   --f-body: "Manrope", "Segoe UI", system-ui, sans-serif;
   --f-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Escalas do sistema de design (docs/design.md). Cores mudam com o tema;
+     estas não: espaço, raio, tipo, altura dos controles, sombra e camadas. */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px;
+  --r-sm: 7px; --r-md: 10px; --r-lg: 14px; --r-xl: 18px; --r-pill: 999px;
+  --fs-xs: 11px; --fs-sm: 12.5px; --fs-md: 14px; --fs-lg: 16px; --fs-xl: 20px; --fs-2xl: 26px;
+  --h-sm: 28px; --h-md: 34px; --h-lg: 40px;
+  --gutter: 28px;
+  --elev-1: 0 1px 0 color-mix(in srgb, var(--ink) 4%, transparent) inset;
+  --elev-2: 0 18px 40px -16px var(--shadow);
+  --elev-3: 0 30px 80px -20px var(--shadow);
+  --z-dock: 4; --z-drawer: 5; --z-scrim: 10; --z-toast: 70;
   color-scheme: dark;
 }
+/* dedo em vez de mouse: alvos de toque maiores (mínimo ~40px) */
+@media (pointer: coarse) { :root { --h-sm: 34px; --h-md: 40px; --h-lg: 46px; } }
+@media (max-width: 720px) { :root { --gutter: 16px; } }
 * { box-sizing: border-box; }
 html, body, #app { height: 100%; margin: 0; }
 body { background: var(--void); color: var(--ink); font: 14px/1.5 var(--f-body); overflow: hidden; }

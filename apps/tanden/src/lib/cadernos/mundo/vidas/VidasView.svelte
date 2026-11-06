@@ -468,7 +468,7 @@
   .mort { fill: color-mix(in srgb, #ff6b6b 60%, transparent); }
   .nasc-t { color: #7fd1a8; }
   .mort-t { color: #ff6b6b; }
-  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr)); gap: 8px; }
   .cards div { border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; display: grid; background: var(--surface); }
   .cards b { font: 600 22px var(--f-display); color: var(--ember-soft); }
   .cards small { color: var(--muted); font-size: 12px; }
@@ -477,10 +477,10 @@
   .profs b { color: var(--ink); }
   .mundo { display: grid; gap: 10px; }
   .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .evbtns { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; }
+  .evbtns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: 6px; }
   .evbtns button { display: grid; text-align: left; gap: 2px; }
   .evbtns small { color: var(--muted); font-size: 11.5px; }
-  .ajustes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px 16px; }
+  .ajustes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 8px 16px; }
   .ajustes label { display: grid; gap: 3px; font-size: 12.5px; color: var(--muted); }
   .val { color: var(--ember-soft); font: 11.5px var(--f-mono); }
   input[type='range'] { accent-color: var(--ember); }

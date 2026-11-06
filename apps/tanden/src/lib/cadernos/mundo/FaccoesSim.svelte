@@ -219,7 +219,7 @@
   .setup { border: 1px solid var(--line); border-radius: 14px; background: radial-gradient(circle at 0 0, color-mix(in srgb, var(--ember) 8%, var(--surface)), var(--surface) 60%); padding: 14px 16px; display: grid; gap: 10px; }
   .intro p { margin: 0; font-size: 12.5px; }
   .ctl { display: flex; flex-wrap: wrap; gap: 12px 22px; align-items: flex-end; }
-  .ctl label { display: grid; gap: 4px; font: 600 10.5px var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); min-width: 150px; }
+  .ctl label { display: grid; gap: 4px; font: 600 10.5px var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); min-width: min(150px, 100%); }
   .val { color: var(--ember-soft); font: 12px var(--f-mono); text-transform: none; letter-spacing: 0; margin-left: 6px; }
   input[type='range'] { accent-color: var(--ember); }
   .seed, .startrow { display: flex; gap: 4px; }
