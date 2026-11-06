@@ -65,6 +65,8 @@ quando roubo(ladrão, vítima, coisa):
 | `interação "Visões" de p em personagem onde fé > 8:` | Acontecimento ocasional de uma ficha só. |
 | `seja limite = 7` | Constante do mundo. |
 | `traço "Nome":`, `profissão "Nome":`, `gosto "Nome"` | Catálogo da simulação de vidas (ver abaixo). |
+| `atributo "Sanidade":`, `espécie "Elfo":`, `criatura "Lobo":` | Valores numéricos das pessoas, espécies e criaturas (ver abaixo). |
+| `trama "Nome" entre a em X, b em Y onde ...:` | Interação em **etapas** que dura meses (ver [Tramas](#tramas-em-etapas)). |
 
 ## Comandos (dentro dos blocos, recuados)
 
@@ -169,6 +171,91 @@ gosto "Falcoaria"
 gostos "Xadrez", "Ópera"
 ```
 
+### Atributos, espécies e criaturas
+
+```regras
+atributo "Sanidade":
+  faixa 0 a 100              # ou numa linha só: atributo "Fé" 0 a 10
+  média 70                   # ao nascer
+  desvio 12                  # 2 em cada 3 nascem entre 58 e 82
+  herdável 40%               # quanto vem da média dos pais
+  categoria mental           # físico, mental, social... (só para mostrar)
+  por ano -1                 # muda sozinho todo janeiro
+  descrição "O quanto ainda se agarra à realidade."
+
+espécie "Elfo" "Elfos":
+  vida 700                   # expectativa de vida em anos
+  maioridade 100             # adulto aos 100 (sem isto, proporcional à vida)
+  fertilidade 30%
+  gestação 12 meses
+  altura 185                 # cm, em média
+  beleza +15                 # força, agilidade, intelecto, beleza, fertilidade
+  sanidade +10               # ou qualquer atributo declarado
+  traços "longevo"           # de nascença, todo elfo tem
+  cruza com "Humano" gera "Meio-elfo"
+  frequência 15%             # dos figurantes gerados
+
+criatura "Lobo" "Lobos":     # = espécie com "criatura"
+  vida 13
+  maioridade 2
+  gestação 2 meses
+  frequência 8%
+```
+
+- Todo mundo nasce com um valor de cada atributo (sorteado de um jeito fixo por pessoa, então acrescentar um atributo não muda o resto da história). Leia e mude como qualquer campo: `p.sanidade < 20`, `p.sanidade -= 5`. O valor fica sempre dentro da faixa.
+- Quem não tem espécie escrita é **humano**: uma `espécie "Humano"` com ajustes vale para essa gente, e `cruza com "Humano"` funciona.
+- A espécie da ficha vem de `espécie: Elfo` ou `espécie: "[[Elfo]]"`. Fichas `tipo: espécie`/`criatura` também contam (`expectativa de vida`, `maioridade`, `fertilidade`, `gestação`, `altura`, `cruza com`, `frequência`); o que a regra disser vale por cima.
+- Espécies diferentes só têm filhos com `cruza com`; os filhos são da espécie do `gera` (ou da mãe).
+- **Criaturas** não conversam, não namoram gente, não trabalham e não têm profissão. Com gente de outra espécie, só conflito (as suas regras dizem como atacam: veja a receita *Lobos na floresta*). Entre si, vivem, brigam e se reproduzem.
+- Nos figurantes, famílias inteiras sorteiam uma espécie com `frequência`, com as idades na escala dela (um elfo adulto tem mais de 100 anos); criaturas entram soltas.
+- Campos: `p.espécie` (nome) e `p.criatura` (sim/não). Função: `espécie(p)`.
+
+### Tramas em etapas
+
+Uma interação que dura meses: começa como uma interação comum (`entre`, `onde`, `atração`, `chance` por ano), mas o corpo é uma sequência de **etapas**. Cada etapa roda quando chega a vez dela e espera `dura N meses` (padrão 1) antes da próxima. As variáveis (`seja`) valem de uma etapa para a outra.
+
+```regras
+trama "Sedução lenta" entre a em personagem, b em personagem onde atração(a, b) > 60 e não trama(a):
+  chance = 15%
+  etapa "Olhares":
+    dura 2 meses
+    relação(b, a).atração += 5
+    crônica "{a} começa a rondar {b}."
+  etapa "Convite":
+    se atração(b, a) < 40:
+      falhar "{b} recusa o convite de {a}."
+    se chance(30%):
+      repetir                # tenta de novo depois de "dura"
+    crônica "{b} aceita o convite de {a}."
+  etapa "Noite":
+    caso(a, b)
+  ao concluir:
+    crônica "{a} conquista {b}."
+  ao falhar:
+    a.humor -= 20
+```
+
+| Dentro de uma etapa | O que faz |
+|---|---|
+| (nada) | vai para a próxima etapa depois de `dura`; depois da última, a trama acaba bem (`ao concluir`) |
+| `seguir` | idem, na hora |
+| `esperar 3` | vai para a próxima, mas daqui a 3 meses |
+| `repetir` / `repetir 2` | roda esta etapa de novo (depois de `dura`, ou de 2 meses) |
+| `ir para "Convite"` | pula para outra etapa |
+| `falhar` / `falhar "texto"` | acaba mal: roda `ao falhar` (o texto entra na crônica) |
+| `concluir` / `concluir "texto"` | acaba bem: roda `ao concluir` |
+
+- Quem já puxa uma trama não começa outra igual; `trama(p)` ou `trama(p, "Sedução lenta")` diz se `p` está numa (bom para o `onde`).
+- Se alguém da trama morre, ela acaba sem alarde.
+- Na simulação de facções (ano a ano) as tramas também rodam; `dura` em meses vira anos arredondados (no mínimo 1).
+- O painel de cada pessoa mostra as tramas em andamento e em que etapa estão.
+
+### Valores e relações
+
+- `ódio(a, b)` (0 a 100) é a opinião negativa: `ódio(a, b) > 50`. Também `relação(a, b).ódio`.
+- Relações aceitam **campos livres**: `relação(a, b).dívida += 10`, `relação(a, b).juramento = sim`. Leia igual: `relação(a, b).dívida > 0`.
+- Compare com `>`, `<`, `>=`, `<=`, `=`, `!=` ou em português (`pelo menos`, `no máximo`...).
+
 Os ids das interações para `peso`: `conversar`, `atividade`, `elogiar`,
 `presentear`, `ajudar`, `confidenciar`, `fofocar`, `insultar`, `discutir`,
 `reconciliar`, `ensinar`, `brincar`, `cuidar`, `flertar`, `cortejar`,
@@ -247,9 +334,11 @@ amante)`, `traicao(traidor, vítima, amante)`, `gravidez(mãe, pai)`,
 
 ### O construtor
 
-A aba **Regras** tem um construtor que escreve estes blocos por você (condições
-e efeitos escolhidos em listas) e receitas prontas. O texto gerado é esta mesma
-linguagem: dá para abrir a nota e ajustar.
+A aba **Regras** tem um construtor que escreve estes blocos por você, com abas
+para interação, trama em etapas, traço, atributo, espécie/criatura e profissão
+(condições e efeitos escolhidos em listas, inclusive qualquer valor da pessoa
+ou da relação), e receitas prontas. O texto gerado é esta mesma linguagem: dá
+para abrir a nota e ajustar.
 
 ## Limites
 
