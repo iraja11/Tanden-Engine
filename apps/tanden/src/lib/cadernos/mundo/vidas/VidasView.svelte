@@ -170,7 +170,7 @@
   let evMeses = $state(3);
   function novoFigurante() {
     if (!sim) return;
-    const cat = catalogo(cadernos.program(world));
+    const cat = catalogo(cadernos.program(world), world.entities);
     const rng = seededRng(sim.t * 7 + sim.todas().length);
     const p = gerarPessoa(rng, cat, { id: sim.novoId(), inicio: sim.t, lugar: sim.cfg.lugar, nomes: { estilo: 'iberico', amostras: [] } });
     p.prof = sim.escolherProf(p);
@@ -189,7 +189,7 @@
     if (!sim || !fichaNova) return;
     const e = world.entities.find((x) => x.path === fichaNova);
     if (!e) return;
-    const p = pessoaDaFicha(e, world, catalogo(cadernos.program(world)), { inicio: sim.t, lugar: sim.cfg.lugar });
+    const p = pessoaDaFicha(e, world, catalogo(cadernos.program(world), world.entities), { inicio: sim.t, lugar: sim.cfg.lugar });
     if (!p) {
       cadernos.say(`${e.name} não está viva em ${sim.data()}.`);
       return;

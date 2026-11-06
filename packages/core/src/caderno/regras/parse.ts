@@ -150,7 +150,11 @@ export type Stmt = { src: Src } & (
   | { t: 'convoke'; action: Expr; target: Expr }
   | { t: 'stop' }
   | { t: 'expr'; e: Expr }
+  /** controle de uma trama em etapas: seguir, falhar, concluir, repetir, ir para "Etapa", esperar N (meses) */
+  | { t: 'flow'; kind: FlowKind; arg: Expr | null }
 );
+
+export type FlowKind = 'seguir' | 'falhar' | 'concluir' | 'repetir' | 'ir' | 'esperar';
 
 /** Lê uma linha de tokens. Para em ":" (fim de cabeçalho) e nas palavras-chave dadas. */
 class P {
@@ -377,6 +381,24 @@ function parseStmt(p: P, l: Line, k: string): Stmt {
   const noKids = () => {
     if (l.kids.length) throw p.err('esta linha não abre bloco');
   };
+  // controle das tramas (só vale dentro de uma etapa; o interpretador confere)
+  const FLOW: Record<string, FlowKind> = {
+    seguir: 'seguir', avancar: 'seguir', prosseguir: 'seguir', falhar: 'falhar', fracassar: 'falhar', concluir: 'concluir', encerrar: 'concluir',
+    repetir: 'repetir', ir: 'ir', esperar: 'esperar', aguardar: 'esperar',
+  };
+  if (FLOW[k] && l.toks[1]?.v !== '(' && l.toks[1]?.v !== '=' && l.toks[1]?.v !== '.' && !/^[+\-*/]=$/.test(l.toks[1]?.v ?? '')) {
+    const kind = FLOW[k]!;
+    p.next();
+    if (kind === 'ir') p.key('para', 'a', 'pra');
+    let arg: Expr | null = null;
+    if (!p.done()) arg = p.expr();
+    // "esperar 3 meses" / "repetir em 2 meses"
+    if (p.isKey('mes', 'meses')) p.next();
+    p.end();
+    noKids();
+    if ((kind === 'ir' || kind === 'esperar') && !arg) throw p.err(kind === 'ir' ? 'ir para qual etapa? (ex.: ir para "Convite")' : 'esperar quantos meses? (ex.: esperar 2)');
+    return { src, t: 'flow', kind, arg };
+  }
   switch (k) {
     case 'se': {
       p.next();
@@ -557,6 +579,66 @@ export interface RuleProfession {
   src: Src;
 }
 
+/** Atributo numérico das pessoas (sanidade, fé, envergadura...), com faixa, herança e espécie. */
+export interface RuleAttribute {
+  id: string;
+  name: string;
+  min: number;
+  max: number;
+  mean: number;
+  sd: number;
+  /** quanto vem dos pais (0 a 1) */
+  inherit: number;
+  /** físico, mental, social... (só para mostrar) */
+  category: string;
+  /** muda sozinho a cada ano */
+  perYear: number;
+  desc: string;
+  src: Src;
+}
+/** Espécie (ou criatura) da simulação: vida, maioridade, fertilidade, corpo, cruzamentos. */
+export interface RuleSpecies {
+  id: string;
+  name: string;
+  plural: string;
+  /** expectativa de vida em anos */
+  life: number | null;
+  /** idade adulta em anos */
+  adult: number | null;
+  /** multiplicador da fertilidade */
+  fertility: number | null;
+  /** meses de gestação */
+  gestation: number | null;
+  /** altura média em cm */
+  height: number | null;
+  /** ajustes de atributos e características (força, intelecto, beleza, saúde, ou atributos declarados) */
+  mods: Record<string, number>;
+  /** traços de nascença de todos da espécie */
+  traits: string[];
+  crosses: Array<{ with: string; gives: string | null }>;
+  /** criatura: não conversa, não namora, não trabalha; só briga e se reproduz com a própria espécie */
+  creature: boolean;
+  /** fração dos figurantes gerados que nasce desta espécie */
+  frequency: number;
+  desc: string;
+  src: Src;
+}
+/** Uma etapa de trama: corre quando chega a vez dela e espera `months` antes da próxima. */
+export interface RuleStage { name: string; months: Expr | null; body: Stmt[]; src: Src }
+/** Interação em várias etapas, que dura meses (uma sedução, uma conspiração, uma vingança). */
+export interface RuleScheme {
+  name: string;
+  a: RuleParty;
+  b: RuleParty | null;
+  where: Expr | null;
+  attraction: Expr | null;
+  chance: Expr | null;
+  stages: RuleStage[];
+  onFail: Stmt[];
+  onDone: Stmt[];
+  src: Src;
+}
+
 export interface RuleIssue {
   path: string;
   line: number;
@@ -574,11 +656,15 @@ export interface Program {
   traits: RuleTrait[];
   professions: RuleProfession[];
   tastes: string[];
+  attributes: RuleAttribute[];
+  species: RuleSpecies[];
+  schemes: RuleScheme[];
   issues: RuleIssue[];
 }
 
 export const emptyProgram = (): Program => ({
-  types: [], groups: [], computed: [], actions: [], handlers: [], interactions: [], globals: [], traits: [], professions: [], tastes: [], issues: [],
+  types: [], groups: [], computed: [], actions: [], handlers: [], interactions: [], globals: [], traits: [], professions: [], tastes: [],
+  attributes: [], species: [], schemes: [], issues: [],
 });
 
 /** "+50%" → 1,5; "-30%" → 0,7; "* 2" ou "x2" → 2; "2" → 2. */
@@ -751,19 +837,7 @@ function decl(prog: Program, l: Line): void {
       // interação "Peregrinação" entre devoto em personagem, templo em lugar onde ...:
       p.next();
       const name = str(p, 'o nome da interação entre aspas');
-      const kind = p.key('entre', 'de', 'para').key;
-      const a: RuleParty = { v: p.ident().key, type: '' };
-      p.key('em', 'de');
-      a.type = p.ident('um tipo').key;
-      let b: RuleParty | null = null;
-      if (kind === 'entre' || p.isOp(',') || p.isKey('e', 'com')) {
-        if (!p.isOp(',') && !p.isKey('e', 'com')) throw p.err('"entre" pede duas partes: entre a em X, b em Y');
-        p.next();
-        b = { v: p.ident().key, type: '' };
-        p.key('em', 'de');
-        b.type = p.ident('um tipo').key;
-      }
-      const where = p.isKey('onde', 'se', 'quando') ? (p.next(), p.expr()) : null;
+      const { a, b, where } = parties(p);
       p.endHeader();
       needKids(p, l);
       let attraction: Expr | null = null;
@@ -839,6 +913,169 @@ function decl(prog: Program, l: Line): void {
       prog.professions.push(t);
       return;
     }
+    case 'trama': {
+      // trama "Sedução lenta" entre a em personagem, b em personagem onde ...:
+      p.next();
+      const name = str(p, 'o nome da trama entre aspas');
+      const { a, b, where } = parties(p);
+      p.endHeader();
+      needKids(p, l);
+      const sc: RuleScheme = { name, a, b, where, attraction: null, chance: null, stages: [], onFail: [], onDone: [], src };
+      for (const kid of l.kids) {
+        const f = kid.toks[0]!;
+        const q = new P(kid.toks, kid.src);
+        if (f.k === 'id' && (f.key === 'atracao' || f.key === 'chance' || f.key === 'peso') && kid.toks[1]?.v === '=') {
+          const r = new P(kid.toks.slice(2), kid.src);
+          const e = r.expr();
+          r.end();
+          if (f.key === 'chance') sc.chance = e;
+          else sc.attraction = e;
+        } else if (f.k === 'id' && f.key === 'etapa') {
+          q.next();
+          const nome = str(q, 'o nome da etapa entre aspas');
+          q.endHeader();
+          needKids(q, kid);
+          let months: Expr | null = null;
+          const rest: Line[] = [];
+          for (const g of kid.kids) {
+            if (g.toks[0]?.k === 'id' && (g.toks[0].key === 'dura' || g.toks[0].key === 'duracao') && !g.kids.length) {
+              const r = new P(g.toks.slice(1), g.src);
+              months = r.expr();
+              if (r.isKey('mes', 'meses')) r.next();
+              r.end();
+            } else rest.push(g);
+          }
+          sc.stages.push({ name: nome, months, body: parseBlock(rest), src: kid.src });
+        } else if (f.k === 'id' && (f.key === 'ao' || f.key === 'se') && ['falhar', 'fracassar', 'concluir', 'fim', 'terminar'].includes(kid.toks[1]?.key ?? '')) {
+          q.next();
+          const w = q.next().key;
+          q.endHeader();
+          needKids(q, kid);
+          if (w === 'falhar' || w === 'fracassar') sc.onFail = parseBlock(kid.kids);
+          else sc.onDone = parseBlock(kid.kids);
+        } else {
+          throw q.err(`dentro de "trama" vale chance =, atração =, etapa "Nome":, ao falhar: e ao concluir:; veio "${f.v}"`);
+        }
+      }
+      if (!sc.stages.length) throw p.err('a trama precisa de pelo menos uma etapa (etapa "Nome":)');
+      prog.schemes.push(sc);
+      return;
+    }
+    case 'atributo': {
+      // atributo "Sanidade":   (ou numa linha: atributo "Fé" 0 a 10)
+      p.next();
+      const name = str(p, 'o nome do atributo entre aspas');
+      const at: RuleAttribute = { id: fold(name).trim(), name, min: 0, max: 100, mean: NaN, sd: NaN, inherit: 0, category: 'geral', perYear: 0, desc: '', src };
+      const faixa = (q: P) => {
+        if (q.isKey('de', 'entre')) q.next();
+        at.min = signed(q);
+        q.key('a', 'e', 'ate');
+        at.max = signed(q);
+      };
+      if (!p.done() && !p.isOp(':')) faixa(p);
+      if (p.isOp(':')) {
+        p.endHeader();
+        for (const kid of l.kids) {
+          const q = new P(kid.toks, kid.src);
+          const kk = kid.toks[0]!.key;
+          q.next();
+          if (kk === 'faixa' || kk === 'escala' || kk === 'vai') faixa(q);
+          else if (kk === 'media' || kk === 'inicial' || kk === 'comeca') at.mean = signed(q);
+          else if (kk === 'desvio' || kk === 'variacao' || kk === 'espalhamento') at.sd = signed(q);
+          else if (kk === 'herdavel' || kk === 'heranca' || kk === 'hereditario') at.inherit = pct(q);
+          else if (kk === 'categoria' || kk === 'tipo') at.category = fold(str(q, 'a categoria'));
+          else if (kk === 'por' && q.isKey('ano')) {
+            q.next();
+            at.perYear = signed(q);
+          } else if (kk === 'descricao') at.desc = str(q, 'a descrição entre aspas');
+          else throw q.err(`dentro de "atributo" vale faixa, média, desvio, herdável, categoria, por ano e descrição; veio "${kid.toks[0]!.v}"`);
+          q.end();
+        }
+      } else p.end();
+      if (at.max <= at.min) throw p.err('a faixa do atributo precisa ir de um número menor para um maior (ex.: faixa 0 a 100)');
+      if (!Number.isFinite(at.mean)) at.mean = (at.min + at.max) / 2;
+      if (!Number.isFinite(at.sd)) at.sd = (at.max - at.min) / 6;
+      prog.attributes.push(at);
+      return;
+    }
+    case 'especie':
+    case 'raca':
+    case 'criatura': {
+      // espécie "Elfo" "Elfos":   /   criatura "Lobo" "Lobos":
+      p.next();
+      const name = str(p, 'o nome da espécie entre aspas');
+      const plural = p.done() || p.isOp(':') ? `${name}s` : str(p, 'o plural entre aspas');
+      const sp: RuleSpecies = {
+        id: fold(name).trim(), name, plural, life: null, adult: null, fertility: null, gestation: null, height: null, mods: {}, traits: [], crosses: [],
+        creature: k === 'criatura', frequency: 0, desc: '', src,
+      };
+      if (p.isOp(':')) {
+        p.endHeader();
+        for (const kid of l.kids) {
+          const q = new P(kid.toks, kid.src);
+          const kk = kid.toks[0]!.key;
+          if (kk === 'criatura' || kk === 'animal' || kk === 'fera' || kk === 'monstro') {
+            q.next();
+            sp.creature = true;
+          } else if (kk === 'vida' || kk === 'longevidade' || kk === 'expectativa') {
+            q.next();
+            if (q.isKey('de')) q.next();
+            if (q.isKey('vida')) q.next();
+            sp.life = signed(q);
+            if (q.isKey('anos', 'ano')) q.next();
+          } else if (kk === 'maioridade' || kk === 'adulto' || kk === 'adulta') {
+            q.next();
+            if (q.isKey('aos', 'com')) q.next();
+            sp.adult = signed(q);
+            if (q.isKey('anos', 'ano')) q.next();
+          } else if (kk === 'fertilidade') {
+            q.next();
+            sp.fertility = pct(q);
+          } else if (kk === 'gestacao' || kk === 'gravidez') {
+            q.next();
+            sp.gestation = signed(q);
+            if (q.isKey('mes', 'meses')) q.next();
+          } else if (kk === 'altura' || kk === 'tamanho') {
+            q.next();
+            sp.height = signed(q);
+            if (q.isKey('cm')) q.next();
+          } else if (kk === 'traco' || kk === 'tracos') {
+            q.next();
+            for (;;) {
+              sp.traits.push(fold(str(q, 'o traço entre aspas')).trim());
+              if (!q.isOp(',')) break;
+              q.next();
+            }
+          } else if (kk === 'cruza') {
+            q.next();
+            q.key('com');
+            const w = fold(str(q, 'a espécie entre aspas')).trim();
+            let gives: string | null = null;
+            if (q.isKey('gera', 'da', 'nasce', 'vira')) {
+              q.next();
+              gives = str(q, 'a espécie dos filhos entre aspas');
+            }
+            sp.crosses.push({ with: w, gives });
+          } else if (kk === 'frequencia' || kk === 'comum' || kk === 'proporcao') {
+            q.next();
+            sp.frequency = pct(q);
+          } else if (kk === 'descricao') {
+            q.next();
+            sp.desc = str(q, 'a descrição entre aspas');
+          } else {
+            // ajuste: "força +10", "atributo sanidade -20", "beleza -5"
+            if (kk === 'atributo' || kk === 'ajuste') q.next();
+            const words: string[] = [];
+            while (q.peek() && (q.peek()!.k === 'id' || q.peek()!.k === 'str')) words.push(fold(q.next().v).trim());
+            if (!words.length || !q.peek()) throw q.err(`dentro de "espécie" vale vida, maioridade, fertilidade, gestação, altura, traço, cruza com, criatura, frequência, descrição ou um ajuste como "força +10"; veio "${kid.toks[0]!.v}"`);
+            sp.mods[words.join(' ')] = signed(q);
+          }
+          q.end();
+        }
+      } else p.end();
+      prog.species.push(sp);
+      return;
+    }
     case 'gosto':
     case 'gostos': {
       p.next();
@@ -860,7 +1097,25 @@ function decl(prog: Program, l: Line): void {
       return;
     }
   }
-  throw p.err(`não sei começar com "${l.toks[0]!.v}". Use tipo, grupo, calcular, ação, quando, interação, traço, profissão, gosto ou seja`);
+  throw p.err(`não sei começar com "${l.toks[0]!.v}". Use tipo, grupo, calcular, ação, quando, interação, trama, traço, atributo, espécie, criatura, profissão, gosto ou seja`);
+}
+
+/** "entre a em X, b em Y onde ..." ou "de p em X onde ..." */
+function parties(p: P): { a: RuleParty; b: RuleParty | null; where: Expr | null } {
+  const kind = p.key('entre', 'de', 'para').key;
+  const a: RuleParty = { v: p.ident().key, type: '' };
+  p.key('em', 'de');
+  a.type = p.ident('um tipo').key;
+  let b: RuleParty | null = null;
+  if (kind === 'entre' || p.isOp(',') || p.isKey('e', 'com')) {
+    if (!p.isOp(',') && !p.isKey('e', 'com')) throw p.err('"entre" pede duas partes: entre a em X, b em Y');
+    p.next();
+    b = { v: p.ident().key, type: '' };
+    p.key('em', 'de');
+    b.type = p.ident('um tipo').key;
+  }
+  const where = p.isKey('onde', 'se', 'quando') ? (p.next(), p.expr()) : null;
+  return { a, b, where };
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

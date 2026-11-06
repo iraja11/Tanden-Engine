@@ -5,7 +5,7 @@ import { markovNames, NAME_STYLES, styledName } from '../gerador';
 import { sameTitle } from '../markdown';
 import { parseWorldDate, type Entity, type World } from '../mundo';
 import { fold } from '../regras/parse';
-import { ESSENCIAIS, NOMES_F, NOMES_M, SOBRENOMES, nomeProf, nomeTraco, profDoTexto, tracoDoTexto, type Catalogo } from './catalogo';
+import { ESSENCIAIS, NOMES_F, NOMES_M, SOBRENOMES, especieId, nomeProf, nomeTraco, profDoTexto, tracoDoTexto, type Catalogo, type Especie } from './catalogo';
 import { ajustarAparencia, alturaDe, cabeloDe, genomaAleatorio, genomaTexto, herdar, lerGenoma, olhosDe, tracosDosGenes } from './genetica';
 import type { Vidas } from './motor';
 import { anoDe, BIG5_NAMES, HABILIDADES, type Big5, type Habilidade, type Laco, type Pessoa, type Sexo, type Vinculo } from './tipos';
@@ -166,7 +166,8 @@ export function pessoaDaFicha(e: Entity, w: World, cat: Catalogo, op: OpcoesElen
   const genero = /n[aã]o.?bin|neutr|enby/i.test(sexoTxt) ? 'n' : sexo;
 
   // espécie e expectativa de vida
-  const esp = alvos(e, /^(espécie|especie|raça|raca)$/i)[0] ?? null;
+  // um [[link]] para a ficha da espécie, ou só o nome ("espécie: Elfo", declarada nas regras)
+  const esp = alvos(e, /^(espécie|especie|raça|raca)$/i)[0] ?? (texto(e, 'espécie', 'especie', 'raça', 'raca').replace(/^\[\[|\]\]$/g, '').split('|')[0]!.trim() || null);
   const espEnt = esp ? w.entities.find((x) => x.path === esp) : undefined;
   const vida = Number((espEnt ? texto(espEnt, 'expectativa de vida', 'longevidade', 'vida') : '').replace(/[^\d.]/g, '')) || 70;
 
@@ -403,17 +404,20 @@ export function povoar(cat: Catalogo, op: OpcoesPovoar): { pessoas: Pessoa[]; la
     if (p.conjuge && !ids.has(p.conjuge)) p.conjuge = null;
     p.pais = p.pais.map((x) => (x && ids.has(x) ? x : null)) as [string | null, string | null];
   }
+  distribuirEspecies(cat, pessoas, op);
 
   // vizinhança: todo mundo conhece alguém (as relações entre as suas fichas ficam como você escreveu)
   const todos = [...op.existentes.filter((p) => p.local === op.lugar || !p.local), ...pessoas];
   const suas = new Set(op.existentes.map((p) => p.id));
   const feitos = new Set<string>();
+  const fera = (p: Pessoa) => !!(p.especie && cat.especies.get(especieId(p.especie))?.criatura);
   for (const p of pessoas.length ? todos : []) {
+    if (fera(p)) continue;
     const k = 2 + Math.floor(rng() * 3);
     for (let i = 0; i < k; i++) {
       const o = pick(rng, todos);
       const par = p.id < o.id ? `${p.id}|${o.id}` : `${o.id}|${p.id}`;
-      if (o.id === p.id || feitos.has(par) || (suas.has(p.id) && suas.has(o.id)) || o.conjuge === p.id || o.pais.includes(p.id) || p.pais.includes(o.id)) continue;
+      if (o.id === p.id || fera(o) || feitos.has(par) || (suas.has(p.id) && suas.has(o.id)) || o.conjuge === p.id || o.pais.includes(p.id) || p.pais.includes(o.id)) continue;
       feitos.add(par);
       const r = rng();
       if (r < 0.15) {
@@ -428,6 +432,64 @@ export function povoar(cat: Catalogo, op: OpcoesPovoar): { pessoas: Pessoa[]; la
     }
   }
   return { pessoas, lacos };
+}
+
+const APELIDOS = ['Cinzento', 'Velho', 'Manco', 'Negro', 'Branco', 'Pardo', 'Ruivo', 'Silencioso', 'Faminto', 'Grande', 'Caolho', 'Malhado'];
+
+/**
+ * Espécies com `frequência` entram nos figurantes: cada família (casal, filhos)
+ * sorteia uma espécie junta, e as idades passam para a escala dela (um elfo
+ * "de 30" na escala humana tem uns 300). Criaturas entram soltas, sem
+ * profissão nem família. Sorte própria: sem espécies, nada muda.
+ */
+function distribuirEspecies(cat: Catalogo, pessoas: Pessoa[], op: OpcoesPovoar): void {
+  const gente = [...cat.especies.values()].filter((e) => e.frequencia > 0 && !e.criatura);
+  const feras = [...cat.especies.values()].filter((e) => e.frequencia > 0 && e.criatura);
+  if (!gente.length && !feras.length) return;
+  const rs = seededRng((op.semente * 104729 + 3) >>> 0 || 1);
+  // famílias: casamento e filiação ligam as pessoas
+  const raiz = new Map<string, string>(pessoas.map((p) => [p.id, p.id]));
+  const achar = (x: string): string => {
+    let r = x;
+    while (raiz.get(r) !== r) r = raiz.get(r)!;
+    raiz.set(x, r);
+    return r;
+  };
+  const unir = (a: string | null, b: string) => {
+    if (a && raiz.has(a)) raiz.set(achar(a), achar(b));
+  };
+  for (const p of pessoas) {
+    unir(p.conjuge, p.id);
+    for (const x of p.pais) unir(x, p.id);
+  }
+  const grupos = new Map<string, Pessoa[]>();
+  for (const p of pessoas) grupos.set(achar(p.id), [...(grupos.get(achar(p.id)) ?? []), p]);
+  const sortear = (l: Especie[], r: number) => {
+    for (const e of l) if ((r -= e.frequencia) < 0) return e;
+    return null;
+  };
+  for (const g of grupos.values()) {
+    // quem vive sozinho pode ser uma criatura; o resto (ou ninguém) sorteia entre as espécies de gente
+    const e = (g.length === 1 ? sortear(feras, rs()) : null) ?? sortear(gente, rs());
+    if (!e) continue;
+    for (const p of g) {
+      p.especie = e.nome;
+      p.vida = e.vida ?? p.vida;
+      // idade: da escala humana para a da espécie
+      const bio = (op.inicio - p.nasc) / 12;
+      const V = Math.max(e.maioridade ? e.maioridade + 1 : 20, e.vida ?? 70);
+      const M = e.maioridade;
+      const real = M ? (bio < 18 ? (bio * M) / 18 : M + ((bio - 18) * (V - M)) / 52) : (bio * V) / 70;
+      p.nasc = op.inicio - Math.round(real * 12);
+      if (e.criatura) {
+        p.prof = null;
+        p.casa = null;
+        p.dinheiro = 0;
+        p.nome = `${e.nome} ${APELIDOS[Math.floor(rs() * APELIDOS.length)]}`;
+        p.gostos = [];
+      }
+    }
+  }
 }
 
 // ------------------------------------------------------------------ da simulação para as fichas

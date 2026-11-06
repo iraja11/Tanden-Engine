@@ -52,7 +52,7 @@
   }
   const total = $derived([...escolhidas].filter((p) => personagens.find((x) => x.path === p)?.ok).length + figurantes);
   const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-  const nTracos = $derived.by(() => { void cadernos.rev; return catalogo(cadernos.program(world)).tracos.size; });
+  const nTracos = $derived.by(() => { void cadernos.rev; return catalogo(cadernos.program(world), world.entities).tracos.size; });
 
   function comecar() {
     vidas.criar(world, {

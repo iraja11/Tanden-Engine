@@ -5,7 +5,7 @@ import { asText } from '../frontmatter';
 import type { Entity, World } from '../mundo';
 import { fold, type Program, type RuleIssue } from '../regras/parse';
 import { Ent, Rules, type Val } from '../regras/run';
-import { catalogo, nomeProf, nomeTraco, ATIVIDADE, type Catalogo, type Profissao } from './catalogo';
+import { catalogo, especieId, nomeProf, nomeTraco, ATIVIDADE, type Catalogo, type Especie, type Profissao } from './catalogo';
 import { atributos, alturaDe, cabeloDe, consanguinidade, herdar, olhosDe, tracosDosGenes } from './genetica';
 import { INTERACOES, type Interacao } from './interacoes';
 import { lutar, type Modo } from './combate';
@@ -126,11 +126,13 @@ export class Vidas {
   /** quem sabe algum segredo dos outros (para a fofoca), refeito todo mês */
   private sabedores = new Set<string>();
   private atribCache = new Map<string, ReturnType<typeof atributos>>();
+  /** campos livres das relações (`relação(a, b).dívida += 10`), de `a>b` */
+  private relCampos = new Map<string, Record<string, CampoValor>>();
   private readonly entPorCaminho: Map<string, Entity>;
   private readonly semente: number;
 
   constructor(readonly world: World, readonly cfg: VidasConfig, elenco: { pessoas: Pessoa[]; lacos?: Laco[] }, readonly opts: VidasOpcoes = {}) {
-    this.cat = catalogo(opts.rules ?? null);
+    this.cat = catalogo(opts.rules ?? null, world.entities);
     this.r = seededRng(cfg.semente);
     this.semente = cfg.semente;
     this.t = cfg.inicio;
@@ -183,19 +185,73 @@ export class Vidas {
   idade(p: Pessoa): number {
     return idadeDe(p, this.t);
   }
-  /** idade "biológica" na escala humana (um elfo de 200 anos pode ser jovem) */
+  /** Espécie da pessoa (declarada nas regras ou numa ficha), se houver. */
+  esp(p: Pessoa): Especie | undefined {
+    return this.cat.especies.get(this.eid(p));
+  }
+  /** Id da espécie; quem não tem espécie escrita é "humano". */
+  eid(p: Pessoa): string {
+    const c = this.eidCache.get(p);
+    if (c !== undefined && c[0] === p.especie) return c[1];
+    const id = especieId(p.especie) || 'humano';
+    this.eidCache.set(p, [p.especie, id]);
+    return id;
+  }
+  private eidCache = new WeakMap<Pessoa, [string | null, string]>();
+  /** Nome da espécie para mostrar ("humano" quando não há). */
+  especieNome(p: Pessoa): string {
+    return this.esp(p)?.nome ?? (p.especie ? p.especie.split('/').pop()!.replace(/\.md$/i, '') : 'humano');
+  }
+  /** idade "biológica" na escala humana (um elfo de 200 anos pode ser jovem; um lobo de 3 já é adulto) */
   idadeBio(p: Pessoa): number {
-    return (this.idade(p) * 70) / Math.max(20, p.vida);
+    const i = this.idade(p);
+    const e = this.esp(p);
+    const V = Math.max(e?.maioridade ? (e.maioridade + 1) : 20, e?.vida ?? p.vida);
+    const M = e?.maioridade;
+    if (M && M > 0) return i < M ? (i * 18) / M : 18 + ((i - M) * 52) / Math.max(1, V - M);
+    return (i * 70) / V;
   }
   adulto(p: Pessoa): boolean {
-    return this.idadeBio(p) >= 18 && this.idade(p) >= 18;
+    return this.idadeBio(p) >= 18 && (!!this.esp(p)?.maioridade || this.idade(p) >= 18);
+  }
+  /** Criatura (fera, monstro, animal): não conversa nem trabalha. */
+  criatura(p: Pessoa): boolean {
+    return !!this.esp(p)?.criatura;
+  }
+  /** As duas espécies podem ter filhos juntas? (mesma espécie, ou um `cruza com`) */
+  cruzam(a: Pessoa, b: Pessoa): boolean {
+    const ea = this.eid(a);
+    const eb = this.eid(b);
+    if (ea === eb) return true;
+    const A = this.cat.especies.get(ea);
+    const B = this.cat.especies.get(eb);
+    if (A?.cruza.some((c) => c.com === eb) || B?.cruza.some((c) => c.com === ea)) return true;
+    if (A?.criatura || B?.criatura) return false;
+    // sem espécie escrita de um dos lados: vale (como sempre foi)
+    return !a.especie || !b.especie;
+  }
+  /** Um dos dois é criatura de outra espécie: só briga, nada de conversa. */
+  alheios(a: Pessoa, b: Pessoa): boolean {
+    return (this.criatura(a) || this.criatura(b)) && this.eid(a) !== this.eid(b);
   }
   crianca(p: Pessoa): boolean {
     return this.idadeBio(p) < 16;
   }
   atrib(p: Pessoa): ReturnType<typeof atributos> {
     let a = this.atribCache.get(p.id);
-    if (!a) this.atribCache.set(p.id, (a = atributos(p, this.idade(p))));
+    if (!a) {
+      // a curva de idade usa a idade biológica (uma espécie com maioridade própria envelhece no ritmo dela)
+      a = atributos({ ...p, vida: 70 }, this.idadeBio(p));
+      const m = this.esp(p)?.mods;
+      if (m) {
+        const k = (n?: number) => (n ?? 0) / 100;
+        a = {
+          forca: clamp(a.forca + k(m['forca']), 0, 1), agilidade: clamp(a.agilidade + k(m['agilidade']), 0, 1), intelecto: clamp(a.intelecto + k(m['intelecto'] ?? m['inteligencia']), 0, 1),
+          beleza: clamp(a.beleza + k(m['beleza']), 0, 1), fertilidade: clamp(a.fertilidade + k(m['fertilidade']), 0, 1),
+        };
+      }
+      this.atribCache.set(p.id, a);
+    }
     return a;
   }
   tem(p: Pessoa, traco: string): boolean {
@@ -236,7 +292,8 @@ export class Vidas {
     return p.prof ? this.cat.profs.get(p.prof) : undefined;
   }
   aparencia(p: Pessoa): { olhos: string; cabelo: string; altura: number } {
-    const adulta = alturaDe(p.genes, p.sexo);
+    const alt = this.esp(p)?.altura;
+    const adulta = alturaDe(p.genes, p.sexo) * (alt ? alt / 170 : 1);
     const i = this.idadeBio(p);
     return { olhos: olhosDe(p.genes), cabelo: cabeloDe(p.genes), altura: Math.round(i >= 18 ? adulta : 50 + (adulta - 50) * Math.min(1, i / 18)) };
   }
@@ -386,7 +443,7 @@ export class Vidas {
     const A = this.vivo(a);
     const B = this.vivo(b);
     if (!A || !B || a === b || !this.adulto(A) || !this.adulto(B)) return false;
-    if (A.especie && B.especie && A.especie !== B.especie) return false;
+    if (!this.cruzam(A, B)) return false;
     return !this.proximos(a, b);
   }
 
@@ -946,7 +1003,7 @@ export class Vidas {
   fertil(p: Pessoa): number {
     if (p.tracos.includes('esteril') || !this.adulto(p) || p.morte !== null) return 0;
     const i = this.idadeBio(p);
-    const base = this.atrib(p).fertilidade;
+    const base = this.atrib(p).fertilidade * (this.esp(p)?.fertilidade ?? 1);
     if (p.sexo === 'f') return base * (i < 18 ? 0 : i <= 32 ? 1 : i >= 47 ? 0 : 1 - (i - 32) / 15);
     return base * (i < 18 ? 0 : i <= 45 ? 1 : Math.max(0.15, 1 - (i - 45) / 40));
   }
@@ -982,12 +1039,15 @@ export class Vidas {
       if (g.gemeos) tracos.push('gemeo');
       const casa = (oficial?.casa ?? pai?.casa ?? mae.casa) || null;
       const nome = this.nomeUnico(nomeDeBebe(this, sexo, mae, oficial));
+      const especie = this.especieDoFilho(mae, pai);
+      const eFilho = especie ? this.cat.especies.get(especieId(especie)) : undefined;
       const b: Pessoa = {
         id: `x${++this.seq}`, nome, nota: null, sexo, genero: sexo, orientacao: this.orientacaoAleatoria(), nasc: this.t, morte: null, causa: null, destino: null,
-        local, viagem: null, especie: mae.especie, vida: mae.vida, casa, pais: [mae.id, pai?.id ?? null], paiOficial: oficial && pai && oficial.id !== pai.id ? oficial.id : null,
+        local, viagem: null, especie, vida: eFilho?.vida ?? mae.vida, casa, pais: [mae.id, pai?.id ?? null], paiOficial: oficial && pai && oficial.id !== pai.id ? oficial.id : null,
         conjuge: null, prof: null, genes, big5, tracos, gostos: [], hab: { combate: 0, labia: 0, intriga: 0, oficio: 0, saber: 0 }, saude: 90, humor: 20, estresse: 0,
         dinheiro: 0, gravidez: null, resguardo: 0, meta: null, xp: {}, conduzido: false, protegido: false, estados: {}, campos: {},
       };
+      this.herdarAtributos(b, mae, pai);
       this.entra(b);
       bebes.push(b);
       this.contagem.nasc++;
@@ -1011,6 +1071,45 @@ export class Vidas {
     if (!mae.protegido && this.chance(risco)) this.morrer(mae, 'no parto');
   }
 
+  /** Espécie de quem nasce: a híbrida do `cruza com ... gera`, ou a da mãe. */
+  private especieDoFilho(mae: Pessoa, pai: Pessoa | null): string | null {
+    if (!pai) return mae.especie;
+    const em = this.eid(mae);
+    const ep = this.eid(pai);
+    if (em === ep) return mae.especie;
+    const cruz = this.cat.especies.get(em)?.cruza.find((c) => c.com === ep) ?? this.cat.especies.get(ep)?.cruza.find((c) => c.com === em);
+    return cruz?.gera ?? mae.especie;
+  }
+
+  /** Sorteio fixo por pessoa e atributo (não gasta a sorte da simulação: acrescentar um atributo não muda o resto da história). */
+  private sorteioDe(p: Pessoa, chave: string): number {
+    const r = seededRng(hash53(`${p.id}|${chave}`, this.semente) % 2147483647 || 1);
+    // normal padrão (Box-Muller)
+    return Math.sqrt(-2 * Math.log(Math.max(1e-9, r()))) * Math.cos(2 * Math.PI * r());
+  }
+
+  /** Valor inicial de um atributo: média (mais o ajuste da espécie) e um desvio. */
+  private atributoInicial(p: Pessoa, id: string): number {
+    const a = this.cat.atributos.get(id)!;
+    const mod = this.esp(p)?.mods[id] ?? 0;
+    return clamp(Math.round((a.media + mod + this.sorteioDe(p, id) * a.desvio) * 10) / 10, a.min, a.max);
+  }
+
+  private herdarAtributos(b: Pessoa, mae: Pessoa, pai: Pessoa | null): void {
+    for (const a of this.cat.atributos.values()) {
+      const proprio = this.atributoInicial(b, a.id);
+      const vm = mae.campos[a.id];
+      const vp = pai?.campos[a.id];
+      const pais = [vm, vp].filter((x): x is number => typeof x === 'number');
+      if (!a.herda || !pais.length) {
+        b.campos[a.id] = proprio;
+        continue;
+      }
+      const media = pais.reduce((s, x) => s + x, 0) / pais.length;
+      b.campos[a.id] = clamp(Math.round((media * a.herda + proprio * (1 - a.herda)) * 10) / 10, a.min, a.max);
+    }
+  }
+
   private orientacaoAleatoria(): Pessoa['orientacao'] {
     const r = this.r();
     return r < 0.86 ? 'hetero' : r < 0.95 ? 'bi' : r < 0.99 ? 'homo' : 'ace';
@@ -1026,6 +1125,14 @@ export class Vidas {
   }
 
   private entra(p: Pessoa): void {
+    // espécie: expectativa de vida e traços de nascença; atributos que faltam ganham valor
+    const e = this.esp(p);
+    if (e?.vida && p.vida === 70) p.vida = e.vida;
+    for (const t of e?.tracos ?? []) if (!p.tracos.includes(t)) p.tracos.push(t);
+    for (const a of this.cat.atributos.values()) {
+      if (typeof p.campos[a.id] !== 'number') p.campos[a.id] = this.atributoInicial(p, a.id);
+    }
+    if (e?.criatura) p.prof = null;
     this.pessoas.set(p.id, p);
     this.porNome.set(fold(p.nome), p.id);
     for (const pp of new Set([...p.pais, p.paiOficial])) {
@@ -1083,6 +1190,14 @@ export class Vidas {
     }
   }
 
+  /** Tramas (interações em etapas) em andamento; com `id`, só as de quem tem esse id. */
+  tramas(id?: string): Array<{ nome: string; etapa: string; passo: number; passos: number; quem: string[]; meses: number }> {
+    if (!this.rt) return [];
+    return this.rt.activeSchemes()
+      .filter((r) => !id || r.who.includes(id))
+      .map((r) => ({ nome: r.name, etapa: r.stage, passo: r.step, passos: r.steps, quem: r.who, meses: r.age }));
+  }
+
   /** Quantas intervenções ainda faltam repetir. */
   get faltam(): number {
     return this.pendentes.length;
@@ -1104,6 +1219,12 @@ export class Vidas {
     for (const sg of this.segredos) for (const x of sg.sabem) if (!sg.sobre.includes(x)) this.sabedores.add(x);
     this.mapearPresenca();
     const vivos = this.vivos();
+    if (novoAno) {
+      for (const a of this.cat.atributos.values()) {
+        if (!a.porAno) continue;
+        for (const p of vivos) p.campos[a.id] = clamp(Math.round(((Number(p.campos[a.id]) || 0) + a.porAno) * 10) / 10, a.min, a.max);
+      }
+    }
     for (const p of vivos) this.vida(p);
     this.mapearPresenca();
     this.efeitosDoMundo();
@@ -1185,7 +1306,7 @@ export class Vidas {
     for (const [k, ate] of Object.entries(p.estados)) if (t > ate) delete p.estados[k];
 
     // gravidez
-    if (p.gravidez && t - p.gravidez.desde >= 9) {
+    if (p.gravidez && t - p.gravidez.desde >= (this.esp(p)?.gestacao ?? 9)) {
       this.nascer(p);
       if (p.morte !== null) return;
     }
@@ -1337,6 +1458,10 @@ export class Vidas {
 
   private maioridade(p: Pessoa): void {
     p.xp['adulto'] = 1;
+    if (this.criatura(p)) {
+      this.emitir('maioridade', [p.id]);
+      return;
+    }
     // personalidade se firma: os extremos do temperamento viram traços
     const pers = p.tracos.filter((x) => this.cat.tracos.get(x)?.cat === 'personalidade').length;
     if (pers < 3) {
@@ -1464,7 +1589,7 @@ export class Vidas {
 
   private agir(p: Pessoa): void {
     // algo sozinho (trabalhar, treinar, beber, viajar...)
-    if (p.viagem?.para !== GUERRA) this.sozinho(p);
+    if (p.viagem?.para !== GUERRA && !this.criatura(p)) this.sozinho(p);
     if (p.morte !== null) return;
     const perto = this.aoRedor(p);
     if (!perto.length) return;
@@ -1521,6 +1646,9 @@ export class Vidas {
   peso(i: Interacao, a: Pessoa, b: Pessoa | null): number {
     let w = i.peso(this, a, b);
     if (w <= 0) return 0;
+    // criatura e gente de outra espécie: só conflito (caçar, atacar, se defender)
+    if (b && this.alheios(a, b) && i.cat !== 'conflito') return 0;
+    if (this.criatura(a) && (i.cat === 'social' || i.cat === 'trabalho') && i.id !== 'brincar' && i.id !== 'cuidar') return 0;
     for (const t of a.tracos) w *= this.cat.tracos.get(t)?.peso?.[i.id] ?? 1;
     if (i.cat === 'romance') w *= this.ajustes.romance;
     if (i.cat === 'conflito') w *= this.ajustes.violencia;
@@ -1958,7 +2086,7 @@ export class Vidas {
 
   private ligarRegras(): void {
     const prog = this.opts.rules;
-    if (!prog || !(prog.handlers.length || prog.interactions.length || prog.traits.some((t) => t.emerge) || prog.professions.some((p) => p.requires))) {
+    if (!prog || !(prog.handlers.length || prog.interactions.length || prog.schemes.length || prog.traits.some((t) => t.emerge) || prog.professions.some((p) => p.requires))) {
       this.mudouGente = false;
       return;
     }
@@ -2026,8 +2154,9 @@ export class Vidas {
         case 'opiniao': return this.opiniao(a, b);
         case 'vinculos': case 'lacos': return [...this.vinculos(a, b)];
         case 'parentesco': return this.parentesco(a, b);
+        case 'odio': return Math.max(0, -this.opiniao(a, b));
         case 'nome': return this.rotulo(path) ?? path;
-        default: return null;
+        default: return this.relCampos.get(`${a}>${b}`)?.[f] ?? null;
       }
     }
     const p = this.pessoas.get(path);
@@ -2090,6 +2219,9 @@ export class Vidas {
       case 'comprometido': case 'comprometida': return this.comprometido(p);
       case 'casado': case 'casada': return !!this.conjuge(p);
       case 'perto': case 'presentes': return this.aoRedor(p).map((x) => new Ent(x));
+      case 'especie': case 'raca': return this.especieNome(p);
+      case 'criatura': return this.criatura(p);
+      case 'tramas': return this.tramas(p.id).map((x) => x.nome);
     }
     if (f in p.campos) {
       const v = p.campos[f]!;
@@ -2101,7 +2233,15 @@ export class Vidas {
   private setCampoPath(path: string, f: string, v: Val): boolean {
     if (path.startsWith('rel:')) {
       const [a, b] = path.slice(4).split('>') as [string, string];
-      if (!(VIZ as readonly string[]).includes(f)) return true;
+      if (!(VIZ as readonly string[]).includes(f)) {
+        if (['opiniao', 'odio', 'vinculos', 'lacos', 'parentesco', 'nome'].includes(f)) throw new Error(`"${f}" de uma relação não muda direto (mexa em afeto, confiança...)`);
+        // campo livre da relação (dívida, juramento, rancor...)
+        const k = `${a}>${b}`;
+        const o = this.relCampos.get(k) ?? {};
+        o[f] = v instanceof Ent ? this.rotulo(v.path) ?? v.path : Array.isArray(v) ? v.map((x) => (x instanceof Ent ? this.rotulo(x.path) ?? x.path : String(x))) : (v as CampoValor);
+        this.relCampos.set(k, o);
+        return true;
+      }
       const n = typeof v === 'number' ? v : Number(v) || 0;
       const vis = this.vm(a, b);
       vis[f as Eixo] = f === 'atracao' ? clamp(n - this.quimica(a, b), -100, 100) : f === 'intimidade' ? clamp(n - this.kinBonus(a, b).intim, 0, 100) : clamp(n, -100, 100);
@@ -2155,6 +2295,11 @@ export class Vidas {
     if (['idade', 'sexo', 'vivo', 'viva', 'morto', 'morta', 'conjuge', 'pai', 'mae', 'filhos', 'irmaos', 'amantes', 'amigos', 'rivais', 'inimigos', 'gravida', 'parceiro'].includes(f)) {
       throw new Error(`"${f}" não muda direto; use as funções (casar, ferir, matar...)`);
     }
+    const at = this.cat.atributos.get(f);
+    if (at) {
+      p.campos[f] = clamp(n(), at.min, at.max);
+      return;
+    }
     p.campos[f] = v instanceof Ent ? nomeDe(v) : Array.isArray(v) ? v.map(nomeDe) : (v as CampoValor);
   }
 
@@ -2190,6 +2335,15 @@ export class Vidas {
         const x = qualquer(a);
         const y = qualquer(b);
         return x && y ? this.atracao(x, y) : 0;
+      },
+      odio: ([a, b]) => {
+        const x = qualquer(a);
+        const y = qualquer(b);
+        return x && y ? Math.max(0, -this.opiniao(x, y)) : 0;
+      },
+      especie: ([a]) => {
+        const x = qualquer(a);
+        return x ? this.especieNome(this.pessoas.get(x)!) : null;
       },
       casar: ([a, b]) => {
         const x = exige(a, 'casar');

@@ -11,7 +11,7 @@
   // à mão na nota depois.
   let { world, onOpenNote }: { world: World; onOpenNote: (path: string) => void } = $props();
 
-  const cat = $derived.by(() => { void cadernos.rev; return catalogo(cadernos.program(world)); });
+  const cat = $derived.by(() => { void cadernos.rev; return catalogo(cadernos.program(world), world.entities); });
   const tracos = $derived([...cat.tracos.values()].sort((a, b) => a.m.localeCompare(b.m, 'pt-BR')));
   const profs = $derived([...cat.profs.values()]);
 

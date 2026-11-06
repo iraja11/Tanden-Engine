@@ -68,7 +68,7 @@ class VidasStore {
 
   /** Monta o elenco (fichas + figurantes), grava a nota da simulação e abre. */
   criar(w: World, cfg: NovaSim): string | null {
-    const cat = catalogo(cadernos.program(w));
+    const cat = catalogo(cadernos.program(w), w.entities);
     const inicio = cfg.ano * 12 + (cfg.mes - 1);
     const escolhidas = new Set(cfg.fichas);
     const fichas = w.entities

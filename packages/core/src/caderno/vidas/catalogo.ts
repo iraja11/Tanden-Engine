@@ -1,5 +1,7 @@
 import { fold } from '../regras/parse';
 import type { Program, RuleProfession, RuleTrait } from '../regras/parse';
+import { asText } from '../frontmatter';
+import type { Entity } from '../mundo';
 import type { Habilidade, Pessoa } from './tipos';
 
 /*
@@ -202,10 +204,90 @@ export interface Catalogo {
   tracos: Map<string, Traco>;
   profs: Map<string, Profissao>;
   gostos: string[];
+  /** espécies e criaturas (das regras e das fichas `tipo: espécie`/`criatura`), pelo id sem acento */
+  especies: Map<string, Especie>;
+  /** atributos numéricos declarados nas regras (`atributo "Sanidade":`) */
+  atributos: Map<string, Atributo>;
+}
+
+export interface Especie {
+  id: string;
+  nome: string;
+  plural: string;
+  /** expectativa de vida (anos); null = 70 */
+  vida: number | null;
+  /** idade adulta (anos); null = proporcional à vida */
+  maioridade: number | null;
+  /** multiplicador da fertilidade */
+  fertilidade: number;
+  /** meses de gestação */
+  gestacao: number;
+  /** altura média adulta (cm); null = a humana */
+  altura: number | null;
+  /** ajustes: força, intelecto, beleza, agilidade, saúde (pontos de 0 a 100) ou atributos declarados */
+  mods: Record<string, number>;
+  /** traços de nascença */
+  tracos: string[];
+  cruza: Array<{ com: string; gera: string | null }>;
+  criatura: boolean;
+  /** fração dos figurantes desta espécie */
+  frequencia: number;
+  desc: string;
+  /** ficha da espécie, se tiver */
+  nota: string | null;
+}
+
+export interface Atributo {
+  id: string;
+  nome: string;
+  min: number;
+  max: number;
+  media: number;
+  desvio: number;
+  herda: number;
+  cat: string;
+  porAno: number;
+  desc: string;
+}
+
+/** Id de espécie a partir de um nome ou caminho ("Mundos/A/Espécies/Elfo.md" → "elfo"). */
+export const especieId = (s: string | null | undefined): string => (s ? fold(s.split('/').pop()!.replace(/\.md$/i, '')).trim() : '');
+
+const numDe = (v: string) => {
+  const n = Number(v.replace(',', '.').replace(/[^\d.-]/g, ''));
+  return v.trim() && Number.isFinite(n) ? n : null;
+};
+
+/** Espécies das fichas: `expectativa de vida`, `maioridade`, `fertilidade`, `gestação`, `altura`, `cruza com`, `frequência`, `criatura`. */
+function especiesDasFichas(entities: Entity[]): Especie[] {
+  const out: Especie[] = [];
+  for (const e of entities) {
+    if (e.type !== 'especie' && e.type !== 'criatura') continue;
+    const get = (...ks: string[]) => {
+      for (const k of Object.keys(e.props)) if (ks.includes(fold(k).trim())) return asText(e.props[k]!).trim();
+      return '';
+    };
+    const pct = (v: string) => {
+      const n = numDe(v);
+      return n === null ? null : v.includes('%') || n > 3 ? n / 100 : n;
+    };
+    const cruza = (Array.isArray(e.props['cruza com']) ? (e.props['cruza com'] as string[]) : get('cruza com', 'cruza', 'hibridos') ? [get('cruza com', 'cruza', 'hibridos')] : [])
+      .flatMap((x) => String(x).split(','))
+      .map((x) => ({ com: especieId(x.replace(/\[\[|\]\]/g, '').split('|')[0]!), gera: null }))
+      .filter((x) => x.com);
+    const crit = get('criatura', 'animal', 'selvagem');
+    out.push({
+      id: especieId(e.name), nome: e.name, plural: e.name, vida: numDe(get('expectativa de vida', 'longevidade', 'vida')), maioridade: numDe(get('maioridade', 'idade adulta')),
+      fertilidade: pct(get('fertilidade')) ?? 1, gestacao: numDe(get('gestacao', 'gravidez')) ?? 9, altura: numDe(get('altura', 'altura media')), mods: {},
+      tracos: get('tracos', 'traços').split(',').map((x) => fold(x).trim()).filter(Boolean), cruza, criatura: e.type === 'criatura' || /^(sim|true|verdadeiro)$/i.test(crit),
+      frequencia: pct(get('frequencia', 'proporcao')) ?? 0, desc: e.summary, nota: e.path,
+    });
+  }
+  return out;
 }
 
 /** Catálogo de fábrica somado ao que as regras do mundo declararam. */
-export function catalogo(prog?: Program | null): Catalogo {
+export function catalogo(prog?: Program | null, entities: Entity[] = []): Catalogo {
   const tracos = new Map(TRACOS.map((t) => [t.id, t]));
   for (const r of prog?.traits ?? []) {
     const base = tracos.get(r.id);
@@ -223,7 +305,22 @@ export function catalogo(prog?: Program | null): Catalogo {
     profs.set(r.id, { id: r.id, m: r.m, f: r.f, renda: r.income, hab: r.skill, status: r.status, risco: r.risk, viaja: r.travels, regra: r, apto: () => 1 });
   }
   const gostos = [...new Set([...GOSTOS, ...(prog?.tastes ?? [])])];
-  return { tracos, profs, gostos };
+  const especies = new Map(especiesDasFichas(entities).map((e) => [e.id, e]));
+  for (const r of prog?.species ?? []) {
+    const base = especies.get(r.id);
+    especies.set(r.id, {
+      id: r.id, nome: r.name, plural: r.plural, vida: r.life ?? base?.vida ?? null, maioridade: r.adult ?? base?.maioridade ?? null,
+      fertilidade: r.fertility ?? base?.fertilidade ?? 1, gestacao: r.gestation ?? base?.gestacao ?? 9, altura: r.height ?? base?.altura ?? null,
+      mods: { ...(base?.mods ?? {}), ...r.mods }, tracos: [...new Set([...(base?.tracos ?? []), ...r.traits])],
+      cruza: [...(base?.cruza ?? []), ...r.crosses.map((c) => ({ com: c.with, gera: c.gives }))], criatura: r.creature || !!base?.criatura,
+      frequencia: r.frequency || base?.frequencia || 0, desc: r.desc || base?.desc || '', nota: base?.nota ?? null,
+    });
+  }
+  const atributos = new Map<string, Atributo>();
+  for (const a of prog?.attributes ?? []) {
+    atributos.set(a.id, { id: a.id, nome: a.name, min: a.min, max: a.max, media: a.mean, desvio: a.sd, herda: a.inherit, cat: a.category, porAno: a.perYear, desc: a.desc });
+  }
+  return { tracos, profs, gostos, especies, atributos };
 }
 
 /** Acha o traço do catálogo por um texto livre ("ciumenta", "covarde no aperto", "Leal"). */
