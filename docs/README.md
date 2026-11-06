@@ -11,6 +11,7 @@
 | [../AGENTS.md](../AGENTS.md) | Agentes de IA | Comandos, mapa, regras de ouro, receitas, armadilhas. |
 | [funcionalidades.md](funcionalidades.md) | Usuários | O que cada tela e recurso faz. |
 | [configuracao.md](configuracao.md) | Usuários/admin | Google Drive, Android, atualização, dependências. |
+| [design.md](design.md) | Devs e agentes | Sistema de design: tokens, componentes base `t-*`, ícones e regras de celular. |
 | [plugins.md](plugins.md) | Autores de plugin | Manifesto, permissões e API `tanden`. |
 | [regras.md](regras.md) | Quem escreve mundos | A linguagem das regras do mundo: tipos, grupos, ações, eventos, interações, traços, profissões, bancos de texto. |
 | [vidas.md](vidas.md) | Quem escreve mundos | A simulação de vidas: pessoas, genética, relações, romance e traição, influências, decisões, salvar e gravar nas fichas. |

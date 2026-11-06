@@ -215,7 +215,7 @@
   .form { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
   .linha { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
   label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
-  .grow { flex: 1; min-width: 160px; }
+  .grow { flex: 1; min-width: min(160px, 100%); }
   .bloco { display: grid; gap: 5px; }
   .item { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; padding: 4px 6px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-2); }
   .k { font-size: 12.5px; color: var(--ink); }
@@ -224,14 +224,14 @@
   .addsel { justify-self: start; border-style: dashed !important; color: var(--muted) !important; }
   select, input:not([type='range']):not([type='checkbox']), textarea { background: var(--void); border: 1px solid var(--line); border-radius: 7px; color: var(--ink); padding: 4px 7px; font-size: 12.5px; min-width: 0; }
   input[type='number'] { width: 70px; font-family: var(--f-mono); }
-  textarea { flex: 1; min-width: 200px; font-family: var(--f-mono); }
+  textarea { flex: 1; min-width: min(200px, 100%); font-family: var(--f-mono); }
   input[type='range'] { accent-color: var(--ember); }
   .chk { display: inline-flex; gap: 4px; align-items: center; grid-auto-flow: column; }
   .val { color: var(--ember-soft); font: 11.5px var(--f-mono); }
   .prev pre, .rc pre { margin: 0; background: var(--void); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font: 12px/1.5 var(--f-mono); color: var(--ink); white-space: pre-wrap; overflow-x: auto; }
   .err { color: var(--crit); font-size: 12.5px; margin: 4px 0 0; }
   .acts { display: flex; justify-content: flex-end; }
-  .receitas .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+  .receitas .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(230px, 100%), 1fr)); gap: 8px; }
   .rc { border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; display: grid; gap: 4px; align-content: start; background: var(--surface-2); }
   .rc b { font: 600 13.5px var(--f-display); }
   .rc p { margin: 0; font-size: 12.5px; color: var(--muted); }

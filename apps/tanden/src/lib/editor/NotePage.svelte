@@ -190,7 +190,9 @@
   .ed { flex: 1 0 auto; display: flex; flex-direction: column; padding-bottom: 30vh; cursor: text; }
   .ed :global(.editor) { flex: 1; }
   @media (max-width: 720px) {
-    .head { padding: 8px 10px 0 14px; }
+    .head { padding: 8px 6px 0 14px; gap: 6px; }
+    .actions { min-width: 0; }
+    .icon { width: 32px; height: 32px; }
     .words { display: none; }
     .title { padding: 0 18px 0 24px; font-size: 1.7rem; margin-top: 10px; }
     .props { padding: 0 18px 0 24px; }

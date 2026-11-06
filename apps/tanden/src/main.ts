@@ -4,6 +4,7 @@ import '@fontsource/manrope/400.css';
 import '@fontsource/manrope/600.css';
 import '@fontsource/jetbrains-mono/400.css';
 import './styles.css';
+import './ui.css';
 import { mount } from 'svelte';
 import App from './App.svelte';
 import { theme } from './lib/theme.svelte';
