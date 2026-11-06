@@ -424,3 +424,33 @@ atributo "Envergadura":
     expect(s.atrib(kael).forca).toBeGreaterThan(antes);
   });
 });
+
+describe('construtor: item e evento', () => {
+  it('escrevem regras que compilam e funcionam', async () => {
+    const { itemRegras, eventoRegras, tracoRegras, especieRegras, atributoRegras } = await import('../src/index');
+    const codes = [
+      itemRegras({ nome: 'Cálice', unico: true, tipo: 'relíquia', raridade: 'rara', valor: 300, desc: 'Nunca esvazia.', ajustes: [{ campo: 'saber', valor: 3 }],
+        porMes: [{ campo: 'humor', valor: 1 }], tracos: ['devoto'], dono: 'Mira', lugar: '', cobicado: true,
+        aoGanhar: { efeitos: [{ k: 'campo', quem: 'a', campo: 'fe', op: '+=', valor: '5' }], cronica: '{dono} {bebe|prova} do cálice.' },
+        aoPerder: { efeitos: [], cronica: '' }, todoMes: { efeitos: [], cronica: '', condicoes: [] } }),
+      eventoRegras({ nome: 'Neblina', desc: 'ninguém enxerga nada', chance: 0, dura: 2, global: true, pesos: [{ interacao: 'roubar', mult: 3 }],
+        aoComecar: 'A neblina desce.', aoAcabar: 'A neblina se vai.',
+        todoMes: { efeitos: [{ k: 'campo', quem: 'a', campo: 'estresse', op: '+=', valor: '2' }], cronica: '', condicoes: [{ k: 'chance', pct: 50 }] } }),
+      tracoRegras({ nome: 'Forte como touro', feminino: '', desc: '', categoria: 'congenito', oposto: '', herdavel: 0, pesos: [], afinidades: [], humor: 0, estresse: 0,
+        ajustes: [{ campo: 'força', valor: 20 }], surge: [], chanceSurge: 20 }),
+      especieRegras({ nome: 'Tiefling', plural: '', criatura: false, vida: 90, maioridade: 0, fertilidade: 100, gestacao: 9, altura: 0, ajustes: [], tracos: [],
+        talvez: [{ traco: 'irascivel', pct: 40 }, { traco: 'belo', pct: 10 }], cruzas: [], frequencia: 0, desc: '' }),
+      atributoRegras({ nome: 'Envergadura', min: 0, max: 30, media: 10, desvio: 2, herdavel: 50, categoria: 'físico', porAno: 0, desc: '', so: ['Dragão'] }),
+    ];
+    const prog = compileRules(codes.map((code, i) => ({ path: `c${i}`, code })));
+    expect(prog.issues).toEqual([]);
+    expect(prog.species[0]!.maybe).toEqual({ irascivel: 0.4, belo: 0.1 });
+    expect(prog.attributes[0]!.only).toEqual(['dragao']);
+    expect(prog.traits[0]!.mods).toEqual({ forca: 20 });
+    const s = simular(mundo(codes.join('\n')));
+    expect(s.pessoa(`${W}/Personagens/Mira.md`)!.itens).toEqual(['calice']);
+    expect(s.comecarEvento('Neblina', null, true)).toBe(true);
+    s.avancar(3);
+    expect(s.eventos.some((e) => e.texto.includes('A neblina se vai.'))).toBe(true);
+  });
+});

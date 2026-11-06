@@ -1,7 +1,8 @@
 <script lang="ts">
   import {
-    CAMPOS_PESSOA, EVENTOS_VIDA, INTERACOES, RECEITAS, atributoRegras, catalogo, compileRules, especieRegras, mecanicaRegras, noteDir, profissaoRegras, tracoRegras,
-    type AtributoForm, type Etapa, type EspecieForm, type Mecanica, type ProfissaoForm, type Quem, type TracoForm, type World,
+    CAMPOS_PESSOA, EVENTOS_VIDA, INTERACOES, RECEITAS, atributoRegras, catalogo, compileRules, especieRegras, eventoRegras, itemRegras, mecanicaRegras, noteDir,
+    profissaoRegras, tracoRegras,
+    type AtributoForm, type Etapa, type EspecieForm, type EventoForm, type ItemForm, type Mecanica, type ProfissaoForm, type Quem, type TracoForm, type World,
   } from '@tanden/core';
   import { rise } from '../../motion';
   import { cadernos } from '../cadernos.svelte';
@@ -20,13 +21,15 @@
   const atributos = $derived([...cat.atributos.values()]);
   const especies = $derived([...cat.especies.values()]);
 
-  type Aba = 'interacao' | 'trama' | 'traco' | 'atributo' | 'especie' | 'profissao';
+  type Aba = 'interacao' | 'trama' | 'traco' | 'atributo' | 'especie' | 'item' | 'evento' | 'profissao';
   const ABAS: Array<[Aba, string, string]> = [
     ['interacao', '🤝 Interação', 'Algo entre duas pessoas, de uma só, ou uma reação a um acontecimento.'],
     ['trama', '🧩 Trama em etapas', 'Uma interação que dura meses: sedução, conspiração, vingança, aprendizado.'],
     ['traco', '✦ Traço', 'Uma característica de personalidade, de nascença, marca do corpo ou reputação.'],
     ['atributo', '📏 Atributo', 'Um número que toda pessoa tem: sanidade, fé, honra, envergadura das asas.'],
-    ['especie', '🧬 Espécie / criatura', 'Elfos, anões, orcs, lobos, dragões: vida, corpo, cruzamentos.'],
+    ['especie', '🧬 Espécie / criatura', 'Elfos, anões, orcs, lobos, dragões: vida, corpo, traços possíveis, cruzamentos.'],
+    ['item', '🗡 Item', 'Um objeto comum ou único (relíquia): dá bônus, traços, maldições; passa de mão em mão, é roubado, herdado, achado.'],
+    ['evento', '🌒 Evento do mundo', 'Algo que acontece num lugar (ou no mundo todo) por alguns meses: eclipse, festival, praga, invasão.'],
     ['profissao', '⚒ Profissão', 'Um ofício com renda, habilidade, prestígio e risco.'],
   ];
   let aba = $state<Aba | null>(null);
@@ -42,6 +45,11 @@
   const vazioTraco = (): TracoForm => ({ nome: '', feminino: '', desc: '', categoria: 'personalidade', oposto: '', herdavel: 0, pesos: [], afinidades: [], humor: 0, estresse: 0, surge: [], chanceSurge: 20 });
   const vazioAtributo = (): AtributoForm => ({ nome: '', min: 0, max: 100, media: 50, desvio: 15, herdavel: 30, categoria: 'mental', porAno: 0, desc: '' });
   const vazioEspecie = (): EspecieForm => ({ nome: '', plural: '', criatura: false, vida: 70, maioridade: 0, fertilidade: 100, gestacao: 9, altura: 0, ajustes: [], tracos: [], cruzas: [], frequencia: 0, desc: '' });
+  const vazioItem = (): ItemForm => ({
+    nome: '', unico: true, tipo: 'relíquia', raridade: 'rara', valor: 100, desc: '', ajustes: [], porMes: [], tracos: [], dono: '', lugar: '', cobicado: false,
+    aoGanhar: { efeitos: [], cronica: '' }, aoPerder: { efeitos: [], cronica: '' }, todoMes: { efeitos: [], cronica: '', condicoes: [] },
+  });
+  const vazioEvento = (): EventoForm => ({ nome: '', desc: '', chance: 10, dura: 2, global: false, pesos: [], aoComecar: '', aoAcabar: '', todoMes: { efeitos: [], cronica: '', condicoes: [] } });
   const vazioProf = (): ProfissaoForm => ({ nome: '', feminino: '', renda: 6, habilidade: 'oficio', status: 2, risco: 0, viaja: false, requer: [] });
 
   let m = $state(vazioM());
@@ -50,6 +58,13 @@
   let at = $state(vazioAtributo());
   let es = $state(vazioEspecie());
   let pf = $state(vazioProf());
+  let it = $state(vazioItem());
+  let ev = $state(vazioEvento());
+  const DONO: Array<[Quem, string]> = [['a', 'quem tem o item']];
+  const PESSOA_EV: Array<[Quem, string]> = [['a', 'cada pessoa lá']];
+  const personagens = $derived(world.entities.filter((e) => e.type === 'personagem').map((e) => e.name));
+  const lugaresNomes = $derived(world.entities.filter((e) => e.type === 'lugar').map((e) => e.name));
+  const camposTodos = $derived([...atributos.map((a) => a.nome), ...CAMPOS_PESSOA.filter((c) => c.id !== 'idade' && c.id !== 'altura').map((c) => c.nome)]);
 
   const partes = $derived.by(() => {
     if (m.tipo === 'par') return { a: 'a (quem age)', b: 'b (o outro)' };
@@ -70,12 +85,14 @@
       case 'atributo': return atributoRegras($state.snapshot(at) as AtributoForm);
       case 'especie': return especieRegras($state.snapshot(es) as EspecieForm);
       case 'profissao': return profissaoRegras($state.snapshot(pf) as ProfissaoForm);
+      case 'item': return itemRegras($state.snapshot(it) as ItemForm);
+      case 'evento': return eventoRegras($state.snapshot(ev) as EventoForm);
       default: return '';
     }
   });
   const problemas = $derived(codigo ? compileRules([{ path: 'construtor', code: codigo }]).issues : []);
   const nome = $derived(
-    aba === 'interacao' ? m.nome : aba === 'trama' ? tr.nome : aba === 'traco' ? tc.nome : aba === 'atributo' ? at.nome : aba === 'especie' ? es.nome : aba === 'profissao' ? pf.nome : '',
+    aba === 'interacao' ? m.nome : aba === 'trama' ? tr.nome : aba === 'traco' ? tc.nome : aba === 'atributo' ? at.nome : aba === 'especie' ? es.nome : aba === 'profissao' ? pf.nome : aba === 'item' ? it.nome : aba === 'evento' ? ev.nome : '',
   );
   const pronto = $derived(!!nome.trim() && !problemas.length && !(aba === 'interacao' && m.tipo === 'reacao' && !m.evento));
   const folder = $derived(world.path ? noteDir(world.path) : `Mundos/${world.name}`);
@@ -98,6 +115,8 @@
     else if (aba === 'traco') tc = vazioTraco();
     else if (aba === 'atributo') at = vazioAtributo();
     else if (aba === 'especie') es = vazioEspecie();
+    else if (aba === 'item') it = vazioItem();
+    else if (aba === 'evento') ev = vazioEvento();
     else pf = vazioProf();
   }
   function moverEtapa(i: number, d: number) {
@@ -115,6 +134,8 @@
     ...prog.traits.map((t) => ({ tipo: 'traço', nome: t.m })),
     ...prog.professions.map((p) => ({ tipo: 'profissão', nome: p.m })),
     ...prog.schemes.map((s) => ({ tipo: 'trama', nome: s.name })),
+    ...[...cat.itens.values()].map((i) => ({ tipo: i.unico ? 'item único' : 'item', nome: i.nome })),
+    ...prog.events.map((e) => ({ tipo: 'evento', nome: e.name })),
     ...prog.interactions.map((s) => ({ tipo: 'interação', nome: s.name })),
   ]);
   const sd = $derived(Math.max(0, at.desvio));
@@ -272,6 +293,16 @@
           <button class="ghost sm add" onclick={() => tc.afinidades.push({ traco: '', pontos: 10 })}>+ opinião</button>
         </div>
         <div class="bloco">
+          <h4>Muda o corpo e a mente</h4>
+          {#each tc.ajustes ?? [] as a, i (i)}
+            <div class="item">
+              <input bind:value={a.campo} list="cons-campos" placeholder="força" /><input type="number" bind:value={a.valor} /><span class="k">pontos</span>
+              <button class="x" onclick={() => tc.ajustes!.splice(i, 1)} aria-label="Tirar">×</button>
+            </div>
+          {/each}
+          <button class="ghost sm add" onclick={() => (tc.ajustes ??= []).push({ campo: 'força', valor: 10 })}>+ ajuste</button>
+        </div>
+        <div class="bloco">
           <h4>Surge sozinho quando… (opcional)</h4>
           <Condicoes bind:conds={tc.surge} quemOps={SO_ELA} {cat} dupla={false} vazio="só de nascença, por herança ou dado à mão" />
           {#if tc.surge.length}<label>Chance por ano <span class="val">{tc.chanceSurge}%</span><input type="range" min="1" max="100" bind:value={tc.chanceSurge} /></label>{/if}
@@ -292,6 +323,9 @@
           <label>Muda por ano <input type="number" step="0.5" bind:value={at.porAno} /></label>
         </div>
         <label>Vem dos pais <span class="val">{at.herdavel}%</span><input type="range" min="0" max="100" bind:value={at.herdavel} /></label>
+        <label class="grow">Só estas espécies têm (separe por vírgula; vazio = todo mundo)
+          <input value={(at.so ?? []).join(', ')} oninput={(e) => (at.so = (e.currentTarget as HTMLInputElement).value.split(',').map((x) => x.trim()).filter(Boolean))} placeholder="Dragão, Wyvern" />
+        </label>
         <p class="dim small">Uns 2 em cada 3 nascem entre {Math.max(at.min, at.media - sd)} e {Math.min(at.max, at.media + sd)}. Use nas condições ("sanidade menor que 20"), nos efeitos ("sanidade tira 10") e nas espécies ("Elfo: sanidade +10").</p>
 
       {:else if aba === 'especie'}
@@ -330,6 +364,17 @@
           </div>
         </div>
         <div class="bloco">
+          <h4>Pode nascer com… (cada um sorteia)</h4>
+          {#each es.talvez ?? [] as t, i (i)}
+            <div class="item">
+              <select bind:value={t.traco}>{#each tracos as x (x.id)}<option value={x.id}>{x.m}</option>{/each}</select>
+              <input type="number" min="0" max="100" bind:value={t.pct} /><span class="k">% de chance</span>
+              <button class="x" onclick={() => es.talvez!.splice(i, 1)} aria-label="Tirar">×</button>
+            </div>
+          {/each}
+          <button class="ghost sm add" onclick={() => (es.talvez ??= []).push({ traco: tracos[0]?.id ?? 'corajoso', pct: 25 })}>+ traço possível</button>
+        </div>
+        <div class="bloco">
           <h4>Tem filhos com…</h4>
           {#each es.cruzas as c, i (i)}
             <div class="item">
@@ -342,6 +387,94 @@
           <button class="ghost sm add" onclick={() => es.cruzas.push({ com: 'Humano', gera: '' })}>+ cruzamento</button>
         </div>
         <label>Entre os figurantes gerados <span class="val">{es.frequencia}%</span><input type="range" min="0" max="100" bind:value={es.frequencia} /></label>
+
+      {:else if aba === 'item'}
+        <div class="linha">
+          <label class="grow">Nome<input bind:value={it.nome} placeholder="Espada de Aurora" /></label>
+          <label>Tipo <input bind:value={it.tipo} list="cons-tipos-item" /></label>
+          <datalist id="cons-tipos-item"><option value="arma"></option><option value="armadura"></option><option value="joia"></option><option value="livro"></option><option value="relíquia"></option><option value="poção"></option><option value="ferramenta"></option></datalist>
+          <label>Raridade
+            <select bind:value={it.raridade}><option value="comum">comum</option><option value="incomum">incomum</option><option value="rara">rara</option><option value="lendária">lendária</option></select>
+          </label>
+          <label>Valor <input type="number" min="0" bind:value={it.valor} /></label>
+        </div>
+        <div class="linha">
+          <label class="chk"><input type="checkbox" bind:checked={it.unico} /> único no mundo</label>
+          <label class="chk"><input type="checkbox" bind:checked={it.cobicado} /> cobiçado (atrai ladrões)</label>
+        </div>
+        <label class="grow">Descrição<input bind:value={it.desc} placeholder="Brilha quando há mentira por perto." /></label>
+        <div class="linha">
+          <label class="grow">Com quem começa <input bind:value={it.dono} list="cons-pers" placeholder="(ninguém)" /></label>
+          {#if !it.dono.trim()}<label class="grow">ou largado em <input bind:value={it.lugar} list="cons-lugares" placeholder="(em lugar nenhum)" /></label>{/if}
+        </div>
+        <datalist id="cons-pers">{#each personagens as n (n)}<option value={n}></option>{/each}</datalist>
+        <datalist id="cons-lugares">{#each lugaresNomes as n (n)}<option value={n}></option>{/each}</datalist>
+        <div class="bloco">
+          <h4>Enquanto alguém tem</h4>
+          {#each it.ajustes as a, i (i)}
+            <div class="item">
+              <input bind:value={a.campo} list="cons-campos" placeholder="combate" /><input type="number" bind:value={a.valor} /><span class="k">pontos</span>
+              <button class="x" onclick={() => it.ajustes.splice(i, 1)} aria-label="Tirar">×</button>
+            </div>
+          {/each}
+          {#each it.porMes as a, i (i)}
+            <div class="item">
+              <span class="k">todo mês</span><input bind:value={a.campo} list="cons-campos" placeholder="humor" /><input type="number" step="0.5" bind:value={a.valor} />
+              <button class="x" onclick={() => it.porMes.splice(i, 1)} aria-label="Tirar">×</button>
+            </div>
+          {/each}
+          <div class="chips">
+            {#each it.tracos as t, i (t)}<span class="chip">dá {cat.tracos.get(t)?.m ?? t} <button class="x" onclick={() => it.tracos.splice(i, 1)} aria-label="Tirar">×</button></span>{/each}
+          </div>
+          <div class="linha">
+            <button class="ghost sm add" onclick={() => it.ajustes.push({ campo: 'combate', valor: 3 })}>+ bônus</button>
+            <button class="ghost sm add" onclick={() => it.porMes.push({ campo: 'humor', valor: -1 })}>+ efeito por mês</button>
+            <select class="addsel" value="" onchange={(e) => { const v = (e.currentTarget as HTMLSelectElement).value; if (v && !it.tracos.includes(v)) it.tracos.push(v); (e.currentTarget as HTMLSelectElement).value = ''; }}>
+              <option value="">+ dá um traço</option>{#each tracos as t (t.id)}<option value={t.id}>{t.m}</option>{/each}
+            </select>
+          </div>
+        </div>
+        <div class="fins">
+          <div class="bloco"><h4>Quando alguém ganha</h4><Efeitos bind:efeitos={it.aoGanhar.efeitos} quemOps={DONO} {cat} dupla={false} />
+            <input bind:value={it.aoGanhar.cronica} placeholder={'{dono} sente o peso da lâmina.'} /></div>
+          <div class="bloco"><h4>Quando perde</h4><Efeitos bind:efeitos={it.aoPerder.efeitos} quemOps={DONO} {cat} dupla={false} />
+            <input bind:value={it.aoPerder.cronica} placeholder={'{dono} se sente nu sem ela.'} /></div>
+          <div class="bloco"><h4>Todo mês</h4><Condicoes bind:conds={it.todoMes.condicoes} quemOps={DONO} {cat} dupla={false} />
+            <Efeitos bind:efeitos={it.todoMes.efeitos} quemOps={DONO} {cat} dupla={false} />
+            <input bind:value={it.todoMes.cronica} placeholder="(nada na crônica)" /></div>
+        </div>
+
+      {:else if aba === 'evento'}
+        <div class="linha">
+          <label class="grow">Nome<input bind:value={ev.nome} placeholder="Lua de Sangue" /></label>
+          <label>Chance por ano <span class="val">{ev.chance ? `${ev.chance}%` : 'só à mão'}</span><input type="range" min="0" max="100" bind:value={ev.chance} /></label>
+          <label>Dura (meses) <input type="number" min="1" bind:value={ev.dura} /></label>
+          <label class="chk"><input type="checkbox" bind:checked={ev.global} /> no mundo todo</label>
+        </div>
+        <label class="grow">Descrição<input bind:value={ev.desc} placeholder="o céu fica vermelho por dias" /></label>
+        <div class="bloco">
+          <h4>Enquanto dura, as pessoas…</h4>
+          {#each ev.pesos as p, i (i)}
+            <div class="item">
+              <select bind:value={p.interacao}>{#each INTERACOES as x (x.id)}<option value={x.id}>{x.nome.toLowerCase()}</option>{/each}</select>
+              <select bind:value={p.mult}>
+                <option value={0}>nunca</option><option value={0.3}>bem menos</option><option value={0.6}>menos</option>
+                <option value={1.5}>mais</option><option value={2}>o dobro</option><option value={3}>o triplo</option>
+              </select>
+              <button class="x" onclick={() => ev.pesos.splice(i, 1)} aria-label="Tirar">×</button>
+            </div>
+          {/each}
+          <button class="ghost sm add" onclick={() => ev.pesos.push({ interacao: 'brigar', mult: 2 })}>+ vontade</button>
+        </div>
+        <div class="bloco"><h4>Todo mês, para cada pessoa lá</h4>
+          <Condicoes bind:conds={ev.todoMes.condicoes} quemOps={PESSOA_EV} {cat} dupla={false} vazio="todo mundo" />
+          <Efeitos bind:efeitos={ev.todoMes.efeitos} quemOps={PESSOA_EV} {cat} dupla={false} />
+          <input bind:value={ev.todoMes.cronica} placeholder="(nada na crônica)" />
+        </div>
+        <div class="fins">
+          <label>Ao começar, a crônica diz <input bind:value={ev.aoComecar} placeholder={'{Um silêncio|Um uivo} corta {lugar}.'} /></label>
+          <label>Ao acabar <input bind:value={ev.aoAcabar} placeholder={'A lua volta a ser branca sobre {lugar}.'} /></label>
+        </div>
 
       {:else if aba === 'profissao'}
         <div class="linha">
@@ -360,6 +493,8 @@
         <div class="bloco"><h4>Só para quem…</h4><Condicoes bind:conds={pf.requer} quemOps={SO_ELA} {cat} dupla={false} vazio="qualquer adulto" /></div>
       {/if}
 
+      <datalist id="cons-campos">{#each camposTodos as c (c)}<option value={c}></option>{/each}</datalist>
+      <p class="dica">💡 Nos textos: <code>{'{a}'}</code> vira o nome; <code>{'{rico|abastado|cheio da grana}'}</code> sorteia uma palavra; <code>{'{a:cansado/cansada}'}</code> concorda com o gênero.</p>
       <div class="prev">
         <h4>O que vai ser escrito</h4>
         <pre>{codigo}</pre>
@@ -431,6 +566,8 @@
   .mini.x { margin: 0; }
   .fins { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
   .fins input { width: 100%; }
+  .dica { margin: 0; font-size: 12px; color: var(--muted); }
+  .dica code { font: 11.5px var(--f-mono); color: var(--ember-soft); background: var(--void); padding: 1px 4px; border-radius: 4px; }
   .prev pre, .rc pre { margin: 0; background: var(--void); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font: 12px/1.5 var(--f-mono); color: var(--ink); white-space: pre-wrap; overflow-x: auto; }
   .err { color: var(--crit); font-size: 12.5px; margin: 4px 0 0; }
   .acts { display: flex; justify-content: flex-end; gap: 8px; }

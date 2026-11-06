@@ -2097,8 +2097,9 @@ export class Vidas {
         this.ganharItem(d, it.id, 'inicio', true);
         continue;
       }
-      if (it.unico && it.lugar) {
-        const l = this.acharLugar(it.lugar);
+      // único sem dono nem lugar: largado onde a simulação começa (alguém pode achar)
+      if (it.unico && !it.dono) {
+        const l = (it.lugar ? this.acharLugar(it.lugar) : null) ?? this.cfg.lugar;
         if (l) {
           this.perdidos.set(it.id, l);
           this.historiaItens.set(it.id, [{ t: this.t, dono: null, como: 'largado', lugar: l }]);

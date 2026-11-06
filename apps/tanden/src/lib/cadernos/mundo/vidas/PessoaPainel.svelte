@@ -36,6 +36,7 @@
       criatura: sim.criatura(p),
       atributos: [...sim.cat.atributos.values()].map((a) => ({ ...a, v: Number(p.campos[a.id] ?? a.media) })),
       tramas: sim.tramas(p.id),
+      itens: sim.itensDe(p),
     };
   });
   const nome = (x: string | null | undefined) => (x ? sim.pessoa(x)?.nome ?? x.split('/').pop()!.replace(/\.md$/, '') : '—');
@@ -136,6 +137,26 @@
       </div>
       {#if p.gostos.length}<p class="gostos">♡ gosta de {p.gostos.join(', ')}</p>{/if}
     </section>
+
+    {#if info.itens.length || (viva && sim.cat.itens.size)}
+      <section>
+        <h4>Itens</h4>
+        <div class="chips">
+          {#each info.itens as it, i (i)}
+            <span class="chip item" class:unico={it.unico} style:--c={it.unico ? "#e6c86e" : "#c8c7cf"} title={[it.desc, Object.entries(it.mods).map(([k, v]) => `${k} ${v >= 0 ? '+' : ''}${v}`).join(', ')].filter(Boolean).join(' · ')}>
+              {it.unico ? '★ ' : ''}{it.nome}
+              {#if viva}<button class="x" onclick={() => cmd({ c: 'item', p: p.id, item: it.id, on: false })} aria-label="Tirar item">×</button>{/if}
+            </span>
+          {/each}
+          {#if viva}
+            <select class="add" value="" onchange={(e) => { const v = (e.currentTarget as HTMLSelectElement).value; if (v) cmd({ c: 'item', p: p.id, item: v, on: true }); (e.currentTarget as HTMLSelectElement).value = ''; }} aria-label="Dar um item">
+              <option value="">+ item</option>
+              {#each [...sim.cat.itens.values()] as it (it.id)}<option value={it.id}>{it.unico ? '★ ' : ''}{it.nome}{it.unico && sim.donoDe(it.id) ? ` (com ${sim.donoDe(it.id)!.nome})` : ''}</option>{/each}
+            </select>
+          {/if}
+        </div>
+      </section>
+    {/if}
 
     {#if info.atributos.length}
       <section>
@@ -330,6 +351,7 @@
   .chip .x:hover { color: var(--crit); }
   .add { background: var(--void); border: 1px dashed var(--line); border-radius: 999px; color: var(--muted); font-size: 12px; padding: 2px 6px; max-width: 120px; }
   .gostos { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); }
+  .chip.item.unico { border-color: #e6c86e; color: #f3dc8f; }
   .tramas { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
   .tramas li { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; font-size: 12.5px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-2); }
   .passos { display: inline-flex; gap: 3px; }

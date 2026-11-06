@@ -280,6 +280,8 @@ export interface TracoForm {
   afinidades: Array<{ traco: string; pontos: number }>;
   humor: number;
   estresse: number;
+  /** ajustes enquanto tem o traço (força +10, sanidade -5...) */
+  ajustes?: Array<{ campo: string; valor: number }>;
   /** surge sozinho quando isto vale (sobre a própria pessoa) */
   surge: Condicao[];
   /** chance por ano de surgir quando a condição vale (0 a 100) */
@@ -300,6 +302,7 @@ export function tracoRegras(t: TracoForm): string {
   for (const a of t.afinidades) L.push(`  afinidade ${a.traco.trim() ? `${q(a.traco.trim())} ` : ''}${a.pontos >= 0 ? '+' : ''}${a.pontos}`);
   if (t.humor) L.push(`  humor ${t.humor >= 0 ? '+' : ''}${t.humor}`);
   if (t.estresse) L.push(`  estresse ${t.estresse >= 0 ? '+' : ''}${t.estresse}`);
+  for (const a of t.ajustes ?? []) if (a.campo.trim() && a.valor) L.push(`  ajuste ${campoTxt(fold(a.campo.trim()))} ${a.valor >= 0 ? '+' : ''}${a.valor}`);
   if (t.surge.length) {
     L.push(`  surge onde ${t.surge.map((c) => cond(c, { a: 'isto', b: 'isto' })).join(' e ')}`);
     L.push(`  chance ${Math.max(1, Math.min(100, Math.round(t.chanceSurge)))}%`);
@@ -318,6 +321,8 @@ export interface AtributoForm {
   categoria: string;
   porAno: number;
   desc: string;
+  /** só estas espécies têm (vazio = todos) */
+  so?: string[];
 }
 
 export function atributoRegras(a: AtributoForm): string {
@@ -326,6 +331,8 @@ export function atributoRegras(a: AtributoForm): string {
   if (a.categoria.trim()) L.push(`  categoria ${q(a.categoria.trim())}`);
   if (a.porAno) L.push(`  por ano ${a.porAno >= 0 ? '+' : ''}${a.porAno}`);
   if (a.desc.trim()) L.push(`  descrição ${q(a.desc.trim())}`);
+  const so = (a.so ?? []).filter((x) => x.trim());
+  if (so.length) L.push(`  só para ${so.map((x) => q(x.trim())).join(', ')}`);
   return `${L.join('\n')}\n`;
 }
 
@@ -342,6 +349,8 @@ export interface EspecieForm {
   altura: number;
   ajustes: Array<{ campo: string; valor: number }>;
   tracos: string[];
+  /** traços que cada um pode ter (chance em %) */
+  talvez?: Array<{ traco: string; pct: number }>;
   cruzas: Array<{ com: string; gera: string }>;
   /** % dos figurantes */
   frequencia: number;
@@ -359,6 +368,8 @@ export function especieRegras(e: EspecieForm): string {
   if (e.altura > 0) L.push(`  altura ${e.altura}`);
   for (const a of e.ajustes) if (a.campo.trim() && a.valor) L.push(`  ${campoTxt(fold(a.campo.trim()))} ${a.valor >= 0 ? '+' : ''}${a.valor}`);
   if (e.tracos.length) L.push(`  traços ${e.tracos.map(q).join(', ')}`);
+  const tv = (e.talvez ?? []).filter((x) => x.traco.trim());
+  if (tv.length) L.push(`  pode ter ${tv.map((x) => `${q(x.traco.trim())} ${Math.max(0, Math.min(100, Math.round(x.pct)))}%`).join(', ')}`);
   for (const c of e.cruzas) if (c.com.trim()) L.push(`  cruza com ${q(c.com.trim())}${c.gera.trim() ? ` gera ${q(c.gera.trim())}` : ''}`);
   if (e.frequencia > 0) L.push(`  frequência ${e.frequencia}%`);
   if (L.length === 1) L.push('  vida 70');
@@ -386,6 +397,99 @@ export function profissaoRegras(p: ProfissaoForm): string {
   return `${L.join('\n')}\n`;
 }
 
+export interface ItemForm {
+  nome: string;
+  unico: boolean;
+  tipo: string;
+  raridade: string;
+  valor: number;
+  desc: string;
+  ajustes: Array<{ campo: string; valor: number }>;
+  porMes: Array<{ campo: string; valor: number }>;
+  tracos: string[];
+  /** quem tem no começo (nome) */
+  dono: string;
+  /** onde está largado, se ninguém tem */
+  lugar: string;
+  cobicado: boolean;
+  aoGanhar: { efeitos: Consequencia[]; cronica: string };
+  aoPerder: { efeitos: Consequencia[]; cronica: string };
+  todoMes: { efeitos: Consequencia[]; cronica: string; condicoes: Condicao[] };
+}
+
+export function itemRegras(it: ItemForm): string {
+  const D: Record<Quem, string> = { a: 'dono', b: 'dono' };
+  const L = [`item ${q(it.nome.trim() || 'Item')}:`];
+  if (it.unico) L.push('  único');
+  if (it.tipo.trim()) L.push(`  tipo ${q(it.tipo.trim())}`);
+  if (it.raridade.trim()) L.push(`  raridade ${q(it.raridade.trim())}`);
+  L.push(`  valor ${it.valor}`);
+  if (it.desc.trim()) L.push(`  descrição ${q(it.desc.trim())}`);
+  if (it.cobicado) L.push('  cobiçado');
+  if (it.dono.trim()) L.push(`  dono ${q(it.dono.trim())}`);
+  else if (it.lugar.trim()) L.push(`  em ${q(it.lugar.trim())}`);
+  for (const a of it.ajustes) if (a.campo.trim() && a.valor) L.push(`  ${campoTxt(fold(a.campo.trim()))} ${a.valor >= 0 ? '+' : ''}${a.valor}`);
+  for (const a of it.porMes) if (a.campo.trim() && a.valor) L.push(`  por mês ${campoTxt(fold(a.campo.trim()))} ${a.valor >= 0 ? '+' : ''}${a.valor}`);
+  if (it.tracos.length) L.push(`  traços ${it.tracos.map(q).join(', ')}`);
+  const bloco = (cab: string, b: { efeitos: Consequencia[]; cronica: string; condicoes?: Condicao[] }) => {
+    if (!b.efeitos.length && !b.cronica.trim()) return;
+    L.push(`  ${cab}:`);
+    let ind = '    ';
+    if (b.condicoes?.length) {
+      L.push(`    se ${b.condicoes.map((c) => cond(c, D)).join(' e ')}:`);
+      ind = '      ';
+    }
+    for (const e of b.efeitos) L.push(...efeito(e, D, ind));
+    if (b.cronica.trim()) L.push(`${ind}crônica ${q(texto(b.cronica, D))}`);
+  };
+  bloco('ao ganhar', it.aoGanhar);
+  bloco('ao perder', it.aoPerder);
+  bloco('todo mês', it.todoMes);
+  return `${L.join('\n')}\n`;
+}
+
+export interface EventoForm {
+  nome: string;
+  desc: string;
+  /** % por ano (0 = só à mão) */
+  chance: number;
+  dura: number;
+  global: boolean;
+  pesos: Array<{ interacao: string; mult: number }>;
+  aoComecar: string;
+  aoAcabar: string;
+  /** todo mês, para cada pessoa no lugar */
+  todoMes: { efeitos: Consequencia[]; cronica: string; condicoes: Condicao[] };
+}
+
+export function eventoRegras(ev: EventoForm): string {
+  const P: Record<Quem, string> = { a: 'personagem', b: 'personagem' };
+  const L = [`evento ${q(ev.nome.trim() || 'Evento')}:`];
+  if (ev.desc.trim()) L.push(`  descrição ${q(ev.desc.trim())}`);
+  if (ev.chance > 0) L.push(`  chance ${Math.min(100, ev.chance)}%`);
+  L.push(`  dura ${Math.max(1, Math.round(ev.dura))} meses`);
+  if (ev.global) L.push('  global');
+  for (const p of ev.pesos) {
+    if (!p.interacao) continue;
+    const pct = Math.round((p.mult - 1) * 100);
+    L.push(`  peso ${p.interacao} ${p.mult === 0 ? '* 0' : pct >= 0 ? `+${pct}%` : `-${-pct}%`}`);
+  }
+  if (ev.aoComecar.trim()) L.push('  ao começar:', `    crônica ${q(ev.aoComecar.trim())}`);
+  const m = ev.todoMes;
+  if (m.efeitos.length || m.cronica.trim()) {
+    L.push('  todo mês:');
+    let ind = '    ';
+    if (m.condicoes.length) {
+      L.push(`    se ${m.condicoes.map((c) => cond(c, P)).join(' e ')}:`);
+      ind = '      ';
+    }
+    for (const e of m.efeitos) L.push(...efeito(e, P, ind));
+    if (m.cronica.trim()) L.push(`${ind}crônica ${q(texto(m.cronica, P))}`);
+  }
+  if (ev.aoAcabar.trim()) L.push('  ao acabar:', `    crônica ${q(ev.aoAcabar.trim())}`);
+  return `${L.join('\n')}\n`;
+}
+
 /** "{a} canta para {b}" → com os nomes das partes. */
 function texto(t: string, nomes: Record<Quem, string>): string {
   return t.replace(/\{a\}/g, `{${nomes.a}}`).replace(/\{b\}/g, `{${nomes.b}}`);
@@ -401,6 +505,44 @@ export interface Receita {
 
 /** Mecânicas prontas: um clique e entram nas regras do mundo. Servem também de exemplo da linguagem. */
 export const RECEITAS: Receita[] = [
+  {
+    nome: 'Relíquia amaldiçoada (item)',
+    desc: 'Um anel único que dá lábia e poder, mas corrói a saúde e o humor; ladrões o cobiçam e ele passa de mão em mão.',
+    codigo: `item "Anel do Rei Morto":
+  único
+  tipo joia
+  raridade lendária
+  valor 800
+  cobiçado
+  descrição "Frio ao toque, quente na ganância."
+  lábia +5
+  intriga +3
+  por mês humor -2
+  por mês saúde -0.5
+  traços "ganancioso"
+  ao ganhar:
+    crônica "{dono} põe o anel no dedo e sente {o mundo inteiro|cada moeda da cidade|a cobiça dos vizinhos} {dono:o/a} observando."
+  ao perder:
+    dono.humor += 20
+    crônica "Sem o anel, {dono} dorme a noite inteira pela primeira vez em anos."
+`,
+  },
+  {
+    nome: 'Festival da colheita (evento)',
+    desc: 'Todo ano há chance de um festival num lugar: mais conversa, flerte e bebida, humor lá em cima.',
+    codigo: `evento "Festival da Colheita":
+  chance 60%
+  dura 1 meses
+  descrição "barracas, música e vinho novo"
+  peso flertar +100%
+  peso conversar +50%
+  peso beber +100%
+  todo mês:
+    personagem.humor += 10
+  ao acabar:
+    crônica "{As barracas são desmontadas|Sobram garrafas vazias e corações partidos} em {lugar}."
+`,
+  },
   {
     nome: 'Conspiração (trama)',
     desc: 'Quem odeia alguém trama em etapas: junta aliados, espalha boatos, ataca. Pode ser descoberto no meio do caminho.',
