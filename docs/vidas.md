@@ -127,9 +127,17 @@ Em **Mundo e ajustes**: festas, pestes, fome, guerra (quem sabe lutar vai para o
 front) e fartura num lugar, e os ajustes do mundo (romance, violência,
 fertilidade, mortalidade, drama, vida social).
 
-Na barra de cima: **▶ 1 mês**, **1 ano**, **10 anos** e **⏩ até algo
+Na barra de cima: **▶ 1 mês**, **1 ano**, **10 anos**, **⏩ até algo
 importante** (para no primeiro nascimento, morte, casamento ou traição
-descoberta de alguém com ficha ou conduzido por você).
+descoberta de alguém com ficha ou conduzido por você) e **⏵ Tocar**: o tempo
+anda sozinho (um mês, uma estação ou um ano por vez) até você pausar, até
+uma decisão sua, ou até um marco (se marcar "pausar em marcos").
+
+**Itens.** Cada pessoa carrega itens (no painel: ★ para os únicos, dar e
+tirar). Itens dão bônus, traços e maldições, passam por herança, roubo e
+achados; a aba **Relíquias** conta a história de cada item único.
+**Eventos do seu mundo** (declarados nas regras) viram botões em **Mundo e
+ajustes**, ao lado de festa, peste, fome, guerra e fartura.
 
 ## Ver
 
@@ -179,7 +187,16 @@ Na aba **Regras**, o **construtor do mundo** monta por partes, sem código:
 - **🧬 Espécie / criatura**: vida, maioridade, fertilidade, gestação, altura,
   ajustes de corpo e atributos, traços de nascença, com quem tem filhos (e de
   que espécie nascem) e quantos figurantes são dela.
+- **🗡 Item**: comum ou único, tipo, raridade, valor, bônus enquanto alguém
+  tem, efeitos por mês (maldições), traços que dá, com quem começa (ou onde
+  está largado), e o que acontece ao ganhar, ao perder e todo mês.
+- **🌒 Evento do mundo**: chance por ano, duração, num lugar ou no mundo
+  todo, o que muda na vontade das pessoas, o que acontece todo mês com quem
+  está lá, e as frases de começo e fim.
 - **⚒ Profissão**: renda, habilidade, prestígio, risco e para quem.
+
+Em todo texto vale variar palavras: `{rico|abastado|cheio da grana}` sorteia
+uma, `{a:cansado/cansada}` concorda com o gênero.
 
 Ele mostra o código que vai escrever e confere os erros antes de gravar. As
 **receitas prontas** (Conspiração, Elfos e meio-elfos, Lobos na floresta,

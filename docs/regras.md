@@ -66,6 +66,7 @@ quando roubo(ladrão, vítima, coisa):
 | `seja limite = 7` | Constante do mundo. |
 | `traço "Nome":`, `profissão "Nome":`, `gosto "Nome"` | Catálogo da simulação de vidas (ver abaixo). |
 | `atributo "Sanidade":`, `espécie "Elfo":`, `criatura "Lobo":` | Valores numéricos das pessoas, espécies e criaturas (ver abaixo). |
+| `item "Espada de Aurora":`, `evento "Lua de Sangue":` | Itens (comuns ou únicos) e eventos do mundo com duração (ver abaixo). |
 | `trama "Nome" entre a em X, b em Y onde ...:` | Interação em **etapas** que dura meses (ver [Tramas](#tramas-em-etapas)). |
 
 ## Comandos (dentro dos blocos, recuados)
@@ -112,6 +113,21 @@ Variáveis prontas: `ano` (o ano da simulação; fora dela, o `ano` da nota do
 mundo ou a última data da linha do tempo) e `mundo`. Na simulação,
 `facção.poder`, `riqueza` e `estabilidade` são os da simulação, na escala 1 a 10
 das fichas.
+
+## Texto com variação
+
+Em qualquer texto entre aspas (crônica, aviso, descrição) e nos bancos de texto:
+
+| Escreva | Sai |
+|---|---|
+| `{a}`, `{a.nome}`, `{dado("1d6")}` | o valor |
+| `{rico\|abastado\|cheio da grana}` | uma das opções, sorteada (cada uma pode ter `{a}` dentro: `{{a} ri\|{a} chora}`) |
+| `{a:cansado/cansada}` | a forma do gênero de quem é `a` (masculino/feminino; uma terceira forma vale para quem é neutro: `{a:o/a/e}`) |
+
+```regras
+quando mês em personagem onde personagem.estresse > 80:
+  crônica "{personagem} anda {nervos|irritad{personagem:o/a}|à flor da pele} e {ninguém ousa falar com {personagem:ele/ela}|a vizinhança evita a casa}."
+```
 
 ## Bancos de texto
 
@@ -209,6 +225,59 @@ criatura "Lobo" "Lobos":     # = espécie com "criatura"
 - **Criaturas** não conversam, não namoram gente, não trabalham e não têm profissão. Com gente de outra espécie, só conflito (as suas regras dizem como atacam: veja a receita *Lobos na floresta*). Entre si, vivem, brigam e se reproduzem.
 - Nos figurantes, famílias inteiras sorteiam uma espécie com `frequência`, com as idades na escala dela (um elfo adulto tem mais de 100 anos); criaturas entram soltas.
 - Campos: `p.espécie` (nome) e `p.criatura` (sim/não). Função: `espécie(p)`.
+
+- Espécies podem ter traços **possíveis**: `pode ter "irascivel" 40%, "belo" 10%` (cada um sorteia ao nascer).
+- Atributo de uma espécie só: `só para "Dragão", "Wyvern"` dentro de `atributo`.
+- Traços mexem em números: `ajuste força +10`, `ajuste sanidade -5` dentro de `traço`.
+
+### Itens
+
+```regras
+item "Anel do Rei Morto":
+  único                      # só existe um (fichas tipo: item já são únicas)
+  tipo joia
+  raridade lendária          # lendária/única também deixam único
+  valor 800
+  cobiçado                   # ladrões vão atrás
+  descrição "Frio ao toque, quente na ganância."
+  dono "Kael"                # com quem começa (ou: em "Pedravale", largado lá)
+  lábia +5                   # ajustes enquanto tem: habilidades, força, beleza, atributos...
+  por mês humor -2           # muda todo mês enquanto tem (maldição)
+  traços "ganancioso"        # ganha enquanto tem; perde junto com o item
+  ao ganhar:
+    crônica "{dono} põe o anel no dedo."
+  ao perder:
+    dono.humor += 20
+  todo mês:
+    se chance(5%):
+      crônica "{dono} ouve sussurros vindos do anel."
+```
+
+- Dentro dos blocos, `dono` é quem tem e `item` é o nome; em `ao ganhar`, `como` diz de onde veio (`heranca`, `roubo`, `achou`, `regra`, `voce`).
+- **Fichas `tipo: item`** viram itens únicos: `dono: "[[Kael]]"`, `valor`, `raridade`, `categoria`, `ajustes: "combate +5, sanidade -10"`, `concede: corajoso`, `por mês: "humor -1"`, `local: "[[Pedravale]]"`, `cobiçado: sim` (`único: não` para um item comum).
+- Na simulação: quem morre deixa os itens para o filho adulto mais velho (senão o cônjuge, senão outro herdeiro); sem ninguém, o item fica largado onde a pessoa estava. Quem passa por um lugar pode **achar** o que está largado (curiosos acham mais). Ladrões preferem quem carrega coisas valiosas e às vezes levam o item. Um item único sem dono começa largado no lugar da simulação.
+- Funções: `dar_item(p, "Anel")`, `tirar_item(p, "Anel")` (fica largado ali), `destruir_item("Anel")`, `tem_item(p, "Anel")`, `dono("Anel")`. Campo `p.itens` (nomes). Eventos: `quando item_ganho(p, nome, como)`, `item_perdido(p, nome, como)`.
+- A aba **Relíquias** da simulação mostra cada item único, com quem está e por quem passou.
+
+### Eventos do mundo
+
+```regras
+evento "Lua de Sangue":
+  chance 5%                  # por ano; 0 (ou sem chance) = só à mão
+  dura 2 meses
+  descrição "o céu fica vermelho"
+  global                     # no mundo todo (sem isto: num lugar sorteado entre os que têm gente)
+  onde lugar.perigos existe  # só começa onde isto vale (`lugar`)
+  peso brigar * 3            # enquanto dura, muda a vontade das interações
+  ao começar:
+    crônica "Um uivo corta {lugar}."
+  todo mês:                  # para cada pessoa no lugar: `personagem`
+    personagem.medo += 1
+  ao acabar:
+    crônica "A lua volta a ser branca."
+```
+
+Os eventos declarados aparecem como botões em **Mundo e ajustes**. Nas regras: `começar_evento("Lua de Sangue", lugar)`, `evento_ativo("Lua de Sangue")`, e `quando lua_de_sangue(lugar):` reage ao começo.
 
 ### Tramas em etapas
 
