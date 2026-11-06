@@ -224,7 +224,7 @@ listas:    [p em personagem onde p.fé > 5]   lista.nome   lista.tamanho`}</pre>
   .issue { display: grid; grid-template-columns: auto 1fr; gap: 10px; text-align: left; border: 1px solid color-mix(in srgb, var(--crit) 45%, var(--line));
     background: color-mix(in srgb, var(--crit) 6%, var(--surface)); border-radius: 10px; padding: 7px 10px; font-size: 13px; color: var(--ink); }
   .where { font: 12px var(--f-mono); color: var(--crit); }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 10px; }
   .box { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 10px 12px; display: grid; gap: 5px; align-content: start; }
   .row { display: flex; align-items: baseline; gap: 7px; font-size: 13px; flex-wrap: wrap; }
   .row.col { flex-direction: column; gap: 3px; }

@@ -542,7 +542,7 @@
   .linha { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
   label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
   label.inline { display: inline-flex; align-items: center; gap: 5px; }
-  .grow { flex: 1; min-width: 160px; }
+  .grow { flex: 1; min-width: min(160px, 100%); }
   .bloco { display: grid; gap: 5px; }
   .item { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; padding: 4px 6px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-2); }
   .k { font-size: 12.5px; color: var(--ink); }
@@ -564,14 +564,14 @@
   .mini { border: 1px solid var(--line); background: var(--surface); border-radius: 7px; width: 26px; height: 26px; padding: 0; color: var(--muted); }
   .mini:disabled { opacity: .35; }
   .mini.x { margin: 0; }
-  .fins { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+  .fins { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 10px; }
   .fins input { width: 100%; }
   .dica { margin: 0; font-size: 12px; color: var(--muted); }
   .dica code { font: 11.5px var(--f-mono); color: var(--ember-soft); background: var(--void); padding: 1px 4px; border-radius: 4px; }
   .prev pre, .rc pre { margin: 0; background: var(--void); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font: 12px/1.5 var(--f-mono); color: var(--ink); white-space: pre-wrap; overflow-x: auto; }
   .err { color: var(--crit); font-size: 12.5px; margin: 4px 0 0; }
   .acts { display: flex; justify-content: flex-end; gap: 8px; }
-  .receitas .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+  .receitas .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(230px, 100%), 1fr)); gap: 8px; }
   .rc { border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; display: grid; gap: 4px; align-content: start; background: var(--surface-2); }
   .rc b { font: 600 13.5px var(--f-display); }
   .rc p { margin: 0; font-size: 12.5px; color: var(--muted); }

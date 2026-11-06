@@ -73,6 +73,10 @@ O documento [architecture.md](architecture.md) tem o mapa completo e as camadas.
 - **Documento novo com merge:** copie o desenho de `board.ts` / `sheet/` (arquivo
   CRDT por aparelho, lápides por geração, `sync(opts?)`), implemente `Syncable`
   e registre no array passado a `fullSync` em `apps/tanden/src/lib/engine.svelte.ts`.
+- **Interface nova:** use os tokens (`--sp-*`, `--r-*`, `--h-*`, `--fs-*`) e os
+  componentes base `t-*` de `apps/tanden/src/ui.css` (botão, campo, chip, folha…)
+  e os ícones de `lib/ui/Icon.svelte`. Veja [docs/design.md](docs/design.md). Teste
+  a 360px: nada pode sair da tela (use `minmax(min(Npx, 100%), 1fr)`).
 - **Comando da paleta:** registre em `apps/tanden/src/lib/app-commands.ts`.
 - **Evento novo:** acrescente a `TandenEvent` em `packages/core/src/events.ts`,
   emita pelo `bus`, e reaja em `engine.onEvent`.

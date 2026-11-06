@@ -24,13 +24,31 @@
   import SimView from './mundo/SimView.svelte';
   import RegrasView from './mundo/RegrasView.svelte';
   import { printCards } from './mundo/print';
+  import Icon, { type IconName } from '../ui/Icon.svelte';
 
   let { onOpenNote }: { onOpenNote: (path: string) => void } = $props();
 
   type Tab = 'fichas' | 'mapas' | 'tempo' | 'grafo' | 'conflitos' | 'sim' | 'ideias' | 'regras';
-  const TABS: Array<[Tab, string]> = [
-    ['fichas', 'Fichas'], ['mapas', 'Mapas'], ['tempo', 'Linha do tempo'], ['grafo', 'Ligações'], ['conflitos', 'Conflitos'], ['sim', 'Simulação'], ['ideias', 'Ideias'], ['regras', 'Regras'],
+  // Abas em três grupos: explorar o que existe, ver o mundo se mexer, e ferramentas.
+  // No celular, as quatro de "explorar" ficam na barra de baixo e o resto em "Mais".
+  type TabDef = { id: Tab; label: string; icon: IconName; group: 'explorar' | 'dinamica' | 'oficina'; desc: string };
+  const TABS: TabDef[] = [
+    { id: 'fichas', label: 'Fichas', icon: 'fichas', group: 'explorar', desc: 'Personagens, lugares, facções e o resto' },
+    { id: 'mapas', label: 'Mapas', icon: 'mapas', group: 'explorar', desc: 'Continentes, marcadores e territórios' },
+    { id: 'tempo', label: 'Tempo', icon: 'tempo', group: 'explorar', desc: 'Tudo o que tem data, em ordem' },
+    { id: 'grafo', label: 'Ligações', icon: 'grafo', group: 'explorar', desc: 'Quem se liga a quem' },
+    { id: 'conflitos', label: 'Conflitos', icon: 'conflitos', group: 'dinamica', desc: 'Guerras, rivalidades e alianças' },
+    { id: 'sim', label: 'Simulação', icon: 'sim', group: 'dinamica', desc: 'Vidas mês a mês ou facções ano a ano' },
+    { id: 'ideias', label: 'Ideias', icon: 'ideias', group: 'oficina', desc: 'Revisão, contradições e geradores' },
+    { id: 'regras', label: 'Regras', icon: 'regras', group: 'oficina', desc: 'Mecânicas e campos calculados' },
   ];
+  const DOCK = TABS.filter((t) => t.group === 'explorar');
+  const MORE = TABS.filter((t) => t.group !== 'explorar');
+  /** abas em que o filtro por tipo faz sentido */
+  const FILTERED: Tab[] = ['fichas', 'tempo', 'grafo'];
+  /** folha aberta no celular: trocar de mundo ou as abas de "Mais" */
+  let sheet = $state<null | 'mundos' | 'mais'>(null);
+  function goTab(t: Tab) { tab = t; sheet = null; entityPath = null; }
   let worldName = $state<string | null>(null);
   let tab = $state<Tab>('fichas');
   let entityPath = $state<string | null>(null);
@@ -303,29 +321,19 @@
   const hint = (k: string) => FIELD_HINTS[k.toLowerCase()] ?? '';
 </script>
 
-<div class="mundo">
-  <aside class="list">
+<div class="mundo" class:inside={!!entity}>
+  <aside class="list" aria-label="Mundos">
     <header>
-      <h2>Mundos</h2>
-      <button class="add" onclick={() => { dialog = 'world'; newName = ''; }} title="Novo mundo" aria-label="Novo mundo">+</button>
+      <h2 class="t-eyebrow">Mundos</h2>
+      <button class="t-btn t-btn--sm t-btn--icon t-btn--quiet" onclick={() => { dialog = 'world'; newName = ''; }} title="Novo mundo" aria-label="Novo mundo"><Icon name="mais_um" size={16} /></button>
     </header>
-    {#each worlds as w (w.name)}
-      <section class:on={w === world}>
-        <button class="world" onclick={() => pickWorld(w.name)}>{w.name}<small>{w.entities.length}</small></button>
-        {#if w === world}
-          <ul>
-            {#each typeCounts as t (t.type)}
-              <li><button class:active={typeFilter === t.type} onclick={() => {
-                if (t.type === 'mapa') { tab = 'mapas'; entityPath = null; return; }
-                typeFilter = typeFilter === t.type ? null : t.type; entityPath = null;
-              }}>
-                <i style:--c={typeColor(t.type)}></i>{typeInfo(t.type).plural}<small>{t.n}</small></button></li>
-            {/each}
-            <li><button class="ghost" onclick={() => startEntity()}>+ ficha</button></li>
-          </ul>
-        {/if}
-      </section>
-    {/each}
+    <ul>
+      {#each worlds as w (w.name)}
+        <li><button class="world" class:on={w === world} onclick={() => pickWorld(w.name)}>
+          <Icon name="mundo" size={16} /><span>{w.name}</span><small>{w.entities.length}</small>
+        </button></li>
+      {/each}
+    </ul>
   </aside>
 
   <div class="body">
@@ -334,31 +342,35 @@
         <div class="orb" aria-hidden="true">✦</div>
         <h1>World building</h1>
         <p>Personagens, lugares, facções, conflitos e mapas, cada um numa nota com propriedades. As ligações montam o grafo, as datas montam a linha do tempo, e as facções podem até ser simuladas. Fica tudo em <code>Mundos/</code>, compatível com o Obsidian.</p>
-        <button class="primary" onclick={() => { dialog = 'world'; newName = ''; }}>Criar um mundo</button>
+        <button class="t-btn t-btn--primary" onclick={() => { dialog = 'world'; newName = ''; }}><Icon name="mais_um" size={16} />Criar um mundo</button>
       </div>
     {:else if entity}
       {#key entity.path}
-        <header class="top" in:rise={{ y: 6 }}>
-          <div>
-            <p class="sub crumbs"><button onclick={() => (entityPath = null)}>{world.name}</button> / {typeInfo(entity.type).plural}</p>
-            <div class="who">
-              <Portrait target={imageOf(fm)} name={entity.name} size={64} onpick={(p) => cadernos.update(entity!.path, (t) => setProp(t, 'imagem', `[[${p}]]`))} />
-              <h1><i class="dot" style:--c={typeColor(entity.type)}></i>{entity.name}</h1>
-              <span class="score" title={`${Math.round(entity.score * 100)}% preenchida: resumo, imagem, campos, seções e ligações`}><Ring value={entity.score} size={26} /><small>{Math.round(entity.score * 100)}%</small></span>
+        <header class="top ficha-top" in:rise={{ y: 6 }}>
+          <nav class="crumbs" aria-label="Caminho">
+            <button class="t-btn t-btn--sm t-btn--quiet back" onclick={() => (entityPath = null)}><Icon name="voltar" size={16} />{world.name}</button>
+            <span class="sep">/</span><span>{typeInfo(entity.type).plural}</span>
+          </nav>
+          <div class="who">
+            <Portrait target={imageOf(fm)} name={entity.name} size={64} onpick={(p) => cadernos.update(entity!.path, (t) => setProp(t, 'imagem', `[[${p}]]`))} />
+            <div class="whotext">
+              <span class="kind" style:--c={typeColor(entity.type)}><i class="dot"></i>{typeInfo(entity.type).label}</span>
+              <h1>{entity.name}</h1>
             </div>
-            {#if onMaps.length}
-              <p class="onmap">{#each onMaps as m (m.path)}<button onclick={() => { mapFocus = { map: m.path, target: entity!.name }; entityPath = null; tab = 'mapas'; }}>⌖ no mapa {m.name}</button>{/each}</p>
-            {/if}
+            <span class="score" title={`${Math.round(entity.score * 100)}% preenchida: resumo, imagem, campos, seções e ligações`}><Ring value={entity.score} size={30} /><small>{Math.round(entity.score * 100)}%</small></span>
           </div>
+          {#if onMaps.length}
+            <p class="onmap">{#each onMaps as m (m.path)}<button class="t-chip" onclick={() => { mapFocus = { map: m.path, target: entity!.name }; entityPath = null; tab = 'mapas'; }}><Icon name="mapas" size={14} />no mapa {m.name}</button>{/each}</p>
+          {/if}
           <div class="acts">
-            {#each ruleActions as a (a)}<button class="ghost rule" onclick={() => runRule(a)} title="Ação das regras do mundo">▶ {a}</button>{/each}
-            {#if entity.type === 'personagem'}<button class="ghost die" onclick={rollPersonality} title="Sorteia motivação, medo, segredo e maneirismo (só os vazios)">🎲 Personalidade</button>{/if}
-            {#if questions.length}<button class="ghost" class:on={showQuestions} onclick={() => (showQuestions = !showQuestions)} title="Perguntas para aprofundar a ficha">✎ Aprofundar</button>{/if}
-            <select value={entity.type} onchange={(e) => setType((e.currentTarget as HTMLSelectElement).value)} aria-label="Tipo">
+            {#each ruleActions as a (a)}<button class="t-btn t-btn--sm rule" onclick={() => runRule(a)} title="Ação das regras do mundo">▶ {a}</button>{/each}
+            {#if entity.type === 'personagem'}<button class="t-btn t-btn--sm die" onclick={rollPersonality} title="Sorteia motivação, medo, segredo e maneirismo (só os vazios)">🎲 Personalidade</button>{/if}
+            {#if questions.length}<button class="t-btn t-btn--sm" class:t-btn--on={showQuestions} onclick={() => (showQuestions = !showQuestions)} title="Perguntas para aprofundar a ficha">✎ Aprofundar</button>{/if}
+            <select class="t-select t-btn--sm" value={entity.type} onchange={(e) => setType((e.currentTarget as HTMLSelectElement).value)} aria-label="Tipo">
               {#each types as t (t.id)}<option value={t.id}>{t.label}</option>{/each}
               {#if !types.some((t) => t.id === entity.type)}<option value={entity.type}>{typeInfo(entity.type).label}</option>{/if}
             </select>
-            <button class="ghost" onclick={() => onOpenNote(entity.path)}>Abrir nota</button>
+            <button class="t-btn t-btn--sm" onclick={() => onOpenNote(entity.path)}><Icon name="nota" size={15} />Abrir nota</button>
           </div>
         </header>
       {/key}
@@ -375,15 +387,16 @@
       {/if}
 
       <div class="sheet">
-        <div class="props">
+        <div class="props t-card">
+          <h3 class="t-eyebrow">Propriedades</h3>
           {#each fields as k (k)}
             {#if editingKey === k}
               <form class="prop editing" onsubmit={(e) => { e.preventDefault(); saveField(); }}>
-                <input class="k" bind:value={keyDraft} aria-label="Nome do campo" />
+                <input class="t-input k" bind:value={keyDraft} aria-label="Nome do campo" />
                 <!-- svelte-ignore a11y_autofocus -->
-                <input class="v" bind:value={valueDraft} placeholder={hint(k) || 'texto, ou [[Nome]] para ligar a outra ficha'} autofocus
+                <input class="t-input v" bind:value={valueDraft} placeholder={hint(k) || 'texto, ou [[Nome]] para ligar a outra ficha'} autofocus
                   onkeydown={(e) => { if (e.key === 'Escape') editingKey = null; }} />
-                <span class="pacts"><button class="primary sm">OK</button><button type="button" class="x" onclick={() => removeField(k)} title="Apagar campo">✕</button></span>
+                <span class="pacts"><button class="t-btn t-btn--sm t-btn--primary">OK</button><button type="button" class="t-btn t-btn--sm t-btn--icon t-btn--quiet t-btn--danger" onclick={() => removeField(k)} title="Apagar campo" aria-label="Apagar campo"><Icon name="fechar" size={15} /></button></span>
               </form>
             {:else}
               <div class="prop">
@@ -410,9 +423,9 @@
           {#if editingKey === ''}
             <form class="prop editing" onsubmit={(e) => { e.preventDefault(); saveField(); }}>
               <!-- svelte-ignore a11y_autofocus -->
-              <input class="k" bind:value={keyDraft} placeholder="campo" autofocus />
-              <input class="v" bind:value={valueDraft} placeholder={hint(keyDraft) || 'valor'} />
-              <span class="pacts"><button class="primary sm" disabled={!keyDraft.trim()}>OK</button><button type="button" class="x" onclick={() => (editingKey = null)}>✕</button></span>
+              <input class="t-input k" bind:value={keyDraft} placeholder="campo" autofocus />
+              <input class="t-input v" bind:value={valueDraft} placeholder={hint(keyDraft) || 'valor'} />
+              <span class="pacts"><button class="t-btn t-btn--sm t-btn--primary" disabled={!keyDraft.trim()}>OK</button><button type="button" class="t-btn t-btn--sm t-btn--icon t-btn--quiet" onclick={() => (editingKey = null)} aria-label="Cancelar"><Icon name="fechar" size={15} /></button></span>
             </form>
           {/if}
           <div class="addf">
@@ -422,25 +435,26 @@
           </div>
         </div>
 
-        <div class="links">
+        <div class="links t-card">
           {#if outgoing.length}
-            <h3>Ligações</h3>
+            <h3 class="t-eyebrow">Ligações</h3>
             {#each outgoing as [label, list] (label)}
               <div class="rel"><span class="lbl">{label}</span>{#each list as e (e.path)}<button class="chip" style:--c={typeColor(e.type)} onclick={() => openEntity(e.path)}>{e.name}</button>{/each}</div>
             {/each}
           {/if}
           {#if incoming.length}
-            <h3>Citado por</h3>
+            <h3 class="t-eyebrow">Citado por</h3>
             {#each incoming as r, i (i)}
               {@const e = byPath.get(r.from)}
               {#if e}<div class="rel"><button class="chip" style:--c={typeColor(e.type)} onclick={() => openEntity(e.path)}>{e.name}</button><span class="lbl">{r.label}</span></div>{/if}
             {/each}
           {/if}
           {#if broken.length}
-            <h3>Fichas que faltam</h3>
+            <h3 class="t-eyebrow">Fichas que faltam</h3>
             <div class="rel">{#each broken as r, i (i)}<button class="chip broken" onclick={() => startEntity(r.target, guessTypeFromLabel(r.label))} title="Criar ficha">+ {r.target}</button>{/each}</div>
           {/if}
           {#if !outgoing.length && !incoming.length && !broken.length}
+            <h3 class="t-eyebrow">Ligações</h3>
             <p class="dim small">Sem ligações ainda. Escreva <code>[[Nome]]</code> num campo ou no texto para ligar esta ficha a outra.</p>
           {/if}
         </div>
@@ -448,16 +462,16 @@
 
       {#if entity.type === 'personagem' || entity.type === 'criatura' || hasSheet(fm)}
         {#key entity.path}
-          <div class="game">
-            <h3>Ficha de jogo</h3>
+          <div class="game t-card">
+            <h3 class="t-eyebrow">Ficha de jogo</h3>
             <SheetPanel path={entity.path} compact portrait={false} {onOpenNote} />
           </div>
         {/key}
       {/if}
 
       {#if entity.type === 'item'}
-        <div class="game">
-          <h3>Carta</h3>
+        <div class="game t-card">
+          <h3 class="t-eyebrow">Carta</h3>
           <ItemCard name={entity.name} card={readItemCard(entity.name, text)} />
           <p class="dim small">Raridade, categoria, dano, valor, peso e <code>sintonização</code> vêm das propriedades; a descrição, da seção <code>## Descrição</code>.</p>
         </div>
@@ -468,36 +482,61 @@
       </div>
     {:else}
       <header class="top">
-        <div>
-          <h1>{world.name}</h1>
-          <p class="sub">{world.entities.length} fichas · {world.relations.filter((r) => r.to).length} ligações · {timeline(world).length} datas</p>
+        <div class="title">
+          <!-- no celular o título troca de mundo; no computador a lista ao lado faz isso -->
+          <button class="switch" onclick={() => (sheet = 'mundos')} aria-haspopup="dialog" title="Trocar de mundo">
+            <h1>{world.name}</h1><Icon name="abaixo" size={18} />
+          </button>
+          <h1 class="plain">{world.name}</h1>
+          <p class="sub">
+            <span>{world.entities.length} fichas</span><span>{world.relations.filter((r) => r.to).length} ligações</span><span>{timeline(world).length} datas</span>
+          </p>
           <div class="health" title="Média de preenchimento das fichas">
             <span class="hbar"><i style:width="{Math.round(health * 100)}%"></i></span>
             <small>{Math.round(health * 100)}% vivo</small>
-            {#if problems}<button class="warn" onclick={() => (tab = 'ideias')}>⚠ {problems} {problems === 1 ? 'contradição' : 'contradições'}</button>{/if}
+            {#if problems}<button class="warn" onclick={() => goTab('ideias')}><Icon name="alerta" size={13} />{problems} {problems === 1 ? 'contradição' : 'contradições'}</button>{/if}
           </div>
         </div>
         <div class="acts">
-          {#if world.path}<button class="ghost" onclick={() => onOpenNote(world.path!)}>Nota do mundo</button>{/if}
-          <button class="primary" onclick={() => startEntity()}>Nova ficha</button>
+          {#if world.path}<button class="t-btn" onclick={() => onOpenNote(world.path!)}><Icon name="nota" size={16} />Nota do mundo</button>{/if}
+          <button class="t-btn t-btn--primary" onclick={() => startEntity()}><Icon name="mais_um" size={16} />Nova ficha</button>
         </div>
       </header>
-      <nav class="tabs">
-        {#each TABS as [id, label] (id)}<button class:on={tab === id} onclick={() => (tab = id)}>{label}</button>{/each}
-      </nav>
 
+      <div class="tabs" role="tablist" aria-label="Seções do mundo">
+        {#each TABS as t, i (t.id)}
+          {#if i > 0 && TABS[i - 1]!.group !== t.group}<span class="gsep" aria-hidden="true"></span>{/if}
+          <button role="tab" aria-selected={tab === t.id} class:on={tab === t.id} onclick={() => goTab(t.id)} title={t.desc}>
+            <Icon name={t.icon} size={16} /><span>{t.label}</span>
+            {#if t.id === 'ideias' && problems}<span class="t-badge">{problems}</span>{/if}
+          </button>
+        {/each}
+      </div>
+
+      {#if FILTERED.includes(tab) && typeCounts.some((t) => t.type !== 'mapa')}
+        <div class="filters t-scroll-x" role="group" aria-label="Filtrar por tipo">
+          <button class="t-chip" class:on={!typeFilter} onclick={() => (typeFilter = null)}>Todas<small>{world.entities.filter((e) => e.type !== 'mapa').length}</small></button>
+          {#each typeCounts.filter((t) => t.type !== 'mapa') as t (t.type)}
+            <button class="t-chip" class:on={typeFilter === t.type} style:--c={typeColor(t.type)} onclick={() => (typeFilter = typeFilter === t.type ? null : t.type)}>
+              <i></i>{typeInfo(t.type).plural}<small>{t.n}</small>
+            </button>
+          {/each}
+        </div>
+      {/if}
+
+      <section class="pane" role="tabpanel">
       {#if tab === 'fichas'}
         <div class="tools">
-          <input class="search" bind:value={query} placeholder="Buscar por nome, apelido ou descrição" />
-          <div class="seg" role="radiogroup" aria-label="Aparência">
-            <button class:on={look === 'lista'} onclick={() => (look = 'lista')}>☰ Lista</button>
-            <button class:on={look === 'cartas'} onclick={() => (look = 'cartas')}>🂠 Cartas</button>
+          <label class="t-search search"><Icon name="buscar" size={15} /><input class="t-input" bind:value={query} placeholder="Buscar por nome, apelido ou descrição" aria-label="Buscar fichas" /></label>
+          <div class="t-seg" role="radiogroup" aria-label="Aparência">
+            <button role="radio" aria-checked={look === 'lista'} class:on={look === 'lista'} onclick={() => (look = 'lista')} title="Lista"><Icon name="lista" size={15} /><span class="seglbl">Lista</span></button>
+            <button role="radio" aria-checked={look === 'cartas'} class:on={look === 'cartas'} onclick={() => (look = 'cartas')} title="Cartas"><Icon name="cartas" size={15} /><span class="seglbl">Cartas</span></button>
           </div>
-          {#if look === 'cartas' && shown.length}<button class="ghost" onclick={() => void printCards(shown, `Cartas de ${world!.name}`)} title="Cartas de baralho (63×88 mm), 9 por folha A4">🖨 Imprimir</button>{/if}
-          <select bind:value={order} aria-label="Ordem">
-            <option value="nome">por nome</option>
-            <option value="vazias">menos completas primeiro</option>
+          <select class="t-select" bind:value={order} aria-label="Ordem">
+            <option value="nome">A–Z</option>
+            <option value="vazias">Menos completas</option>
           </select>
+          {#if look === 'cartas' && shown.length}<button class="t-btn t-btn--icon" onclick={() => void printCards(shown, `Cartas de ${world!.name}`)} title="Imprimir cartas de baralho (63×88 mm), 9 por folha A4" aria-label="Imprimir cartas"><Icon name="imprimir" size={16} /></button>{/if}
         </div>
         {#if shown.length}
           {#key look + (typeFilter ?? '') + order}
@@ -523,7 +562,10 @@
             {/if}
           {/key}
         {:else}
-          <p class="dim pad">{world.entities.length ? 'Nada encontrado.' : 'Nenhuma ficha ainda. Comece por uma personagem ou um lugar.'}</p>
+          <div class="none">
+            <p class="dim">{world.entities.length ? 'Nada encontrado.' : 'Nenhuma ficha ainda. Comece por uma personagem ou um lugar.'}</p>
+            {#if !world.entities.length}<button class="t-btn t-btn--primary" onclick={() => startEntity()}><Icon name="mais_um" size={16} />Criar a primeira ficha</button>{/if}
+          </div>
         {/if}
       {:else if tab === 'mapas'}
         <MapaView {world} {byPath} focus={mapFocus} onopen={(p) => (byPath.get(p)?.type === 'mapa' ? onOpenNote(p) : openEntity(p))}
@@ -556,11 +598,11 @@
                 <span class="kind">{typeInfo(e.type).label}</span>
                 <b>{e.name}</b>
                 {#if e.summary}<span class="sum">{e.summary}</span>{/if}
-                <button class="primary sm" onclick={() => openEntity(e.path)}>Abrir ficha</button>
+                <button class="t-btn t-btn--sm t-btn--primary" onclick={() => openEntity(e.path)}>Abrir ficha</button>
               </div>
             {/if}
           </div>
-          <div class="legend">{#each typeCounts as t (t.type)}<span><i style:--c={typeColor(t.type)}></i>{typeInfo(t.type).plural}</span>{/each}<span class="dim">· tracejado = citado no texto</span></div>
+          <p class="legend dim small">Toque num ponto para ver a ficha · tracejado = citado no texto</p>
         {:else}
           <p class="dim pad">Sem fichas para ligar ainda.</p>
         {/if}
@@ -573,30 +615,78 @@
       {:else if tab === 'regras'}
         <RegrasView {world} {byPath} onopen={openEntity} {onOpenNote} />
       {/if}
+      </section>
     {/if}
   </div>
 
+  {#if world && !entity}
+    <!-- celular: barra de baixo com as abas de explorar + "Mais", e o botão de nova ficha -->
+    {@const extra = MORE.find((t) => t.id === tab)}
+    <nav class="dock" aria-label="Seções do mundo">
+      {#each DOCK as t (t.id)}
+        <button class:on={tab === t.id} aria-current={tab === t.id ? 'page' : undefined} onclick={() => goTab(t.id)}><Icon name={t.icon} size={21} /><span>{t.label}</span></button>
+      {/each}
+      <button class:on={!!extra} onclick={() => (sheet = 'mais')} aria-haspopup="dialog">
+        <span class="ic"><Icon name={extra?.icon ?? 'mais'} size={21} />{#if problems && tab !== 'ideias'}<i class="ping"></i>{/if}</span><span>{extra?.label ?? 'Mais'}</span>
+      </button>
+    </nav>
+    {#if tab === 'fichas' || tab === 'tempo' || tab === 'grafo'}
+      <button class="fab t-btn t-btn--primary" onclick={() => startEntity()} aria-label="Nova ficha"><Icon name="mais_um" size={22} /></button>
+    {/if}
+  {/if}
+
+  {#if sheet}
+    <div class="t-scrim" role="presentation" onclick={(e) => { if (e.target === e.currentTarget) sheet = null; }}>
+      <div class="t-sheet" role="dialog" aria-modal="true" aria-label={sheet === 'mundos' ? 'Mundos' : 'Mais seções'}>
+        {#if sheet === 'mundos'}
+          <h2>Mundos</h2>
+          <div class="rows">
+            {#each worlds as w (w.name)}
+              <button class="t-row" class:on={w === world} onclick={() => { pickWorld(w.name); sheet = null; }}>
+                <Icon name="mundo" size={20} /><span>{w.name}<small>{w.entities.length} fichas</small></span>
+              </button>
+            {/each}
+          </div>
+          <div class="t-actions">
+            {#if world?.path}<button class="t-btn" onclick={() => { sheet = null; onOpenNote(world!.path!); }}><Icon name="nota" size={16} />Nota do mundo</button>{/if}
+            <button class="t-btn t-btn--primary" onclick={() => { sheet = null; dialog = 'world'; newName = ''; }}><Icon name="mais_um" size={16} />Novo mundo</button>
+          </div>
+        {:else}
+          <h2>Mais seções</h2>
+          <div class="rows">
+            {#each MORE as t (t.id)}
+              <button class="t-row" class:on={tab === t.id} onclick={() => goTab(t.id)}>
+                <Icon name={t.icon} size={20} /><span>{t.label}<small>{t.desc}</small></span>
+                {#if t.id === 'ideias' && problems}<span class="t-badge">{problems}</span>{/if}
+              </button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    </div>
+  {/if}
+
   {#if dialog}
-    <div class="scrim" role="presentation" onclick={(e) => { if (e.target === e.currentTarget) dialog = null; }}>
-      <div class="dialog" role="dialog" aria-modal="true">
+    <div class="t-scrim" role="presentation" onclick={(e) => { if (e.target === e.currentTarget) dialog = null; }}>
+      <div class="t-sheet dialog" role="dialog" aria-modal="true">
         {#if dialog === 'world'}
           <h2>Novo mundo</h2>
           <form onsubmit={(e) => { e.preventDefault(); createWorld(); }}>
             <!-- svelte-ignore a11y_autofocus -->
-            <label>Nome<input bind:value={newName} placeholder="Aerth" autofocus /></label>
-            <div class="formacts"><button type="button" class="ghost" onclick={() => (dialog = null)}>Cancelar</button><button class="primary" disabled={!newName.trim()}>Criar</button></div>
+            <label><span class="t-eyebrow">Nome</span><input class="t-input" bind:value={newName} placeholder="Aerth" autofocus /></label>
+            <div class="t-actions"><button type="button" class="t-btn" onclick={() => (dialog = null)}>Cancelar</button><button class="t-btn t-btn--primary" disabled={!newName.trim()}>Criar</button></div>
           </form>
         {:else}
           <h2>Nova ficha em {world?.name}</h2>
           <form onsubmit={(e) => { e.preventDefault(); createEntity(); }}>
             <!-- svelte-ignore a11y_autofocus -->
-            <label>Nome<input bind:value={newName} placeholder="Kael" autofocus /></label>
+            <label><span class="t-eyebrow">Nome</span><input class="t-input" bind:value={newName} placeholder="Kael" autofocus /></label>
             <div class="types" role="radiogroup" aria-label="Tipo">
               {#each types as t (t.id)}
-                <button type="button" class:on={newType === t.id} style:--c={typeColor(t.id)} onclick={() => (newType = t.id)}><span class="g">{typeGlyph(t.id)}</span>{t.label}</button>
+                <button type="button" role="radio" aria-checked={newType === t.id} class="t-chip" class:on={newType === t.id} style:--c={typeColor(t.id)} onclick={() => (newType = t.id)}><span class="g">{typeGlyph(t.id)}</span>{t.label}</button>
               {/each}
             </div>
-            <div class="formacts"><button type="button" class="ghost" onclick={() => (dialog = null)}>Cancelar</button><button class="primary" disabled={!newName.trim()}>Criar</button></div>
+            <div class="t-actions"><button type="button" class="t-btn" onclick={() => (dialog = null)}>Cancelar</button><button class="t-btn t-btn--primary" disabled={!newName.trim()}>Criar</button></div>
           </form>
         {/if}
       </div>
@@ -607,182 +697,227 @@
 </div>
 
 <style>
-  .mundo { position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: 220px minmax(0, 1fr); }
-  .list { border-right: 1px solid var(--line); overflow-y: auto; padding: 14px 8px; }
-  .list header { display: flex; justify-content: space-between; align-items: center; padding: 0 8px 10px; }
-  h2 { margin: 0; font: 600 11.5px/1 var(--f-display); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
-  .add { width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); }
-  .add:hover { border-color: var(--ember); color: var(--ember); }
-  .world { width: 100%; display: flex; justify-content: space-between; border: 0; background: none; padding: 8px 10px; border-radius: 9px;
-    font: 600 13px var(--f-display); letter-spacing: .04em; text-align: left; }
-  .world small, .list li small { color: var(--muted); font: 11px var(--f-mono); margin-left: auto; }
-  section.on .world { color: var(--ember); }
-  .list ul { list-style: none; margin: 0 0 8px; padding: 0 0 0 8px; }
-  .list li button { width: 100%; display: flex; align-items: center; gap: 8px; text-align: left; border: 0; background: none; padding: 6px 10px; border-radius: 8px; }
-  .list li button:hover, .list li button.active { background: var(--surface-2); }
-  .list li button.ghost { color: var(--muted); font-size: 12.5px; }
-  .list li i, .legend i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; }
+  /* grade: lista de mundos | conteúdo; no celular a lista some e entra a barra de baixo */
+  .mundo { position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: 220px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  .dock, .fab, .switch { display: none; }
 
-  .body { overflow-y: auto; padding: 22px 28px 0; min-width: 0; display: flex; flex-direction: column; }
+  /* ── lista de mundos (computador) ── */
+  .list { border-right: 1px solid var(--line); overflow-y: auto; padding: var(--sp-4) var(--sp-2); background: color-mix(in srgb, var(--surface) 50%, transparent); }
+  .list header { display: flex; justify-content: space-between; align-items: center; padding: 0 var(--sp-2) var(--sp-3); }
+  .list ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .world { width: 100%; display: flex; align-items: center; gap: var(--sp-2); border: 0; background: none; min-height: var(--h-md); padding: 0 var(--sp-3);
+    border-radius: var(--r-md); text-align: left; color: var(--muted); font: 600 13.5px var(--f-body); transition: background var(--dur), color var(--dur); }
+  .world span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .world small { font: 11px var(--f-mono); color: var(--muted); }
+  .world:hover { background: var(--surface-2); color: var(--ink); }
+  .world.on { background: color-mix(in srgb, var(--ember) 11%, transparent); color: var(--ink); box-shadow: inset 2px 0 0 var(--ember); }
+  .world.on :global(svg) { color: var(--ember); }
+
+  /* ── área de conteúdo ── */
+  .body { overflow-y: auto; padding: var(--sp-6) var(--gutter) 0; min-width: 0; display: flex; flex-direction: column; container-type: inline-size; }
   .body > * { flex-shrink: 0; }
-  .top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
-  h1 { margin: 0; font: 600 26px/1.15 var(--f-display); letter-spacing: .02em; display: flex; align-items: center; gap: 10px; }
-  .who { display: flex; align-items: center; gap: 14px; }
-  h1 .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--c); box-shadow: 0 0 12px var(--c); }
-  h3 { margin: 14px 0 6px; font: 600 10.5px var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-  h3:first-child { margin-top: 0; }
-  .sub { margin: 4px 0 0; color: var(--muted); font-size: 12.5px; }
-  .crumbs { margin: 0 0 2px; }
-  .crumbs button { border: 0; background: none; padding: 0; color: var(--ember-soft); font: inherit; }
-  .acts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  select { background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px; color: var(--ink); padding: 6px 10px; font: inherit; }
-  .primary { border: 0; border-radius: 9px; padding: 7px 14px; background: var(--ember); color: var(--on-ember); font-weight: 600; }
-  .primary.sm { padding: 4px 10px; font-size: 12.5px; }
-  .primary:disabled { opacity: .45; cursor: default; }
-  .ghost { border: 1px solid var(--line); border-radius: 9px; padding: 6px 12px; background: var(--surface-2); }
-  .ghost:hover { border-color: var(--ember); }
+  .pane { display: flex; flex-direction: column; flex: 1 0 auto; min-width: 0; }
+  .pane > :global(*) { flex-shrink: 0; }
+
+  .top { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--sp-3) var(--sp-4); flex-wrap: wrap; margin-bottom: var(--sp-4); }
+  .title { min-width: 0; }
+  h1 { margin: 0; font: 600 var(--fs-2xl)/1.15 var(--f-display); letter-spacing: .01em; overflow-wrap: anywhere; }
+  .sub { margin: var(--sp-1) 0 0; color: var(--muted); font-size: var(--fs-sm); display: flex; flex-wrap: wrap; gap: 0 var(--sp-2); }
+  .sub span + span::before { content: '·'; margin-right: var(--sp-2); opacity: .6; }
+  .acts { display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; }
   .dim { color: var(--muted); }
   .small { font-size: 12px; }
-  .pad { padding: 18px 0; }
+  .pad { padding: var(--sp-4) 0; }
   code { font: 12px var(--f-mono); color: var(--ember-soft); }
 
-  .empty { max-width: 560px; margin: 8vh auto 0; text-align: center; }
-  .orb { font-size: 46px; color: var(--ember); filter: drop-shadow(0 0 18px var(--ember)); animation: twinkle 3.2s ease-in-out infinite; }
-  @keyframes twinkle { 50% { transform: rotate(18deg) scale(1.12); filter: drop-shadow(0 0 30px var(--ember)); } }
-  .score { display: inline-flex; align-items: center; gap: 4px; }
-  .score small { font: 11px var(--f-mono); color: var(--muted); }
-  .onmap { margin: 6px 0 0; display: flex; gap: 6px; flex-wrap: wrap; }
-  .onmap button { border: 1px solid color-mix(in srgb, #6fc3c9 50%, var(--line)); background: color-mix(in srgb, #6fc3c9 10%, transparent); color: var(--ink);
-    border-radius: 999px; padding: 1px 10px; font-size: 12px; }
-  .ghost.on { border-color: var(--ember); color: var(--ember-soft); }
-  .die:hover { animation: wobble .5s; }
-  @keyframes wobble { 30% { transform: rotate(-6deg); } 60% { transform: rotate(5deg); } }
-  .questions { border: 1px dashed color-mix(in srgb, var(--ember) 50%, var(--line)); border-radius: 14px; padding: 10px 12px; margin-bottom: 10px;
-    background: color-mix(in srgb, var(--ember) 4%, transparent); }
-  .questions p { margin: 0 0 8px; }
-  .qs { display: flex; flex-wrap: wrap; gap: 6px; }
-  .qs button { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 5px 10px; font-size: 13px; text-align: left; color: var(--ink); }
-  .qs button:hover:not(:disabled) { border-color: var(--ember); }
-  .qs button.done { color: var(--ok); opacity: .7; }
-  .health { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .health { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
   .hbar { width: 140px; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
-  .hbar i { display: block; height: 100%; background: linear-gradient(90deg, var(--ember), var(--ok)); border-radius: 3px; transition: width .8s var(--ease, ease); }
+  .hbar i { display: block; height: 100%; background: linear-gradient(90deg, var(--ember), var(--ok)); border-radius: 3px; transition: width .8s var(--ease); }
   .health small { font: 11px var(--f-mono); color: var(--muted); }
-  .warn { border: 0; background: color-mix(in srgb, var(--crit) 14%, transparent); color: var(--crit); border-radius: 999px; padding: 1px 9px; font-size: 11.5px; }
-  .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
-  .tools .search { margin: 0; flex: 1; min-width: 180px; }
-  .seg { display: flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
-  .seg button { border: 0; background: var(--surface); color: var(--muted); padding: 6px 11px; font-size: 12.5px; }
-  .seg button.on { background: color-mix(in srgb, var(--ember) 15%, var(--surface)); color: var(--ink); }
-  .deck { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; padding: 4px 2px 40px; }
-  .fresh { animation: fresh 2.2s ease-out; border-radius: 16px; }
-  @keyframes fresh { 0%, 30% { box-shadow: 0 0 0 2px var(--ember), 0 0 30px var(--ember); } 100% { box-shadow: 0 0 0 0 transparent; } }
-  .g { font-size: 11px; }
-  .cnt { display: inline-flex; align-items: center; gap: 5px; }
-  .emptyv { border: 0; background: none; padding: 0; text-align: left; font-style: italic; font-size: 12.5px; color: var(--muted); opacity: .6; }
-  .emptyv:hover { opacity: 1; }
-  .addf button.extra { border-style: dotted; opacity: .75; }
-  .prop.calc .v { color: var(--ember-soft); font: 13px var(--f-mono); }
-  .prop.calc .fx { color: var(--muted); font: italic 13px serif; text-align: center; }
-  .ghost.rule { border-color: color-mix(in srgb, #7fb6ff 45%, var(--line)); }
-  .ghost.rule:hover { border-color: #7fb6ff; box-shadow: 0 0 14px -6px #7fb6ff; }
-  @media (prefers-reduced-motion: reduce) { .orb, .fresh, .die:hover { animation: none; } }
-  .empty p { color: var(--muted); margin-bottom: 18px; }
+  .warn { display: inline-flex; align-items: center; gap: 5px; border: 0; background: color-mix(in srgb, var(--crit) 14%, transparent); color: var(--crit);
+    border-radius: var(--r-pill); padding: 2px 10px; font-size: 11.5px; }
 
-  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 14px; overflow-x: auto; scrollbar-width: none; }
-  .tabs button { border: 0; background: none; padding: 9px 12px; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap;
-    font: 600 12px var(--f-display); letter-spacing: .08em; text-transform: uppercase; }
-  .tabs button.on { color: var(--ink); border-bottom-color: var(--ember); }
-  .search { width: 100%; max-width: 420px; background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 8px 11px; color: var(--ink); margin-bottom: 12px; }
-  .card { transition: transform .18s var(--ease, ease), border-color .18s, box-shadow .18s; }
-  .card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px -16px var(--c); }
-  .search:focus { border-color: var(--ember); outline: none; }
+  /* ── abas (computador): ícone + nome, grupos separados ── */
+  .tabs { display: flex; align-items: stretch; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: var(--sp-3); overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { position: relative; display: inline-flex; align-items: center; gap: 7px; border: 0; background: none; padding: 10px 12px; color: var(--muted); white-space: nowrap;
+    font: 600 13px var(--f-body); border-radius: var(--r-sm) var(--r-sm) 0 0; transition: color var(--dur), background var(--dur); }
+  .tabs button::after { content: ''; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--ember);
+    transform: scaleX(0); transition: transform var(--dur) var(--ease); }
+  .tabs button:hover { color: var(--ink); background: color-mix(in srgb, var(--surface-2) 60%, transparent); }
+  .tabs button.on { color: var(--ink); }
+  .tabs button.on::after { transform: none; }
+  .tabs button.on :global(svg) { color: var(--ember); }
+  .gsep { width: 1px; margin: 10px 6px; background: var(--line); flex: none; }
+  /* conteúdo estreito (janela pequena ou painel lateral aberto): primeiro sai o ícone, que o nome é o que explica */
+  @container (max-width: 820px) { .tabs button { padding: 10px; gap: 0; } .tabs button > :global(svg) { display: none; } .tabs button.on > :global(svg) { display: block; margin-right: 6px; } .gsep { margin: 10px 2px; } }
+  @container (max-width: 580px) { .tabs button:not(.on) > :global(svg) { display: block; } .tabs button:not(.on) span:not(.t-badge) { display: none; } }
 
-  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; padding-bottom: 40px; }
-  .card { text-align: left; display: grid; gap: 4px; align-content: start; border: 1px solid var(--line); background: var(--surface); border-radius: 14px;
-    padding: 12px 14px 12px 16px; position: relative; overflow: hidden; }
+  .filters { margin-bottom: var(--sp-3); flex-wrap: wrap; mask-image: none; -webkit-mask-image: none; }
+
+  /* ── fichas ── */
+  .tools { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; margin-bottom: var(--sp-3); }
+  .search { flex: 1; min-width: min(220px, 100%); max-width: 460px; }
+  .none { display: grid; justify-items: start; gap: var(--sp-2); padding: var(--sp-4) 0; }
+  .none p { margin: 0; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: var(--sp-3); padding-bottom: 40px; }
+  .card { position: relative; overflow: hidden; text-align: left; display: grid; gap: var(--sp-1); align-content: start; border: 1px solid var(--line); background: var(--surface);
+    border-radius: var(--r-lg); padding: var(--sp-3) var(--sp-4) var(--sp-3) calc(var(--sp-4) + 2px); color: var(--ink);
+    transition: transform .18s var(--ease), border-color .18s, box-shadow .18s; }
   .card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--c); }
-  .card:hover { border-color: color-mix(in srgb, var(--c) 60%, var(--line)); }
-  .kind { font: 600 10px var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--c); }
-  .card b, .peek b { font: 600 16px var(--f-display); }
-  .card { position: relative; }
+  .card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--c) 60%, var(--line)); box-shadow: 0 10px 24px -16px var(--c); }
   .card.pic { padding-right: 64px; }
   .card .thumb { position: absolute; right: 12px; top: 12px; }
-  .sum { color: var(--muted); font-size: 12.5px; }
-  .cnt { color: var(--muted); font: 11px var(--f-mono); }
+  .kind { display: inline-flex; align-items: center; gap: 6px; font: 600 10px var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--c); }
+  .card b, .peek b { font: 600 16px var(--f-display); }
+  .sum { color: var(--muted); font-size: var(--fs-sm); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .cnt { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font: 11px var(--f-mono); }
+  .g { font-size: 11px; }
+  .deck { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); gap: var(--sp-4); padding: 4px 2px 40px; }
+  .fresh { animation: fresh 2.2s ease-out; border-radius: 16px; }
+  @keyframes fresh { 0%, 30% { box-shadow: 0 0 0 2px var(--ember), 0 0 30px var(--ember); } 100% { box-shadow: 0 0 0 0 transparent; } }
 
-  .sheet { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 14px; margin-bottom: 8px; }
-  .props, .links { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 10px 12px; }
-  .prop { display: grid; grid-template-columns: 120px 1fr 26px; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent); }
+  /* ── ficha aberta ── */
+  .ficha-top { display: grid; gap: var(--sp-3); align-items: start; }
+  .crumbs { display: flex; align-items: center; gap: var(--sp-1); color: var(--muted); font-size: var(--fs-sm); margin-left: calc(var(--sp-2) * -1); }
+  .crumbs .back { color: var(--ember-soft); }
+  .crumbs .sep { opacity: .5; }
+  .who { display: flex; align-items: center; gap: var(--sp-4); min-width: 0; }
+  .whotext { display: grid; gap: 2px; min-width: 0; }
+  .kind .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 10px var(--c); }
+  .score { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+  .score small { font: 11px var(--f-mono); color: var(--muted); }
+  .onmap { margin: 0; display: flex; gap: 6px; flex-wrap: wrap; }
+  .onmap .t-chip { --c: #6fc3c9; }
+  .acts .rule { border-color: color-mix(in srgb, #7fb6ff 45%, var(--line)); }
+  .die:hover { animation: wobble .5s; }
+  @keyframes wobble { 30% { transform: rotate(-6deg); } 60% { transform: rotate(5deg); } }
+
+  .questions { border: 1px dashed color-mix(in srgb, var(--ember) 50%, var(--line)); border-radius: var(--r-lg); padding: var(--sp-3); margin-bottom: var(--sp-3);
+    background: color-mix(in srgb, var(--ember) 4%, transparent); }
+  .questions p { margin: 0 0 var(--sp-2); }
+  .qs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .qs button { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-md); padding: 6px 10px; font-size: 13px; text-align: left; color: var(--ink); }
+  .qs button:hover:not(:disabled) { border-color: var(--ember); }
+  .qs button.done { color: var(--ok); opacity: .7; }
+
+  .sheet { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: var(--sp-3); margin-bottom: var(--sp-3); }
+  .props h3, .links h3, .game h3 { margin: var(--sp-3) 0 var(--sp-2); }
+  .props h3:first-child, .links h3:first-child, .game h3:first-child { margin-top: var(--sp-1); }
+  .prop { display: grid; grid-template-columns: 120px minmax(0, 1fr) 28px; align-items: center; gap: var(--sp-2); min-height: 36px; padding: 3px 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent); }
   .prop .k { font: 600 10.5px var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
-  .prop .v { display: flex; flex-wrap: wrap; gap: 4px 8px; min-width: 0; }
+  .prop .v { display: flex; flex-wrap: wrap; gap: 4px 8px; min-width: 0; overflow-wrap: anywhere; }
   .item:not(:last-child)::after { content: ','; color: var(--muted); }
-  .prop.editing { grid-template-columns: 120px 1fr auto; }
-  .prop.editing input { background: var(--void); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); padding: 5px 8px; font: 13px var(--f-body); min-width: 0; }
-  .prop.editing input:focus { border-color: var(--ember); outline: none; }
+  .prop.editing { grid-template-columns: 120px minmax(0, 1fr) auto; padding: 6px 0; }
+  .prop.editing .t-input { min-height: var(--h-sm); font-size: 13px; padding: 0 var(--sp-2); border-radius: var(--r-sm); }
   .pacts { display: flex; gap: 4px; }
-  .edit, .x { border: 0; background: none; width: 26px; height: 26px; border-radius: 7px; color: var(--muted); opacity: .5; }
+  .edit { border: 0; background: none; width: 28px; height: 28px; border-radius: var(--r-sm); color: var(--muted); opacity: .5; }
   .prop:hover .edit, .edit:focus { opacity: 1; }
-  .edit:hover, .x:hover { background: var(--surface-2); color: var(--ink); opacity: 1; }
-  .x:hover { color: var(--crit); }
-  .addf { display: flex; flex-wrap: wrap; gap: 4px; padding-top: 8px; }
-  .addf button { border: 1px dashed var(--line); background: none; border-radius: 999px; padding: 3px 10px; font-size: 12px; color: var(--muted); }
+  .edit:hover { background: var(--surface-2); color: var(--ink); opacity: 1; }
+  .emptyv { border: 0; background: none; padding: 0; text-align: left; font-style: italic; font-size: var(--fs-sm); color: var(--muted); opacity: .6; }
+  .emptyv:hover { opacity: 1; }
+  .prop.calc .v { color: var(--ember-soft); font: 13px var(--f-mono); }
+  .prop.calc .fx { color: var(--muted); font: italic 13px serif; text-align: center; }
+  .addf { display: flex; flex-wrap: wrap; gap: 6px; padding-top: var(--sp-3); }
+  .addf button { border: 1px dashed var(--line); background: none; border-radius: var(--r-pill); min-height: 26px; padding: 0 10px; font-size: 12px; color: var(--muted); }
   .addf button:hover { border-color: var(--ember); color: var(--ink); }
+  .addf button.extra { border-style: dotted; opacity: .75; }
 
   .chip { border: 1px solid color-mix(in srgb, var(--c) 55%, transparent); background: color-mix(in srgb, var(--c) 12%, transparent);
-    color: var(--ink); border-radius: 999px; padding: 1px 9px; font-size: 12.5px; }
+    color: var(--ink); border-radius: var(--r-pill); padding: 1px 9px; font-size: var(--fs-sm); }
   .chip:hover { background: color-mix(in srgb, var(--c) 25%, transparent); }
   .chip.broken { --c: var(--muted); border-style: dashed; color: var(--muted); }
   .rel { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 4px 0; }
   .lbl { font: 11px var(--f-mono); color: var(--ember-soft); }
 
-  .game { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 10px 12px; margin-bottom: 8px; }
-  .text { flex: 1 0 auto; min-height: 300px; display: flex; flex-direction: column; border-top: 1px solid var(--line); margin: 0 -28px; }
+  .game { margin-bottom: var(--sp-3); }
+  .text { flex: 1 0 auto; min-height: 300px; display: flex; flex-direction: column; border-top: 1px solid var(--line); margin: 0 calc(var(--gutter) * -1); }
   .text :global(.editor) { flex: 1; }
 
+  /* ── linha do tempo ── */
   .timeline { list-style: none; margin: 0; padding: 0 0 40px; position: relative; }
   .timeline::before { content: ''; position: absolute; left: 116px; top: 6px; bottom: 40px; width: 1px; background: linear-gradient(var(--line), var(--ember) 50%, var(--line)); }
-  .timeline li { display: grid; grid-template-columns: 100px 32px 1fr; align-items: center; min-height: 42px; }
+  .timeline li { display: grid; grid-template-columns: 100px 32px minmax(0, 1fr); align-items: center; min-height: 42px; }
   .when { text-align: right; font: 12px var(--f-mono); color: var(--ember-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .mark { width: 11px; height: 11px; border-radius: 50%; background: var(--void); border: 2px solid var(--c); justify-self: center; position: relative; z-index: 1; }
-  .what { text-align: left; border: 1px solid transparent; background: none; border-radius: 10px; padding: 5px 10px; display: grid; }
+  .what { text-align: left; border: 1px solid transparent; background: none; border-radius: var(--r-md); padding: 5px 10px; display: grid; color: var(--ink); min-width: 0; }
   .what:hover { border-color: var(--line); background: var(--surface); }
   .what b { font: 600 14px var(--f-display); }
   .what small { color: var(--muted); font-size: 11.5px; }
   .timeline .gap { display: block; padding: 6px 0 6px 140px; color: var(--muted); font: italic 11.5px var(--f-body); min-height: 0; }
 
-  .graphwrap { position: relative; flex: 1; min-height: 420px; display: flex; margin-bottom: 8px; }
-  .peek { position: absolute; left: 12px; bottom: 12px; width: min(280px, calc(100% - 24px)); display: grid; gap: 4px; padding: 12px 14px;
-    background: color-mix(in srgb, var(--surface) 92%, transparent); border: 1px solid color-mix(in srgb, var(--c) 50%, var(--line)); border-radius: 14px; backdrop-filter: blur(6px); }
-  .peek .primary { justify-self: start; margin-top: 4px; }
-  .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; padding-bottom: 24px; }
-  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  /* ── grafo ── */
+  .graphwrap { position: relative; flex: 1; min-height: 420px; display: flex; margin-bottom: var(--sp-2); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+  .peek { position: absolute; left: 12px; bottom: 12px; width: min(280px, calc(100% - 24px)); display: grid; gap: 4px; padding: var(--sp-3) var(--sp-4);
+    background: color-mix(in srgb, var(--surface) 92%, transparent); border: 1px solid color-mix(in srgb, var(--c) 50%, var(--line)); border-radius: var(--r-lg); backdrop-filter: blur(6px); }
+  .peek .t-btn { justify-self: start; margin-top: 4px; }
+  .legend { margin: 0 0 var(--sp-6); }
 
-  .scrim { position: absolute; inset: 0; z-index: 10; background: var(--scrim); display: grid; place-items: center; padding: 16px; }
-  .dialog { width: min(480px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; display: grid; gap: 12px;
-    box-shadow: 0 30px 80px -20px var(--shadow); }
-  .dialog h2 { font-size: 13px; color: var(--ink); }
-  .dialog form { display: grid; gap: 12px; }
-  .dialog label { display: grid; gap: 4px; font: 600 10.5px var(--f-display); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-  .dialog input { background: var(--void); border: 1px solid var(--line); border-radius: 9px; color: var(--ink); padding: 7px 10px; font: 14px var(--f-body); }
-  .dialog input:focus { border-color: var(--ember); outline: none; }
+  /* ── vazio ── */
+  .empty { max-width: 560px; margin: 8vh auto 0; text-align: center; display: grid; justify-items: center; }
+  .empty p { color: var(--muted); margin: var(--sp-3) 0 var(--sp-5); }
+  .orb { font-size: 46px; color: var(--ember); filter: drop-shadow(0 0 18px var(--ember)); animation: twinkle 3.2s ease-in-out infinite; }
+  @keyframes twinkle { 50% { transform: rotate(18deg) scale(1.12); filter: drop-shadow(0 0 30px var(--ember)); } }
+
+  /* ── diálogos e folhas ── */
+  .dialog form { display: grid; gap: var(--sp-3); }
+  .dialog label { display: grid; gap: 6px; }
   .types { display: flex; flex-wrap: wrap; gap: 6px; }
-  .types button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: none; border-radius: 999px; padding: 5px 11px; font-size: 13px; color: var(--muted); }
-  .types button.on { border-color: var(--c); color: var(--ink); background: color-mix(in srgb, var(--c) 14%, transparent); }
-  .formacts { display: flex; justify-content: flex-end; gap: 8px; }
+  .rows { display: grid; gap: 2px; }
+  .rows .t-badge { margin-left: auto; }
   .toast { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 11; max-width: min(560px, 90%);
-    padding: 10px 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--ember); font-size: 13px; }
+    padding: 10px 14px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--ember); font-size: 13px; box-shadow: var(--elev-2); }
 
+  @media (prefers-reduced-motion: reduce) { .orb, .fresh, .die:hover { animation: none; } }
+
+  /* ── celular ── */
   @media (max-width: 720px) {
-    .mundo { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
-    .list { border-right: 0; border-bottom: 1px solid var(--line); max-height: 30vh; padding: 8px; }
-    .body { padding: 16px 16px 0; }
-    .sheet { grid-template-columns: 1fr; }
-    .prop, .prop.editing { grid-template-columns: 90px 1fr auto; }
+    .mundo { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+    .list { display: none; }
+    .body { padding-top: var(--sp-4); }
+    .mundo:not(.inside) .body { padding-bottom: 76px; } /* espaço para o botão flutuante */
+
+    /* título vira o seletor de mundo */
+    .switch { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0; color: var(--ink); max-width: 100%; }
+    .switch h1 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .switch :global(svg) { color: var(--muted); }
+    h1.plain { display: none; }
+    h1 { font-size: 22px; }
+    .top:not(.ficha-top) .acts { display: none; } /* no celular: nota do mundo na folha, nova ficha no botão flutuante */
+    .top { margin-bottom: var(--sp-3); }
+
+    .tabs { display: none; }
+    .filters { flex-wrap: nowrap; margin: 0 calc(var(--gutter) * -1) var(--sp-3); padding: 0 var(--gutter);
+      mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent); }
+    .tools .t-seg .seglbl { display: none; }
+    .tools .search { flex-basis: 100%; max-width: none; }
+    .tools .t-select { flex: 1; }
+
+    .dock { display: grid; grid-template-columns: repeat(5, 1fr); grid-row: 2; z-index: var(--z-dock); border-top: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(10px); padding: 4px 4px 2px; }
+    .dock button { display: grid; justify-items: center; gap: 3px; min-height: 52px; padding: 6px 2px 4px; border: 0; background: none; border-radius: var(--r-md);
+      color: var(--muted); font: 600 10.5px/1 var(--f-body); min-width: 0; }
+    .dock button span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dock button.on { color: var(--ink); }
+    .dock button.on :global(svg) { color: var(--ember); }
+    .dock button:active { background: var(--surface-2); }
+    .dock .ic { position: relative; display: block; }
+    .ping { position: absolute; top: -2px; right: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--crit); box-shadow: 0 0 0 2px var(--surface); }
+    .fab { display: inline-flex; position: absolute; right: var(--sp-4); bottom: calc(68px + var(--sp-3)); z-index: var(--z-dock); width: 54px; height: 54px; padding: 0;
+      border-radius: 18px; box-shadow: 0 10px 28px -8px var(--ember-glow), var(--elev-2); }
+
+    .ficha-top .acts { gap: 6px; }
+    .who { gap: var(--sp-3); }
+    .sheet { grid-template-columns: minmax(0, 1fr); }
+    .prop, .prop.editing { grid-template-columns: 92px minmax(0, 1fr) auto; }
+    .prop.editing { grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); }
+    .prop.editing .pacts { grid-column: 1 / -1; justify-content: flex-end; }
     .edit { opacity: 1; }
-    .text { margin: 0 -16px; }
-    .timeline::before { left: 86px; }
-    .timeline li { grid-template-columns: 70px 32px 1fr; }
-    .timeline .gap { padding-left: 110px; }
+    .graphwrap { min-height: 360px; }
+    .timeline::before { left: 76px; }
+    .timeline li { grid-template-columns: 60px 32px minmax(0, 1fr); }
+    .timeline .gap { padding-left: 100px; }
+    .toast { bottom: 84px; }
   }
 </style>

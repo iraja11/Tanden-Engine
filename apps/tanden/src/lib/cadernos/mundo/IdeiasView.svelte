@@ -159,7 +159,7 @@
   .acts { display: flex; gap: 4px; }
   .more { border: 0; background: none; color: var(--ember-soft); font-size: 12.5px; padding: 6px 0; }
   .clean { color: var(--ok); margin: 0; }
-  .gens { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .gens { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 12px; }
   .box { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 12px 14px; }
   .hooks { grid-column: 1 / -1; background: radial-gradient(circle at 100% 0, color-mix(in srgb, var(--ember) 9%, var(--surface)), var(--surface) 55%); }
   ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }

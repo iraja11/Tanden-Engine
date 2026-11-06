@@ -98,7 +98,7 @@
   header { display: flex; justify-content: space-between; align-items: center; }
   h3 { margin: 0 0 8px; font: 600 10.5px var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
   header h3 { margin: 0; }
-  .wars { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; margin-top: 8px; }
+  .wars { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr)); gap: 10px; margin-top: 8px; }
   .war { position: relative; display: grid; gap: 6px; text-align: left; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); overflow: hidden;
     background: linear-gradient(160deg, color-mix(in srgb, var(--crit) 6%, var(--surface)), var(--surface) 60%); }
   .war.active { border-color: color-mix(in srgb, var(--crit) 45%, var(--line)); }

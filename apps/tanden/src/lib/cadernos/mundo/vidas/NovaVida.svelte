@@ -137,7 +137,7 @@
   h4 { margin: 0 0 6px; font: 600 13px var(--f-display); }
   h4 small { color: var(--muted); font: 11px var(--f-mono); margin-left: 6px; }
   header p { margin: 0; font-size: 13px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; align-items: start; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap: 12px; align-items: start; }
   label, .quando { display: grid; gap: 5px; font: 600 10.5px var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
   .lbl { display: block; }
   .quando small { text-transform: none; letter-spacing: 0; font: 12px var(--f-body, inherit); }
@@ -152,7 +152,7 @@
   .who.on { border-color: color-mix(in srgb, var(--c) 70%, var(--line)); background: color-mix(in srgb, var(--c) 14%, var(--surface-2)); }
   .who.on .ck { background: var(--c); color: var(--on-ember, #111); border-color: transparent; }
   .who:disabled { opacity: .45; }
-  .extras { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+  .extras { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 12px; }
   .val { color: var(--ember-soft); font: 12px var(--f-mono); text-transform: none; letter-spacing: 0; margin-left: 6px; }
   input[type='range'] { accent-color: var(--ember); }
   footer { display: flex; justify-content: flex-end; gap: 8px; }
