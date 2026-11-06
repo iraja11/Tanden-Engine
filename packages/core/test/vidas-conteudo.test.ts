@@ -256,3 +256,34 @@ interação "Cobrança" entre a em personagem, b em personagem onde ódio(a, b) 
     expect(s.eventos.some((e) => e.texto.includes('[[Kael]] cobra [[Mira]]'))).toBe(true);
   });
 });
+
+describe('construtor', () => {
+  it('cada formulário escreve regras que compilam', async () => {
+    const { tracoRegras, atributoRegras, especieRegras, profissaoRegras, mecanicaRegras } = await import('../src/index');
+    const codes = [
+      tracoRegras({ nome: 'Sonâmbulo', feminino: 'Sonâmbula', desc: 'Anda dormindo.', categoria: 'congenito', oposto: '', herdavel: 25,
+        pesos: [{ interacao: 'flertar', mult: 0.5 }, { interacao: 'estudar', mult: 2 }], afinidades: [{ traco: '', pontos: 10 }, { traco: 'devoto', pontos: -5 }],
+        humor: -3, estresse: 4, surge: [{ k: 'valor', alvo: 'pessoa', quem: 'a', campo: 'estresse', op: '>=', valor: '70' }], chanceSurge: 20 }),
+      atributoRegras({ nome: 'Força de vontade', min: 0, max: 20, media: 10, desvio: 3, herdavel: 40, categoria: 'mental', porAno: 0.5, desc: '' }),
+      especieRegras({ nome: 'Orc', plural: 'Orcs', criatura: false, vida: 50, maioridade: 12, fertilidade: 150, gestacao: 7, altura: 190,
+        ajustes: [{ campo: 'força', valor: 20 }, { campo: 'Força de vontade', valor: 3 }], tracos: ['irascivel'], cruzas: [{ com: 'Humano', gera: 'Meio-orc' }], frequencia: 20, desc: '' }),
+      profissaoRegras({ nome: 'Caçador de recompensas', feminino: 'Caçadora de recompensas', renda: 9, habilidade: 'combate', status: 2, risco: 2, viaja: true,
+        requer: [{ k: 'valor', alvo: 'pessoa', quem: 'a', campo: 'combate', op: '>=', valor: '5' }] }),
+      mecanicaRegras({ tipo: 'trama', nome: 'Vendeta', chance: 100, condicoes: [{ k: 'valor', alvo: 'relacao', quem: 'a', campo: 'odio', op: '>', valor: '50' }], efeitos: [], cronica: '',
+        etapas: [
+          { nome: 'Juramento', dura: 2, efeitos: [{ k: 'relcampo', de: 'a', campo: 'vendeta', op: '=', valor: 'sim' }], cronica: '{a} jura vingança contra {b}.', condicoes: [], senao: 'falhar', cronicaSenao: '' },
+          { nome: 'Emboscada', dura: 1, efeitos: [{ k: 'lutar', modo: 'emboscada' }], cronica: '', condicoes: [{ k: 'chance', pct: 50 }], senao: 'repetir', cronicaSenao: '{a} espera a hora certa.' },
+        ],
+        aoConcluir: { efeitos: [], cronica: 'A vendeta de {a} chega ao fim.' }, aoFalhar: { efeitos: [{ k: 'humor', quem: 'a', delta: -10 }], cronica: '' } }),
+    ];
+    const prog = compileRules(codes.map((code, i) => ({ path: `c${i}`, code })));
+    expect(prog.issues).toEqual([]);
+    expect(prog.species[0]!.mods).toEqual({ forca: 20, 'forca de vontade': 3 });
+    expect(prog.schemes[0]!.stages.length).toBe(2);
+    expect(prog.traits[0]!.weights).toEqual({ flertar: 0.5, estudar: 2 });
+    // a trama montada roda numa simulação de verdade
+    const s = simular(mundo(codes.join('\n') + `\nquando início:\n  relação(ficha("Kael"), ficha("Mira")).afeto = -90\n  relação(ficha("Mira"), ficha("Kael")).afeto = -90`), 6, 2);
+    s.avancar(12);
+    expect(s.eventos.some((e) => e.texto.includes('jura vingança'))).toBe(true);
+  });
+});

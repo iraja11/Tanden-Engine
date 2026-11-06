@@ -280,7 +280,7 @@
             <li>
               <button class:on={sel === g.p.id} class:dead={g.p.morte !== null} onclick={() => (sel = sel === g.p.id ? null : g.p.id)}>
                 <span class="nm">{g.p.conduzido ? '🎮 ' : ''}{g.p.nome}</span>
-                <small>{g.idade}{g.p.prof ? ` · ${sim.nomeProf(g.p)}` : ''}{g.par ? (g.p.conjuge ? ' · ♥' : ' · ♡') : ''}{g.amantes ? ' · 🤫' : ''}{g.p.gravidez ? ' · 🤰' : ''}{g.p.morte === null && g.onde === null ? ' · 🐎' : ''}{g.p.estados['enlutado'] ? ' · 🖤' : ''}{g.p.nota ? '' : ' ·  figurante'}</small>
+                <small>{g.idade}{g.p.especie ? ` · ${sim.criatura(g.p) ? '🐾 ' : ''}${sim.especieNome(g.p)}` : ''}{g.p.prof ? ` · ${sim.nomeProf(g.p)}` : ''}{g.par ? (g.p.conjuge ? ' · ♥' : ' · ♡') : ''}{g.amantes ? ' · 🤫' : ''}{g.p.gravidez ? ' · 🤰' : ''}{g.p.morte === null && g.onde === null ? ' · 🐎' : ''}{g.p.estados['enlutado'] ? ' · 🖤' : ''}{g.p.nota ? '' : ' ·  figurante'}</small>
               </button>
             </li>
           {/each}

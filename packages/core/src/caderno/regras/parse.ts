@@ -1068,7 +1068,7 @@ function decl(prog: Program, l: Line): void {
             const words: string[] = [];
             while (q.peek() && (q.peek()!.k === 'id' || q.peek()!.k === 'str')) words.push(fold(q.next().v).trim());
             if (!words.length || !q.peek()) throw q.err(`dentro de "espécie" vale vida, maioridade, fertilidade, gestação, altura, traço, cruza com, criatura, frequência, descrição ou um ajuste como "força +10"; veio "${kid.toks[0]!.v}"`);
-            sp.mods[words.join(' ')] = signed(q);
+            sp.mods[words.join(' ').replace(/_/g, ' ')] = signed(q);
           }
           q.end();
         }

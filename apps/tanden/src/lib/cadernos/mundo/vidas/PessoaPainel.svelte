@@ -32,6 +32,10 @@
       filhos: sim.filhosOficiais(p.id),
       irmaos: sim.irmaos(p.id),
       ev: sim.eventos.filter((e) => e.quem.includes(p.id)).slice(-12).reverse(),
+      especie: sim.especieNome(p),
+      criatura: sim.criatura(p),
+      atributos: [...sim.cat.atributos.values()].map((a) => ({ ...a, v: Number(p.campos[a.id] ?? a.media) })),
+      tramas: sim.tramas(p.id),
     };
   });
   const nome = (x: string | null | undefined) => (x ? sim.pessoa(x)?.nome ?? x.split('/').pop()!.replace(/\.md$/, '') : '—');
@@ -133,6 +137,31 @@
       {#if p.gostos.length}<p class="gostos">♡ gosta de {p.gostos.join(', ')}</p>{/if}
     </section>
 
+    {#if info.atributos.length}
+      <section>
+        <h4>Atributos</h4>
+        {#each info.atributos as a (a.id)}
+          <div class="mbar" title={a.desc || a.cat}><span>{a.nome}</span><i><b style:width={bar(a.v, a.min, a.max)}></b></i><small>{Math.round(a.v * 10) / 10}</small></div>
+        {/each}
+      </section>
+    {/if}
+
+    {#if info.tramas.length}
+      <section>
+        <h4>Tramas em andamento</h4>
+        <ul class="tramas">
+          {#each info.tramas as t, i (i)}
+            <li>
+              <b>{t.nome}</b>
+              {#if t.quem.length > 1}<span class="dim">{t.quem[0] === p.id ? 'contra' : 'de'} <button class="lk" onclick={() => onselect(t.quem[0] === p.id ? t.quem[1]! : t.quem[0]!)}>{nome(t.quem[0] === p.id ? t.quem[1] : t.quem[0])}</button></span>{/if}
+              <span class="passos">{#each { length: t.passos } as _, k (k)}<i class:feito={k < t.passo - 1} class:agora={k === t.passo - 1}></i>{/each}</span>
+              <small class="dim">{t.etapa} · há {t.meses} {t.meses === 1 ? 'mês' : 'meses'}</small>
+            </li>
+          {/each}
+        </ul>
+      </section>
+    {/if}
+
     <section class="two">
       <div>
         <h4>Temperamento</h4>
@@ -145,7 +174,7 @@
     </section>
 
     <details>
-      <summary>Corpo e genes · olhos {info.ap.olhos}, cabelo {info.ap.cabelo}, {info.ap.altura} cm</summary>
+      <summary>{info.criatura ? '🐾 ' : ''}{info.especie} · olhos {info.ap.olhos}, cabelo {info.ap.cabelo}, {info.ap.altura} cm</summary>
       <p class="dim small">força {Math.round(info.at.forca * 100)} · agilidade {Math.round(info.at.agilidade * 100)} · intelecto {Math.round(info.at.intelecto * 100)} · beleza {Math.round(info.at.beleza * 100)} · fertilidade {Math.round(sim.fertil(p) * 100)}</p>
       <code class="genes">{genomaTexto(p.genes)}</code>
       <p class="dim small">Letras: olhos C castanho &gt; V verde &gt; A azul; cabelo E escuro &gt; L loiro &gt; R ruivo. Números: os dois alelos (0–100). "sangue s" é o alelo da doença recessiva.</p>
@@ -301,6 +330,12 @@
   .chip .x:hover { color: var(--crit); }
   .add { background: var(--void); border: 1px dashed var(--line); border-radius: 999px; color: var(--muted); font-size: 12px; padding: 2px 6px; max-width: 120px; }
   .gostos { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); }
+  .tramas { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+  .tramas li { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; font-size: 12.5px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-2); }
+  .passos { display: inline-flex; gap: 3px; }
+  .passos i { width: 14px; height: 5px; border-radius: 3px; background: var(--line); }
+  .passos i.feito { background: color-mix(in srgb, var(--ember) 55%, var(--line)); }
+  .passos i.agora { background: var(--ember); box-shadow: 0 0 6px var(--ember); }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .mbar { display: grid; grid-template-columns: 112px 1fr 22px; gap: 6px; align-items: center; font-size: 11.5px; color: var(--muted); margin: 2px 0; }
   .mbar b { display: block; height: 100%; background: var(--ember); border-radius: 3px; }
