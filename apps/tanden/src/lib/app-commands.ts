@@ -8,6 +8,7 @@ import { noteName } from './editor/host';
 import { copyBlockLink, insertTemplate, linkAllMentions } from './editor/note-actions';
 import { quadros } from './quadro/quadros.svelte';
 import { mesa } from './rpg/mesa.svelte';
+import { sorte } from './sorte/sorte.svelte';
 import { snippets } from './snippets.svelte';
 import { sound } from './sound.svelte';
 import { theme } from './theme.svelte';
@@ -31,7 +32,7 @@ export interface AppActions {
 
 const MODULES: [string, string][] = [
   ['hoje', 'Hoje'], ['notas', 'Notas'], ['bancos', 'Bancos'], ['grafo', 'Grafo'], ['ia', 'IA'], ['lembretes', 'Lembretes'], ['saude', 'Saúde'], ['quadros', 'Quadros'], ['agenda', 'Agenda'],
-  ['planilhas', 'Planilhas'], ['calculo', 'Cálculo'], ['flashcards', 'Flashcards'], ['slides', 'Slides'], ['mundos', 'Mundos'], ['mesa', 'Mesa (RPG)'], ['luta', 'Luta'], ['biblioteca', 'Biblioteca'], ['arquivos', 'Arquivos'], ['plugins', 'Plugins'],
+  ['planilhas', 'Planilhas'], ['calculo', 'Cálculo'], ['flashcards', 'Flashcards'], ['slides', 'Slides'], ['mundos', 'Mundos'], ['mesa', 'Mesa (RPG)'], ['sorte', 'Sorte'], ['luta', 'Luta'], ['biblioteca', 'Biblioteca'], ['arquivos', 'Arquivos'], ['plugins', 'Plugins'],
 ];
 
 /** rola pela mesa (entra no histórico) e mostra o resultado num aviso */
@@ -158,7 +159,13 @@ export function registerAppCommands(a: AppActions): () => void {
     // brinquedos
     { id: 'dado.d20', label: 'Rolar d20', keys: 'dado rpg sorte', run: () => rollSay('1d20', 'd20') },
     { id: 'dado.2d6', label: 'Rolar 2d6', keys: 'dado rpg', run: () => rollSay('2d6', '2d6') },
-    { id: 'dado.moeda', label: 'Cara ou coroa', keys: 'moeda sorte decidir', run: () => { sound.play('tick'); files.say(Math.random() < 0.5 ? '🪙 Cara' : '🪙 Coroa'); } },
+    // entra no histórico e na contagem da tela Sorte
+    { id: 'dado.moeda', label: 'Cara ou coroa', keys: 'moeda sorte decidir jogar', run: () => { sound.play('tick'); files.say(sorte.flip() === 'cara' ? '🪙 Cara' : '🪙 Coroa'); } },
+
+    // sorte
+    { id: 'sorte.roleta', label: 'Girar uma roleta', keys: 'sorte roleta sortear decidir escolher aleatorio', run: () => sorte.open('roleta') },
+    { id: 'sorte.sorteio', label: 'Sortear nomes, times ou números', keys: 'sorte sorteio rifa amigo secreto times numeros mega sena', run: () => sorte.open('sorteio') },
+    { id: 'sorte.bola8', label: 'Perguntar à bola 8', keys: 'sorte bola 8 magica pergunta sim nao oraculo', run: () => sorte.open('bola8') },
 
     // mesa de RPG
     { id: 'mesa.dados', label: 'Rolar dados (fórmula)', keys: 'dado rpg rolagem formula vantagem mesa', run: () => mesa.open('dados') },

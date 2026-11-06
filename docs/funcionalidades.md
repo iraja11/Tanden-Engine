@@ -89,6 +89,17 @@ A tela **Mesa** junta o que se usa jogando. Tudo continua sendo nota comum, ent�
 - **Tabelas de rolagem.** Qualquer tabela Markdown com um dado no cabeçalho (`d6`, `d20`, `d100`; faixas como `1-2`, `96-00`) é rolável. Numa nota com `tipo: tabela`, cada lista debaixo de um título também é. Num resultado, `{2d4}` rola dados e `{@Outra tabela}` rola outra tabela. *Geradores de exemplo* cria nomes, tavernas, jeito do NPC, ganchos, clima e tesouro.
 - **Sessões.** *Nova sessão* cria `Sessão N` com o resumo da anterior e a deixa aberta: cada rolagem entra no `## Registro` dela, com a hora.
 
+## Sorte
+
+A tela **Sorte** junta as ferramentas de acaso do dia a dia. O sorteio usa o gerador criptográfico do aparelho (o mesmo dos dados da Mesa), então é justo de verdade.
+
+- **Roleta.** Uma opção por linha (ou separadas por vírgula); `*2` no fim de uma opção dá o dobro de chance e uma fatia maior. Toque na roda ou aperte espaço para girar: o ponteiro estala a cada fatia e a roda freia até o resultado. *Tirar da roleta* remove a opção sorteada (para ir eliminando).
+- **Sorteio.** *Nomes* tira um ou mais nomes sem repetir; *Times* divide a lista em times equilibrados; *Ordem* embaralha a lista (quem começa, ordem de apresentação); *Números* sorteia num intervalo, com ou sem repetição, e tem atalhos para Mega-Sena e Lotofácil. *Copiar* leva o resultado para a área de transferência.
+- **Moeda.** Cara ou coroa com a moeda girando no ar, a contagem de cada lado, a sequência atual e as últimas jogadas. O comando *Cara ou coroa* da paleta entra na mesma contagem.
+- **Bola 8.** Escreva a pergunta (ou não), sacuda, e uma das 20 respostas clássicas sobe do líquido. Ela nunca repete a resposta anterior.
+- **Listas salvas.** *Salvar como lista* grava as opções na nota `Sorteios.md`, uma seção `## nome` por lista. A roleta e o sorteio escolhem dessas listas, e editar a nota no Obsidian vale na hora.
+- **Histórico.** Os resultados recentes ficam na coluna da direita, só neste aparelho.
+
 ## Apresentações (Slides)
 
 Uma apresentação é uma nota `.md` comum em `Apresentações/` (ou qualquer nota com `tipo: apresentação`). Cada linha com `---` separa um slide, o mesmo formato do plugin Slides do Obsidian:
@@ -353,4 +364,4 @@ Tela **Grafo**: cada nota é um nó e cada `[[link]]` uma ligação, como no Obs
 - **Atalhos**: todo comando da paleta pode ganhar um ou mais atalhos. Clique no **+**, aperte as teclas e pronto; um atalho repetido sai do comando antigo. Fica salvo por aparelho.
 - **Snippets CSS**: arquivos `.css` em `Snippets/` (vão junto no sync) ou em `.obsidian/snippets/`. Cada aparelho liga os que quiser, e o editor embutido mostra o resultado enquanto você digita. Um snippet pode trocar qualquer variável do tema (`--ember`, `--void`, `--f-body`…).
 - **Modo foco** (Ctrl+Shift+Enter): esconde as barras; Esc volta.
-- Comandos extras na paleta: nota aleatória, próximo tema, claro/escuro, ligar/desligar sons, rolar d20 e 2d6, cara ou coroa, e os da Mesa de RPG (rolar fórmula, combate, fichas, tabelas, nova sessão).
+- Comandos extras na paleta: nota aleatória, próximo tema, claro/escuro, ligar/desligar sons, rolar d20 e 2d6, cara ou coroa, roleta, sorteio, bola 8, e os da Mesa de RPG (rolar fórmula, combate, fichas, tabelas, nova sessão).

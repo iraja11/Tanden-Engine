@@ -26,6 +26,8 @@
   import { cadernos } from './lib/cadernos/cadernos.svelte';
   import MesaView from './lib/rpg/MesaView.svelte';
   import { mesa } from './lib/rpg/mesa.svelte';
+  import SorteView from './lib/sorte/SorteView.svelte';
+  import { sorte } from './lib/sorte/sorte.svelte';
   import SlidesView from './lib/slides/SlidesView.svelte';
   import Presenter from './lib/slides/Presenter.svelte';
   import { slides } from './lib/slides/slides.svelte';
@@ -76,8 +78,9 @@
   /** marcador que desliza até o módulo ativo na barra */
   let mark = $state<{ x: number; y: number; w: number; h: number } | null>(null);
   let error = $state('');
-  type View = 'hoje' | 'notas' | 'bancos' | 'grafo' | 'ia' | 'lembretes' | 'saude' | 'quadros' | 'agenda' | 'planilhas' | 'calculo' | 'flashcards' | 'biblioteca' | 'arquivos' | 'luta' | 'mundos' | 'mesa' | 'slides' | 'plugins' | `plugin:${string}`;
-  let view = $state<View>('notas');
+  type View = 'hoje' | 'notas' | 'bancos' | 'grafo' | 'ia' | 'lembretes' | 'saude' | 'quadros' | 'agenda' | 'planilhas' | 'calculo' | 'flashcards' | 'biblioteca' | 'arquivos' | 'luta' | 'mundos' | 'mesa' | 'sorte' | 'slides' | 'plugins' | `plugin:${string}`;
+  // o app abre no painel do dia; as notas ficam a um clique (ou na gaveta)
+  let view = $state<View>('hoje');
   /** id do plugin cuja tela está aberta */
   const pluginView = $derived(view.startsWith('plugin:') ? view.slice(7) : null);
   /** o painel de IA fica montado depois de aberto, para não matar as sessões */
@@ -99,6 +102,7 @@
     { id: 'slides', label: 'Slides', ready: true },
     { id: 'mundos', label: 'Mundos', ready: true },
     { id: 'mesa', label: 'Mesa', ready: true },
+    { id: 'sorte', label: 'Sorte', ready: true },
     { id: 'luta', label: 'Luta', ready: true },
     { id: 'biblioteca', label: 'Biblioteca', ready: true },
     { id: 'arquivos', label: 'Arquivos', ready: true },
@@ -119,6 +123,9 @@
   $effect(() => { if (engine.ready) mesa.start(); });
   // "rolar dados" e afins pela paleta abrem a mesa
   $effect(() => { if (mesa.goto) untrack(() => go('mesa')); });
+  $effect(() => { if (engine.ready) sorte.start(); });
+  // "jogar moeda", "roleta" e afins pela paleta abrem a tela de sorte
+  $effect(() => { if (sorte.goto) untrack(() => go('sorte')); });
   $effect(() => { if (engine.ready) files.start(); });
   $effect(() => { if (engine.ready) biblioteca.start(); });
   $effect(() => { if (engine.ready) notes.start(); });
@@ -447,6 +454,8 @@
           <MundoView onOpenNote={(p) => { engine.open(p); go('notas'); }} />
         {:else if view === 'mesa' && engine.ready}
           <MesaView onOpenNote={(p) => { engine.open(p); go('notas'); }} />
+        {:else if view === 'sorte' && engine.ready}
+          <SorteView onOpenNote={openNote} onDice={() => mesa.open('dados')} />
         {:else if view === 'quadros' && engine.ready}
           <Quadro onOpenNote={(p) => { engine.open(p); go('notas'); }} />
         {:else if error}
