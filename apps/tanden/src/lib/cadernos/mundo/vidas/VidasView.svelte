@@ -627,7 +627,7 @@
   .ops { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
   .corpo { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 12px; align-items: start; }
   .corpo.comsel { grid-template-columns: 200px minmax(0, 1fr) minmax(300px, 360px); }
-  .elenco { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 8px; display: grid; gap: 6px; position: sticky; top: 8px; max-height: calc(100vh - 120px); overflow: hidden; grid-template-rows: auto 1fr auto auto; }
+  .elenco { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 8px; display: grid; gap: 6px; position: sticky; top: 8px; max-height: calc(100vh - 120px); overflow: hidden; grid-template-rows: auto 1fr auto auto; grid-template-columns: minmax(0, 1fr); }
   .busq { display: grid; gap: 6px; }
   .buscar { display: flex; gap: 4px; }
   .buscar .busca { flex: 1; min-width: 0; }

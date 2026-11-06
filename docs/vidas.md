@@ -107,6 +107,58 @@ veterano, traições o desconfiado, perdas o amargurado, bebedeira o alcoólatra
 anos de estudo o sábio. Estresse demais vira crise (bebida, fé, explosões,
 pesadelos).
 
+## Povos, filtros e vínculos novos
+
+- **Povos (etnias)**: declare com `etnia "Nórdico":` (ou fichas `tipo: cultura`).
+  Os figurantes chegam em famílias de cada povo, com nomes, sobrenomes,
+  aparência e gostos do povo; filhos herdam o povo; o `afinidade` de um povo
+  pelo outro vira preconceito (ou simpatia) na opinião.
+- **Filtros**: traços, atributos, profissões, eventos e vínculos dizem para
+  quem valem (`para espécie "Elfo" e sexo feminino e idade 16 a 60`). Traços
+  podem `nascer com` uma chance só em quem passa no filtro.
+- **Vínculos e status novos**: além de namoro, casamento, caso, amizade,
+  rivalidade e inimizade, o mundo inventa os seus (irmãos de sangue, mentor e
+  aprendiz, juramento, noivado arranjado...), com papéis, exclusividade,
+  segredo, opinião, efeitos por mês, quando surgem e quando acabam.
+
+## Guerras ao mesmo tempo que a vida
+
+Fichas `tipo: facção` (e quem governa cada lugar: `governante: [[Facção]]`)
+viram facções dentro da simulação de vidas. Cada pessoa é leal a uma facção (a
+da ficha, a do lugar onde mora, a dos pais), e cada facção tem um líder de
+carne e osso (o da ficha, senão o mais prestigiado; morto o líder, o filho
+mais velho herda, ou o mais capaz assume).
+
+- **Várias guerras ao mesmo tempo**, declaradas pelas posturas (rancor,
+  líderes ambiciosos ou cruéis, vontade de guerra do mundo), pelas regras ou
+  por você. Aliados entram nas guerras uns dos outros.
+- **Gente de verdade no front**: soldados e guardas primeiro, depois os
+  corajosos; vivem meses no acampamento (fazendo amigos), lutam batalhas com
+  nome e lugar, morrem, voltam feridos, viram heróis ou desertores. A família
+  de quem morre lembra de quem matou.
+- **Cerco e conquista**: o lugar muda de dono, a cidade é saqueada, parte dos
+  moradores muda de lado. Facção sem terra e sem força cai.
+- **Paz** com o cansaço (ou um casamento entre as casas), com tributo para quem
+  venceu e trégua de cinco anos. Cofres vazios trazem fome de guerra; pouca
+  estabilidade traz revoltas e líderes depostos.
+- A vida mexe na guerra: o assassinato de um líder por gente de outra facção
+  pode começar uma guerra; casamentos entre casas aproximam facções.
+
+Na aba **⚔ Guerras**: facções (poder, riqueza, estabilidade, território,
+líder), guerras em andamento com placar e quem está no front, declarar guerra,
+fazer a paz, mexer na postura entre duas facções, criar uma facção nova.
+
+## O acaso, em quatro tons
+
+Além do que as pessoas escolhem, a vida apronta: **✨ fantasia** (fadas,
+maldições, profecias, pactos, lobisomens, sapos encantados), **🤡 cômico**
+(gansos furiosos, apostas idiotas, perucas voando no sermão), **🔥 adulto**
+(noites proibidas, bordéis, chantagens, vícios, escândalos; só entre adultos)
+e **⚖ sério** (incêndios, julgamentos, dívidas, perdas, atos de coragem). Em
+**Mundo e ajustes**, cada tom tem um controle (0 = nunca, 3 = o triplo); a
+crônica marca o tom e deixa filtrar. No painel da pessoa, **🎲 fazer
+acontecer** escolhe um acontecimento na hora.
+
 ## Sua mão no destino
 
 No painel de cada pessoa (clique no nome):
@@ -142,12 +194,16 @@ ajustes**, ao lado de festa, peste, fome, guerra e fartura.
 ## Ver
 
 - **Crônica**: tudo o que aconteceu, por ano, com filtros (romance, família,
-  conflito, social, vida, morte, mundo, regras, você), "só o notável" e
-  segredos (🤫, com fundo listrado: só você sabe).
+  conflito, social, vida, morte, guerra, acaso, mundo, regras, você), filtro
+  por tom, "só o notável" e segredos (🤫, com fundo listrado: só você sabe).
+- **Elenco** com filtros (⚙): sexo, espécie, povo, facção, faixa de idade,
+  traço e situação (solteiros, casados, em caso, no front, grávidas, vínculos
+  do mundo...).
 - **Teia**: o grafo de quem está com quem (casamentos, casos, amizades,
   rivalidades, filhos).
 - **Números**: população por ano, nascimentos, mortes, casamentos, casais,
-  crianças, casos em andamento, profissões.
+  crianças, casos em andamento, profissões, pirâmide de idades e censo por
+  sexo, espécie, povo, facção e situação.
 
 ## Guardar
 

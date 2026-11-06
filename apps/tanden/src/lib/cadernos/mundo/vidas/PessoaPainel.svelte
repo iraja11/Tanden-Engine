@@ -62,7 +62,13 @@
   ]);
   const temV = (v: string) => { void vidas.ver; return v === 'casados' ? p?.conjuge === alvo : sim.temVinc(id, alvo, v); };
   let acaso = $state('');
-  const acasos = $derived.by(() => { void vidas.ver; return p && viva ? [...sim.acontecimentosPara(p.id, null), ...sim.acontecimentosPara(p.id, alvo || null)] : []; });
+  const acasos = $derived.by(() => {
+    void vidas.ver;
+    if (!p || !viva) return [];
+    const solo = sim.acontecimentosPara(p.id, null).map((x) => ({ ...x, par: false }));
+    const par = alvo && alvo !== p.id ? sim.acontecimentosPara(p.id, alvo).map((x) => ({ ...x, par: true })) : [];
+    return [...solo, ...par];
+  });
   const TOMI = Object.fromEntries(TONS_VIDA.map((t) => [t.id, t.icone])) as Record<string, string>;
 
   // ------------------------------------------------ influência
@@ -294,11 +300,11 @@
               <option value="">🎲 fazer acontecer…</option>
               {#each TONS_VIDA as t (t.id)}
                 <optgroup label={`${t.icone} ${t.nome}`}>
-                  {#each acasos.filter((x) => x.tom === t.id) as x (x.id)}<option value={x.id} disabled={!x.pode}>{x.nome}{sim.acontecimentosPara(p.id, alvo || null).some((y) => y.id === x.id) ? ` (com ${sim.pessoa(alvo)?.nome.split(' ')[0] ?? 'o outro'})` : ''}{x.pode ? '' : ' (não cabe agora)'}</option>{/each}
+                  {#each acasos.filter((x) => x.tom === t.id) as x (x.id)}<option value={x.id} disabled={!x.pode}>{x.nome}{x.par ? ` (com ${sim.pessoa(alvo)?.nome.split(' ')[0] ?? 'o outro'})` : ''}{x.pode ? '' : ' (não cabe agora)'}</option>{/each}
                 </optgroup>
               {/each}
             </select>
-            <button class="primary sm" disabled={!acaso} onclick={() => { const x = acasos.find((y) => y.id === acaso); if (x) cmd({ c: 'acontecer', id: x.id, a: p.id, b: sim.acontecimentosPara(p.id, alvo || null).some((y) => y.id === x.id) ? alvo : null }); acaso = ''; }}>{acaso ? (TOMI[acasos.find((y) => y.id === acaso)?.tom ?? ''] ?? '') : ''} Acontecer</button>
+            <button class="primary sm" disabled={!acaso} onclick={() => { const x = acasos.find((y) => y.id === acaso); if (x) cmd({ c: 'acontecer', id: x.id, a: p.id, b: x.par ? alvo : null }); acaso = ''; }}>{acaso ? (TOMI[acasos.find((y) => y.id === acaso)?.tom ?? ''] ?? '') : ''} Acontecer</button>
           </div>
         {:else if painel === 'sussurrar'}
           <div class="row">

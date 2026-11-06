@@ -1,5 +1,5 @@
 import {
-  abrirSim, catalogo, cronicaMarkdown, entityFolder, entityTemplate, fichasDaSimulacao, lacosDasFichas, noteDir, pessoaDaFicha, povoar, readSim,
+  MOTOR_VERSAO, abrirSim, catalogo, cronicaMarkdown, entityFolder, entityTemplate, fichasDaSimulacao, lacosDasFichas, noteDir, pessoaDaFicha, povoar, readSim,
   regrasHash, saveDe, setProps, setSection, getSection, simNoteText, type Comando, type Laco, type Nomeador, type Passo, type Pessoa, type SimSave,
   type VidaEvento, type Vidas, type World,
 } from '@tanden/core';
@@ -79,7 +79,7 @@ class VidasStore {
     const pov = povoar(cat, { quantos: cfg.figurantes, inicio, lugar: cfg.lugar, semente: cfg.semente, nomes, existentes: fichas });
     const lacos: Laco[] = [...lacosDasFichas(w.entities, new Set(fichas.map((p) => p.id))), ...pov.lacos];
     const sv: SimSave = {
-      versao: 1, nome: cfg.nome.trim() || 'Simulação', mundo: w.name, semente: cfg.semente, inicio, lugar: cfg.lugar, meses: 0, regras: regrasHash(w),
+      versao: MOTOR_VERSAO, nome: cfg.nome.trim() || 'Simulação', mundo: w.name, semente: cfg.semente, inicio, lugar: cfg.lugar, meses: 0, regras: regrasHash(w),
       elenco: [...fichas, ...pov.pessoas], lacos, registro: [],
     };
     if (!sv.elenco.length) {

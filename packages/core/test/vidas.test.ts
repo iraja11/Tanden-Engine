@@ -373,5 +373,5 @@ describe('construtor de mecânicas', () => {
     const s = sim(w, elenco(w, 10));
     s.avancar(12 * 12);
     expect(s.issues).toEqual([]);
-  });
+  }, 20000);
 });

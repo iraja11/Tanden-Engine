@@ -279,6 +279,106 @@ evento "Lua de Sangue":
 
 Os eventos declarados aparecem como botões em **Mundo e ajustes**. Nas regras: `começar_evento("Lua de Sangue", lugar)`, `evento_ativo("Lua de Sangue")`, e `quando lua_de_sangue(lugar):` reage ao começo.
 
+### Povos (etnias)
+
+Um povo dentro de uma espécie: aparência, nomes, traços, gostos e o que pensa
+dos outros povos. Fichas `tipo: cultura` também viram povos (`espécie`,
+`frequência`, `nomes`, `nomes femininos`, `sobrenomes`, `traços`, `gostos`,
+`olhos`, `cabelo`). A ficha de uma personagem diz o povo com `etnia`, `povo` ou
+`cultura` (texto ou `[[link]]`).
+
+```regras
+etnia "Nórdico" "Nórdicos":     # também: povo, cultura
+  descrição "Gente do gelo."
+  espécie "Humano"               # (opcional) só gente desta espécie
+  olhos "azul" 60%, "verde" 20%  # a cor mais comum (os genes se ajustam)
+  cabelo "loiro" 55%
+  altura +6                      # cm
+  força +5                       # ajustes de corpo e atributos
+  nomes "Bjorn", "Erik"
+  nomes femininos "Astrid", "Freya"
+  sobrenomes "Ragnarsson"
+  traços "corajoso"              # todos têm
+  pode ter "curioso" 20%         # cada um sorteia
+  gostos "o mar"
+  frequência 40%                 # dos figurantes (por família)
+  afinidade +10                  # opinião sobre gente do próprio povo
+  afinidade "Sulista" -20        # e sobre outro povo ("*" = qualquer outro)
+```
+
+Filhos herdam o povo dos pais (de um deles, se forem de povos diferentes), e
+muitas vezes um nome do povo. Nas regras: `p.etnia`, `etnia(p)`.
+
+### Filtros: para quem vale
+
+Traço, atributo, profissão, evento e vínculo aceitam uma linha `para` (junte com
+`e`). Tudo vazio = todo mundo.
+
+```regras
+traço "Sangue de dragão" "Sangue de dragão":
+  categoria congenito
+  nasce com 8%                   # chance de nascer com (só quem passa no filtro)
+  para etnia "Nórdico" e sexo feminino
+
+atributo "Fúria":
+  faixa 0 a 10
+  para idade 16 a 60             # aparece quando a idade chega
+
+profissão "Valquíria":
+  renda 14
+  habilidade combate
+  para sexo feminino e idade 18 a 45
+```
+
+Critérios: `espécie "A", "B"`, `etnia "X"` (ou `povo`), `facção "Coroa"`,
+`sexo feminino`/`masculino` (ou `mulheres`, `homens`), `idade 16 a 60`,
+`idade > 30`, `idade até 12`, `adultos`, `crianças`, `idosos`.
+
+### Vínculos e status novos
+
+Além de namoro, noivado, casamento, caso, amizade, rivalidade e inimizade, o
+mundo inventa os seus:
+
+```regras
+vínculo "Mentor e aprendiz":     # também: laço, status
+  símbolo 🎓
+  descrição "O ofício passa de mão em mão."
+  papéis "mentor", "aprendiz"    # dois lados diferentes (opcional)
+  exclusivo                      # um de cada vez por pessoa
+  secreto                        # só quem lê a crônica sabe (🤫)
+  romântico                      # conta como estar comprometido
+  opinião +10                    # entre os dois
+  peso brigar -80%               # entre os dois, muda a vontade das interações
+  por mês respeito +1            # afeto, confiança, respeito, intimidade, atração, humor, estresse
+  surge onde a.idade > 35 e b.idade < 22    # entre quem se cruza no mês
+  chance 40%                     # por ano
+  acaba onde b.idade > 30
+  para espécie "Humano"          # os dois precisam passar
+  ao formar:
+    crônica "{a} toma {b} como aprendiz."
+  ao acabar:
+    crônica "{b} já não precisa de {a}."
+```
+
+Nas regras: `vincular(a, b, "Mentor e aprendiz")` (o primeiro fica com o
+primeiro papel), `desvincular(a, b, "...")`, `vínculo(a, b, "...")`,
+`vinculados(p, "...")`, `papel(p, outro, "...")`, `p.mentor_e_aprendiz` (com
+quem tem), e `quando mentor_e_aprendiz(a, b):` quando forma. No painel da
+pessoa, **⚖ Relação** liga e desfaz qualquer vínculo à mão.
+
+### Tom: fantasia, cômico, adulto, sério
+
+Interações, tramas e eventos podem dizer o tom. O mundo regula quanto quer de
+cada um em **Mundo e ajustes** (0 = nunca, 3 = o triplo): a chance é
+multiplicada pelo ajuste.
+
+```regras
+interação "Bebedeira épica" entre a em personagem, b em personagem onde a.amigos tem b:
+  tom cômico
+  chance = 20%
+  crônica "{a} e {b} bebem até {acordar no telhado|batizar uma cabra}."
+```
+
 ### Tramas em etapas
 
 Uma interação que dura meses: começa como uma interação comum (`entre`, `onde`, `atração`, `chance` por ano), mas o corpo é uma sequência de **etapas**. Cada etapa roda quando chega a vez dela e espera `dura N meses` (padrão 1) antes da próxima. As variáveis (`seja`) valem de uma etapa para a outra.
@@ -343,11 +443,14 @@ Leitura: `idade`, `sexo`, `gênero`, `orientação`, `vivo`, `morto`, `adulto`,
 `parceiro` (cônjuge, noivo ou namorado), `mãe`, `pai` (o oficial),
 `pai_biológico`, `pais`, `filhos`, `irmãos`, `amantes`, `amigos`, `rivais`,
 `inimigos`, `grávida`, `família` (sobrenome), `meta`, `alvo`, `comprometido`,
-`casado`, `conduzido`, `protegido`, `perto` (quem está no mesmo lugar).
+`casado`, `conduzido`, `protegido`, `perto` (quem está no mesmo lugar),
+`etnia` (ou `povo`), `facção`, `em_guerra` (no front), `líder` (lidera uma
+facção), `vínculos`, `estados` e, para cada vínculo do mundo, a lista de quem
+tem (`p.irmãos_de_sangue`).
 
 Dá para mudar: `dinheiro`, `saúde`, `humor`, `estresse`, as habilidades, os
 cinco grandes, `traços` (`p.traços += "ciumento"`), `gostos`, `profissão`,
-`local`, `família`, `conduzido`, `protegido`. Qualquer outro nome vira um campo
+`local`, `família`, `conduzido`, `protegido`, `etnia`, `facção`. Qualquer outro nome vira um campo
 livre da pessoa (`p.rancor += 1`). Família, casamento e morte mudam pelas
 funções abaixo.
 
@@ -386,6 +489,14 @@ se relação(b, a).confiança < 0:
 | `segredo(p)`, `segredo(p, quem)` | p está num segredo (que `quem` sabe)? |
 | `revelar(p)` | os segredos de p caem na boca do povo |
 | `atividade(a, b)` | o que os dois gostam de fazer juntos (texto) |
+| `vincular(a, b, "nome")`, `desvincular(...)`, `vínculo(a, b, "nome")`, `vinculados(p, "nome")`, `papel(p, outro, "nome")` | vínculos do mundo |
+| `etnia(p)`, `facção(p)` | povo e facção (a ficha da facção, se houver) |
+| `em_guerra(f)`, `em_guerra(f1, f2)` | a facção está em guerra (com a outra)? |
+| `declarar_guerra(f1, f2, "motivo")`, `fazer_paz(f1, f2)` | guerra e paz entre facções |
+| `postura(f1, f2)`, `postura(f1, f2, -80)` | lê ou muda a postura (−100 ódio a 100 aliança) |
+| `líder(f)` | quem lidera a facção |
+| `acontecer("sapo", p)`, `acontecer("noite_proibida", a, b)` | faz um acontecimento do acaso acontecer |
+| `estado(p, "preso", 12)`, `estado(p, "preso")` | dá um estado por N meses (0 tira) / está nele? |
 
 ### Eventos
 
@@ -401,10 +512,18 @@ amante)`, `traicao(traidor, vítima, amante)`, `gravidez(mãe, pai)`,
 `crise(p)`, `traco(p, "nome")`, `viagem(p, "lugar")`, `festa`, `peste`,
 `fome`, `guerra`, `fartura`, `inicio`, `mes`, `ano`.
 
+Das guerras entre facções (os valores são as facções): `guerra(atacante,
+defensor)`, `batalha(vencedora, perdedora, lugar)`, `conquista(nova, velha,
+lugar)`, `paz(a, b)`, `alianca(a, b)`, `queda(caída, vencedora)`,
+`sucessao(novo líder, facção)`, `convocado(p, facção)`. Do acaso:
+`acontecimento(a, b, "nome")` e um evento com o id de cada acontecimento
+(`quando sapo(p):`).
+
 ### O construtor
 
 A aba **Regras** tem um construtor que escreve estes blocos por você, com abas
-para interação, trama em etapas, traço, atributo, espécie/criatura e profissão
+para interação, trama em etapas, traço, atributo, espécie/criatura, povo,
+vínculo, item, evento e profissão, filtro "para quem" e tom
 (condições e efeitos escolhidos em listas, inclusive qualquer valor da pessoa
 ou da relação), e receitas prontas. O texto gerado é esta mesma linguagem: dá
 para abrir a nota e ajustar.
