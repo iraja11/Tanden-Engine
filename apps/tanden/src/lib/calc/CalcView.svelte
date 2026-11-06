@@ -6,6 +6,7 @@
   import { files } from '../files/files.svelte';
   import { editorBridge } from '../files/editor-bridge';
   import { sound } from '../sound.svelte';
+  import { ask } from '../ask.svelte';
   import type { AnyPlot } from './plot-view';
   import { makePlot } from './make-plot';
   import { PLOT_HELP, REFERENCE, TEX_HELP } from './reference';
@@ -58,14 +59,22 @@ g(x; y) = sen(x) * cos(y)
     sound.play('create');
   }
 
-  // abre uma folha ao entrar (a ativa, se já for uma folha; senão a primeira; senão cria)
+  // abre uma folha ao entrar (a ativa, se já for uma folha; senão a primeira).
+  // Sem folhas, mostra o convite: criar sozinho fazia a folha apagada "voltar".
   $effect(() => {
     if (!engine.ready) return;
     const active = engine.active;
-    if (active && active.startsWith(FOLDER)) return;
+    if (active && active.startsWith(FOLDER) && engine.notes.includes(active)) return;
     if (sheets.length) engine.open(sheets[0]!);
-    else newSheet();
   });
+
+  async function removeSheet(p: string) {
+    if (!(await ask.confirm(`Apagar a folha "${title(p)}"?`, { detail: 'Uma cópia fica na lixeira (.trash/) e o aviso deixa desfazer.', ok: 'Apagar', danger: true }))) return;
+    sound.play('close');
+    const next = sheets.filter((x) => x !== p);
+    if (engine.active === p) engine.open(next[0] ?? null);
+    await files.remove(p);
+  }
 
   // o gráfico acompanha a folha, um instante depois de parar de digitar
   let timer = 0;
@@ -165,7 +174,10 @@ g(x; y) = sen(x) * cos(y)
     </header>
     <ul>
       {#each sheets as p (p)}
-        <li><button class:on={p === engine.active} onclick={() => { if (p !== engine.active) sound.play('tick'); engine.open(p); }}>{title(p)}</button></li>
+        <li>
+          <button class="item" class:on={p === engine.active} onclick={() => { if (p !== engine.active) sound.play('tick'); engine.open(p); }}>{title(p)}</button>
+          <button class="del" onclick={() => removeSheet(p)} title="Apagar esta folha" aria-label={`Apagar ${title(p)}`}>🗑</button>
+        </li>
       {/each}
     </ul>
     <p class="hint">Blocos <code>```calc</code> e <code>```grafico</code> funcionam em qualquer nota, e <code>$…$</code> vira fórmula. Use <b>∑ Inserir</b> na nota.</p>
@@ -180,6 +192,11 @@ g(x; y) = sen(x) * cos(y)
         </div>
         <Editor value={engine.content} docKey={engine.active} onchange={(v) => engine.edit(v)} host={files.host} />
       {/key}
+    {:else}
+      <div class="empty">
+        <p>Nenhuma folha de cálculo aberta.</p>
+        <button onclick={newSheet}>Nova folha</button>
+      </div>
     {/if}
   </section>
 
@@ -232,10 +249,22 @@ g(x; y) = sen(x) * cos(y)
     transition: border-color var(--dur), color var(--dur), transform var(--dur) var(--spring); }
   .new:hover { border-color: var(--ember); color: var(--ember); transform: rotate(90deg); }
   .list ul { list-style: none; margin: 0; padding: 0 8px; overflow-y: auto; }
-  .list li button { width: 100%; text-align: left; border: 0; background: none; border-radius: 8px; padding: 7px 10px; border-left: 2px solid transparent;
+  .list li { position: relative; display: flex; align-items: center; }
+  .list li .del { position: absolute; right: 4px; width: 26px; height: 26px; border: 0; border-radius: 6px; background: none; font-size: 12px;
+    opacity: 0; transition: opacity var(--dur), background var(--dur); }
+  .list li:hover .del, .list li .del:focus-visible { opacity: .7; }
+  .list li .del:hover { opacity: 1; background: var(--surface-3, var(--surface-2)); }
+  @media (hover: none) {
+    .list li .del { pointer-events: none; }
+    .list li:has(.on) .del { opacity: .6; pointer-events: auto; }
+  }
+  .empty { margin: auto; display: grid; gap: 12px; justify-items: center; color: var(--muted); }
+  .empty button { border: 1px solid var(--line); background: var(--surface-2); border-radius: 10px; padding: 8px 16px; color: var(--ink); }
+  .empty button:hover { border-color: var(--ember); color: var(--ember); }
+  .list li button.item { width: 100%; text-align: left; border: 0; background: none; border-radius: 8px; padding: 7px 32px 7px 10px; border-left: 2px solid transparent;
     color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: background var(--dur); }
-  .list li button:hover { background: var(--surface-2); }
-  .list li button.on { background: var(--surface-2); border-left-color: var(--ember); }
+  .list li button.item:hover { background: var(--surface-2); }
+  .list li button.item.on { background: var(--surface-2); border-left-color: var(--ember); }
   .hint { margin: auto 14px 14px; font-size: 12px; line-height: 1.5; color: var(--muted); }
   code { font: 11.5px var(--f-mono); color: var(--ember-soft); }
 
@@ -278,7 +307,7 @@ g(x; y) = sen(x) * cos(y)
     .calc { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) minmax(280px, 45%); }
     .list { border-right: 0; border-bottom: 1px solid var(--line); }
     .list ul { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 8px; }
-    .list li button { width: auto; }
+    .list li button.item { width: auto; }
     .list .hint { display: none; }
     .panel { border-left: 0; border-top: 1px solid var(--line); }
   }

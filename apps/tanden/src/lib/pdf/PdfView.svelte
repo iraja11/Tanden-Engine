@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fit as fitScreen } from '../fit';
   import { onMount, tick, untrack } from 'svelte';
   import type { PdfAnnotation, PdfTextItem } from '@tanden/core';
   import { engine } from '../engine.svelte';
@@ -728,7 +729,7 @@
       <div class="menu-wrap">
         <button onclick={() => (menu = !menu)} aria-haspopup="menu" disabled={!doc}>Exportar ▾</button>
         {#if menu}
-          <div class="menu" role="menu">
+          <div class="menu" role="menu" use:fitScreen>
             <button role="menuitem" onclick={() => { menu = false; files.annotationsNote(path); }}>Nota com as anotações<small>{annots.length}</small></button>
             <button role="menuitem" onclick={() => { menu = false; void files.exportAnnotated(path); }}>PDF com as anotações<small>abre em qualquer leitor</small></button>
             <button role="menuitem" onclick={() => void extractText()}>Texto do PDF para nota</button>

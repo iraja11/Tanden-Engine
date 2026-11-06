@@ -30,6 +30,8 @@ class Sheets {
     this.store = engine.sheets;
     this.store.onChange((path, origin) => {
       this.refresh();
+      // a planilha aberta foi apagada (aqui ou em outro aparelho)
+      if (this.active && !this.store!.has(this.active)) this.leave();
       if (path === this.active) this.version++;
       if (origin === 'local') this.scheduleSync();
       else engine.pulse('editor', 'out');
@@ -69,6 +71,28 @@ class Sheets {
     this.active = path;
     this.unwatch = this.store.workbook(path).onChange(() => this.version++);
     this.version++;
+  }
+
+  private leave(): void {
+    this.unwatch?.();
+    this.unwatch = null;
+    this.active = null;
+    if (this.list.length) this.open(this.list[0]!);
+    else this.version++;
+  }
+
+  /** Apaga a planilha inteira (cópia em .trash/). Devolve onde ficou a cópia. */
+  async remove(path: string): Promise<string | null> {
+    if (!this.store?.has(path)) return null;
+    if (path === this.active) {
+      this.unwatch?.();
+      this.unwatch = null;
+    }
+    const trashed = await this.store.remove(path);
+    this.refresh();
+    if (path === this.active || (this.active && !this.store.has(this.active))) this.leave();
+    void engine.syncNow();
+    return trashed;
   }
 
   create(name = 'Nova planilha'): void {

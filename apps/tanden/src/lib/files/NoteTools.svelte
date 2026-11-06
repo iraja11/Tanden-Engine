@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fit } from '../fit';
   import { isDeck } from '@tanden/core';
   import { engine } from '../engine.svelte';
   import { slides } from '../slides/slides.svelte';
@@ -42,7 +43,7 @@
       <span class="lbl">Anexar</span>
     </button>
     {#if menu === 'attach'}
-      <div class="menu" role="menu">
+      <div class="menu" role="menu" use:fit>
         <button role="menuitem" onclick={() => { menu = null; input?.click(); }}>Arquivo…<small>ou arraste para a nota</small></button>
         <button role="menuitem" onclick={() => { menu = null; clip = true; }}>Página web…<small>nota ou cartão</small></button>
       </div>
@@ -51,7 +52,7 @@
   <div class="wrap">
     <button onclick={() => (menu = menu === 'insert' ? null : 'insert')} aria-haspopup="menu" title="Inserir conta, gráfico ou fórmula">∑ <span class="lbl">Inserir</span></button>
     {#if menu === 'insert'}
-      <div class="menu" role="menu">
+      <div class="menu" role="menu" use:fit>
         <button role="menuitem" onclick={() => insertBlock('calc')}>Bloco de cálculo<small>contas e unidades</small></button>
         <button role="menuitem" onclick={() => insertBlock('plot')}>Gráfico<small>funções e pontos</small></button>
         <button role="menuitem" onclick={() => insertBlock('plot3d')}>Gráfico 3D<small>superfícies e curvas</small></button>
@@ -65,7 +66,7 @@
       <span class="lbl">Exportar ▾</span>
     </button>
     {#if menu === 'export'}
-      <div class="menu" role="menu">
+      <div class="menu" role="menu" use:fit>
         <button role="menuitem" onclick={() => { menu = null; void files.exportNote(path, 'docx'); }}>Word (.docx)<small>Word, Google Docs</small></button>
         <button role="menuitem" onclick={() => { menu = null; void files.exportNote(path, 'odt'); }}>LibreOffice (.odt)<small>Writer, com os estilos dele</small></button>
         <button role="menuitem" onclick={() => { menu = null; void files.exportNote(path, 'pdf'); }}>PDF<small>pela janela de impressão</small></button>

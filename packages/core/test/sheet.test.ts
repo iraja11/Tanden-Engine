@@ -361,3 +361,105 @@ describe('planilhas sincronizadas entre aparelhos', () => {
     expect(phone.store.workbook('Faculdade/horário.xlsx').sheets().length).toBe(1);
   });
 });
+
+describe('planilhas: apagar', () => {
+  function pair() {
+    const disk = new MemoryStorage();
+    return { disk, pc: new SheetStore(disk, 'arch', new EventBus()), phone: new SheetStore(disk, 'redmi', new EventBus()) };
+  }
+
+  it('apaga com cópia na lixeira e não volta no sync seguinte', async () => {
+    const { disk, pc, phone } = pair();
+    const wb = pc.create('Planilhas/Gastos.xlsx');
+    wb.set(wb.sheets()[0]!.id, 0, 0, '42');
+    await pc.sync();
+    await phone.sync();
+    expect(phone.has('Planilhas/Gastos.xlsx')).toBe(true);
+    const trashed = await pc.remove('Planilhas/Gastos.xlsx');
+    expect(trashed).toBe('.trash/Planilhas/Gastos.xlsx');
+    const back = readXlsx((await disk.read(trashed!))!);
+    expect(back.sheets[0]!.cells.get('A1')).toBe('42');
+    for (let i = 0; i < 3; i++) {
+      await pc.sync();
+      await phone.sync();
+    }
+    expect(pc.has('Planilhas/Gastos.xlsx')).toBe(false);
+    expect(phone.has('Planilhas/Gastos.xlsx')).toBe(false);
+    expect(await disk.read('Planilhas/Gastos.xlsx')).toBeNull();
+    // um aparelho que acabou de abrir o app também não traz de volta
+    const fresh = new SheetStore(disk, 'arch', new EventBus());
+    await fresh.sync();
+    expect(fresh.has('Planilhas/Gastos.xlsx')).toBe(false);
+  });
+
+  it('uma edição feita ao mesmo tempo em outro aparelho ressuscita a planilha', async () => {
+    const { pc, phone } = pair();
+    const wb = pc.create('p.xlsx');
+    const s = wb.sheets()[0]!.id;
+    wb.set(s, 0, 0, '1');
+    await pc.sync();
+    await phone.sync();
+    phone.workbook('p.xlsx').set(s, 1, 0, '2');
+    await pc.remove('p.xlsx');
+    await pc.sync();
+    await phone.sync();
+    await pc.sync();
+    expect(pc.has('p.xlsx')).toBe(true);
+    expect(pc.workbook('p.xlsx').value(s, 1, 0)).toBe(2);
+  });
+
+  it('criar de novo no mesmo caminho começa do zero', async () => {
+    const { pc, phone } = pair();
+    const wb = pc.create('p.xlsx');
+    const s = wb.sheets()[0]!.id;
+    wb.set(s, 0, 0, 'velho');
+    await pc.sync();
+    await phone.sync();
+    await pc.remove('p.xlsx');
+    const wb2 = pc.create('p.xlsx');
+    wb2.set(wb2.sheets()[0]!.id, 0, 0, 'novo');
+    for (let i = 0; i < 2; i++) {
+      await pc.sync();
+      await phone.sync();
+    }
+    const w = phone.workbook('p.xlsx');
+    expect(w.value(w.sheets()[0]!.id, 0, 0)).toBe('novo');
+    expect(w.sheets().length).toBe(1);
+  });
+
+  it('um .xlsx apagado fora do Tanden (gerenciador de arquivos) não volta', async () => {
+    const { disk, pc, phone } = pair();
+    const wb = pc.create('q.xlsx');
+    wb.set(wb.sheets()[0]!.id, 0, 0, '7');
+    await pc.sync();
+    await phone.sync();
+    await disk.remove('q.xlsx');
+    for (let i = 0; i < 3; i++) {
+      await pc.sync();
+      await phone.sync();
+    }
+    expect(await disk.read('q.xlsx')).toBeNull();
+    expect(pc.has('q.xlsx')).toBe(false);
+    expect(phone.has('q.xlsx')).toBe(false);
+  });
+
+  it('apagar passando pelo Drive', async () => {
+    const drive = new MemoryRemote();
+    const a = device(drive, 'arch');
+    const b = device(drive, 'redmi');
+    const wb = a.store.create('m.xlsx');
+    wb.set(wb.sheets()[0]!.id, 0, 0, '1');
+    await a.sync();
+    await b.sync();
+    expect(b.store.has('m.xlsx')).toBe(true);
+    await a.store.remove('m.xlsx');
+    await a.sync();
+    await b.sync();
+    await b.sync();
+    await a.sync();
+    expect(b.store.has('m.xlsx')).toBe(false);
+    expect(a.store.has('m.xlsx')).toBe(false);
+    expect(await b.disk.read('m.xlsx')).toBeNull();
+    expect(drive.files.has('m.xlsx')).toBe(false);
+  });
+});
