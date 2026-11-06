@@ -17,7 +17,14 @@ export type Condicao =
   | { k: 'traco'; quem: Quem; traco: string; nao?: boolean }
   | { k: 'opiniao' | 'atracao' | 'confianca' | 'intimidade'; de: Quem; op: Op; valor: number }
   | { k: 'idade'; quem: Quem; op: Op; valor: number }
-  | { k: 'vinculo'; vinc: 'casados' | 'namoro' | 'amantes' | 'amigos' | 'rivais' | 'inimigos' | 'parentes'; nao?: boolean }
+  /** vínculo entre os dois: os de fábrica, `parentes`, ou um inventado pelo mundo (pelo nome) */
+  | { k: 'vinculo'; vinc: string; nao?: boolean }
+  | { k: 'sexo'; quem: Quem; sexo: 'f' | 'm' }
+  | { k: 'etnia'; quem: Quem; etnia: string; nao?: boolean }
+  | { k: 'faccao'; quem: Quem; faccao: string; nao?: boolean }
+  /** os dois são do mesmo povo / da mesma facção (ou não) */
+  | { k: 'mesma'; o: 'etnia' | 'faccao'; nao?: boolean }
+  | { k: 'faixa'; quem: Quem; de: number; ate: number }
   | { k: 'comprometido' | 'gravida' | 'adulto'; quem: Quem; nao?: boolean }
   | { k: 'profissao'; quem: Quem; prof: string; nao?: boolean }
   | { k: 'gosto'; quem: Quem; gosto: string }
@@ -36,6 +43,10 @@ export type Consequencia =
   /** muda um valor da relação de uma pessoa com a outra (afeto, confiança... ou um campo livre como dívida) */
   | { k: 'relcampo'; de: Quem; campo: string; op: '=' | '+=' | '-='; valor: string }
   | { k: 'disparar'; evento: string }
+  /** liga ou desfaz um vínculo entre os dois (de fábrica ou do mundo) */
+  | { k: 'vincular' | 'desvincular'; vinculo: string }
+  /** um estado que passa (sapo, preso, amaldiçoado...) por alguns meses */
+  | { k: 'estado'; quem: Quem; estado: string; meses: number }
   | { k: 'livre'; codigo: string };
 
 /** Uma etapa de trama montada no construtor. */
@@ -72,7 +83,41 @@ export interface Mecanica {
   efeitos: Consequencia[];
   /** frase da crônica; {a} e {b} viram os nomes */
   cronica: string;
+  /** fantasia, comico, adulto, serio: o mundo regula quanto quer de cada um */
+  tom?: string;
 }
+
+/** Para quem vale: vira a linha `para ...` das regras. Vazio = todo mundo. */
+export interface PublicoForm {
+  especies: string[];
+  etnias: string[];
+  sexo: '' | 'f' | 'm';
+  /** 0 = sem limite */
+  idadeMin: number;
+  idadeMax: number;
+  faccoes: string[];
+}
+export const publicoVazio = (): PublicoForm => ({ especies: [], etnias: [], sexo: '', idadeMin: 0, idadeMax: 0, faccoes: [] });
+
+/** `para espécie "Elfo" e sexo feminino e idade 16 a 60` (ou nada). */
+export function publicoRegras(f: PublicoForm | undefined, ind = '  '): string[] {
+  if (!f) return [];
+  const partes: string[] = [];
+  const lista = (l: string[]) => l.map((x) => q(x.trim())).join(', ');
+  if (f.especies.filter((x) => x.trim()).length) partes.push(`espécie ${lista(f.especies.filter((x) => x.trim()))}`);
+  if (f.etnias.filter((x) => x.trim()).length) partes.push(`etnia ${lista(f.etnias.filter((x) => x.trim()))}`);
+  if (f.faccoes.filter((x) => x.trim()).length) partes.push(`facção ${lista(f.faccoes.filter((x) => x.trim()))}`);
+  if (f.sexo) partes.push(`sexo ${f.sexo === 'f' ? 'feminino' : 'masculino'}`);
+  if (f.idadeMin > 0 && f.idadeMax > 0) partes.push(`idade ${f.idadeMin} a ${f.idadeMax}`);
+  else if (f.idadeMin > 0) partes.push(`idade > ${f.idadeMin - 1}`);
+  else if (f.idadeMax > 0) partes.push(`idade até ${f.idadeMax}`);
+  return partes.length ? [`${ind}para ${partes.join(' e ')}`] : [];
+}
+
+/** Os tons do acaso, como se escrevem nas regras. */
+export const TONS_REGRAS: Array<{ id: string; nome: string }> = [
+  { id: '', nome: 'sem tom' }, { id: 'fantasia', nome: '✨ fantasia' }, { id: 'cômico', nome: '🤡 cômico' }, { id: 'adulto', nome: '🔥 adulto' }, { id: 'sério', nome: '⚖ sério' },
+];
 
 /** Eventos da simulação de vidas que dá para usar em "quando". As partes vêm na ordem. */
 export const EVENTOS_VIDA: Array<{ id: string; nome: string; partes: string[] }> = [
@@ -146,7 +191,13 @@ function cond(c: Condicao, nomes: Record<Quem, string>): string {
     case 'vinculo':
       if (c.vinc === 'casados') return `${n('a')}.cônjuge ${c.nao ? '!=' : '='} ${n('b')}`;
       if (c.vinc === 'parentes') return `${c.nao ? 'não ' : ''}existe(parente(${n('a')}, ${n('b')}))`;
-      return `${n('a')}.${c.vinc} ${c.nao ? 'não tem' : 'tem'} ${n('b')}`;
+      if (['namoro', 'amantes', 'amigos', 'rivais', 'inimigos'].includes(c.vinc)) return `${n('a')}.${c.vinc} ${c.nao ? 'não tem' : 'tem'} ${n('b')}`;
+      return `${c.nao ? 'não ' : ''}vínculo(${n('a')}, ${n('b')}, ${q(c.vinc)})`;
+    case 'sexo': return `${n(c.quem)}.sexo = ${q(c.sexo === 'f' ? 'feminino' : 'masculino')}`;
+    case 'etnia': return `${n(c.quem)}.etnia ${c.nao ? '!=' : '='} ${q(c.etnia)}`;
+    case 'faccao': return `${n(c.quem)}.facção ${c.nao ? '!=' : '='} ${q(c.faccao)}`;
+    case 'mesma': return `${n('a')}.${c.o === 'etnia' ? 'etnia' : 'facção'} ${c.nao ? '!=' : '='} ${n('b')}.${c.o === 'etnia' ? 'etnia' : 'facção'}`;
+    case 'faixa': return `${n(c.quem)}.idade pelo menos ${c.de} e ${n(c.quem)}.idade no máximo ${c.ate}`;
     case 'comprometido': return `${c.nao ? 'não ' : ''}${n(c.quem)}.comprometido`;
     case 'gravida': return `${c.nao ? 'não ' : ''}${n(c.quem)}.grávida`;
     case 'adulto': return `${c.nao ? 'não ' : ''}${n(c.quem)}.adulto`;
@@ -179,6 +230,9 @@ function efeito(e: Consequencia, nomes: Record<Quem, string>, ind: string): stri
     case 'campo': return [`${ind}${n(e.quem)}.${campoTxt(e.campo)} ${e.op} ${valor(e.valor)}`];
     case 'relcampo': return [`${ind}relação(${n(e.de)}, ${o(e.de)}).${campoTxt(e.campo)} ${e.op} ${valor(e.valor)}`];
     case 'disparar': return [`${ind}disparar ${id(e.evento)}(${n('a')}${nomes.b !== nomes.a ? `, ${n('b')}` : ''})`];
+    case 'vincular': return [`${ind}vincular(${n('a')}, ${n('b')}, ${q(e.vinculo)})`];
+    case 'desvincular': return [`${ind}desvincular(${n('a')}, ${n('b')}, ${q(e.vinculo)})`];
+    case 'estado': return [`${ind}estado(${n(e.quem)}, ${q(e.estado)}, ${Math.max(1, Math.round(e.meses))})`];
     case 'livre': return e.codigo.split('\n').filter((x) => x.trim()).map((x) => `${ind}${x.trim()}`);
   }
 }
@@ -216,6 +270,7 @@ export function mecanicaRegras(m: Mecanica): string {
     : `interação ${q(nome)} de p em personagem${conds.length ? ` onde ${conds.join(' e ')}` : ''}:`);
   if (m.atracao?.trim() && m.tipo === 'par') linhas.push(`${ind}atração = ${m.atracao.trim()}`);
   linhas.push(`${ind}chance = ${Math.max(0, Math.min(100, m.chance))}%`);
+  if (m.tom?.trim()) linhas.push(`${ind}tom ${m.tom.trim()}`);
   for (const e of m.efeitos) linhas.push(...efeito(e, nomes, ind));
   if (m.cronica.trim()) linhas.push(`${ind}crônica ${q(texto(m.cronica, nomes))}`);
   if (linhas.length === 3 && !m.cronica.trim()) linhas.push(`${ind}${nomes.a}.humor += 0`);
@@ -233,6 +288,7 @@ function tramaRegras(m: Mecanica): string {
     : `trama ${q(nome)} entre a em personagem, b em personagem${conds.length ? ` onde ${conds.join(' e ')}` : ''}:`);
   if (m.atracao?.trim() && !m.solo) L.push(`${I}atração = ${m.atracao.trim()}`);
   L.push(`${I}chance = ${Math.max(0, Math.min(100, m.chance))}%`);
+  if (m.tom?.trim()) L.push(`${I}tom ${m.tom.trim()}`);
   const etapas = m.etapas?.length ? m.etapas : [{ nome: 'Começo', dura: 1, efeitos: [], cronica: '', condicoes: [], senao: 'falhar' as const, cronicaSenao: '' }];
   etapas.forEach((e, i) => {
     L.push(`${I}etapa ${q(e.nome.trim() || `Etapa ${i + 1}`)}:`);
@@ -286,6 +342,10 @@ export interface TracoForm {
   surge: Condicao[];
   /** chance por ano de surgir quando a condição vale (0 a 100) */
   chanceSurge: number;
+  /** quem pode ter (espécie, povo, sexo, idade, facção) */
+  publico?: PublicoForm;
+  /** % de chance de nascer com o traço (para quem passa no filtro) */
+  nasce?: number;
 }
 
 export function tracoRegras(t: TracoForm): string {
@@ -307,6 +367,8 @@ export function tracoRegras(t: TracoForm): string {
     L.push(`  surge onde ${t.surge.map((c) => cond(c, { a: 'isto', b: 'isto' })).join(' e ')}`);
     L.push(`  chance ${Math.max(1, Math.min(100, Math.round(t.chanceSurge)))}%`);
   }
+  if (t.nasce) L.push(`  nasce com ${Math.max(1, Math.min(100, Math.round(t.nasce)))}%`);
+  L.push(...publicoRegras(t.publico));
   return `${L.join('\n')}\n`;
 }
 
@@ -323,6 +385,7 @@ export interface AtributoForm {
   desc: string;
   /** só estas espécies têm (vazio = todos) */
   so?: string[];
+  publico?: PublicoForm;
 }
 
 export function atributoRegras(a: AtributoForm): string {
@@ -333,6 +396,7 @@ export function atributoRegras(a: AtributoForm): string {
   if (a.desc.trim()) L.push(`  descrição ${q(a.desc.trim())}`);
   const so = (a.so ?? []).filter((x) => x.trim());
   if (so.length) L.push(`  só para ${so.map((x) => q(x.trim())).join(', ')}`);
+  L.push(...publicoRegras(a.publico));
   return `${L.join('\n')}\n`;
 }
 
@@ -386,6 +450,7 @@ export interface ProfissaoForm {
   risco: number;
   viaja: boolean;
   requer: Condicao[];
+  publico?: PublicoForm;
 }
 
 export function profissaoRegras(p: ProfissaoForm): string {
@@ -394,6 +459,7 @@ export function profissaoRegras(p: ProfissaoForm): string {
   if (p.risco > 0) L.push(`  risco ${p.risco}%`);
   if (p.viaja) L.push('  viaja');
   if (p.requer.length) L.push(`  requer ${p.requer.map((c) => cond(c, { a: 'isto', b: 'isto' })).join(' e ')}`);
+  L.push(...publicoRegras(p.publico));
   return `${L.join('\n')}\n`;
 }
 
@@ -460,6 +526,8 @@ export interface EventoForm {
   aoAcabar: string;
   /** todo mês, para cada pessoa no lugar */
   todoMes: { efeitos: Consequencia[]; cronica: string; condicoes: Condicao[] };
+  tom?: string;
+  publico?: PublicoForm;
 }
 
 export function eventoRegras(ev: EventoForm): string {
@@ -469,6 +537,8 @@ export function eventoRegras(ev: EventoForm): string {
   if (ev.chance > 0) L.push(`  chance ${Math.min(100, ev.chance)}%`);
   L.push(`  dura ${Math.max(1, Math.round(ev.dura))} meses`);
   if (ev.global) L.push('  global');
+  if (ev.tom?.trim()) L.push(`  tom ${ev.tom.trim()}`);
+  L.push(...publicoRegras(ev.publico));
   for (const p of ev.pesos) {
     if (!p.interacao) continue;
     const pct = Math.round((p.mult - 1) * 100);
@@ -490,6 +560,106 @@ export function eventoRegras(ev: EventoForm): string {
   return `${L.join('\n')}\n`;
 }
 
+export interface EtniaForm {
+  nome: string;
+  plural: string;
+  desc: string;
+  especie: string;
+  /** cor dos olhos e do cabelo mais comuns (com %) */
+  olhos: Array<{ cor: string; pct: number }>;
+  cabelo: Array<{ cor: string; pct: number }>;
+  altura: number;
+  ajustes: Array<{ campo: string; valor: number }>;
+  nomesM: string;
+  nomesF: string;
+  sobrenomes: string;
+  tracos: string[];
+  talvez: Array<{ traco: string; pct: number }>;
+  gostos: string;
+  /** % dos figurantes */
+  frequencia: number;
+  /** opinião sobre outros povos ("" = o próprio) */
+  afinidades: Array<{ etnia: string; pontos: number }>;
+}
+
+const listaTxt = (t: string) => t.split(',').map((x) => x.trim()).filter(Boolean);
+
+export function etniaRegras(e: EtniaForm): string {
+  const nome = e.nome.trim() || 'Povo';
+  const L = [`etnia ${q(nome)}${e.plural.trim() ? ` ${q(e.plural.trim())}` : ''}:`];
+  if (e.desc.trim()) L.push(`  descrição ${q(e.desc.trim())}`);
+  if (e.especie.trim()) L.push(`  espécie ${q(e.especie.trim())}`);
+  const cores = (l: Array<{ cor: string; pct: number }>) => l.filter((x) => x.cor.trim()).map((x) => `${q(x.cor.trim())} ${Math.max(1, Math.min(100, Math.round(x.pct)))}%`).join(', ');
+  if (cores(e.olhos)) L.push(`  olhos ${cores(e.olhos)}`);
+  if (cores(e.cabelo)) L.push(`  cabelo ${cores(e.cabelo)}`);
+  if (e.altura) L.push(`  altura ${e.altura >= 0 ? '+' : ''}${e.altura}`);
+  for (const a of e.ajustes) if (a.campo.trim() && a.valor) L.push(`  ${campoTxt(fold(a.campo.trim()))} ${a.valor >= 0 ? '+' : ''}${a.valor}`);
+  if (listaTxt(e.nomesM).length) L.push(`  nomes ${listaTxt(e.nomesM).map(q).join(', ')}`);
+  if (listaTxt(e.nomesF).length) L.push(`  nomes femininos ${listaTxt(e.nomesF).map(q).join(', ')}`);
+  if (listaTxt(e.sobrenomes).length) L.push(`  sobrenomes ${listaTxt(e.sobrenomes).map(q).join(', ')}`);
+  if (e.tracos.length) L.push(`  traços ${e.tracos.map(q).join(', ')}`);
+  const tv = e.talvez.filter((x) => x.traco.trim());
+  if (tv.length) L.push(`  pode ter ${tv.map((x) => `${q(x.traco.trim())} ${Math.max(0, Math.min(100, Math.round(x.pct)))}%`).join(', ')}`);
+  if (listaTxt(e.gostos).length) L.push(`  gostos ${listaTxt(e.gostos).map(q).join(', ')}`);
+  if (e.frequencia > 0) L.push(`  frequência ${e.frequencia}%`);
+  for (const a of e.afinidades) if (a.pontos) L.push(`  afinidade ${a.etnia.trim() ? `${q(a.etnia.trim())} ` : ''}${a.pontos >= 0 ? '+' : ''}${a.pontos}`);
+  if (L.length === 1) L.push('  frequência 0%');
+  return `${L.join('\n')}\n`;
+}
+
+export interface VinculoForm {
+  nome: string;
+  desc: string;
+  simbolo: string;
+  /** papéis diferentes (mentor/aprendiz); vazio = os dois iguais */
+  papelA: string;
+  papelB: string;
+  secreto: boolean;
+  exclusivo: boolean;
+  romantico: boolean;
+  opiniao: number;
+  pesos: Array<{ interacao: string; mult: number }>;
+  porMes: Array<{ eixo: string; valor: number }>;
+  /** surge sozinho entre `a` e `b` quando isto vale (vazio = só à mão ou pelas regras) */
+  surge: Condicao[];
+  chance: number;
+  acaba: Condicao[];
+  publico?: PublicoForm;
+  aoFormar: { efeitos: Consequencia[]; cronica: string };
+  aoAcabar: { efeitos: Consequencia[]; cronica: string };
+}
+
+export function vinculoRegras(v: VinculoForm): string {
+  const N: Record<Quem, string> = { a: 'a', b: 'b' };
+  const L = [`vínculo ${q(v.nome.trim() || 'Vínculo')}:`];
+  if (v.desc.trim()) L.push(`  descrição ${q(v.desc.trim())}`);
+  if (v.simbolo.trim()) L.push(`  símbolo ${v.simbolo.trim()}`);
+  if (v.papelA.trim() && v.papelB.trim()) L.push(`  papéis ${q(v.papelA.trim())}, ${q(v.papelB.trim())}`);
+  if (v.secreto) L.push('  secreto');
+  if (v.exclusivo) L.push('  exclusivo');
+  if (v.romantico) L.push('  romântico');
+  if (v.opiniao) L.push(`  opinião ${v.opiniao >= 0 ? '+' : ''}${v.opiniao}`);
+  for (const p of v.pesos) {
+    if (!p.interacao) continue;
+    const pct = Math.round((p.mult - 1) * 100);
+    L.push(`  peso ${p.interacao} ${p.mult === 0 ? '* 0' : pct >= 0 ? `+${pct}%` : `-${-pct}%`}`);
+  }
+  for (const m of v.porMes) if (m.eixo.trim() && m.valor) L.push(`  por mês ${m.eixo.trim()} ${m.valor >= 0 ? '+' : ''}${m.valor}`);
+  if (v.surge.length) {
+    L.push(`  surge onde ${v.surge.map((c) => cond(c, N)).join(' e ')}`);
+    L.push(`  chance ${Math.max(1, Math.min(100, Math.round(v.chance)))}%`);
+  }
+  if (v.acaba.length) L.push(`  acaba onde ${v.acaba.map((c) => cond(c, N)).join(' e ')}`);
+  L.push(...publicoRegras(v.publico));
+  for (const [cab, b] of [['ao formar', v.aoFormar], ['ao acabar', v.aoAcabar]] as const) {
+    if (!b.efeitos.length && !b.cronica.trim()) continue;
+    L.push(`  ${cab}:`);
+    for (const e of b.efeitos) L.push(...efeito(e, N, '    '));
+    if (b.cronica.trim()) L.push(`    crônica ${q(texto(b.cronica, N))}`);
+  }
+  return `${L.join('\n')}\n`;
+}
+
 /** "{a} canta para {b}" → com os nomes das partes. */
 function texto(t: string, nomes: Record<Quem, string>): string {
   return t.replace(/\{a\}/g, `{${nomes.a}}`).replace(/\{b\}/g, `{${nomes.b}}`);
@@ -505,6 +675,145 @@ export interface Receita {
 
 /** Mecânicas prontas: um clique e entram nas regras do mundo. Servem também de exemplo da linguagem. */
 export const RECEITAS: Receita[] = [
+  {
+    nome: 'Povos do Norte e do Sul (etnias)',
+    desc: 'Dois povos com nomes, aparência, gostos e um velho preconceito um contra o outro. Os figurantes chegam em famílias de cada povo.',
+    codigo: `etnia "Nórdico" "Nórdicos":
+  descrição "Gente do gelo, do mar e das sagas."
+  olhos "azul" 60%, "verde" 20%
+  cabelo "loiro" 55%, "ruivo" 15%
+  altura +6
+  força +5
+  nomes "Bjorn", "Erik", "Ulf", "Ragnar", "Leif"
+  nomes femininos "Astrid", "Sigrid", "Freya", "Ingrid", "Solveig"
+  sobrenomes "Ragnarsson", "Eriksdottir", "Ulfsson"
+  pode ter "corajoso" 25%
+  gostos "o mar", "histórias"
+  frequência 40%
+  afinidade +10
+  afinidade "Sulista" -20
+
+etnia "Sulista" "Sulistas":
+  descrição "Mercadores do deserto e das cidades de pedra branca."
+  olhos "castanho" 85%
+  cabelo "escuro" 90%
+  nomes "Amir", "Tariq", "Samir", "Idris"
+  nomes femininos "Leila", "Zara", "Yasmin", "Nadia"
+  sobrenomes "al-Rashid", "ibn Faruq"
+  pode ter "curioso" 20%
+  gostos "astronomia", "culinária"
+  frequência 40%
+  afinidade +10
+  afinidade "Nórdico" -20
+`,
+  },
+  {
+    nome: 'Irmãos de sangue (vínculo)',
+    desc: 'Amigos muito próximos fazem um juramento de sangue: a opinião sobe, brigas quase somem, e a morte de um fere o outro.',
+    codigo: `vínculo "Irmãos de sangue":
+  símbolo 🩸
+  descrição "Um corte na palma, um juramento para a vida."
+  opinião +25
+  peso brigar -90%
+  peso insultar -70%
+  por mês afeto +1
+  surge onde a.amigos tem b e opinião(a, b) > 60 e opinião(b, a) > 60
+  chance 30%
+  ao formar:
+    crônica "{a} e {b} cortam as palmas e misturam o sangue à luz da fogueira."
+
+quando morte(morto):
+  para cada x em vinculados(morto, "Irmãos de sangue"):
+    x.humor -= 40
+    x.estresse += 30
+    crônica "{x} sente o corte da palma arder no dia em que {morto} morre."
+`,
+  },
+  {
+    nome: 'Mentor e aprendiz (vínculo com papéis)',
+    desc: 'Gente experiente toma jovens como aprendizes: respeito, habilidade que passa de um para o outro, e um mestre por aprendiz.',
+    codigo: `vínculo "Mentor e aprendiz":
+  símbolo 🎓
+  papéis "mentor", "aprendiz"
+  exclusivo
+  opinião +10
+  por mês respeito +1
+  surge onde a.idade > 35 e b.idade >= 14 e b.idade < 22 e a.profissão = b.profissão
+  chance 40%
+  acaba onde b.idade > 30
+
+quando ano:
+  para cada m em personagem:
+    para cada x em vinculados(m, "Mentor e aprendiz"):
+      se papel(x, m, "Mentor e aprendiz") = "aprendiz":
+        x.ofício += 1
+`,
+  },
+  {
+    nome: 'Sangue de dragão (traço filtrado)',
+    desc: 'Um traço raro, de nascença, que só aparece em mulheres nórdicas: força, temperamento e a cobiça de todos.',
+    codigo: `traço "Sangue de dragão" "Sangue de dragão":
+  descrição "Os olhos brilham no escuro quando tem raiva."
+  categoria congenito
+  nasce com 8%
+  para etnia "Nórdico" e sexo feminino
+  herdável 40%
+  ajuste força +12
+  peso brigar +60%
+  afinidade "" +15
+`,
+  },
+  {
+    nome: 'Valquírias (profissão filtrada)',
+    desc: 'Uma ordem de guerreiras: só mulheres adultas, bem pagas, com muito prestígio e algum risco.',
+    codigo: `profissão "Valquíria":
+  renda 14
+  habilidade combate
+  status 4
+  risco 1%
+  para sexo feminino e idade 18 a 45
+  requer isto.combate pelo menos 6
+`,
+  },
+  {
+    nome: 'Bebedeira épica (cômico)',
+    desc: 'Na taverna, dois amigos bebem demais e acordam em lugares improváveis. Some se o tom cômico estiver em zero.',
+    codigo: `interação "Bebedeira épica" entre a em personagem, b em personagem onde a.amigos tem b e a.adulto e b.adulto:
+  tom cômico
+  chance = 20%
+  a.humor += 10
+  b.humor += 10
+  relação(a, b).intimidade += 5
+  crônica "{a} e {b} bebem até {acordar no telhado da igreja|roubar o sino da capela|batizar uma cabra|declarar guerra a um moinho}."
+`,
+  },
+  {
+    nome: 'Lua de Sangue (fantasia)',
+    desc: 'Um evento sobrenatural de três meses: os homens ficam agitados, brigam mais, e os sonhos ficam estranhos.',
+    codigo: `evento "Lua de Sangue":
+  tom fantasia
+  chance 8%
+  dura 3 meses
+  descrição "a lua fica vermelha e os cães uivam a noite inteira"
+  peso brigar +80%
+  peso flertar +40%
+  para sexo masculino e idade 16 a 70
+  todo mês:
+    personagem.estresse += 4
+  ao acabar:
+    crônica "A lua volta a ser branca sobre {lugar}. Ninguém fala do que fez naquelas noites."
+`,
+  },
+  {
+    nome: 'Amor proibido entre povos (adulto)',
+    desc: 'Gente de povos rivais se apaixona às escondidas: um caso secreto que, descoberto, envergonha as duas famílias.',
+    codigo: `interação "Amor proibido" entre a em personagem, b em personagem onde a.etnia != b.etnia e atração(a, b) > 55 e atração(b, a) > 40:
+  tom adulto
+  chance = 15%
+  caso(a, b)
+  crônica "🤫 Entre povos que se odeiam, {a} e {b} se encontram às escondidas {no celeiro|na beira do rio|na casa abandonada}."
+`,
+  },
   {
     nome: 'Relíquia amaldiçoada (item)',
     desc: 'Um anel único que dá lábia e poder, mas corrói a saúde e o humor; ladrões o cobiçam e ele passa de mão em mão.',

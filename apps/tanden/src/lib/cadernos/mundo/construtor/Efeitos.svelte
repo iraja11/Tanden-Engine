@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CAMPOS_PESSOA, CAMPOS_RELACAO, type Catalogo, type Consequencia, type Quem } from '@tanden/core';
+  import { CAMPOS_PESSOA, CAMPOS_RELACAO, ESTADOS_VIDA, type Catalogo, type Consequencia, type Quem } from '@tanden/core';
 
   // Lista de efeitos ("acontece..."): mudar valores da pessoa ou da relação,
   // traços, romance, briga, morte, memória, evento ou código livre.
@@ -24,6 +24,9 @@
     ['ferir', 'fica ferido', false],
     ['matar', 'morre', false],
     ['lembrar', 'guarda uma memória do outro', true],
+    ['vincular', 'ganham um vínculo', true],
+    ['desvincular', 'perdem um vínculo', true],
+    ['estado', 'fica num estado por um tempo (sapo, preso...)', false],
     ['disparar', 'dispara um evento', false],
     ['livre', 'código livre', false],
   ];
@@ -43,11 +46,14 @@
       case 'ferir': case 'matar': return { k, quem: dupla ? 'b' : 'a', texto: '' };
       case 'lembrar': return { k, de: 'b', texto: 'nunca vou esquecer', valor: -10 };
       case 'disparar': return { k, evento: 'meu_evento' };
+      case 'vincular': case 'desvincular': return { k, vinculo: vinculos[0] ?? 'amigos' };
+      case 'estado': return { k, quem: 'a', estado: 'amaldicoado', meses: 6 };
       case 'livre': return { k, codigo: 'a.humor += 1' };
     }
     return null;
   }
   const rotulo = (e: Consequencia) => KINDS.find(([k]) => k === e.k)?.[1] ?? e.k;
+  const vinculos = $derived([...[...cat.vinculos.values()].map((v) => v.nome), 'amigos', 'rivais', 'inimigos', 'namoro']);
 </script>
 
 <div class="efs">
@@ -85,6 +91,11 @@
       {:else if e.k === 'ferir' || e.k === 'matar'}<input bind:value={e.texto} placeholder={e.k === 'matar' ? 'como morre' : 'marca (cicatriz, manco...)'} />
       {:else if e.k === 'lembrar'}<input bind:value={e.texto} placeholder="o que lembra" /><input type="number" bind:value={e.valor} title="pontos de opinião" />
       {:else if e.k === 'disparar'}<input bind:value={e.evento} placeholder="nome do evento" />
+      {:else if e.k === 'vincular' || e.k === 'desvincular'}<select bind:value={e.vinculo}>{#each vinculos as v (v)}<option value={v}>{v}</option>{/each}</select>
+      {:else if e.k === 'estado'}
+        <input bind:value={e.estado} list="cons-estados" placeholder="sapo, preso, amaldicoado..." />
+        <datalist id="cons-estados">{#each Object.entries(ESTADOS_VIDA) as [k, v] (k)}<option value={k}>{v.icone} {v.nome}</option>{/each}</datalist>
+        <span class="k">por</span><input type="number" min="1" bind:value={e.meses} /><span class="k">meses</span>
       {:else if e.k === 'livre'}<textarea bind:value={e.codigo} rows="2"></textarea>{/if}
       <button class="x" onclick={() => efeitos.splice(i, 1)} aria-label="Tirar efeito">×</button>
     </div>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { BIG5_NAMES, HABILIDADES, genomaTexto, type Comando, type Meta, type Relacao, type Vidas } from '@tanden/core';
+  import { BIG5_NAMES, ESTADOS_VIDA, HABILIDADES, TONS_VIDA, genomaTexto, type Comando, type Meta, type Relacao, type Vidas } from '@tanden/core';
   import { rise } from '../../../motion';
   import LinkText from '../LinkText.svelte';
   import { vidas } from './vidas.svelte';
@@ -47,6 +47,23 @@
     amor: 'encontrar um amor', familia: 'ter uma família', riqueza: 'ficar rico', vinganca: 'vingança', fama: 'ficar famoso', paz: 'viver em paz', conquistar: 'conquistar', saber: 'aprender tudo',
   };
   const VINC: Record<string, string> = { namoro: '♥ namoro', noivado: '💍 noivado', amantes: '🤫 amantes', amigos: '🤝 amigos', rivais: '⚡ rivais', inimigos: '⚔ inimigos', ex: 'ex' };
+  /** nome do vínculo para mostrar: os de fábrica, ou os do mundo (com símbolo e papel) */
+  function vincNome(v: string, outro: string): string {
+    if (VINC[v]) return VINC[v]!;
+    const d = sim.cat.vinculos.get(v);
+    if (!d) return v;
+    const papel = d.papeis ? sim.papel(outro, id, v) : null;
+    return `${d.simbolo ? `${d.simbolo} ` : ''}${d.secreto ? '🤫 ' : ''}${papel ?? d.nome.toLowerCase()}`;
+  }
+  const VINC_EDIT = $derived([
+    { id: 'casados', nome: '♥ casados' }, { id: 'namoro', nome: '♥ namoro' }, { id: 'noivado', nome: '💍 noivado' }, { id: 'amantes', nome: '🤫 amantes' },
+    { id: 'amigos', nome: '🤝 amigos' }, { id: 'rivais', nome: '⚡ rivais' }, { id: 'inimigos', nome: '⚔ inimigos' },
+    ...[...sim.cat.vinculos.values()].map((v) => ({ id: v.id, nome: `${v.simbolo ? `${v.simbolo} ` : ''}${v.nome}${v.papeis ? ` (${p?.nome.split(' ')[0]} é ${v.papeis[0]})` : ''}` })),
+  ]);
+  const temV = (v: string) => { void vidas.ver; return v === 'casados' ? p?.conjuge === alvo : sim.temVinc(id, alvo, v); };
+  let acaso = $state('');
+  const acasos = $derived.by(() => { void vidas.ver; return p && viva ? [...sim.acontecimentosPara(p.id, null), ...sim.acontecimentosPara(p.id, alvo || null)] : []; });
+  const TOMI = Object.fromEntries(TONS_VIDA.map((t) => [t.id, t.icone])) as Record<string, string>;
 
   // ------------------------------------------------ influência
   let alvo = $state('');
@@ -96,6 +113,8 @@
           · {viva ? (info.onde === null ? 'na estrada' : `em ${sim.lugarNome(info.onde)}`) : `morreu ${p.causa ?? ''} em ${sim.data(p.morte!)}`}
           {#if p.orientacao !== 'hetero'} · {({ homo: 'homo', bi: 'bi', ace: 'assexual', hetero: '' })[p.orientacao]}{/if}
           {#if p.casa} · casa {p.casa}{/if}
+          {#if sim.etniaNome(p)} · povo {sim.etniaNome(p)}{/if}
+          {#if sim.guerras.faccaoDe(p)} · ⚑ {sim.guerras.faccaoDe(p)!.nome}{#if sim.guerras.vivas().some((f) => f.lider === p.id)} 👑{/if}{/if}
         </p>
       </div>
       <div class="hacts">
@@ -117,7 +136,8 @@
         <div><span>dinheiro</span><small class="coin">🪙 {Math.round(p.dinheiro)}</small></div>
       </div>
       <p class="meta">🎯 {p.meta ? `${META[p.meta.tipo]}${p.meta.alvo ? `: ${nome(p.meta.alvo)}` : ''}` : 'sem meta ainda'}{#if p.gravidez} · 🤰 grávida há {sim.t - p.gravidez.desde} {sim.t - p.gravidez.desde === 1 ? 'mês' : 'meses'}{/if}
-        {#each Object.keys(p.estados) as e (e)}{#if e !== 'bebado' && e !== 'brigou'} · {({ enlutado: '🖤 de luto', doente: '🤒 doente', vigiado: '👁 vigiada' } as Record<string, string>)[e] ?? e}{/if}{/each}</p>
+        {#each Object.keys(p.estados) as e (e)}{#if e !== 'bebado' && e !== 'brigou' && (p.estados[e] ?? 0) >= sim.t} · {ESTADOS_VIDA[e] ? `${ESTADOS_VIDA[e].icone} ${ESTADOS_VIDA[e].nome}` : e}{/if}{/each}
+        {#if sim.guerras.front(p)} · ⚔ no front ({sim.guerras.front(p)!.nome}){/if}</p>
     {/if}
 
     <section>
@@ -225,7 +245,7 @@
             <small class="num" style:color={cor(r.opiniao)}>{r.opiniao > 0 ? '+' : ''}{r.opiniao}</small>
             <span class="tags">
               {#if r.parentesco}<em>{r.parentesco}</em>{/if}
-              {#each r.vinculos as v (v)}<em>{VINC[v] ?? v}</em>{/each}
+              {#each r.vinculos as v (v)}{#if v !== 'ex' || r.vinculos.length === 1}<em>{vincNome(v, r.id)}</em>{/if}{/each}
               {#if r.atracao > 40}<em title="Atração">🔥{r.atracao}</em>{/if}
               {#if r.mem.length}<button class="mem" onclick={() => (aberta = aberta === r.id ? null : r.id)} title="Memórias">💭{r.mem.length}</button>{/if}
             </span>
@@ -269,6 +289,17 @@
           <div class="solo">
             {#each sozinho.filter((a) => a.pode) as a (a.id)}<button class="mini" onclick={() => fazer(a.id, null)}>{a.nome}</button>{/each}
           </div>
+          <div class="row">
+            <select bind:value={acaso} aria-label="Fazer acontecer">
+              <option value="">🎲 fazer acontecer…</option>
+              {#each TONS_VIDA as t (t.id)}
+                <optgroup label={`${t.icone} ${t.nome}`}>
+                  {#each acasos.filter((x) => x.tom === t.id) as x (x.id)}<option value={x.id} disabled={!x.pode}>{x.nome}{sim.acontecimentosPara(p.id, alvo || null).some((y) => y.id === x.id) ? ` (com ${sim.pessoa(alvo)?.nome.split(' ')[0] ?? 'o outro'})` : ''}{x.pode ? '' : ' (não cabe agora)'}</option>{/each}
+                </optgroup>
+              {/each}
+            </select>
+            <button class="primary sm" disabled={!acaso} onclick={() => { const x = acasos.find((y) => y.id === acaso); if (x) cmd({ c: 'acontecer', id: x.id, a: p.id, b: sim.acontecimentosPara(p.id, alvo || null).some((y) => y.id === x.id) ? alvo : null }); acaso = ''; }}>{acaso ? (TOMI[acasos.find((y) => y.id === acaso)?.tom ?? ''] ?? '') : ''} Acontecer</button>
+          </div>
         {:else if painel === 'sussurrar'}
           <div class="row">
             <select bind:value={sussurro}>
@@ -284,6 +315,12 @@
             <input type="range" min={eixo === 'intimidade' || eixo === 'atracao' ? 0 : -100} max="100" bind:value={valor} />
             <small class="num">{valor}</small>
             <button class="primary sm" onclick={() => cmd({ c: 'relacao', a: p.id, b: alvo, campo: eixo, valor: eixo === 'atracao' ? valor - sim.atracao(p.id, alvo) + sim.visao(p.id, alvo).atracao : eixo === 'intimidade' ? valor - sim.intimidade(p.id, alvo) + sim.visao(p.id, alvo).intimidade : valor })}>Definir</button>
+          </div>
+          <p class="dim small">Vínculos com {sim.pessoa(alvo)?.nome.split(' ')[0] ?? 'o outro'} (clique para ligar ou desfazer):</p>
+          <div class="solo">
+            {#each VINC_EDIT as v (v.id)}
+              <button class="mini" class:ligado={temV(v.id)} onclick={() => cmd({ c: 'vinculo', a: p.id, b: alvo, v: v.id, on: !temV(v.id) })}>{v.nome}</button>
+            {/each}
           </div>
         {:else}
           <div class="row">
@@ -303,6 +340,20 @@
             </select>
             <button class="ghost sm" disabled={!destino} onclick={() => { cmd({ c: 'mudar', p: p.id, lugar: destino }); destino = ''; }}>Mudar</button>
           </div>
+          {#if sim.cat.etnias.size || sim.guerras.faccoes.size}
+            <div class="row">
+              {#if sim.cat.etnias.size}
+                <select value={p.etnia ?? ''} onchange={(e) => cmd({ c: 'campo', p: p.id, campo: 'etnia', valor: (e.currentTarget as HTMLSelectElement).value || null })} aria-label="Povo">
+                  <option value="">sem povo</option>{#each [...sim.cat.etnias.values()] as et (et.id)}<option value={et.id}>{et.nome}</option>{/each}
+                </select>
+              {/if}
+              {#if sim.guerras.faccoes.size}
+                <select value={p.faccao ?? ''} onchange={(e) => cmd({ c: 'campo', p: p.id, campo: 'faccao', valor: (e.currentTarget as HTMLSelectElement).value || null })} aria-label="Facção">
+                  <option value="">sem facção</option>{#each sim.guerras.vivas() as f (f.id)}<option value={f.id}>⚑ {f.nome}</option>{/each}
+                </select>
+              {/if}
+            </div>
+          {/if}
           <div class="row">
             <button class="ghost sm" onclick={() => cmd({ c: 'campo', p: p.id, campo: 'dinheiro', valor: Math.round(p.dinheiro + 50) })}>🪙 +50</button>
             <button class="ghost sm" onclick={() => cmd({ c: 'campo', p: p.id, campo: 'saude', valor: 100 })}>❤ curar</button>
@@ -403,4 +454,5 @@
   .ghost { border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; background: var(--surface-2); color: var(--ink); }
   .sm { font-size: 12.5px; }
   .danger:hover { border-color: var(--crit); color: var(--crit); }
+  .mini.ligado { border-color: var(--ember); background: color-mix(in srgb, var(--ember) 18%, var(--surface-2)); }
 </style>

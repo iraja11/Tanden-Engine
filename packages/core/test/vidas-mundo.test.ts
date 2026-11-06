@@ -387,3 +387,37 @@ describe('acontecimentos com tom', () => {
     expect(anoDe(a.t)).toBe(320);
   });
 });
+
+describe('construtor: receitas e formulários novos', () => {
+  it('todas as receitas compilam sem erro', async () => {
+    const { RECEITAS } = await import('../src/index');
+    const prog = compileRules(RECEITAS.map((r, i) => ({ path: `r${i}`, code: r.codigo })));
+    expect(prog.issues).toEqual([]);
+    expect(prog.ethnicities.length).toBeGreaterThanOrEqual(2);
+    expect(prog.bonds.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('etnia, vínculo, público e tom geram regras válidas', async () => {
+    const { etniaRegras, vinculoRegras, tracoRegras, mecanicaRegras, eventoRegras, publicoVazio } = await import('../src/index');
+    const codigo = [
+      etniaRegras({ nome: 'Élfico', plural: 'Élficos', desc: 'Das florestas', especie: '', olhos: [{ cor: 'verde', pct: 60 }], cabelo: [], altura: 4, ajustes: [{ campo: 'beleza', valor: 5 }],
+        nomesM: 'Aelar, Thranduil', nomesF: 'Lúthien', sobrenomes: '', tracos: [], talvez: [], gostos: 'música', frequencia: 20, afinidades: [{ etnia: '', pontos: 8 }] }),
+      vinculoRegras({ nome: 'Escudeiro', desc: '', simbolo: '🛡', papelA: 'cavaleiro', papelB: 'escudeiro', secreto: false, exclusivo: true, romantico: false, opiniao: 5,
+        pesos: [{ interacao: 'brigar', mult: 0.3 }], porMes: [{ eixo: 'respeito', valor: 1 }], surge: [{ k: 'idade', quem: 'a', op: '>', valor: 30 }, { k: 'mesma', o: 'faccao' }], chance: 20,
+        acaba: [{ k: 'faixa', quem: 'b', de: 30, ate: 200 }], publico: { ...publicoVazio(), sexo: 'm' }, aoFormar: { efeitos: [{ k: 'estado', quem: 'b', estado: 'orgulhoso', meses: 2 }], cronica: '{b} serve {a}.' },
+        aoAcabar: { efeitos: [], cronica: '' } }),
+      tracoRegras({ nome: 'Ruivo de fogo', feminino: 'Ruiva de fogo', desc: '', categoria: 'congenito', oposto: '', herdavel: 10, pesos: [], afinidades: [], humor: 0, estresse: 0, surge: [], chanceSurge: 10,
+        nasce: 15, publico: { ...publicoVazio(), etnias: ['Élfico'], idadeMin: 0, idadeMax: 0 } }),
+      mecanicaRegras({ tipo: 'par', nome: 'Piada', chance: 20, condicoes: [{ k: 'sexo', quem: 'a', sexo: 'f' }, { k: 'etnia', quem: 'b', etnia: 'Élfico', nao: true }, { k: 'vinculo', vinc: 'Escudeiro' }],
+        efeitos: [{ k: 'vincular', vinculo: 'Escudeiro' }], cronica: '{a} ri de {b}.', tom: 'cômico' }),
+      eventoRegras({ nome: 'Feira', desc: '', chance: 10, dura: 1, global: false, pesos: [], aoComecar: '', aoAcabar: '', todoMes: { efeitos: [], cronica: '', condicoes: [] }, tom: 'sério',
+        publico: { ...publicoVazio(), idadeMin: 18 } }),
+    ].join('\n');
+    const prog = compileRules([{ path: 'c', code: codigo }]);
+    expect(prog.issues).toEqual([]);
+    expect(prog.bonds[0]!.roles).toEqual(['cavaleiro', 'escudeiro']);
+    expect(prog.traits[0]!.filter.ethnicities).toEqual(['elfico']);
+    expect(prog.interactions[0]!.tone).toBe('comico');
+    expect(prog.events[0]!.filter.minAge).toBe(18);
+  });
+});

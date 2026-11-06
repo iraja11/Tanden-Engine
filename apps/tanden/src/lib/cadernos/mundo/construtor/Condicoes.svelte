@@ -19,6 +19,11 @@
     ['relacao', 'um valor da relação (ódio, afeto, dívida...)', true],
     ['traco', 'tem (ou não) um traço', false],
     ['especie', 'é de uma espécie', false],
+    ['etnia', 'é de um povo', false],
+    ['sexo', 'é do sexo', false],
+    ['faixa', 'tem idade entre', false],
+    ['faccao', 'é de uma facção', false],
+    ['mesma', 'os dois são do mesmo povo / facção', true],
     ['vinculo', 'vínculo entre os dois', true],
     ['comprometido', 'está comprometido', false],
     ['adulto', 'é adulto', false],
@@ -31,6 +36,8 @@
   const tracos = $derived([...cat.tracos.values()].sort((a, b) => a.m.localeCompare(b.m, 'pt-BR')));
   const atributos = $derived([...cat.atributos.values()]);
   const especies = $derived([...cat.especies.values()]);
+  const etnias = $derived([...cat.etnias.values()]);
+  const VINCS = $derived(['casados', 'namoro', 'amantes', 'amigos', 'rivais', 'inimigos', 'parentes', ...[...cat.vinculos.values()].map((v) => v.nome)]);
   const conhecidos = $derived(new Set([...CAMPOS_PESSOA.map((c) => c.id), ...atributos.map((a) => a.id)]));
   const conhecidosRel = new Set(CAMPOS_RELACAO.map((c) => c.id));
 
@@ -41,6 +48,11 @@
       case 'traco': return { k: 'traco', quem: 'a', traco: tracos[0]?.id ?? 'corajoso' };
       case 'especie': return { k: 'especie', quem: 'a', especie: especies[0]?.nome ?? 'Humano' };
       case 'vinculo': return { k: 'vinculo', vinc: 'amigos' };
+      case 'etnia': return { k: 'etnia', quem: 'a', etnia: etnias[0]?.nome ?? 'Nórdico' };
+      case 'sexo': return { k: 'sexo', quem: 'a', sexo: 'f' };
+      case 'faixa': return { k: 'faixa', quem: 'a', de: 18, ate: 40 };
+      case 'faccao': return { k: 'faccao', quem: 'a', faccao: '' };
+      case 'mesma': return { k: 'mesma', o: 'etnia' };
       case 'comprometido': case 'gravida': case 'adulto': return { k, quem: 'a' };
       case 'profissao': return { k: 'profissao', quem: 'a', prof: [...cat.profs.values()][0]?.m ?? 'ferreiro' };
       case 'gosto': return { k: 'gosto', quem: 'a', gosto: cat.gostos[0] ?? 'música' };
@@ -60,7 +72,7 @@
       {#if 'quem' in c}
         <select bind:value={c.quem} aria-label="quem">{#each quemOps as [v, l] (v)}<option value={v}>{l}</option>{/each}</select>
       {/if}
-      {#if 'nao' in c || c.k === 'traco' || c.k === 'vinculo' || c.k === 'comprometido' || c.k === 'gravida' || c.k === 'adulto' || c.k === 'profissao' || c.k === 'especie'}
+      {#if 'nao' in c || c.k === 'traco' || c.k === 'vinculo' || c.k === 'comprometido' || c.k === 'gravida' || c.k === 'adulto' || c.k === 'profissao' || c.k === 'especie' || c.k === 'etnia' || c.k === 'faccao' || c.k === 'mesma'}
         <select value={c.nao ? 'nao' : 'sim'} onchange={(e) => { (c as { nao?: boolean }).nao = (e.currentTarget as HTMLSelectElement).value === 'nao'; }} aria-label="sim ou não">
           <option value="sim">—</option><option value="nao">não</option>
         </select>
@@ -91,7 +103,14 @@
       {:else if c.k === 'especie'}
         <input bind:value={c.especie} list="cons-especies" placeholder="Elfo" />
         <datalist id="cons-especies">{#each especies as e (e.id)}<option value={e.nome}></option>{/each}<option value="humano"></option></datalist>
-      {:else if c.k === 'vinculo'}<select bind:value={c.vinc}>{#each ['casados', 'namoro', 'amantes', 'amigos', 'rivais', 'inimigos', 'parentes'] as v (v)}<option value={v}>{v}</option>{/each}</select>
+      {:else if c.k === 'vinculo'}<select bind:value={c.vinc}>{#each VINCS as v (v)}<option value={v}>{v}</option>{/each}</select>
+      {:else if c.k === 'etnia'}
+        <input bind:value={c.etnia} list="cons-etnias" placeholder="Nórdico" />
+        <datalist id="cons-etnias">{#each etnias as e (e.id)}<option value={e.nome}></option>{/each}</datalist>
+      {:else if c.k === 'sexo'}<select bind:value={c.sexo}><option value="f">feminino</option><option value="m">masculino</option></select>
+      {:else if c.k === 'faixa'}<input type="number" min="0" bind:value={c.de} /><span class="k">e</span><input type="number" min="0" bind:value={c.ate} /><span class="k">anos</span>
+      {:else if c.k === 'faccao'}<input bind:value={c.faccao} placeholder="nome da facção" />
+      {:else if c.k === 'mesma'}<select bind:value={c.o}><option value="etnia">povo</option><option value="faccao">facção</option></select>
       {:else if c.k === 'profissao'}<select bind:value={c.prof}>{#each [...cat.profs.values()] as p (p.id)}<option value={p.m}>{p.m}</option>{/each}</select>
       {:else if c.k === 'gosto'}<select bind:value={c.gosto}>{#each cat.gostos as g (g)}<option value={g}>{g}</option>{/each}</select>
       {:else if c.k === 'chance'}<input type="number" min="1" max="100" bind:value={c.pct} /> <span class="k">%</span>

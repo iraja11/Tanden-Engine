@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { anoDe, catalogo, gerarPessoa, idadeDe, pessoaDaFicha, seededRng, type Ajustes, type Categoria, type Efeito, type VidaEvento, type World } from '@tanden/core';
+  import { anoDe, catalogo, gerarPessoa, idadeDe, pessoaDaFicha, seededRng, TONS_VIDA, type Ajustes, type Categoria, type Efeito, type TomVida, type VidaEvento, type World } from '@tanden/core';
+  import GuerrasPainel from './GuerrasPainel.svelte';
   import { rise } from '../../../motion';
   import { cadernos } from '../../cadernos.svelte';
   import Graph from '../../Graph.svelte';
@@ -20,7 +21,7 @@
 
   let criando = $state(false);
   let sel = $state<string | null>(null);
-  let aba = $state<'cronica' | 'teia' | 'numeros' | 'reliquias' | 'mundo'>('cronica');
+  let aba = $state<'cronica' | 'teia' | 'numeros' | 'reliquias' | 'guerras' | 'mundo'>('cronica');
   let busca = $state('');
   let mostrarMortos = $state(false);
 
@@ -82,19 +83,63 @@
   });
 
   // ------------------------------------------------ elenco
+  // filtros do elenco: sexo, espécie, povo, facção, idade, traço e situação (casado, em caso, no front...)
+  let verFiltros = $state(false);
+  const FILTRO0 = { sexo: '', especie: '', etnia: '', faccao: '', idadeMin: 0, idadeMax: 0, traco: '', status: '' };
+  let filtro = $state({ ...FILTRO0 });
+  const nFiltros = $derived(Object.entries(filtro).filter(([k, v]) => v && v !== FILTRO0[k as keyof typeof FILTRO0]).length);
+  const opcoes = $derived.by(() => {
+    void vidas.ver;
+    if (!sim) return { especies: [], etnias: [], faccoes: [], tracos: [], vinculos: [] };
+    const vs = sim.todas();
+    return {
+      especies: [...new Set(vs.map((p) => sim.especieNome(p)))].sort(),
+      etnias: [...new Set(vs.map((p) => sim.etniaNome(p)).filter((x): x is string => !!x))].sort(),
+      faccoes: [...sim.guerras.faccoes.values()].map((f) => ({ id: f.id, nome: f.nome })),
+      tracos: [...new Set(vs.flatMap((p) => p.tracos))].map((id) => ({ id, nome: sim.cat.tracos.get(id)?.m ?? id })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
+      vinculos: [...sim.cat.vinculos.values()].map((v) => ({ id: v.id, nome: v.nome })),
+    };
+  });
+  function passaFiltro(p: import('@tanden/core').Pessoa): boolean {
+    if (!sim) return true;
+    const f = filtro;
+    if (f.sexo && p.sexo !== f.sexo) return false;
+    if (f.especie && sim.especieNome(p) !== f.especie) return false;
+    if (f.etnia && (f.etnia === '—' ? !!p.etnia : sim.etniaNome(p) !== f.etnia)) return false;
+    if (f.faccao && (f.faccao === '—' ? !!sim.guerras.faccaoDe(p) : p.faccao !== f.faccao)) return false;
+    const i = sim.idade(p);
+    if (f.idadeMin && i < f.idadeMin) return false;
+    if (f.idadeMax && i > f.idadeMax) return false;
+    if (f.traco && !p.tracos.includes(f.traco)) return false;
+    switch (f.status) {
+      case '': return true;
+      case 'solteiro': return sim.adulto(p) && !sim.comprometido(p);
+      case 'namoro': return !p.conjuge && !!sim.parceiro(p);
+      case 'casado': return !!p.conjuge;
+      case 'viuvo': return !p.conjuge && !!p.estados['enlutado'];
+      case 'caso': return sim.amantes(p).length > 0;
+      case 'front': return !!sim.guerras.front(p);
+      case 'crianca': return sim.crianca(p);
+      case 'gravida': return !!p.gravidez;
+      case 'conduzido': return p.conduzido;
+      case 'fichas': return !!p.nota;
+      default: return f.status.startsWith('v:') ? sim.comVinculo(p.id, f.status.slice(2)).length > 0 : true;
+    }
+  }
   const gente = $derived.by(() => {
     void vidas.ver;
     if (!sim) return [];
     const q = busca.trim().toLowerCase();
     return sim.todas()
-      .filter((p) => (mostrarMortos || p.morte === null) && (!q || p.nome.toLowerCase().includes(q) || (sim.nomeProf(p) ?? '').toLowerCase().includes(q)))
+      .filter((p) => (mostrarMortos || p.morte === null) && (!q || p.nome.toLowerCase().includes(q) || (sim.nomeProf(p) ?? '').toLowerCase().includes(q)) && passaFiltro(p))
       .map((p) => ({ p, idade: idadeDe(p, sim.t), par: sim.parceiro(p), amantes: sim.amantes(p).length, onde: sim.ondeEsta(p) }))
       .sort((a, b) => Number(a.p.morte !== null) - Number(b.p.morte !== null) || Number(!!b.p.nota) - Number(!!a.p.nota) || a.p.nome.localeCompare(b.p.nome, 'pt-BR'));
   });
 
   // ------------------------------------------------ crônica
-  const CATS: Array<[Categoria, string]> = [['romance', '♥ romance'], ['familia', '👪 família'], ['conflito', '⚔ conflito'], ['social', '💬 social'], ['vida', '🌱 vida'], ['morte', '✝ morte'], ['mundo', '🌍 mundo'], ['regra', '✎ regras'], ['voce', '✋ você']];
+  const CATS: Array<[Categoria, string]> = [['romance', '♥ romance'], ['familia', '👪 família'], ['conflito', '⚔ conflito'], ['social', '💬 social'], ['vida', '🌱 vida'], ['morte', '✝ morte'], ['guerra', '🏴 guerra'], ['acaso', '🎲 acaso'], ['mundo', '🌍 mundo'], ['regra', '✎ regras'], ['voce', '✋ você']];
   let cats = $state<Set<Categoria>>(new Set(CATS.map(([c]) => c)));
+  let tons = $state<Set<TomVida>>(new Set(TONS_VIDA.map((t) => t.id)));
   let soMarcos = $state(true);
   let soSel = $state(false);
   let segredos = $state(true);
@@ -104,7 +149,7 @@
     const out: VidaEvento[] = [];
     for (let i = sim.eventos.length - 1; i >= 0 && out.length < 400; i--) {
       const e = sim.eventos[i]!;
-      if (!cats.has(e.cat) || (soMarcos && e.peso < 2) || (!segredos && e.segredo) || (soSel && sel && !e.quem.includes(sel))) continue;
+      if (!cats.has(e.cat) || (e.tom && !tons.has(e.tom)) || (soMarcos && e.peso < 2) || (!segredos && e.segredo) || (soSel && sel && !e.quem.includes(sel))) continue;
       out.push(e);
     }
     const grupos: Array<{ ano: number; ev: VidaEvento[] }> = [];
@@ -131,7 +176,8 @@
     const e = world.entities.find((x) => x.name.toLowerCase() === t.toLowerCase());
     if (e) onopen(e.path);
   }
-  const ICON: Record<Categoria, string> = { romance: '♥', familia: '👪', conflito: '⚔', social: '💬', vida: '🌱', morte: '✝', mundo: '🌍', regra: '✎', voce: '✋', trabalho: '⚒' };
+  const ICON: Record<Categoria, string> = { romance: '♥', familia: '👪', conflito: '⚔', social: '💬', vida: '🌱', morte: '✝', mundo: '🌍', regra: '✎', voce: '✋', trabalho: '⚒', guerra: '🏴', acaso: '🎲' };
+  const TOM_ICON = Object.fromEntries(TONS_VIDA.map((t) => [t.id, t.icone])) as Record<TomVida, string>;
 
   // ------------------------------------------------ teia
   const VCOR: Record<string, string> = { casados: '♥ casados', namoro: 'namoro', noivado: 'noivado', amantes: '🤫 amantes', amigos: 'amigos', rivais: 'rivais', inimigos: 'inimigos' };
@@ -145,7 +191,12 @@
     for (const [k, set] of sim.vinc) {
       const [a, b] = k.split('|') as [string, string];
       if (!vivosIds.has(a) || !vivosIds.has(b)) continue;
-      for (const v of set) if (v !== 'ex') edges.push({ from: a, to: b, label: VCOR[v] ?? v });
+      for (const v of set) {
+        if (v === 'ex') continue;
+        const d = sim.cat.vinculos.get(v);
+        if (d?.secreto && !segredos) continue;
+        edges.push({ from: a, to: b, label: VCOR[v] ?? (d ? `${d.simbolo ? `${d.simbolo} ` : ''}${d.nome.toLowerCase()}` : v) });
+      }
     }
     for (const p of sim.vivos()) {
       if (p.conjuge && p.id < p.conjuge && vivosIds.has(p.conjuge)) edges.push({ from: p.id, to: p.conjuge, label: VCOR['casados']! });
@@ -178,11 +229,41 @@
     return {
       casados: v.filter((p) => p.conjuge).length / 2, criancas: v.filter((p) => sim.crianca(p)).length, casos: sim.segredos.filter((s) => s.tipo === 'caso' && sim.temVinc(s.sobre[0]!, s.sobre[1]!, 'amantes')).length,
       segredos: sim.segredos.filter((s) => !s.publico).length, profs: [...profs].sort((a, b) => b[1] - a[1]),
+      censo: censo(v),
+      piramide: piramide(v),
     };
   });
+  function conta(l: string[]): Array<[string, number]> {
+    const m = new Map<string, number>();
+    for (const x of l) m.set(x, (m.get(x) ?? 0) + 1);
+    return [...m].sort((a, b) => b[1] - a[1]);
+  }
+  function censo(v: import('@tanden/core').Pessoa[]) {
+    if (!sim) return [];
+    const grupos: Array<{ titulo: string; itens: Array<[string, number]> }> = [
+      { titulo: 'sexo', itens: conta(v.map((p) => (p.sexo === 'f' ? '♀ mulheres' : '♂ homens'))) },
+      { titulo: 'espécie', itens: conta(v.map((p) => sim.especieNome(p))) },
+      { titulo: 'povo', itens: conta(v.map((p) => sim.etniaNome(p) ?? 'sem povo')) },
+      { titulo: 'facção', itens: conta(v.map((p) => sim.guerras.faccaoDe(p)?.nome ?? 'sem facção')) },
+      { titulo: 'situação', itens: conta(v.filter((p) => sim.adulto(p)).map((p) => (p.conjuge ? 'casados' : sim.parceiro(p) ? 'namorando' : p.estados['enlutado'] ? 'de luto' : 'solteiros'))) },
+    ];
+    return grupos.filter((g) => g.itens.length > 1 || (g.itens[0] && !/^sem /.test(g.itens[0][0])));
+  }
+  function piramide(v: import('@tanden/core').Pessoa[]) {
+    if (!sim) return [];
+    const faixas = ['0–9', '10–19', '20–29', '30–39', '40–49', '50–59', '60–69', '70+'];
+    const out = faixas.map((f) => ({ f, m: 0, h: 0 }));
+    for (const p of v) {
+      const i = Math.min(7, Math.floor(sim.idade(p) / 10));
+      if (p.sexo === 'f') out[i]!.m++;
+      else out[i]!.h++;
+    }
+    const max = Math.max(1, ...out.map((x) => Math.max(x.m, x.h)));
+    return out.map((x) => ({ ...x, pm: (x.m / max) * 100, ph: (x.h / max) * 100 })).reverse();
+  }
 
   // ------------------------------------------------ mundo
-  const AJ: Array<[keyof Ajustes, string]> = [['romance', 'romance'], ['violencia', 'violência'], ['fertilidade', 'fertilidade'], ['mortalidade', 'mortalidade'], ['drama', 'drama (fofoca, descobertas)'], ['social', 'vida social']];
+  const AJ: Array<[keyof Ajustes, string]> = [['romance', 'romance'], ['violencia', 'violência'], ['fertilidade', 'fertilidade'], ['mortalidade', 'mortalidade'], ['drama', 'drama (fofoca, descobertas)'], ['social', 'vida social'], ['guerra', 'vontade de guerra (facções)']];
   const EVS: Array<[Efeito['tipo'], string, string]> = [['festa', '🎉 Festa', 'todo mundo se encontra, flerta e bebe'], ['peste', '☠ Peste', 'muita gente adoece'], ['fome', '🌾 Fome', 'menos renda, mais roubo e estresse'], ['guerra', '⚔ Guerra', 'quem sabe lutar vai para o front'], ['fartura', '💰 Fartura', 'mais renda, mais humor']];
   let evLugar = $state<string>('');
   let evMeses = $state(3);
@@ -299,13 +380,37 @@
 
     <div class="corpo" class:comsel={!!sel && tres} bind:clientWidth={largura}>
       <aside class="elenco">
-        <input class="busca" bind:value={busca} placeholder="Buscar pessoa ou profissão" />
+        <div class="busq">
+        <div class="buscar">
+          <input class="busca" bind:value={busca} placeholder="Buscar pessoa ou profissão" />
+          <button class="mini" class:on={verFiltros || nFiltros > 0} onclick={() => (verFiltros = !verFiltros)} title="Filtrar por sexo, espécie, povo, facção, idade, traço e situação">⚙{nFiltros ? ` ${nFiltros}` : ''}</button>
+        </div>
+        {#if verFiltros}
+          <div class="filtro">
+            <select bind:value={filtro.sexo} aria-label="Sexo"><option value="">qualquer sexo</option><option value="f">♀ mulheres</option><option value="m">♂ homens</option></select>
+            {#if opcoes.especies.length > 1}<select bind:value={filtro.especie} aria-label="Espécie"><option value="">qualquer espécie</option>{#each opcoes.especies as e (e)}<option value={e}>{e}</option>{/each}</select>{/if}
+            {#if opcoes.etnias.length}<select bind:value={filtro.etnia} aria-label="Povo"><option value="">qualquer povo</option>{#each opcoes.etnias as e (e)}<option value={e}>{e}</option>{/each}<option value="—">sem povo</option></select>{/if}
+            {#if opcoes.faccoes.length}<select bind:value={filtro.faccao} aria-label="Facção"><option value="">qualquer facção</option>{#each opcoes.faccoes as f (f.id)}<option value={f.id}>{f.nome}</option>{/each}<option value="—">sem facção</option></select>{/if}
+            <span class="idades">idade <input type="number" min="0" bind:value={filtro.idadeMin} aria-label="Idade mínima" /> a <input type="number" min="0" bind:value={filtro.idadeMax} aria-label="Idade máxima" placeholder="∞" /></span>
+            <select bind:value={filtro.traco} aria-label="Traço"><option value="">qualquer traço</option>{#each opcoes.tracos as t (t.id)}<option value={t.id}>{t.nome}</option>{/each}</select>
+            <select bind:value={filtro.status} aria-label="Situação">
+              <option value="">qualquer situação</option>
+              <option value="solteiro">solteiros</option><option value="namoro">namorando / noivos</option><option value="casado">casados</option><option value="viuvo">de luto</option>
+              <option value="caso">🤫 em caso</option><option value="gravida">🤰 grávidas</option><option value="front">⚔ no front</option><option value="crianca">crianças</option>
+              <option value="conduzido">🎮 conduzidos</option><option value="fichas">só fichas</option>
+              {#each opcoes.vinculos as v (v.id)}<option value={`v:${v.id}`}>{v.nome}</option>{/each}
+            </select>
+            <button class="mini" onclick={() => (filtro = { ...FILTRO0 })} disabled={!nFiltros}>limpar</button>
+            <small class="dim">{gente.length} {gente.length === 1 ? 'pessoa' : 'pessoas'}</small>
+          </div>
+        {/if}
+        </div>
         <ul>
           {#each gente as g (g.p.id)}
             <li>
               <button class:on={sel === g.p.id} class:dead={g.p.morte !== null} onclick={() => (sel = sel === g.p.id ? null : g.p.id)}>
                 <span class="nm">{g.p.conduzido ? '🎮 ' : ''}{g.p.nome}</span>
-                <small>{g.idade}{g.p.especie ? ` · ${sim.criatura(g.p) ? '🐾 ' : ''}${sim.especieNome(g.p)}` : ''}{g.p.prof ? ` · ${sim.nomeProf(g.p)}` : ''}{g.par ? (g.p.conjuge ? ' · ♥' : ' · ♡') : ''}{g.amantes ? ' · 🤫' : ''}{g.p.gravidez ? ' · 🤰' : ''}{g.p.morte === null && g.onde === null ? ' · 🐎' : ''}{g.p.estados['enlutado'] ? ' · 🖤' : ''}{g.p.nota ? '' : ' ·  figurante'}</small>
+                <small>{g.idade}{g.p.especie ? ` · ${sim.criatura(g.p) ? '🐾 ' : ''}${sim.especieNome(g.p)}` : ''}{g.p.etnia ? ` · ${sim.etniaNome(g.p)}` : ''}{sim.guerras.front(g.p) ? ' · ⚔' : ''}{sim.bloqueado(g.p) ? ' · 🐸' : ''}{g.p.prof ? ` · ${sim.nomeProf(g.p)}` : ''}{g.par ? (g.p.conjuge ? ' · ♥' : ' · ♡') : ''}{g.amantes ? ' · 🤫' : ''}{g.p.gravidez ? ' · 🤰' : ''}{g.p.morte === null && g.onde === null ? ' · 🐎' : ''}{g.p.estados['enlutado'] ? ' · 🖤' : ''}{g.p.nota ? '' : ' ·  figurante'}</small>
               </button>
             </li>
           {/each}
@@ -327,7 +432,7 @@
           <PessoaPainel {sim} id={sel} onselect={(id) => (sel = id)} onopen={onOpenNote} onclose={() => (sel = null)} />
         {/if}
         <nav class="abas">
-          {#each [['cronica', 'Crônica'], ['teia', 'Teia'], ['numeros', 'Números'], ...(estado?.reliquias.length ? [['reliquias', 'Relíquias']] : []), ['mundo', 'Mundo e ajustes']] as [k, l] (k)}
+          {#each [['cronica', 'Crônica'], ['teia', 'Teia'], ['numeros', 'Números'], ...(estado?.reliquias.length ? [['reliquias', 'Relíquias']] : []), ['guerras', `⚔ Guerras${sim.guerras.emAndamento().length ? ` (${sim.guerras.emAndamento().length})` : ''}`], ['mundo', 'Mundo e ajustes']] as [k, l] (k)}
             <button class:on={aba === k} onclick={() => (aba = k as typeof aba)}>{l}</button>
           {/each}
         </nav>
@@ -341,6 +446,12 @@
             <label class="chk"><input type="checkbox" bind:checked={segredos} /> 🤫 segredos</label>
             {#if sel}<label class="chk"><input type="checkbox" bind:checked={soSel} /> só {sim.pessoa(sel)?.nome.split(' ')[0]}</label>{/if}
           </div>
+          <div class="filtros tons">
+            <span class="dim small">tom do acaso:</span>
+            {#each TONS_VIDA as t (t.id)}
+              <button class:on={tons.has(t.id)} title={t.desc} onclick={() => { const s = new Set(tons); if (s.has(t.id)) s.delete(t.id); else s.add(t.id); tons = s; }}>{t.icone} {t.nome}</button>
+            {/each}
+          </div>
           <ol class="cron">
             {#each eventos as g (g.ano)}
               <li>
@@ -348,7 +459,7 @@
                 <div class="evs">
                   {#each g.ev as e, j (j)}
                     <div class="ev c-{e.cat}" class:marco={e.peso >= 3} class:segredo={e.segredo}>
-                      <span class="ic">{ICON[e.cat]}</span>
+                      <span class="ic" title={e.tom ? TONS_VIDA.find((t) => t.id === e.tom)?.nome : undefined}>{e.tom ? TOM_ICON[e.tom] : ICON[e.cat]}</span>
                       <span class="tx"><small>{sim.data(e.t).split(' ')[0]}</small> <LinkText text={e.texto} color={corDe} onlink={link} /></span>
                     </div>
                   {/each}
@@ -387,6 +498,17 @@
               <div><b>{contagem.segredos}</b><small>segredos guardados</small></div>
             </div>
             {#if contagem.profs.length}<p class="profs">{#each contagem.profs as [n, c] (n)}<span>{n} <b>{c}</b></span>{/each}</p>{/if}
+            <section class="graf">
+              <h4>Pirâmide de idades <small class="dim">♀ à esquerda, ♂ à direita</small></h4>
+              <div class="pir">
+                {#each contagem.piramide as f (f.f)}
+                  <span class="pm"><i style:width={`${f.pm}%`}></i><small>{f.m || ''}</small></span><span class="pf">{f.f}</span><span class="ph"><i style:width={`${f.ph}%`}></i><small>{f.h || ''}</small></span>
+                {/each}
+              </div>
+            </section>
+            {#each contagem.censo as g (g.titulo)}
+              <p class="profs"><b class="ct">{g.titulo}</b>{#each g.itens as [n, c] (n)}<span>{n} <b>{c}</b></span>{/each}</p>
+            {/each}
           {/if}
         {:else if aba === 'reliquias'}
           <section class="relq">
@@ -413,6 +535,8 @@
             {/each}
             <p class="dim small">Itens únicos passam por herança, roubo e achados. Dê ou tire itens no painel de cada pessoa; crie itens na aba Regras (🗡 Item) ou com fichas tipo: item.</p>
           </section>
+        {:else if aba === 'guerras'}
+          <GuerrasPainel {sim} onselect={(id) => (sel = id)} />
         {:else}
           <section class="mundo">
             {#if meusEventos.length}
@@ -434,6 +558,16 @@
               {#each EVS as [t, l, d] (t)}<button class="ghost" onclick={() => vidas.agir({ c: 'evento', tipo: t, lugar: evLugar || null, meses: evMeses })} title={d}>{l}<small>{d}</small></button>{/each}
             </div>
             {#if estado?.efeitos.length}<p class="dim small">Agora: {estado.efeitos.join(' · ')}</p>{/if}
+            <h4>Tom do acaso</h4>
+            <p class="dim small">Quanto de cada tipo de acontecimento a vida apronta (0 = nunca, 1 = normal, 3 = o triplo). Os adultos só acontecem entre adultos.</p>
+            <div class="ajustes">
+              {#each TONS_VIDA as t (t.id)}
+                <label title={t.desc}>{t.icone} {t.nome} <span class="val">×{(estado?.ajustes[t.id] ?? 1).toFixed(1)}</span>
+                  <input type="range" min="0" max="3" step="0.1" value={estado?.ajustes[t.id] ?? 1} onchange={(e) => vidas.agir({ c: 'ajuste', k: t.id, v: Number((e.currentTarget as HTMLInputElement).value) })} />
+                  <small class="dim">{t.desc}</small>
+                </label>
+              {/each}
+            </div>
             <h4>Ajustes do mundo</h4>
             <div class="ajustes">
               {#each AJ as [k, l] (k)}
@@ -494,6 +628,24 @@
   .corpo { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 12px; align-items: start; }
   .corpo.comsel { grid-template-columns: 200px minmax(0, 1fr) minmax(300px, 360px); }
   .elenco { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 8px; display: grid; gap: 6px; position: sticky; top: 8px; max-height: calc(100vh - 120px); overflow: hidden; grid-template-rows: auto 1fr auto auto; }
+  .busq { display: grid; gap: 6px; }
+  .buscar { display: flex; gap: 4px; }
+  .buscar .busca { flex: 1; min-width: 0; }
+  .mini.on { border-color: var(--ember); color: var(--ember-soft); }
+  .filtro { display: grid; gap: 4px; padding: 6px; border: 1px dashed var(--line); border-radius: 9px; }
+  .filtro select { font-size: 12px; padding: 3px 6px; max-width: 100%; }
+  .idades { display: flex; gap: 4px; align-items: center; font-size: 12px; color: var(--muted); }
+  .idades input { width: 52px; padding: 2px 4px; }
+  .tons { margin-top: -4px; }
+  .pir { display: grid; grid-template-columns: 1fr 52px 1fr; gap: 2px 6px; align-items: center; font-size: 11px; }
+  .pir .pf { text-align: center; color: var(--muted); font-family: var(--f-mono); }
+  .pir .pm, .pir .ph { display: flex; gap: 4px; align-items: center; height: 12px; }
+  .pir .pm { flex-direction: row-reverse; }
+  .pir i { display: block; height: 10px; border-radius: 3px; min-width: 1px; }
+  .pir .pm i { background: color-mix(in srgb, #d98fb0 70%, transparent); }
+  .pir .ph i { background: color-mix(in srgb, #7fb6ff 70%, transparent); }
+  .pir small { color: var(--muted); font-family: var(--f-mono); }
+  .ct { color: var(--muted); text-transform: uppercase; font-size: 10.5px; letter-spacing: .1em; align-self: center; }
   .busca { background: var(--void); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); padding: 5px 8px; font-size: 12.5px; }
   .elenco ul { list-style: none; margin: 0; padding: 0; overflow-y: auto; display: grid; gap: 2px; align-content: start; }
   .elenco li button { width: 100%; text-align: left; border: 1px solid transparent; background: none; color: var(--ink); border-radius: 8px; padding: 4px 6px; display: grid; }

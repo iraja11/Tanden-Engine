@@ -919,11 +919,11 @@ function filterLine(q: P, f: RuleFilter): void {
         q.next();
         f.maxAge = signed(q);
       } else if (q.isOp('>') || q.isOp('>=')) {
-        q.next();
-        f.minAge = signed(q);
+        const estrito = q.next().v === '>';
+        f.minAge = signed(q) + (estrito ? 1 : 0);
       } else if (q.isOp('<') || q.isOp('<=')) {
-        q.next();
-        f.maxAge = signed(q);
+        const estrito = q.next().v === '<';
+        f.maxAge = signed(q) - (estrito ? 1 : 0);
       } else {
         f.minAge = signed(q);
         if (q.isKey('a', 'e', 'ate')) {
