@@ -2,6 +2,7 @@
   import { ask } from '../ask.svelte';
   import { NF, formatGeneral, parseRect, type ChartType } from '@tanden/core';
   import { sheets } from './sheets.svelte';
+  import { files } from '../files/files.svelte';
   import { SheetCtl } from './ctl.svelte';
   import Grid from './Grid.svelte';
   import FormulaBar from './FormulaBar.svelte';
@@ -73,6 +74,13 @@
     el.select();
   }
 
+  async function removeBook() {
+    const p = sheets.active;
+    if (!p) return;
+    if (!(await ask.confirm(`Apagar a planilha "${title(p)}"?`, { detail: 'Todas as abas vão junto. Uma cópia fica na lixeira (.trash/) e o aviso deixa desfazer.', ok: 'Apagar', danger: true }))) return;
+    await files.remove(p);
+  }
+
   const brief = (n: number) => formatGeneral(Math.round(n * 1e4) / 1e4);
 </script>
 
@@ -86,6 +94,7 @@
         {#each sheets.list as p (p)}<option value={p}>{title(p)}</option>{/each}
       </select>
       <button class="icon" onclick={() => sheets.create()} title="Nova planilha" aria-label="Nova planilha">+</button>
+      <button class="icon" onclick={removeBook} disabled={!sheets.active} title="Apagar esta planilha" aria-label="Apagar planilha">🗑</button>
       <button onclick={() => fileInput?.click()} title="Importar .xlsx, .ods ou .csv">Importar</button>
       <input bind:this={fileInput} type="file" accept=".xlsx,.xlsm,.ods,.csv,.tsv,.txt,text/csv" multiple hidden onchange={onFile} />
       <div class="menu-wrap">

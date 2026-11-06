@@ -8,6 +8,7 @@
   import { pop } from '../motion';
   import Slide from './Slide.svelte';
   import { slides } from './slides.svelte';
+  import { ask } from '../ask.svelte';
 
   // Tela de slides: texto da apresentação à esquerda, slide atual em destaque
   // e a fila de miniaturas. O cursor no texto escolhe o slide mostrado.
@@ -48,6 +49,18 @@
     const q = query.trim().toLowerCase();
     return (q ? notes.filter((p) => p.toLowerCase().includes(q)) : notes).slice(0, 40);
   });
+
+  async function removeDeck() {
+    const p = path;
+    if (!p) return;
+    if (!(await ask.confirm(`Apagar a apresentação "${name(p)}"?`, { detail: 'Uma cópia fica na lixeira (.trash/) e o aviso deixa desfazer.', ok: 'Apagar', danger: true }))) return;
+    sound.play('close');
+    cur = 0;
+    const next = slides.list.find((x) => x !== p);
+    await files.remove(p);
+    slides.refresh();
+    if (next) slides.open(next);
+  }
 
   function name(p: string) {
     return p.split('/').pop()!.replace(/\.md$/, '');
@@ -110,6 +123,7 @@
       {/if}
     </div>
     <button class="icon" onclick={() => slides.create()} title="Nova apresentação" aria-label="Nova apresentação">+</button>
+    <button class="icon" onclick={removeDeck} disabled={!path} title="Apagar esta apresentação" aria-label="Apagar apresentação">🗑</button>
     <div class="menu-wrap">
       <button onclick={() => { menu = menu === 'note' ? null : 'note'; query = ''; }} aria-haspopup="menu" title="Criar slides a partir de uma nota">Da nota…</button>
       {#if menu === 'note'}

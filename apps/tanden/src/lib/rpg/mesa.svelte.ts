@@ -100,7 +100,7 @@ class Mesa {
     if (this.started) return;
     this.started = true;
     engine.bus.on('*', (e) => {
-      if (e.type === 'note.changed' || e.type === 'note.created' || e.type === 'sync.finished') this.schedule();
+      if (e.type === 'note.changed' || e.type === 'note.created' || e.type === 'note.deleted' || e.type === 'sync.finished') this.schedule();
     });
     this.rebuild();
   }

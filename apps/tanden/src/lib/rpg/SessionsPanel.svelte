@@ -2,6 +2,8 @@
   import { getSection, type Campaign } from '@tanden/core';
   import { cadernos } from '../cadernos/cadernos.svelte';
   import { mesa } from './mesa.svelte';
+  import { ask } from '../ask.svelte';
+  import { files } from '../files/files.svelte';
 
   let { campaign, onOpenNote }: { campaign: Campaign; onOpenNote: (path: string) => void } = $props();
 
@@ -15,6 +17,13 @@
       return { ...s, resumo, log };
     });
   });
+
+  async function remove(path: string, name: string) {
+    if (!(await ask.confirm(`Apagar "${name}"?`, { detail: 'Uma cópia fica na lixeira (.trash/) e o aviso deixa desfazer.', ok: 'Apagar', danger: true }))) return;
+    if (mesa.sessionPath === path) mesa.setSession(null);
+    await files.remove(path);
+    mesa.rebuild();
+  }
 
   function startNew() {
     const p = mesa.newSession();
@@ -39,6 +48,7 @@
         {:else}
           <button class="ghost sm" onclick={() => { mesa.setSession(s.path); mesa.recording = true; mesa.save(); }} title="As rolagens passam a entrar no registro desta sessão">Anotar rolagens aqui</button>
         {/if}
+        <button class="ghost sm" onclick={() => remove(s.path, s.name)} title="Apagar esta sessão" aria-label={`Apagar ${s.name}`}>🗑</button>
       </header>
       {#if s.resumo}<p class="resumo">{s.resumo.length > 320 ? `${s.resumo.slice(0, 317)}…` : s.resumo}</p>{:else}<p class="dim small">Sem resumo ainda. Escreva em <code>## Resumo</code> para a próxima sessão já começar com ele.</p>{/if}
       {#if s.log}<p class="dim small">{s.log} {s.log === 1 ? 'linha' : 'linhas'} no registro</p>{/if}
