@@ -7,3 +7,5 @@ export * from './combate';
 export * from './elenco';
 export * from './salvar';
 export * from './mecanicas';
+export * from './guerras';
+export * from './acontecimentos';

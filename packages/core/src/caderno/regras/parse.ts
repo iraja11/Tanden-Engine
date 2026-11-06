@@ -608,7 +608,37 @@ export interface RuleAction { name: string; type: string; where: Expr | null; bo
 export interface RuleHandler { event: string; label: string; params: string[]; paramsRaw: string[]; type: string | null; where: Expr | null; body: Stmt[]; src: Src }
 export interface RuleGroup { name: string; label: string; v: string; from: string; where: Expr | null; src: Src }
 export interface RuleParty { v: string; type: string }
-export interface RuleInteraction { name: string; a: RuleParty; b: RuleParty | null; where: Expr | null; attraction: Expr | null; chance: Expr | null; body: Stmt[]; src: Src }
+export interface RuleInteraction { name: string; a: RuleParty; b: RuleParty | null; where: Expr | null; attraction: Expr | null; chance: Expr | null; body: Stmt[]; src: Src; tone?: string }
+
+/**
+ * Para quem vale (traço, atributo, profissão, evento, vínculo): `para espécie "Elfo"`,
+ * `para etnia "Nórdico"`, `para sexo feminino`, `para idade 16 a 60`, `para facção "Coroa"`.
+ * Listas vazias e null = qualquer um.
+ */
+export interface RuleFilter {
+  species: string[];
+  ethnicities: string[];
+  sex: 'f' | 'm' | null;
+  minAge: number | null;
+  maxAge: number | null;
+  factions: string[];
+}
+export const emptyFilter = (): RuleFilter => ({ species: [], ethnicities: [], sex: null, minAge: null, maxAge: null, factions: [] });
+export const filterIsEmpty = (f: RuleFilter | null | undefined): boolean =>
+  !f || (!f.species.length && !f.ethnicities.length && !f.sex && f.minAge === null && f.maxAge === null && !f.factions.length);
+
+/** Tons dos acontecimentos: o mundo regula quanto de cada um quer ver. */
+export const TONS = ['fantasia', 'comico', 'adulto', 'serio'] as const;
+export type Tom = (typeof TONS)[number];
+/** "cômico", "comédia", "+18" → id do tom (ou null). */
+export function tomDe(s: string): Tom | null {
+  const k = fold(s).trim();
+  if (/^(fantas|magi|mistic|sobrenat)/.test(k)) return 'fantasia';
+  if (/^(comic|comed|humor|engracad|pastel)/.test(k)) return 'comico';
+  if (/^(adult|18|picant|mature|sensual|safad)/.test(k)) return 'adulto';
+  if (/^(seri|drama|sombri|grave|realis)/.test(k)) return 'serio';
+  return null;
+}
 export interface RuleGlobal { name: string; value: Expr; src: Src }
 /** Traço de personalidade declarado nas regras (entra no catálogo da simulação de vidas). */
 export interface RuleTrait {
@@ -631,6 +661,10 @@ export interface RuleTrait {
   /** surge sozinho na pessoa quando a condição vale (conferido uma vez por ano) */
   emerge: Expr | null;
   emergeChance: number;
+  /** chance de nascer com o traço (0 a 1), para quem passa no filtro */
+  birth: number;
+  /** quem pode ter: espécie, etnia, sexo, idade, facção */
+  filter: RuleFilter;
   src: Src;
 }
 /** Profissão declarada nas regras. */
@@ -644,6 +678,7 @@ export interface RuleProfession {
   risk: number;
   travels: boolean;
   requires: Expr | null;
+  filter: RuleFilter;
   src: Src;
 }
 
@@ -663,6 +698,8 @@ export interface RuleAttribute {
   perYear: number;
   /** só estas espécies têm (vazio = todos) */
   only: string[];
+  /** quem tem: espécie, etnia, sexo, idade, facção */
+  filter: RuleFilter;
   desc: string;
   src: Src;
 }
@@ -743,6 +780,68 @@ export interface RuleEvent {
   onEnd: Stmt[];
   /** ajusta o peso das interações enquanto dura (id → ×) */
   weights: Record<string, number>;
+  /** fantasia, comico, adulto, serio: o mundo regula a chance */
+  tone?: string;
+  /** quem sente o `todo mês` */
+  filter: RuleFilter;
+  src: Src;
+}
+
+/** Povo, etnia ou cultura: aparência, nomes, traços, gostos e o que pensa dos outros povos. */
+export interface RuleEthnicity {
+  id: string;
+  name: string;
+  plural: string;
+  desc: string;
+  /** espécie a que pertence (vazio = qualquer) */
+  species: string | null;
+  /** cor dos olhos e do cabelo mais comuns ("azul" → 0,6) */
+  eyes: Record<string, number>;
+  hair: Record<string, number>;
+  /** ajuste de altura (cm) */
+  height: number;
+  /** ajustes de corpo e atributos (força +5) */
+  mods: Record<string, number>;
+  namesM: string[];
+  namesF: string[];
+  surnames: string[];
+  traits: string[];
+  maybe: Record<string, number>;
+  tastes: string[];
+  /** fração dos figurantes (da espécie) que é deste povo */
+  frequency: number;
+  /** opinião sobre gente de outro povo (id → pontos; "" = o próprio) */
+  affinity: Record<string, number>;
+  src: Src;
+}
+
+/** Vínculo inventado pelo mundo (irmãos de sangue, mentor e aprendiz, juramento, rivais de amor...). */
+export interface RuleBond {
+  id: string;
+  name: string;
+  desc: string;
+  symbol: string;
+  /** papéis de um vínculo com dois lados diferentes ("mentor", "aprendiz"); null = os dois iguais */
+  roles: [string, string] | null;
+  secret: boolean;
+  /** só um de cada vez por pessoa */
+  exclusive: boolean;
+  /** conta como romance (a pessoa fica comprometida) */
+  romantic: boolean;
+  /** opinião extra entre os dois */
+  opinion: number;
+  /** muda a vontade de cada interação entre os dois */
+  weights: Record<string, number>;
+  /** muda a relação dos dois todo mês (afeto +1, confiança -2) */
+  perMonth: Record<string, number>;
+  /** forma sozinho entre dois que se cruzam (`a` e `b`), com chance por ano */
+  emerge: Expr | null;
+  emergeChance: number;
+  /** desfaz sozinho quando isto vale */
+  breaks: Expr | null;
+  filter: RuleFilter;
+  onForm: Stmt[];
+  onBreak: Stmt[];
   src: Src;
 }
 /** Uma etapa de trama: corre quando chega a vez dela e espera `months` antes da próxima. */
@@ -758,6 +857,7 @@ export interface RuleScheme {
   stages: RuleStage[];
   onFail: Stmt[];
   onDone: Stmt[];
+  tone?: string;
   src: Src;
 }
 
@@ -783,13 +883,71 @@ export interface Program {
   schemes: RuleScheme[];
   items: RuleItem[];
   events: RuleEvent[];
+  ethnicities: RuleEthnicity[];
+  bonds: RuleBond[];
   issues: RuleIssue[];
 }
 
 export const emptyProgram = (): Program => ({
   types: [], groups: [], computed: [], actions: [], handlers: [], interactions: [], globals: [], traits: [], professions: [], tastes: [],
-  attributes: [], species: [], schemes: [], items: [], events: [], issues: [],
+  attributes: [], species: [], schemes: [], items: [], events: [], ethnicities: [], bonds: [], issues: [],
 });
+
+/** Lê o resto de uma linha `para ...` (pode juntar com "e": para sexo feminino e idade 16 a 60). */
+function filterLine(q: P, f: RuleFilter): void {
+  const lista = (out: string[]) => {
+    for (;;) {
+      out.push(fold(str(q, 'um nome entre aspas')).trim());
+      if (!q.isOp(',')) break;
+      q.next();
+    }
+  };
+  for (;;) {
+    const t = q.next();
+    const k = t.key;
+    if (k === 'especie' || k === 'especies' || k === 'raca' || k === 'racas') lista(f.species);
+    else if (k === 'etnia' || k === 'etnias' || k === 'povo' || k === 'povos' || k === 'cultura' || k === 'culturas') lista(f.ethnicities);
+    else if (k === 'faccao' || k === 'faccoes' || k === 'reino' || k === 'reinos') lista(f.factions);
+    else if (k === 'sexo' || k === 'genero') {
+      const v = fold(q.next().v);
+      f.sex = /^(f|fem|mulher)/.test(v) ? 'f' : /^(m|masc|homem)/.test(v) ? 'm' : null;
+    } else if (k === 'mulheres' || k === 'femininas' || k === 'feminino') f.sex = 'f';
+    else if (k === 'homens' || k === 'masculinos' || k === 'masculino') f.sex = 'm';
+    else if (k === 'idade' || k === 'idades') {
+      if (q.isKey('de', 'entre')) q.next();
+      if (q.isKey('ate')) {
+        q.next();
+        f.maxAge = signed(q);
+      } else if (q.isOp('>') || q.isOp('>=')) {
+        q.next();
+        f.minAge = signed(q);
+      } else if (q.isOp('<') || q.isOp('<=')) {
+        q.next();
+        f.maxAge = signed(q);
+      } else {
+        f.minAge = signed(q);
+        if (q.isKey('a', 'e', 'ate')) {
+          q.next();
+          f.maxAge = signed(q);
+        }
+      }
+      if (q.isKey('anos')) q.next();
+    } else if (k === 'adultos') f.minAge = 18;
+    else if (k === 'criancas') f.maxAge = 15;
+    else if (k === 'velhos' || k === 'idosos') f.minAge = 60;
+    else throw q.err(`"para" aceita espécie, etnia, facção, sexo e idade; veio "${t.v}"`);
+    if (!q.isKey('e')) break;
+    q.next();
+  }
+}
+
+/** `tom cômico` → "comico" (erro se não for um dos quatro). */
+function toneLine(q: P): string {
+  const t = q.next().v;
+  const tom = tomDe(t);
+  if (!tom) throw q.err(`tom de quê? Vale fantasia, cômico, adulto ou sério; veio "${t}"`);
+  return tom;
+}
 
 /** "+50%" → 1,5; "-30%" → 0,7; "* 2" ou "x2" → 2; "2" → 2. */
 function multiplier(p: P): number {
@@ -966,6 +1124,7 @@ function decl(prog: Program, l: Line): void {
       needKids(p, l);
       let attraction: Expr | null = null;
       let chance: Expr | null = null;
+      let tone: string | undefined;
       const rest: Line[] = [];
       for (const kid of l.kids) {
         const f = kid.toks[0]!;
@@ -975,9 +1134,13 @@ function decl(prog: Program, l: Line): void {
           q.end();
           if (f.key === 'chance') chance = e;
           else attraction = e;
+        } else if (f.k === 'id' && f.key === 'tom' && kid.toks.length === 2 && !kid.kids.length) {
+          const q = new P(kid.toks.slice(1), kid.src);
+          tone = toneLine(q);
+          q.end();
         } else rest.push(kid);
       }
-      prog.interactions.push({ name, a, b, where, attraction, chance, body: parseBlock(rest), src });
+      prog.interactions.push({ name, a, b, where, attraction, chance, body: parseBlock(rest), src, ...(tone ? { tone } : {}) });
       return;
     }
     case 'traco': {
@@ -988,7 +1151,7 @@ function decl(prog: Program, l: Line): void {
       p.endHeader();
       const t: RuleTrait = {
         id: fold(m).trim(), m, f, opposite: null, inherit: 0, desc: '', category: 'personalidade', weights: {}, affinity: {}, mood: 0, stress: 0, mods: {},
-        emerge: null, emergeChance: 1, src,
+        emerge: null, emergeChance: 1, birth: 0, filter: emptyFilter(), src,
       };
       for (const kid of l.kids) {
         const q = new P(kid.toks, kid.src);
@@ -1008,12 +1171,18 @@ function decl(prog: Program, l: Line): void {
           q.key('onde', 'se', 'quando');
           t.emerge = q.expr();
         } else if (kk === 'chance') t.emergeChance = pct(q);
-        else if (kk === 'ajuste' || kk === 'bonus') {
+        else if (kk === 'para' || kk === 'so') {
+          if (kk === 'so' && q.isKey('para')) q.next();
+          filterLine(q, t.filter);
+        } else if ((kk === 'nasce' && q.isKey('com')) || (kk === 'ao' && q.isKey('nascer')) || kk === 'nascenca') {
+          if (q.isKey('com', 'nascer')) q.next();
+          t.birth = pct(q);
+        } else if (kk === 'ajuste' || kk === 'bonus') {
           const words: string[] = [];
           while (q.peek() && (q.peek()!.k === 'id' || q.peek()!.k === 'str')) words.push(fold(q.next().v).trim());
           if (!words.length) throw q.err('ajuste de quê? (ex.: ajuste força +10)');
           t.mods[words.join(' ').replace(/_/g, ' ')] = signed(q);
-        } else throw q.err(`dentro de "traço" vale oposto, herdável, descrição, categoria, peso, afinidade, humor, estresse, ajuste, surge e chance; veio "${kid.toks[0]!.v}"`);
+        } else throw q.err(`dentro de "traço" vale oposto, herdável, descrição, categoria, peso, afinidade, humor, estresse, ajuste, surge, chance, nasce com e para; veio "${kid.toks[0]!.v}"`);
         q.end();
       }
       prog.traits.push(t);
@@ -1025,7 +1194,7 @@ function decl(prog: Program, l: Line): void {
       const m = str(p, 'o nome da profissão entre aspas');
       const f = p.done() ? m : str(p, 'a forma feminina entre aspas');
       p.endHeader();
-      const t: RuleProfession = { id: fold(m).trim(), m, f, income: 4, skill: 'oficio', status: 2, risk: 0, travels: false, requires: null, src };
+      const t: RuleProfession = { id: fold(m).trim(), m, f, income: 4, skill: 'oficio', status: 2, risk: 0, travels: false, requires: null, filter: emptyFilter(), src };
       for (const kid of l.kids) {
         const q = new P(kid.toks, kid.src);
         const kk = kid.toks[0]!.key;
@@ -1036,7 +1205,10 @@ function decl(prog: Program, l: Line): void {
         else if (kk === 'risco') t.risk = pct(q);
         else if (kk === 'viaja' || kk === 'viajante') t.travels = true;
         else if (kk === 'requer' || kk === 'exige') t.requires = q.expr();
-        else throw q.err(`dentro de "profissão" vale renda, habilidade, status, risco, viaja e requer; veio "${kid.toks[0]!.v}"`);
+        else if (kk === 'para' || kk === 'so') {
+          if (kk === 'so' && q.isKey('para')) q.next();
+          filterLine(q, t.filter);
+        } else throw q.err(`dentro de "profissão" vale renda, habilidade, status, risco, viaja, requer e para; veio "${kid.toks[0]!.v}"`);
         q.end();
       }
       prog.professions.push(t);
@@ -1059,6 +1231,10 @@ function decl(prog: Program, l: Line): void {
           r.end();
           if (f.key === 'chance') sc.chance = e;
           else sc.attraction = e;
+        } else if (f.k === 'id' && f.key === 'tom' && kid.toks.length === 2 && !kid.kids.length) {
+          q.next();
+          sc.tone = toneLine(q);
+          q.end();
         } else if (f.k === 'id' && f.key === 'etapa') {
           q.next();
           const nome = str(q, 'o nome da etapa entre aspas');
@@ -1174,7 +1350,7 @@ function decl(prog: Program, l: Line): void {
       p.next();
       const name = str(p, 'o nome do evento entre aspas');
       p.endHeader();
-      const ev: RuleEvent = { id: fold(name).trim(), name, chance: 0, months: 1, global: false, where: null, desc: '', onStart: [], monthly: [], onEnd: [], weights: {}, src };
+      const ev: RuleEvent = { id: fold(name).trim(), name, chance: 0, months: 1, global: false, where: null, desc: '', onStart: [], monthly: [], onEnd: [], weights: {}, filter: emptyFilter(), src };
       for (const kid of l.kids) {
         const q = new P(kid.toks, kid.src);
         const kk = kid.toks[0]!.key;
@@ -1209,7 +1385,11 @@ function decl(prog: Program, l: Line): void {
         else if (kk === 'onde' || kk === 'se' || kk === 'quando') ev.where = q.expr();
         else if (kk === 'descricao') ev.desc = str(q, 'a descrição entre aspas');
         else if (kk === 'peso') ev.weights[fold(q.ident('o nome de uma interação (ex.: flertar)').v)] = multiplier(q);
-        else throw q.err(`dentro de "evento" vale chance, dura, global, onde, descrição, peso, ao começar:, todo mês:, ao acabar:; veio "${kid.toks[0]!.v}"`);
+        else if (kk === 'tom') ev.tone = toneLine(q);
+        else if (kk === 'para' || kk === 'so') {
+          if (kk === 'so' && q.isKey('para')) q.next();
+          filterLine(q, ev.filter);
+        } else throw q.err(`dentro de "evento" vale chance, dura, global, onde, descrição, peso, tom, para, ao começar:, todo mês:, ao acabar:; veio "${kid.toks[0]!.v}"`);
         q.end();
       }
       prog.events.push(ev);
@@ -1219,7 +1399,7 @@ function decl(prog: Program, l: Line): void {
       // atributo "Sanidade":   (ou numa linha: atributo "Fé" 0 a 10)
       p.next();
       const name = str(p, 'o nome do atributo entre aspas');
-      const at: RuleAttribute = { id: fold(name).trim(), name, min: 0, max: 100, mean: NaN, sd: NaN, inherit: 0, category: 'geral', perYear: 0, only: [], desc: '', src };
+      const at: RuleAttribute = { id: fold(name).trim(), name, min: 0, max: 100, mean: NaN, sd: NaN, inherit: 0, category: 'geral', perYear: 0, only: [], filter: emptyFilter(), desc: '', src };
       const faixa = (q: P) => {
         if (q.isKey('de', 'entre')) q.next();
         at.min = signed(q);
@@ -1242,7 +1422,10 @@ function decl(prog: Program, l: Line): void {
             q.next();
             at.perYear = signed(q);
           } else if (kk === 'descricao') at.desc = str(q, 'a descrição entre aspas');
-          else if (kk === 'so' || kk === 'apenas' || kk === 'somente') {
+          else if (kk === 'para' || ((kk === 'so' || kk === 'apenas' || kk === 'somente') && q.isKey('para') && ['especie', 'especies', 'raca', 'etnia', 'etnias', 'povo', 'cultura', 'sexo', 'genero', 'idade', 'faccao', 'mulheres', 'homens', 'adultos', 'criancas', 'idosos', 'velhos'].includes(q.peek(1)?.key ?? ''))) {
+            if (kk !== 'para') q.next();
+            filterLine(q, at.filter);
+          } else if (kk === 'so' || kk === 'apenas' || kk === 'somente') {
             // só para "Dragão", "Wyvern"
             if (q.isKey('para', 'de', 'em')) q.next();
             for (;;) {
@@ -1250,7 +1433,7 @@ function decl(prog: Program, l: Line): void {
               if (!q.isOp(',')) break;
               q.next();
             }
-          } else throw q.err(`dentro de "atributo" vale faixa, média, desvio, herdável, categoria, por ano, só para e descrição; veio "${kid.toks[0]!.v}"`);
+          } else throw q.err(`dentro de "atributo" vale faixa, média, desvio, herdável, categoria, por ano, só para, para e descrição; veio "${kid.toks[0]!.v}"`);
           q.end();
         }
       } else p.end();
@@ -1348,6 +1531,136 @@ function decl(prog: Program, l: Line): void {
       prog.species.push(sp);
       return;
     }
+    case 'etnia':
+    case 'povo':
+    case 'cultura': {
+      // etnia "Nórdico" "Nórdicos":
+      p.next();
+      const name = str(p, 'o nome do povo entre aspas');
+      const plural = p.done() || p.isOp(':') ? `${name}s` : str(p, 'o plural entre aspas');
+      const et: RuleEthnicity = {
+        id: fold(name).trim(), name, plural, desc: '', species: null, eyes: {}, hair: {}, height: 0, mods: {}, namesM: [], namesF: [], surnames: [], traits: [], maybe: {},
+        tastes: [], frequency: 0, affinity: {}, src,
+      };
+      const lista = (q: P, out: string[], fn = (x: string) => x) => {
+        for (;;) {
+          out.push(fn(str(q, 'um texto entre aspas')));
+          if (!q.isOp(',')) break;
+          q.next();
+        }
+      };
+      if (p.isOp(':')) {
+        p.endHeader();
+        for (const kid of l.kids) {
+          const q = new P(kid.toks, kid.src);
+          const kk = kid.toks[0]!.key;
+          q.next();
+          if (kk === 'descricao') et.desc = str(q, 'a descrição entre aspas');
+          else if (kk === 'especie' || kk === 'raca') et.species = fold(str(q, 'a espécie entre aspas')).trim();
+          else if (kk === 'olhos' || kk === 'cabelo' || kk === 'cabelos') {
+            // olhos "azul" 60%, "verde" 20%
+            for (;;) {
+              const cor = fold(str(q, 'a cor')).trim();
+              (kk === 'olhos' ? et.eyes : et.hair)[cor] = q.peek()?.k === 'num' ? pct(q) : 0.6;
+              if (!q.isOp(',')) break;
+              q.next();
+            }
+          } else if (kk === 'altura') {
+            et.height = signed(q);
+            if (q.isKey('cm')) q.next();
+          } else if (kk === 'nomes' || kk === 'nome') {
+            const g = q.isKey('femininos', 'feminino', 'de', 'masculinos', 'masculino') ? q.next().key : 'masculinos';
+            const fem = g.startsWith('femin') || (g === 'de' && (q.next().key.startsWith('mulher')));
+            lista(q, fem ? et.namesF : et.namesM);
+          } else if (kk === 'sobrenomes' || kk === 'sobrenome' || kk === 'familias' || kk === 'casas') lista(q, et.surnames);
+          else if (kk === 'traco' || kk === 'tracos') lista(q, et.traits, (x) => fold(x).trim());
+          else if (kk === 'pode' && q.isKey('ter')) {
+            q.next();
+            for (;;) {
+              const t = fold(str(q, 'o traço entre aspas')).trim();
+              et.maybe[t] = q.peek()?.k === 'num' ? pct(q) : 0.25;
+              if (!q.isOp(',')) break;
+              q.next();
+            }
+          } else if (kk === 'gosto' || kk === 'gostos') lista(q, et.tastes);
+          else if (kk === 'frequencia' || kk === 'proporcao' || kk === 'comum') et.frequency = pct(q);
+          else if (kk === 'afinidade' || kk === 'opiniao') {
+            const other = q.peek()?.k === 'str' ? fold(q.next().v).trim() : '';
+            et.affinity[other] = signed(q);
+          } else {
+            q.i = 0;
+            if (q.isKey('ajuste', 'atributo')) q.next();
+            const words: string[] = [];
+            while (q.peek() && (q.peek()!.k === 'id' || q.peek()!.k === 'str')) words.push(fold(q.next().v).trim());
+            if (!words.length || !q.peek()) {
+              throw q.err(`dentro de "etnia" vale descrição, espécie, olhos, cabelo, altura, nomes, nomes femininos, sobrenomes, traços, pode ter, gostos, frequência, afinidade ou um ajuste como "força +5"; veio "${kid.toks[0]!.v}"`);
+            }
+            et.mods[words.join(' ').replace(/_/g, ' ')] = signed(q);
+          }
+          q.end();
+        }
+      } else p.end();
+      prog.ethnicities.push(et);
+      return;
+    }
+    case 'vinculo':
+    case 'laco':
+    case 'status': {
+      // vínculo "Irmãos de sangue":
+      p.next();
+      const name = str(p, 'o nome do vínculo entre aspas');
+      p.endHeader();
+      const bd: RuleBond = {
+        id: fold(name).trim(), name, desc: '', symbol: '', roles: null, secret: false, exclusive: false, romantic: false, opinion: 0, weights: {}, perMonth: {},
+        emerge: null, emergeChance: 0.2, breaks: null, filter: emptyFilter(), onForm: [], onBreak: [], src,
+      };
+      for (const kid of l.kids) {
+        const q = new P(kid.toks, kid.src);
+        const kk = kid.toks[0]!.key;
+        const k2 = kid.toks[1]?.key ?? '';
+        if ((kk === 'ao' || kk === 'quando') && ['formar', 'comecar', 'surgir', 'acabar', 'desfazer', 'terminar', 'romper'].includes(k2)) {
+          q.next();
+          q.next();
+          q.endHeader();
+          needKids(q, kid);
+          if (['formar', 'comecar', 'surgir'].includes(k2)) bd.onForm = parseBlock(kid.kids);
+          else bd.onBreak = parseBlock(kid.kids);
+          continue;
+        }
+        q.next();
+        if (kk === 'descricao') bd.desc = str(q, 'a descrição entre aspas');
+        else if (kk === 'simbolo' || kk === 'icone') {
+          bd.symbol = kid.toks.slice(1).map((x) => x.v).join('');
+          q.i = kid.toks.length;
+        } else if (kk === 'papeis' || kk === 'papel') {
+          const a = str(q, 'o primeiro papel entre aspas');
+          if (q.isOp(',') || q.isKey('e')) q.next();
+          bd.roles = [a, str(q, 'o segundo papel entre aspas')];
+        } else if (kk === 'secreto' || kk === 'secreta' || kk === 'segredo') bd.secret = true;
+        else if (kk === 'exclusivo' || kk === 'exclusiva' || kk === 'unico' || kk === 'unica') bd.exclusive = true;
+        else if (kk === 'romantico' || kk === 'romantica' || kk === 'amoroso' || kk === 'amorosa') bd.romantic = true;
+        else if (kk === 'opiniao' || kk === 'afinidade') bd.opinion = signed(q);
+        else if (kk === 'peso') bd.weights[fold(q.ident('o nome de uma interação (ex.: brigar)').v)] = multiplier(q);
+        else if (kk === 'por' && q.isKey('mes')) {
+          q.next();
+          const eixo = fold(q.next().v).trim();
+          bd.perMonth[eixo] = signed(q);
+        } else if (kk === 'surge' || kk === 'forma' || kk === 'aparece') {
+          q.key('onde', 'se', 'quando');
+          bd.emerge = q.expr();
+        } else if (kk === 'chance') bd.emergeChance = pct(q);
+        else if (kk === 'acaba' || kk === 'desfaz' || kk === 'rompe' || kk === 'termina') {
+          q.key('onde', 'se', 'quando');
+          bd.breaks = q.expr();
+        } else if (kk === 'para' || kk === 'so') {
+          if (kk === 'so' && q.isKey('para')) q.next();
+          filterLine(q, bd.filter);
+        } else throw q.err(`dentro de "vínculo" vale descrição, símbolo, papéis, secreto, exclusivo, romântico, opinião, peso, por mês, surge onde, chance, acaba onde, para, ao formar: e ao acabar:; veio "${kid.toks[0]!.v}"`);
+        q.end();
+      }
+      prog.bonds.push(bd);
+      return;
+    }
     case 'gosto':
     case 'gostos': {
       p.next();
@@ -1369,7 +1682,7 @@ function decl(prog: Program, l: Line): void {
       return;
     }
   }
-  throw p.err(`não sei começar com "${l.toks[0]!.v}". Use tipo, grupo, calcular, ação, quando, interação, trama, traço, atributo, espécie, criatura, item, evento, profissão, gosto ou seja`);
+  throw p.err(`não sei começar com "${l.toks[0]!.v}". Use tipo, grupo, calcular, ação, quando, interação, trama, traço, atributo, espécie, criatura, etnia, vínculo, item, evento, profissão, gosto ou seja`);
 }
 
 /** "entre a em X, b em Y onde ..." ou "de p em X onde ..." */

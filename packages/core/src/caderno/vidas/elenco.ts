@@ -5,7 +5,7 @@ import { markovNames, NAME_STYLES, styledName } from '../gerador';
 import { sameTitle } from '../markdown';
 import { parseWorldDate, type Entity, type World } from '../mundo';
 import { fold } from '../regras/parse';
-import { ESSENCIAIS, NOMES_F, NOMES_M, SOBRENOMES, especieId, nomeProf, nomeTraco, profDoTexto, tracoDoTexto, type Catalogo, type Especie } from './catalogo';
+import { ESSENCIAIS, NOMES_F, NOMES_M, SOBRENOMES, especieId, etniaDoTexto, nomeProf, nomeTraco, profDoTexto, tracoDoTexto, type Catalogo, type Especie, type Etnia } from './catalogo';
 import { ajustarAparencia, alturaDe, cabeloDe, genomaAleatorio, genomaTexto, herdar, lerGenoma, olhosDe, tracosDosGenes } from './genetica';
 import type { Vidas } from './motor';
 import { anoDe, BIG5_NAMES, HABILIDADES, type Big5, type Habilidade, type Laco, type Pessoa, type Sexo, type Vinculo } from './tipos';
@@ -90,7 +90,7 @@ function big5DeTracos(cat: Catalogo, tracos: string[], rng: Rng): Big5 {
 }
 
 function personalidadeAleatoria(cat: Catalogo, rng: Rng, n: number): string[] {
-  const pool = [...cat.tracos.values()].filter((t) => t.cat === 'personalidade' && !t.regra?.emerge).map((t) => t.id);
+  const pool = [...cat.tracos.values()].filter((t) => t.cat === 'personalidade' && !t.regra?.emerge && !t.nasce && !t.filtro).map((t) => t.id);
   const ids: string[] = [];
   for (let i = 0; i < n * 3 && ids.length < n; i++) ids.push(pick(rng, pool));
   return tracosConsistentes(cat, ids).slice(0, n);
@@ -208,6 +208,12 @@ export function pessoaDaFicha(e: Entity, w: World, cat: Catalogo, op: OpcoesElen
   const local = alvos(e, /^(local|mora em|residência|residencia|cidade|lar|onde mora|vive em|casa|origem)$/i).find((x) => w.entities.find((y) => y.path === x)?.type === 'lugar')
     ?? (texto(e, 'mora em', 'residência', 'cidade', 'local') || op.lugar);
   const dinheiroTxt = Number(texto(e, 'dinheiro', 'ouro', 'moedas').replace(',', '.'));
+  // povo e lealdade: um [[link]] para a ficha (cultura, facção) ou só o nome
+  const etniaTxt = alvos(e, /^(etnia|povo|cultura|origem étnica|raça cultural)$/i).find((x) => ['cultura', 'etnia', 'povo'].includes(w.entities.find((y) => y.path === x)?.type ?? ''))
+    ?? texto(e, 'etnia', 'povo', 'cultura');
+  const etnia = etniaTxt ? etniaDoTexto(cat, etniaTxt) ?? fold(etniaTxt.replace(/^\[\[|\]\]$/g, '').split('|')[0]!.split('/').pop()!.replace(/\.md$/i, '')).trim() : null;
+  const faccao = alvos(e, /^(afiliação|afiliacao|facção|faccao|ordem|membro de|lealdade|reino|casa real)$/i).find((x) => w.entities.find((y) => y.path === x)?.type === 'faccao')
+    ?? (texto(e, 'facção', 'faccao', 'lealdade', 'reino') || undefined);
   const casaTxt = texto(e, 'casa', 'sobrenome', 'família', 'familia', 'dinastia').replace(/^\[\[|\]\]$/g, '');
 
   return {
@@ -218,6 +224,7 @@ export function pessoaDaFicha(e: Entity, w: World, cat: Catalogo, op: OpcoesElen
     prof, genes, big5: b5, tracos, gostos: [...new Set(gostos)].slice(0, 6), hab, saude: Number(texto(e, 'saúde', 'saude')) || 75 + rng() * 25,
     humor: rng() * 30, estresse: 10 + rng() * 25, dinheiro: Number.isFinite(dinheiroTxt) && dinheiroTxt > 0 ? dinheiroTxt : (pr?.renda ?? 3) * (3 + rng() * 8),
     gravidez: null, resguardo: 0, meta: null, xp: anoDe(op.inicio) - anoDe(nasc) >= 16 ? { adulto: 1 } : {}, conduzido: false, protegido: false, estados: {}, campos: {},
+    ...(etnia ? { etnia } : {}), ...(faccao ? { faccao } : {}),
   };
 }
 
@@ -405,6 +412,7 @@ export function povoar(cat: Catalogo, op: OpcoesPovoar): { pessoas: Pessoa[]; la
     p.pais = p.pais.map((x) => (x && ids.has(x) ? x : null)) as [string | null, string | null];
   }
   distribuirEspecies(cat, pessoas, op);
+  distribuirEtnias(cat, pessoas, op);
 
   // vizinhança: todo mundo conhece alguém (as relações entre as suas fichas ficam como você escreveu)
   const todos = [...op.existentes.filter((p) => p.local === op.lugar || !p.local), ...pessoas];
@@ -492,6 +500,71 @@ function distribuirEspecies(cat: Catalogo, pessoas: Pessoa[], op: OpcoesPovoar):
   }
 }
 
+/**
+ * Povos com `frequência` entram nos figurantes: cada família sorteia um povo
+ * (da espécie dela), com a aparência, os nomes, os sobrenomes, os traços e
+ * os gostos daquele povo. Sorte própria: sem povos, nada muda.
+ */
+function distribuirEtnias(cat: Catalogo, pessoas: Pessoa[], op: OpcoesPovoar): void {
+  const povos = [...cat.etnias.values()].filter((e) => e.frequencia > 0);
+  if (!povos.length) return;
+  const rs = seededRng((op.semente * 15485863 + 11) >>> 0 || 1);
+  const raiz = new Map<string, string>(pessoas.map((p) => [p.id, p.id]));
+  const achar = (x: string): string => {
+    let r = x;
+    while (raiz.get(r) !== r) r = raiz.get(r)!;
+    raiz.set(x, r);
+    return r;
+  };
+  for (const p of pessoas) for (const x of [p.conjuge, ...p.pais]) if (x && raiz.has(x)) raiz.set(achar(x), achar(p.id));
+  const grupos = new Map<string, Pessoa[]>();
+  for (const p of pessoas) grupos.set(achar(p.id), [...(grupos.get(achar(p.id)) ?? []), p]);
+  const fera = (p: Pessoa) => !!(p.especie && cat.especies.get(especieId(p.especie))?.criatura);
+  const corOlhos: Record<string, string> = { azul: 'A', azuis: 'A', verde: 'V', verdes: 'V', castanho: 'C', castanhos: 'C', escuro: 'C', negro: 'C' };
+  const corCabelo: Record<string, string> = { loiro: 'L', loira: 'L', ruivo: 'R', ruiva: 'R', escuro: 'E', castanho: 'E', negro: 'E', preto: 'E' };
+  const sortear = (e: Etnia, mapa: Record<string, string>, tabela: Record<string, number>): string | null => {
+    let r = rs();
+    for (const [cor, c] of Object.entries(tabela)) if ((r -= c) < 0) return mapa[cor] ?? null;
+    return null;
+  };
+  for (const g of grupos.values()) {
+    const esp = especieId(g[0]!.especie) || 'humano';
+    if (fera(g[0]!)) continue;
+    const cabe = povos.filter((e) => !e.especie || e.especie === esp);
+    const total = cabe.reduce((s, e) => s + e.frequencia, 0);
+    if (!total) continue;
+    let r = rs() * Math.max(1, total);
+    const e = cabe.find((x) => (r -= x.frequencia) < 0);
+    if (!e) continue;
+    const sobrenome = e.sobrenomes.length ? e.sobrenomes[Math.floor(rs() * e.sobrenomes.length)]! : null;
+    for (const p of g) {
+      p.etnia = e.id;
+      // aparência do povo: um alelo puxado para a cor mais comum
+      const o = sortear(e, corOlhos, e.olhos);
+      if (o) p.genes.olhos = [o, rs() < 0.6 ? o : p.genes.olhos[1]];
+      const c = sortear(e, corCabelo, e.cabelo);
+      if (c) p.genes.cabelo = [c, rs() < 0.6 ? c : p.genes.cabelo[1]];
+      // nomes e sobrenome do povo
+      const pool = p.sexo === 'f' ? e.nomesF : e.nomesM;
+      if (pool.length || sobrenome) {
+        const primeiro = pool.length ? pool[Math.floor(rs() * pool.length)]! : p.nome.split(' ')[0]!;
+        const casa = sobrenome ?? p.casa;
+        p.nome = `${primeiro}${casa ? ` ${casa}` : ''}`;
+        p.casa = casa;
+      }
+      for (const t of e.gostos) if (!p.gostos.includes(t) && rs() < 0.4) p.gostos.push(t);
+    }
+  }
+  // nomes repetidos ganham um número romano no motor; aqui só evitamos o óbvio
+  const vistos = new Map<string, number>();
+  for (const p of pessoas) {
+    const k = fold(p.nome);
+    const n = vistos.get(k) ?? 0;
+    vistos.set(k, n + 1);
+    if (n) p.nome = `${p.nome} ${['II', 'III', 'IV', 'V', 'VI'][n - 1] ?? n + 1}`;
+  }
+}
+
 // ------------------------------------------------------------------ da simulação para as fichas
 
 export interface FichaDaVida {
@@ -530,6 +603,8 @@ export function fichasDaSimulacao(s: Vidas, opts: { so?: Set<string> } = {}): Fi
       'traços': p.tracos.map((t) => nomeTraco(s.cat, t, p.genero)),
       gostos: p.gostos,
       casa: p.casa,
+      etnia: s.etniaNome(p),
+      'facção': s.guerras.faccaoDe(p) ? `[[${s.guerras.faccaoDe(p)!.nome}]]` : null,
       'orientação': { hetero: 'hétero', homo: 'homo', bi: 'bi', ace: 'assexual' }[p.orientacao],
       'mãe': link(p.pais[0]),
       pai: link(paiOf),

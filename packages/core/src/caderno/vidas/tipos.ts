@@ -105,6 +105,10 @@ export interface Pessoa {
   campos: Record<string, CampoValor>;
   /** itens que carrega (ids do catálogo; um comum pode aparecer mais de uma vez) */
   itens?: string[];
+  /** povo / etnia / cultura (id do catálogo), se houver */
+  etnia?: string | null;
+  /** facção a que é leal (id da facção na simulação), se houver */
+  faccao?: string | null;
 }
 
 export type CampoValor = number | string | boolean | null | string[];
@@ -132,7 +136,10 @@ export interface Visao {
   visto: number;
 }
 
-export type Vinculo = 'namoro' | 'noivado' | 'amantes' | 'amigos' | 'rivais' | 'inimigos' | 'ex';
+export type VinculoBase = 'namoro' | 'noivado' | 'amantes' | 'amigos' | 'rivais' | 'inimigos' | 'ex';
+/** Os de fábrica e os que o mundo inventa (`vínculo "Irmãos de sangue":`, pelo id sem acento). */
+export type Vinculo = VinculoBase | (string & {});
+export const VINCULOS_BASE: VinculoBase[] = ['namoro', 'noivado', 'amantes', 'amigos', 'rivais', 'inimigos', 'ex'];
 
 export interface Segredo {
   id: number;
@@ -146,7 +153,16 @@ export interface Segredo {
   publico: boolean;
 }
 
-export type Categoria = 'social' | 'romance' | 'familia' | 'conflito' | 'vida' | 'morte' | 'trabalho' | 'mundo' | 'regra' | 'voce';
+export type Categoria = 'social' | 'romance' | 'familia' | 'conflito' | 'vida' | 'morte' | 'trabalho' | 'mundo' | 'regra' | 'voce' | 'guerra' | 'acaso';
+
+/** Tom de um acontecimento: o mundo regula quanto quer de cada um. */
+export type TomVida = 'fantasia' | 'comico' | 'adulto' | 'serio';
+export const TONS_VIDA: Array<{ id: TomVida; nome: string; icone: string; desc: string }> = [
+  { id: 'fantasia', nome: 'fantasia', icone: '✨', desc: 'fadas, maldições, profecias, dragões, sapos encantados' },
+  { id: 'comico', nome: 'cômico', icone: '🤡', desc: 'vexames, apostas idiotas, cabras rebeldes, mal-entendidos' },
+  { id: 'adulto', nome: 'adulto', icone: '🔥', desc: 'paixões proibidas, bordéis, chantagens, vícios, escândalos (só entre adultos)' },
+  { id: 'serio', nome: 'sério', icone: '⚖', desc: 'incêndios, julgamentos, dívidas, perdas, atos de coragem' },
+];
 
 export interface VidaEvento {
   t: number;
@@ -161,6 +177,8 @@ export interface VidaEvento {
   peso: number;
   /** só quem lê a crônica sabe (ninguém na história sabe ainda) */
   segredo?: boolean;
+  /** tom do acontecimento (fantasia, cômico, adulto, sério), quando tem */
+  tom?: TomVida;
 }
 
 export interface Decisao {
@@ -184,8 +202,17 @@ export interface Ajustes {
   mortalidade: number;
   drama: number;
   social: number;
+  /** vontade das facções de declarar guerra */
+  guerra: number;
+  /** quanto de cada tom de acontecimento (0 = nunca) */
+  fantasia: number;
+  comico: number;
+  adulto: number;
+  serio: number;
 }
-export const AJUSTES_PADRAO: Ajustes = { romance: 1, violencia: 1, fertilidade: 1, mortalidade: 1, drama: 1, social: 1 };
+export const AJUSTES_PADRAO: Ajustes = {
+  romance: 1, violencia: 1, fertilidade: 1, mortalidade: 1, drama: 1, social: 1, guerra: 1, fantasia: 1, comico: 1, adulto: 1, serio: 1,
+};
 
 /** Evento do mundo com duração (festa, peste, fome, guerra, fartura). */
 export interface Efeito {
@@ -214,7 +241,19 @@ export type Comando =
   | { c: 'matar'; p: string; causa?: string }
   | { c: 'mudar'; p: string; lugar: string }
   | { c: 'adicionar'; pessoa: Pessoa }
-  | { c: 'vincular'; p: string; nota: string };
+  | { c: 'vincular'; p: string; nota: string }
+  /** liga (on) ou desfaz um vínculo entre duas pessoas (de fábrica ou inventado pelo mundo) */
+  | { c: 'vinculo'; a: string; b: string; v: string; on: boolean }
+  /** cria uma facção no meio da história */
+  | { c: 'faccao'; id: string; nome: string; lugares: string[]; lider?: string | null }
+  /** declara guerra (a ataca b) */
+  | { c: 'guerra'; a: string; b: string; motivo?: string }
+  /** acaba uma guerra em andamento (paz negociada pelo placar de agora) */
+  | { c: 'paz'; guerra: number }
+  /** define a postura entre duas facções (−100 ódio, 100 aliança) */
+  | { c: 'postura'; a: string; b: string; v: number }
+  /** faz acontecer um acontecimento (fadas, vexames, escândalos...) com alguém */
+  | { c: 'acontecer'; id: string; a: string; b: string | null };
 
 /** Relação inicial entre duas pessoas do elenco (das fichas ou da vizinhança gerada). */
 export interface Laco {

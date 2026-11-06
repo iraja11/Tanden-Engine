@@ -3,16 +3,18 @@ import type { RollTable } from '../../rpg/tables';
 import { hash53 } from '../../hash';
 import { asText } from '../frontmatter';
 import type { Entity, World } from '../mundo';
-import { fold, type Program, type RuleIssue } from '../regras/parse';
+import { fold, type Program, type RuleFilter, type RuleIssue } from '../regras/parse';
 import { Ent, Rules, type Val } from '../regras/run';
-import { catalogo, especieId, nomeProf, nomeTraco, ATIVIDADE, type Catalogo, type Especie, type Item, type Profissao } from './catalogo';
+import { catalogo, especieId, etniaDoTexto, nomeProf, nomeTraco, ATIVIDADE, type Catalogo, type Especie, type Etnia, type Item, type Profissao } from './catalogo';
+import { ACONTECIMENTOS, ESTADOS_VIDA, acasoDoMes, type Acontecimento } from './acontecimentos';
+import { Guerras } from './guerras';
 import { atributos, alturaDe, cabeloDe, consanguinidade, herdar, olhosDe, tracosDosGenes } from './genetica';
 import { INTERACOES, type Interacao } from './interacoes';
 import { lutar, type Modo } from './combate';
 import { nomeDeBebe } from './elenco';
 import {
   AJUSTES_PADRAO, anoDe, dataTexto, idadeDe, mesDoAno, MESES, type Ajustes, type Big5, type CampoValor, type Categoria, type Comando, type Decisao,
-  type Efeito, type Habilidade, type Laco, type Memoria, type Meta, type Pessoa, type Registro, type Segredo, type VidaEvento, type Vinculo, type Visao,
+  type Efeito, type Habilidade, type Laco, type Memoria, type Meta, type Pessoa, type Registro, type Segredo, type TomVida, type VidaEvento, type Vinculo, type Visao,
 } from './tipos';
 
 /*
@@ -79,7 +81,7 @@ const VIZ = ['afeto', 'atracao', 'confianca', 'respeito', 'intimidade'] as const
 type Eixo = (typeof VIZ)[number];
 
 /** Versão do motor: muda quando a mesma semente passa a dar outra história. */
-export const MOTOR_VERSAO = 1;
+export const MOTOR_VERSAO = 2;
 
 export class Vidas {
   readonly cat: Catalogo;
@@ -139,10 +141,21 @@ export class Vidas {
   private relCampos = new Map<string, Record<string, CampoValor>>();
   private readonly entPorCaminho: Map<string, Entity>;
   private readonly semente: number;
+  /** sorte própria do acaso (acontecimentos com tom): não mexe na sorte do resto */
+  private readonly sorte: Rng;
+  /** facções, posturas e as guerras em andamento */
+  readonly guerras: Guerras;
+  /** vínculos com papéis (mentor/aprendiz): `id|par` → quem tem o primeiro papel */
+  readonly papeis = new Map<string, string>();
+  /** quem perdeu a profissão por não passar no filtro dela */
+  private semProf = new Set<string>();
+  /** tom do acontecimento que está acontecendo agora (marca a crônica) */
+  private tomAtual: TomVida | null = null;
 
   constructor(readonly world: World, readonly cfg: VidasConfig, elenco: { pessoas: Pessoa[]; lacos?: Laco[] }, readonly opts: VidasOpcoes = {}) {
     this.cat = catalogo(opts.rules ?? null, world.entities);
     this.r = seededRng(cfg.semente);
+    this.sorte = seededRng(((cfg.semente * 1103515245 + 12345) ^ 0x2545f491) >>> 0 || 3);
     this.semente = cfg.semente;
     this.t = cfg.inicio;
     this.pendentes = [...(opts.registro ?? [])];
@@ -174,9 +187,15 @@ export class Vidas {
         this.casamentos.set(parKey(l.a, l.b), this.t + 6);
       } else if (l.v) this.liga(l.a, l.b, l.v);
     }
+    this.guerras = new Guerras(this, cfg.semente);
     this.iniciarItens();
     this.ligarRegras();
     this.mapearPresenca();
+    for (const id of this.semProf) {
+      const p = this.pessoas.get(id);
+      if (p && this.adulto(p)) p.prof = this.escolherProf(p);
+    }
+    this.semProf.clear();
     this.rt?.emit('inicio');
     this.coletarIssues();
   }
@@ -199,6 +218,40 @@ export class Vidas {
   esp(p: Pessoa): Especie | undefined {
     return this.cat.especies.get(this.eid(p));
   }
+  /** Povo da pessoa (do catálogo), se houver. */
+  etnia(p: Pessoa): Etnia | undefined {
+    return p.etnia ? this.cat.etnias.get(p.etnia) : undefined;
+  }
+  etniaNome(p: Pessoa): string | null {
+    return this.etnia(p)?.nome ?? p.etnia ?? null;
+  }
+  /** A pessoa passa no filtro (espécie, etnia, sexo, idade, facção)? Filtro vazio = sim. */
+  passa(p: Pessoa, f: RuleFilter | null | undefined): boolean {
+    if (!f) return true;
+    if (f.species.length && !f.species.includes(this.eid(p)) && !f.species.includes(fold(this.especieNome(p)))) return false;
+    if (f.ethnicities.length && (!p.etnia || !f.ethnicities.some((e) => e === p.etnia || fold(this.etniaNome(p) ?? '') === e))) return false;
+    if (f.sex && p.sexo !== f.sex) return false;
+    if (f.minAge !== null || f.maxAge !== null) {
+      const i = this.idade(p);
+      if (f.minAge !== null && i < f.minAge) return false;
+      if (f.maxAge !== null && i > f.maxAge) return false;
+    }
+    if (f.factions.length) {
+      const fc = this.guerras?.faccaoDe(p);
+      if (!fc || !f.factions.some((x) => x === fold(fc.nome) || x === fc.id)) return false;
+    }
+    return true;
+  }
+  /** Estados que tiram a pessoa de cena (sapo, presa, sumida no reino das fadas). */
+  bloqueado(p: Pessoa): boolean {
+    for (const k in p.estados) if (ESTADOS_VIDA[k]?.bloqueia) return true;
+    return false;
+  }
+  /** Está num acampamento de guerra (ou na guerra das antigas, `§guerra`)? */
+  naGuerra(p: Pessoa): boolean {
+    return !!p.viagem && p.viagem.para.startsWith('§');
+  }
+
   /** Id da espécie; quem não tem espécie escrita é "humano". */
   eid(p: Pessoa): string {
     const c = this.eidCache.get(p);
@@ -253,8 +306,10 @@ export class Vidas {
       // a curva de idade usa a idade biológica (uma espécie com maioridade própria envelhece no ritmo dela)
       a = atributos({ ...p, vida: 70 }, this.idadeBio(p));
       const m0 = this.esp(p)?.mods;
+      const me = this.etnia(p)?.mods;
       const extra = ['forca', 'agilidade', 'intelecto', 'inteligencia', 'beleza', 'fertilidade'].some((k) => this.bonus(p, k));
-      const m = m0 || extra ? { ...(m0 ?? {}) } : null;
+      const m = m0 || me || extra ? { ...(m0 ?? {}) } : null;
+      if (m && me) for (const k in me) m[k] = (m[k] ?? 0) + me[k]!;
       if (m) for (const k of ['forca', 'agilidade', 'intelecto', 'beleza', 'fertilidade']) m[k] = (m[k] ?? 0) + this.bonus(p, k) + (k === 'intelecto' ? this.bonus(p, 'inteligencia') : 0);
       if (m) {
         const k = (n?: number) => (n ?? 0) / 100;
@@ -281,6 +336,7 @@ export class Vidas {
   lugarNome(key: string | null): string {
     if (!key) return '—';
     if (key === GUERRA) return 'a guerra';
+    if (key.startsWith('§front:')) return this.guerras?.nomeFront(key) ?? 'o front';
     return this.lugares.get(key) ?? this.entPorCaminho.get(key)?.name ?? key;
   }
   /** Onde a pessoa está agora (null = na estrada). */
@@ -306,7 +362,7 @@ export class Vidas {
   }
   aparencia(p: Pessoa): { olhos: string; cabelo: string; altura: number } {
     const alt = this.esp(p)?.altura;
-    const adulta = alturaDe(p.genes, p.sexo) * (alt ? alt / 170 : 1);
+    const adulta = alturaDe(p.genes, p.sexo) * (alt ? alt / 170 : 1) + (this.etnia(p)?.altura ?? 0);
     const i = this.idadeBio(p);
     return { olhos: olhosDe(p.genes), cabelo: cabeloDe(p.genes), altura: Math.round(i >= 18 ? adulta : 50 + (adulta - 50) * Math.min(1, i / 18)) };
   }
@@ -395,6 +451,9 @@ export class Vidas {
     s += Math.min(12, comuns * 4);
     s += 6 - (Math.abs(A.big5[0] - B.big5[0]) + Math.abs(A.big5[3] - B.big5[3])) / 16;
     s += this.atrib(B).beleza * 5;
+    // povo: quem gosta dos seus, quem desconfia dos outros
+    const ea = this.etnia(A);
+    if (ea && B.etnia) s += ea.afinidade[B.etnia === A.etnia ? '' : B.etnia] ?? (B.etnia !== A.etnia ? ea.afinidade['*'] ?? 0 : 0);
     const r = clamp(s, -30, 30);
     this.compatCache.set(ck, r);
     return r;
@@ -420,7 +479,9 @@ export class Vidas {
     if (c !== undefined) return c;
     const v = this.visao(a, b);
     const kin = this.kinBonus(a, b);
-    const o = Math.round(clamp(v.afeto + v.confianca * 0.3 + v.respeito * 0.2 + this.memoria(v) + this.compat(a, b) + kin.afeto, -100, 100));
+    let laco = 0;
+    if (this.cat.vinculos.size) for (const x of this.vinculos(a, b)) laco += this.cat.vinculos.get(x)?.opiniao ?? 0;
+    const o = Math.round(clamp(v.afeto + v.confianca * 0.3 + v.respeito * 0.2 + this.memoria(v) + this.compat(a, b) + kin.afeto + laco, -100, 100));
     this.opCache.set(ck, o);
     return o;
   }
@@ -513,7 +574,7 @@ export class Vidas {
     if (c) return c;
     for (const k of this.chaves.get(p.id) ?? []) {
       const set = this.vinc.get(k);
-      if (!set || (!set.has('noivado') && !set.has('namoro'))) continue;
+      if (!set || (!set.has('noivado') && !set.has('namoro') && !(this.cat.vinculos.size && [...set].some((v) => this.cat.vinculos.get(v)?.romantico)))) continue;
       const [x, y] = k.split('|') as [string, string];
       const o = this.vivo(x === p.id ? y : x);
       if (o) return o;
@@ -722,7 +783,7 @@ export class Vidas {
   }
 
   say(cat: Categoria, tipo: string, texto: string, quem: string[], peso: number, segredo = false): void {
-    this.eventos.push({ t: this.t, cat, tipo, texto, quem: [...new Set(quem)], peso, ...(segredo ? { segredo: true } : {}) });
+    this.eventos.push({ t: this.t, cat, tipo, texto, quem: [...new Set(quem)], peso, ...(segredo ? { segredo: true } : {}), ...(this.tomAtual ? { tom: this.tomAtual } : {}) });
     // a crônica guarda até 25 mil linhas; as miúdas mais antigas saem primeiro
     if (this.eventos.length > 25000) {
       const i = this.eventos.findIndex((e) => e.peso === 1);
@@ -732,6 +793,7 @@ export class Vidas {
 
   /** Dispara um evento para as regras do mundo (`quando casamento(a, b):`). */
   emitir(nome: string, ids: string[], extra: Val[] = []): void {
+    if (ids.length >= 2) this.guerras?.aoEvento(nome, ids);
     if (!this.rt) return;
     this.rt.emit(nome, [...ids.map((x) => new Ent(x)), ...extra]);
   }
@@ -1054,7 +1116,14 @@ export class Vidas {
       }
       if (g.gemeos) tracos.push('gemeo');
       const casa = (oficial?.casa ?? pai?.casa ?? mae.casa) || null;
-      const nome = this.nomeUnico(nomeDeBebe(this, sexo, mae, oficial));
+      // povo: o dos dois, ou de um deles (sorte fixa)
+      const ep = (oficial ?? pai)?.etnia ?? null;
+      const etnia = !ep || !mae.etnia || ep === mae.etnia ? mae.etnia ?? ep : this.unif(mae, `filho:${this.t}:${i}`) < 0.5 ? mae.etnia : ep;
+      const eb = etnia ? this.cat.etnias.get(etnia) : undefined;
+      const pool = eb ? (sexo === 'f' ? eb.nomesF : eb.nomesM) : [];
+      const nome = this.nomeUnico(pool.length && this.unif(mae, `nome:${this.t}:${i}`) < 0.7
+        ? `${pool[Math.floor(this.unif(mae, `nomei:${this.t}:${i}`) * pool.length)]}${casa ? ` ${casa}` : ''}`
+        : nomeDeBebe(this, sexo, mae, oficial));
       const especie = this.especieDoFilho(mae, pai);
       const eFilho = especie ? this.cat.especies.get(especieId(especie)) : undefined;
       const b: Pessoa = {
@@ -1062,6 +1131,7 @@ export class Vidas {
         local, viagem: null, especie, vida: eFilho?.vida ?? mae.vida, casa, pais: [mae.id, pai?.id ?? null], paiOficial: oficial && pai && oficial.id !== pai.id ? oficial.id : null,
         conjuge: null, prof: null, genes, big5, tracos, gostos: [], hab: { combate: 0, labia: 0, intriga: 0, oficio: 0, saber: 0 }, saude: 90, humor: 20, estresse: 0,
         dinheiro: 0, gravidez: null, resguardo: 0, meta: null, xp: {}, conduzido: false, protegido: false, estados: {}, campos: {},
+        etnia, faccao: (oficial ?? pai)?.faccao ?? mae.faccao ?? null,
       };
       this.herdarAtributos(b, mae, pai);
       this.entra(b);
@@ -1105,7 +1175,7 @@ export class Vidas {
   /** A pessoa tem este atributo? (atributos `só para` certas espécies) */
   temAtributo(p: Pessoa, id: string): boolean {
     const a = this.cat.atributos.get(id);
-    return !!a && (!a.so.length || a.so.includes(this.eid(p)));
+    return !!a && (!a.so.length || a.so.includes(this.eid(p))) && this.passa(p, a.filtro.ethnicities.length || a.filtro.sex || a.filtro.factions.length || a.filtro.minAge !== null || a.filtro.maxAge !== null ? { ...a.filtro, species: [] } : null);
   }
 
   /** Sorteio fixo por pessoa e atributo (não gasta a sorte da simulação: acrescentar um atributo não muda o resto da história). */
@@ -1118,7 +1188,7 @@ export class Vidas {
   /** Valor inicial de um atributo: média (mais o ajuste da espécie) e um desvio. */
   private atributoInicial(p: Pessoa, id: string): number {
     const a = this.cat.atributos.get(id)!;
-    const mod = this.esp(p)?.mods[id] ?? 0;
+    const mod = (this.esp(p)?.mods[id] ?? 0) + (this.etnia(p)?.mods[id] ?? 0);
     return clamp(Math.round((a.media + mod + this.sorteioDe(p, id) * a.desvio) * 10) / 10, a.min, a.max);
   }
 
@@ -1159,11 +1229,27 @@ export class Vidas {
     for (const t of e?.tracos ?? []) if (!p.tracos.includes(t)) p.tracos.push(t);
     // traços que a espécie pode ter: sorteio fixo por pessoa
     for (const [t, c] of Object.entries(e?.talvez ?? {})) if (!p.tracos.includes(t) && this.unif(p, `talvez:${t}`) < c) p.tracos.push(t);
+    // povo: traços de todos e traços possíveis (o nome do povo pode vir escrito na ficha)
+    if (p.etnia && !this.cat.etnias.has(p.etnia)) p.etnia = etniaDoTexto(this.cat, p.etnia) ?? p.etnia;
+    const et = this.etnia(p);
+    for (const t of et?.tracos ?? []) if (!p.tracos.includes(t)) p.tracos.push(t);
+    for (const [t, c] of Object.entries(et?.talvez ?? {})) if (!p.tracos.includes(t) && this.unif(p, `etnia:${t}`) < c) p.tracos.push(t);
+    // traços com "nasce com": sorteio fixo por pessoa, só para quem passa no filtro
+    for (const tr of this.cat.tracos.values()) {
+      if (!tr.nasce || p.tracos.includes(tr.id) || (tr.oposto && p.tracos.includes(tr.oposto))) continue;
+      if (this.passa(p, tr.filtro ? { ...tr.filtro, minAge: null, maxAge: null } : null) && this.unif(p, `nasce:${tr.id}`) < tr.nasce) p.tracos.push(tr.id);
+    }
     for (const a of this.cat.atributos.values()) {
       if (!this.temAtributo(p, a.id)) continue;
       if (typeof p.campos[a.id] !== 'number') p.campos[a.id] = this.atributoInicial(p, a.id);
     }
     if (e?.criatura) p.prof = null;
+    // profissão que a pessoa não pode ter (filtro "para"): procura outra quando o elenco estiver pronto
+    const pf = p.prof ? this.cat.profs.get(p.prof) : undefined;
+    if (pf?.filtro && !this.passa(p, pf.filtro)) {
+      p.prof = null;
+      this.semProf.add(p.id);
+    }
     this.pessoas.set(p.id, p);
     this.porNome.set(fold(p.nome), p.id);
     for (const pp of new Set([...p.pais, p.paiOficial])) {
@@ -1259,12 +1345,17 @@ export class Vidas {
     for (const p of vivos) this.vida(p);
     this.mapearPresenca();
     this.efeitosDoMundo();
+    this.guerras.mes();
+    this.mapearPresenca();
     this.itensDoMes();
     this.eventosDoMundo();
     // encontros
     const ordem = this.embaralhar(this.vivos());
     for (const p of ordem) if (p.morte === null) this.agir(p);
+    // o acaso: fadas, vexames, escândalos, incêndios (pelo tom do mundo)
+    acasoDoMes(this, this.sorte);
     this.consequencias();
+    this.vinculosDoMes();
     // regras do mundo
     if (this.rt) {
       if (this.mudouGente) this.ligarRegras();
@@ -1326,14 +1417,15 @@ export class Vidas {
     // viagem
     const v = p.viagem;
     if (v) {
-      if (t === v.chega && v.para !== GUERRA) this.say('vida', 'chegada', `${this.L(p.id)} chega a [[${this.lugarNome(v.para)}]].`, [p.id], 1);
+      const front = v.para.startsWith('§');
+      if (t === v.chega && !front) this.say('vida', 'chegada', `${this.L(p.id)} chega a [[${this.lugarNome(v.para)}]].`, [p.id], 1);
       if (v.para === p.local && t >= v.chega) {
         p.viagem = null;
-      } else if (t >= v.chega + 2 && v.para !== GUERRA && !this.efeito('guerra', p.local)) {
+      } else if (t >= v.chega + 2 && !front && !this.efeito('guerra', p.local)) {
         // volta para casa
         const dur = this.duracao(v.para, p.local);
         p.viagem = { para: p.local, chega: t + dur, motivo: 'volta' };
-      } else if (t < v.chega && v.para !== GUERRA) {
+      } else if (t < v.chega && !front) {
         this.estrada(p);
         if (p.morte !== null) return;
       }
@@ -1342,7 +1434,12 @@ export class Vidas {
       this.morrer(p, 'como estava escrito');
       return;
     }
-    for (const [k, ate] of Object.entries(p.estados)) if (t > ate) delete p.estados[k];
+    for (const [k, ate] of Object.entries(p.estados)) {
+      if (t <= ate) continue;
+      delete p.estados[k];
+      const fim = ESTADOS_VIDA[k]?.fim;
+      if (fim) this.say('acaso', 'fim', fim.replace(/\{a\}/g, this.L(p.id)).replace(/\{o\/a\}/g, this.g(p, 'o', 'a')), [p.id], 2);
+    }
 
     // gravidez
     if (p.gravidez && t - p.gravidez.desde >= (this.esp(p)?.gestacao ?? 9)) {
@@ -1420,7 +1517,7 @@ export class Vidas {
     // dinheiro
     const fome = this.efeito('fome', p.local);
     const farto = this.efeito('fartura', p.local);
-    if (pr && this.adulto(p) && p.viagem?.para !== GUERRA) {
+    if (pr && this.adulto(p) && !this.naGuerra(p) && !this.bloqueado(p)) {
       p.dinheiro += pr.renda * (0.6 + (p.hab[pr.hab as Habilidade] ?? 5) / 25) * (fome ? 0.4 : farto ? 1.5 : 1) * (p.tracos.includes('preguicoso') ? 0.7 : 1);
       this.sobe(p, pr.hab, 0.02);
     }
@@ -1480,10 +1577,12 @@ export class Vidas {
     if (this.rt) {
       for (const tr of this.cat.tracos.values()) {
         const r = tr.regra;
-        if (!r?.emerge || p.tracos.includes(tr.id)) continue;
+        if (!r?.emerge || p.tracos.includes(tr.id) || !this.passa(p, tr.filtro)) continue;
         if (this.rt.check(r.emerge, p.id, 'personagem', r.src) && this.chance(r.emergeChance)) this.ganhaTraco(p, tr.id);
       }
     }
+    // atributos que só existem numa faixa de idade aparecem quando ela chega
+    for (const a of this.cat.atributos.values()) if (typeof p.campos[a.id] !== 'number' && this.temAtributo(p, a.id)) p.campos[a.id] = this.atributoInicial(p, a.id);
     // o temperamento muda devagar com a vida
     p.big5[4] = clamp(p.big5[4] + (p.estresse - 40) / 40, 0, 100);
     if (bio > 50) p.big5[0] = clamp(p.big5[0] - 0.3, 0, 100);
@@ -1516,7 +1615,7 @@ export class Vidas {
       if (ne < 30) cand.push('calmo');
       if (ab > 70) cand.push('curioso');
       if (ab < 30) cand.push('tradicional');
-      const pool = [...this.cat.tracos.values()].filter((t) => t.cat === 'personalidade').map((t) => t.id);
+      const pool = [...this.cat.tracos.values()].filter((t) => t.cat === 'personalidade' && !t.nasce && (!t.filtro || this.passa(p, t.filtro))).map((t) => t.id);
       while (cand.length < 3 - pers) cand.push(this.pick(pool));
       for (const c of cand.slice(0, 3 - pers)) {
         const tr = this.cat.tracos.get(c);
@@ -1547,6 +1646,7 @@ export class Vidas {
     for (const pr of this.cat.profs.values()) {
       if (pr.heranca) continue;
       if (pr.regra?.requires && this.rt && !this.rt.check(pr.regra.requires, p.id, 'personagem', pr.regra.src)) continue;
+      if (!this.passa(p, pr.filtro)) continue;
       const ja = aqui.filter((x) => x === pr.id).length;
       const w = (pr.apto?.(p) ?? 1) / (1 + ja * 0.7);
       if (w > 0) opcoes.push({ id: pr.id, w });
@@ -1628,7 +1728,8 @@ export class Vidas {
 
   private agir(p: Pessoa): void {
     // algo sozinho (trabalhar, treinar, beber, viajar...)
-    if (p.viagem?.para !== GUERRA && !this.criatura(p)) this.sozinho(p);
+    if (this.bloqueado(p)) return;
+    if (!this.naGuerra(p) && !this.criatura(p)) this.sozinho(p);
     if (p.morte !== null) return;
     const perto = this.aoRedor(p);
     if (!perto.length) return;
@@ -1662,7 +1763,7 @@ export class Vidas {
     const lista: Array<{ b: Pessoa; w: number }> = [];
     for (const x of cands) {
       const b = this.vivo(x);
-      if (!b) continue;
+      if (!b || this.bloqueado(b)) continue;
       const vs = this.vinculos(p.id, x);
       let w = 0.6 + this.intimidade(p.id, x) / 25;
       if (p.conjuge === x) w += 3;
@@ -1701,6 +1802,7 @@ export class Vidas {
       else if (this.crianca(a) !== this.crianca(b)) w *= 0.15;
     }
     if (b && (i.id === 'seduzir' || i.id === 'cortejar') && this.temVinc(a.id, b.id, 'ex')) w *= this.ha(a.id, b.id, 'ex') < 24 ? 0.15 : 0.5;
+    if (b && this.cat.vinculos.size) for (const v of this.vinculos(a.id, b.id)) w *= this.cat.vinculos.get(v)?.peso[i.id] ?? 1;
     if (i.id === 'seduzir' && a.estados['vigiado']) w *= 0.3;
     if (i.cat === 'conflito' && i.id !== 'insultar' && i.id !== 'discutir' && a.estados['brigou']) w *= 0.2;
     if (this.efeito('festa', a.local) && (i.id === 'flertar' || i.id === 'conversar' || i.id === 'atividade')) w *= 2;
@@ -1796,7 +1898,7 @@ export class Vidas {
 
   /** Lugares para onde dá para ir a partir daqui. */
   destinos(de: string): string[] {
-    const todos = [...this.lugares.keys()].filter((x) => x !== de && x !== GUERRA);
+    const todos = [...this.lugares.keys()].filter((x) => x !== de && !x.startsWith('§'));
     if (!this.rotas.size || !this.rotas.has(de)) return todos;
     const ok = new Set<string>();
     const fila = [de];
@@ -1940,6 +2042,126 @@ export class Vidas {
     this.efeitos = this.efeitos.filter((e) => e.ate >= this.t);
   }
 
+  // ---------------------------------------------------------------- vínculos inventados pelo mundo
+
+  /** Liga um vínculo (de fábrica ou do mundo). `primeiro` = quem tem o primeiro papel (mentor, senhor...). */
+  vincular(a: Pessoa, b: Pessoa, id: string, primeiro: Pessoa = a, silencioso = false): boolean {
+    if (a.id === b.id || this.temVinc(a.id, b.id, id)) return false;
+    const d = this.cat.vinculos.get(id);
+    if (!d) {
+      this.liga(a.id, b.id, id);
+      return true;
+    }
+    if (d.romantico && !this.podeRomance(a.id, b.id)) return false;
+    if (d.exclusivo) {
+      for (const x of [a, b]) for (const o of this.comVinculo(x.id, id)) if (o.id !== a.id && o.id !== b.id) this.desvincular(x, o, id, true);
+    }
+    this.liga(a.id, b.id, id);
+    if (d.papeis) this.papeis.set(`${id}|${parKey(a.id, b.id)}`, primeiro.id);
+    if (!silencioso) {
+      const papel = d.papeis ? ` (${primeiro === a ? `${this.L(a.id)} ${d.papeis[0]}, ${this.L(b.id)} ${d.papeis[1]}` : `${this.L(b.id)} ${d.papeis[0]}, ${this.L(a.id)} ${d.papeis[1]}`})` : '';
+      this.say(d.romantico ? 'romance' : 'social', 'vinculo', `${d.simbolo ? `${d.simbolo} ` : ''}${d.secreto ? '🤫 ' : ''}${this.L(a.id)} e ${this.L(b.id)}: ${d.nome.toLowerCase()}${papel}.`, [a.id, b.id], 2, d.secreto);
+    }
+    if (d.regra.onForm.length && this.rt) this.rt.runBody(d.regra.onForm, { a: new Ent(a.id), b: new Ent(b.id) }, d.regra.src);
+    this.emitir(id.replace(/\s+/g, '_'), [a.id, b.id]);
+    return true;
+  }
+
+  desvincular(a: Pessoa, b: Pessoa, id: string, silencioso = false): boolean {
+    if (!this.temVinc(a.id, b.id, id)) return false;
+    const d = this.cat.vinculos.get(id);
+    this.desliga(a.id, b.id, id);
+    this.papeis.delete(`${id}|${parKey(a.id, b.id)}`);
+    if (d && !silencioso) this.say(d.romantico ? 'romance' : 'social', 'vinculo', `${this.L(a.id)} e ${this.L(b.id)} deixam de ser ${d.nome.toLowerCase()}.`, [a.id, b.id], 2, d.secreto);
+    if (d?.regra.onBreak.length && this.rt) this.rt.runBody(d.regra.onBreak, { a: new Ent(a.id), b: new Ent(b.id) }, d.regra.src);
+    return true;
+  }
+
+  /** Papel da pessoa num vínculo com papéis ("mentor", "aprendiz"), ou null. */
+  papel(id: string, outro: string, v: string): string | null {
+    const d = this.cat.vinculos.get(v);
+    if (!d?.papeis || !this.temVinc(id, outro, v)) return null;
+    return this.papeis.get(`${v}|${parKey(id, outro)}`) === id ? d.papeis[0] : d.papeis[1];
+  }
+
+  /** Vínculos do mundo: surgem entre quem se cruzou, mudam a relação todo mês e se desfazem quando a condição vale. */
+  private vinculosDoMes(): void {
+    if (!this.cat.vinculos.size) return;
+    // efeitos de todo mês e rompimentos
+    for (const [k, set] of [...this.vinc]) {
+      for (const v of [...set]) {
+        const d = this.cat.vinculos.get(v);
+        if (!d) continue;
+        const [x, y] = k.split('|') as [string, string];
+        const A = this.vivo(x);
+        const B = this.vivo(y);
+        if (!A || !B) continue;
+        for (const [eixo, n] of Object.entries(d.porMes)) {
+          const e = (eixo === 'atracao' || eixo === 'confianca' || eixo === 'afeto' || eixo === 'respeito' || eixo === 'intimidade') ? eixo : null;
+          if (e) {
+            this.mexe(x, y, { [e]: n });
+            this.mexe(y, x, { [e]: n });
+          } else if (eixo === 'humor' || eixo === 'estresse') {
+            for (const P of [A, B]) (eixo === 'humor' ? this.humor(P, n) : this.estresse(P, n));
+          }
+        }
+        if (d.regra.breaks && this.rt && this.rt.test(d.regra.breaks, { a: new Ent(x), b: new Ent(y) }, d.regra.src)) this.desvincular(A, B, v);
+      }
+    }
+    // surgem entre quem se cruzou no mês (chance por ano repartida)
+    const surgem = [...this.cat.vinculos.values()].filter((d) => d.regra.emerge);
+    if (!surgem.length || !this.rt) return;
+    for (const k of this.tocados) {
+      const [x, y] = k.split('|') as [string, string];
+      const A = this.vivo(x);
+      const B = this.vivo(y);
+      if (!A || !B) continue;
+      for (const d of surgem) {
+        if (this.temVinc(x, y, d.id) || !this.passa(A, d.regra.filter) || !this.passa(B, d.regra.filter)) continue;
+        const pm = 1 - Math.pow(1 - Math.min(1, d.regra.emergeChance), 1 / 12);
+        if (this.sorte() >= pm) continue;
+        // tenta dos dois lados (a condição pode ser assimétrica: mentor e aprendiz)
+        if (this.rt.test(d.regra.emerge!, { a: new Ent(x), b: new Ent(y) }, d.regra.src)) this.vincular(A, B, d.id, A);
+        else if (this.rt.test(d.regra.emerge!, { a: new Ent(y), b: new Ent(x) }, d.regra.src)) this.vincular(B, A, d.id, B);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------- acaso
+
+  /** Faz um acontecimento (fadas, vexames, escândalos...) acontecer com `a` (e `b`). */
+  acontecer(ac: Acontecimento, a: Pessoa, b: Pessoa | null): void {
+    const antes = this.tomAtual;
+    this.tomAtual = ac.tom;
+    try {
+      ac.fazer(this, a, b);
+    } finally {
+      this.tomAtual = antes;
+    }
+    this.emitir('acontecimento', [a.id, ...(b ? [b.id] : [])], [ac.nome]);
+    this.emitir(ac.id, [a.id, ...(b ? [b.id] : [])]);
+  }
+
+  /** Acontecimentos que cabem em `a` (com `b`) agora (para o painel "Fazer acontecer"). */
+  acontecimentosPara(a: string, b: string | null): Array<{ id: string; nome: string; tom: TomVida; pode: boolean }> {
+    const A = this.vivo(a);
+    const B = b ? this.vivo(b) : null;
+    if (!A) return [];
+    return ACONTECIMENTOS.filter((x) => x.alvo === !!B).map((x) => ({
+      id: x.id, nome: x.nome, tom: x.tom,
+      pode: (x.tom !== 'adulto' || (this.adulto(A) && (!B || this.adulto(B)))) && (!x.pode || x.pode(this, A, B)),
+    }));
+  }
+
+  /** Festa, peste, fome, guerra local ou fartura num lugar (as guerras das facções usam para a fome). */
+  efeitoMundo(tipo: Efeito['tipo'], lugar: string | null, meses: number, voce = false): void {
+    if (voce) this.eventoDoMundo(tipo, lugar, meses);
+    else {
+      this.efeitos.push({ tipo, lugar, ate: this.t + Math.max(1, meses) - 1 });
+      this.say('mundo', tipo, `${tipo === 'fome' ? '🌾 A fome da guerra chega a' : tipo === 'peste' ? '☠ Uma peste chega a' : '✦ Algo muda em'} ${lugar ? `[[${this.lugarNome(lugar)}]]` : 'todo o mundo'}.`, [], 2);
+    }
+  }
+
   private podar(): void {
     for (const [k, v] of this.visoes) {
       v.mem = v.mem.filter((m) => Math.abs(m.v * Math.pow(0.5, (this.t - m.t) / m.m)) >= 1);
@@ -2068,6 +2290,54 @@ export class Vidas {
       }
       case 'mundo': {
         this.comecarEvento(cmd.id, cmd.lugar, true);
+        return;
+      }
+      case 'vinculo': {
+        const a = this.vivo(cmd.a);
+        const b = this.vivo(cmd.b);
+        if (!a || !b || a === b) return;
+        if (cmd.v === 'casados') {
+          if (cmd.on) this.casar(a, b);
+          else if (a.conjuge === b.id) this.terminar(a, b, a);
+          return;
+        }
+        if (cmd.on) {
+          if (cmd.v === 'amantes') this.comecarCaso(a, b);
+          else if (this.vincular(a, b, cmd.v, a, true)) {
+            const d = this.cat.vinculos.get(cmd.v);
+            this.say('voce', 'vinculo', `✋ ${this.L(a.id)} e ${this.L(b.id)}: ${d?.nome.toLowerCase() ?? cmd.v}.`, [a.id, b.id], 1);
+          }
+        } else if (cmd.v === 'amantes' || cmd.v === 'namoro' || cmd.v === 'noivado') {
+          if (this.temVinc(a.id, b.id, cmd.v)) this.terminar(a, b, a);
+        } else if (this.desvincular(a, b, cmd.v, true)) this.say('voce', 'vinculo', `✋ ${this.L(a.id)} e ${this.L(b.id)} deixam de ser ${this.cat.vinculos.get(cmd.v)?.nome.toLowerCase() ?? cmd.v}.`, [a.id, b.id], 1);
+        return;
+      }
+      case 'faccao':
+        this.guerras.criar(cmd.id, cmd.nome, cmd.lugares, cmd.lider ?? null);
+        return;
+      case 'guerra':
+        this.guerras.declarar(cmd.a, cmd.b, cmd.motivo ?? null, true);
+        return;
+      case 'paz': {
+        const g = this.guerras.guerras.find((x) => x.id === cmd.guerra);
+        if (g) this.guerras.paz(g, true);
+        return;
+      }
+      case 'postura':
+        this.guerras.setPostura(cmd.a, cmd.b, cmd.v);
+        return;
+      case 'acontecer': {
+        const a = this.vivo(cmd.a);
+        const b = cmd.b ? this.vivo(cmd.b) : null;
+        const ac = ACONTECIMENTOS.find((x) => x.id === cmd.id);
+        if (!a || !ac || (ac.alvo && !b)) return;
+        if (ac.tom === 'adulto' && (!this.adulto(a) || (b && !this.adulto(b)))) return;
+        if (ac.pode && !ac.pode(this, a, ac.alvo ? b : null)) {
+          this.say('voce', 'acontecer', `✋ Não dá para fazer acontecer ${ac.nome.toLowerCase()} com ${this.L(a.id)} agora.`, [a.id], 1);
+          return;
+        }
+        this.say('voce', 'acontecer', `✋ Você faz acontecer: ${ac.nome.toLowerCase()} (${this.L(a.id)}${b ? `, ${this.L(b.id)}` : ''}).`, [a.id, ...(b ? [b.id] : [])], 1);
+        this.acontecer(ac, a, ac.alvo ? b : null);
         return;
       }
       case 'item': {
@@ -2293,7 +2563,8 @@ export class Vidas {
     // começam sozinhos (chance por ano repartida nos meses)
     for (const d of this.cat.eventos.values()) {
       if (d.chance <= 0 || this.eventosAtivos.some((e) => e.id === d.id)) continue;
-      const pm = d.chance >= 1 ? 1 : 1 - Math.pow(1 - d.chance, 1 / 12);
+      const ch = Math.min(1, d.chance * (d.tone ? this.ajustes[d.tone as TomVida] ?? 1 : 1));
+      const pm = ch >= 1 ? 1 : 1 - Math.pow(1 - ch, 1 / 12);
       if (!this.chance(pm)) continue;
       this.comecarEvento(d.id, null, false);
     }
@@ -2302,7 +2573,7 @@ export class Vidas {
       const d = this.cat.eventos.get(ev.id);
       if (!d?.monthly.length || !this.rt) continue;
       const gente = ev.lugar === null ? this.vivos().map((p) => p.id) : this.presentes.get(ev.lugar) ?? [];
-      for (const id of gente) if (this.vivo(id)) this.rt.runBody(d.monthly, { personagem: new Ent(id), isto: new Ent(id), lugar: this.placeVal(ev.lugar) }, d.src);
+      for (const id of gente) if (this.vivo(id) && this.passa(this.vivo(id)!, d.filter)) this.rt.runBody(d.monthly, { personagem: new Ent(id), isto: new Ent(id), lugar: this.placeVal(ev.lugar) }, d.src);
     }
   }
 
@@ -2312,7 +2583,7 @@ export class Vidas {
     if (!d) return false;
     let l: string | null = d.global ? null : lugar;
     if (!d.global && !l) {
-      const comGente = [...this.presentes.keys()].filter((k) => k !== GUERRA && (!d.where || !this.rt || this.rt.test(d.where, { lugar: this.placeVal(k) }, d.src)));
+      const comGente = [...this.presentes.keys()].filter((k) => !k.startsWith('§') && (!d.where || !this.rt || this.rt.test(d.where, { lugar: this.placeVal(k) }, d.src)));
       if (!comGente.length) return false;
       l = this.pick(comGente);
     } else if (!voce && d.where && this.rt && !this.rt.test(d.where, { lugar: this.placeVal(l) }, d.src)) return false;
@@ -2389,6 +2660,7 @@ export class Vidas {
   private ligarRegras(): void {
     const prog = this.opts.rules;
     if (!prog || !(prog.handlers.length || prog.interactions.length || prog.schemes.length || prog.events.length || prog.traits.some((t) => t.emerge) || prog.professions.some((p) => p.requires)
+      || prog.bonds.length
       || prog.items.some((i) => i.onGain.length || i.onLose.length || i.monthly.length))) {
       this.mudouGente = false;
       return;
@@ -2406,7 +2678,15 @@ export class Vidas {
       this.rt = new Rules(prog, mundo, {
         rng: this.r, year: anoDe(this.t), tables: this.opts.tables, positions: this.opts.positions, budget: 300_000, period: 1 / 12,
         chronicle: (text, who) => this.say('regra', 'regra', text, [...new Set(who)].filter((x) => this.pessoas.has(x)), 2),
-        stance: () => undefined,
+        stance: (kind, a, b) => {
+          const fa = this.guerras.achar(a);
+          const fb = this.guerras.achar(b);
+          if (!fa || !fb) return;
+          if (kind === 'guerra') this.guerras.declarar(fa.id, fb.id, null, false);
+          else if (kind === 'paz') { const g = this.guerras.guerraEntre(fa.id, fb.id); if (g) this.guerras.paz(g, false); }
+          else this.guerras.setPostura(fa.id, fb.id, 70);
+        },
+        tone: (tom) => this.ajustes[tom as TomVida] ?? 1,
         label: (path) => this.rotulo(path),
         virtual: { get: (path, f) => this.getCampo(path, f), set: (path, f, v) => this.setCampoPath(path, f, v) },
         candidates: (a) => {
@@ -2524,9 +2804,21 @@ export class Vidas {
       case 'casado': case 'casada': return !!this.conjuge(p);
       case 'perto': case 'presentes': return this.aoRedor(p).map((x) => new Ent(x));
       case 'especie': case 'raca': return this.especieNome(p);
+      case 'etnia': case 'povo': case 'cultura': return this.etniaNome(p);
+      case 'faccao': case 'reino': case 'lealdade': {
+        const fc = this.guerras.faccaoDe(p);
+        return fc ? this.guerras.val(fc.id) : null;
+      }
+      case 'em guerra': case 'no front': return !!this.guerras.front(p);
+      case 'lider': case 'lidera': return this.guerras.vivas().some((x) => x.lider === p.id);
+      case 'vinculos': case 'lacos': return [...new Set(this.ligados(p.id).flatMap((x) => [...this.vinculos(p.id, x)]))];
+      case 'estados': return Object.keys(p.estados);
       case 'criatura': return this.criatura(p);
       case 'tramas': return this.tramas(p.id).map((x) => x.nome);
     }
+    // vínculo do mundo: `p.irmãos_de_sangue` = com quem tem
+    if (this.cat.vinculos.has(f)) return lista(this.comVinculo(p.id, f));
+    if (p.estados[f] !== undefined || ESTADOS_VIDA[f]) return p.estados[f] !== undefined && p.estados[f]! >= this.t;
     const atr = this.cat.atributos.get(f);
     if (atr && typeof p.campos[f] === 'number') return clamp(Math.round(((p.campos[f] as number) + this.bonus(p, f)) * 10) / 10, atr.min, atr.max);
     if (f in p.campos) {
@@ -2597,6 +2889,18 @@ export class Vidas {
         return;
       }
       case 'familia': case 'sobrenome': p.casa = v === null ? null : nomeDe(v); return;
+      case 'etnia': case 'povo': case 'cultura': {
+        const s = nomeDe(v);
+        p.etnia = s ? etniaDoTexto(this.cat, s) ?? fold(s) : null;
+        this.atribCache.delete(p.id);
+        this.mudouPessoa();
+        return;
+      }
+      case 'faccao': case 'reino': case 'lealdade': {
+        const fc = v === null ? null : this.guerras.achar(v instanceof Ent ? v.path : nomeDe(v));
+        p.faccao = fc?.id ?? null;
+        return;
+      }
     }
     if (['idade', 'sexo', 'vivo', 'viva', 'morto', 'morta', 'conjuge', 'pai', 'mae', 'filhos', 'irmaos', 'amantes', 'amigos', 'rivais', 'inimigos', 'gravida', 'parceiro'].includes(f)) {
       throw new Error(`"${f}" não muda direto; use as funções (casar, ferir, matar...)`);
@@ -2823,6 +3127,87 @@ export class Vidas {
           this.publicar(s);
         }
         return true;
+      },
+      vincular: ([a, b, v, quem]) => {
+        const x = exige(a, 'vincular');
+        const y = exige(b, 'vincular');
+        const id = fold(texto(v)).trim();
+        if (!id) throw new Error('vincular(a, b, "nome do vínculo")');
+        return this.vincular(x, y, id, pe(quem) ?? x);
+      },
+      desvincular: ([a, b, v]) => this.desvincular(exige(a, 'desvincular'), exige(b, 'desvincular'), fold(texto(v)).trim()),
+      vinculo: ([a, b, v]) => {
+        const x = qualquer(a);
+        const y = qualquer(b);
+        return !!x && !!y && this.temVinc(x, y, fold(texto(v)).trim());
+      },
+      vinculados: ([a, v]) => {
+        const x = qualquer(a);
+        return x ? this.comVinculo(x, fold(texto(v)).trim()).map((p) => new Ent(p.id)) : [];
+      },
+      papel: ([a, b, v]) => {
+        const x = qualquer(a);
+        const y = qualquer(b);
+        return x && y ? this.papel(x, y, fold(texto(v)).trim()) : null;
+      },
+      etnia: ([a]) => {
+        const x = qualquer(a);
+        return x ? this.etniaNome(this.pessoas.get(x)!) : null;
+      },
+      faccao: ([a]) => {
+        const x = qualquer(a);
+        const fc = x ? this.guerras.faccaoDe(this.pessoas.get(x)!) : null;
+        return fc ? this.guerras.val(fc.id) : null;
+      },
+      em_guerra: ([a, b]) => {
+        const fa = this.guerras.achar(a instanceof Ent ? a.path : texto(a));
+        const fb = b === undefined ? null : this.guerras.achar(b instanceof Ent ? b.path : texto(b));
+        if (!fa) return false;
+        return fb ? !!this.guerras.guerraEntre(fa.id, fb.id) : this.guerras.emGuerra(fa.id).length > 0;
+      },
+      declarar_guerra: ([a, b, m]) => {
+        const fa = this.guerras.achar(a instanceof Ent ? a.path : texto(a));
+        const fb = this.guerras.achar(b instanceof Ent ? b.path : texto(b));
+        if (!fa || !fb) throw new Error('declarar_guerra precisa de duas facções');
+        return !!this.guerras.declarar(fa.id, fb.id, m ? texto(m) : null, false);
+      },
+      fazer_paz: ([a, b]) => {
+        const fa = this.guerras.achar(a instanceof Ent ? a.path : texto(a));
+        const fb = this.guerras.achar(b instanceof Ent ? b.path : texto(b));
+        const g = fa && fb ? this.guerras.guerraEntre(fa.id, fb.id) : null;
+        if (g) this.guerras.paz(g, false);
+        return !!g;
+      },
+      postura: ([a, b, v]) => {
+        const fa = this.guerras.achar(a instanceof Ent ? a.path : texto(a));
+        const fb = this.guerras.achar(b instanceof Ent ? b.path : texto(b));
+        if (!fa || !fb) return 0;
+        if (typeof v === 'number') this.guerras.setPostura(fa.id, fb.id, v);
+        return Math.round(this.guerras.postura(fa.id, fb.id));
+      },
+      lider: ([f]) => {
+        const fc = this.guerras.achar(f instanceof Ent ? f.path : texto(f));
+        return fc ? this.entOf(fc.lider) : null;
+      },
+      acontecer: ([n, a, b]) => {
+        const k = fold(texto(n));
+        const ac = ACONTECIMENTOS.find((x) => x.id === k || fold(x.nome) === k);
+        const x = exige(a, 'acontecer');
+        const y = pe(b);
+        if (!ac || (ac.alvo && !y) || (ac.tom === 'adulto' && (!this.adulto(x) || (y && !this.adulto(y))))) return false;
+        if (ac.pode && !ac.pode(this, x, ac.alvo ? y : null)) return false;
+        this.acontecer(ac, x, ac.alvo ? y : null);
+        return true;
+      },
+      estado: ([a, e, m]) => {
+        const p = exige(a, 'estado');
+        const k = fold(texto(e)).trim();
+        if (typeof m === 'number') {
+          if (m <= 0) delete p.estados[k];
+          else p.estados[k] = this.t + Math.round(m) - 1;
+          return true;
+        }
+        return (p.estados[k] ?? -1) >= this.t;
       },
       atividade: ([a, b]) => {
         const x = exige(a, 'atividade');

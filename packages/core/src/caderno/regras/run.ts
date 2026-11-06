@@ -49,6 +49,8 @@ export interface RuleHost {
   candidates?(a: string, type: string): string[] | null;
   /** fração do ano de cada volta das interações (1/12 = mensal); a `chance` continua sendo por ano */
   period?: number;
+  /** multiplicador da chance de interações e tramas com `tom` (fantasia, comico, adulto, serio) */
+  tone?(tone: string): number;
   /** posição das fichas no mapa (em %), para distância() */
   positions?: Map<string, { x: number; y: number }>;
   /** limite de passos por chamada (laços infinitos param aqui) */
@@ -251,7 +253,7 @@ export class Rules {
    * `onde` e sorteia a chance (anual, repartida pelas voltas). Se der, chama `run`.
    */
   private fire(
-    it: { a: { v: string; type: string }; b: { v: string; type: string } | null; where: Expr | null; attraction: Expr | null; chance: Expr | null; src: Src },
+    it: { a: { v: string; type: string }; b: { v: string; type: string } | null; where: Expr | null; attraction: Expr | null; chance: Expr | null; src: Src; tone?: string },
     run: (env: Env, a: Ent) => void, skip?: Set<string>,
   ): void {
     const rng = this.host.rng;
@@ -284,6 +286,7 @@ export class Rules {
         else if (it.attraction && this.num(this.eval(it.attraction, env, null)) <= 0) continue;
         let p = it.chance ? this.num(this.eval(it.chance, env, null)) : 0.1;
         if (p > 1) p /= 100;
+        if (it.tone && this.host.tone) p = Math.min(1, p * Math.max(0, this.host.tone(it.tone)));
         // chance por ano; numa volta mensal, a parte do mês (12 meses a 1,4% ≈ 15% no ano)
         const per = this.host.period ?? 1;
         if (per < 1 && p > 0) p = p >= 1 ? 1 : 1 - Math.pow(1 - p, per);

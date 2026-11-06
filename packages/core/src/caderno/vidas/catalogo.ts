@@ -1,5 +1,5 @@
-import { fold } from '../regras/parse';
-import type { Program, RuleEvent, RuleItem, RuleProfession, RuleTrait } from '../regras/parse';
+import { emptyFilter, filterIsEmpty, fold } from '../regras/parse';
+import type { Program, RuleBond, RuleEvent, RuleFilter, RuleItem, RuleProfession, RuleTrait } from '../regras/parse';
 import { asText } from '../frontmatter';
 import type { Entity } from '../mundo';
 import type { Habilidade, Pessoa } from './tipos';
@@ -39,6 +39,10 @@ export interface Traco {
   combate?: number;
   /** traço declarado nas regras: surge sozinho quando a condição vale */
   regra?: RuleTrait;
+  /** quem pode ter (espécie, etnia, sexo, idade, facção); vazio = todos */
+  filtro?: RuleFilter;
+  /** chance de nascer com o traço, para quem passa no filtro (0 a 1) */
+  nasce?: number;
 }
 
 const T = (id: string, f: string | null, cat: TracoCat, desc: string, x: Partial<Traco> = {}): Traco => ({ id, m: id, f: f ?? id, cat, desc, ...x });
@@ -48,6 +52,7 @@ const MASC: Record<string, string> = {
   irascivel: 'irascível', sociavel: 'sociável', timido: 'tímido', preguicoso: 'preguiçoso', cinico: 'cínico', traicoeiro: 'traiçoeiro', ingenuo: 'ingênuo',
   melancolico: 'melancólico', romantico: 'romântico', pragmatico: 'pragmático', fragil: 'frágil', miudo: 'miúdo', esteril: 'estéril', sabio: 'sábio',
   consanguineo: 'consanguíneo', gemeo: 'gêmeo', heroi: 'herói', alcoolatra: 'alcoólatra', brigao: 'brigão',
+  amaldicoado: 'amaldiçoado', abencoado: 'abençoado',
 };
 
 const TRACOS_BASE: Traco[] = [
@@ -126,6 +131,15 @@ const TRACOS_BASE: Traco[] = [
   T('manco', 'manca', 'marca', 'Uma perna que não obedece.', { combate: -3 }),
   T('caolho', 'caolha', 'marca', 'Perdeu um olho.', { combate: -3, visto: -1 }),
   T('mutilado', 'mutilada', 'marca', 'Perdeu a mão.', { combate: -6 }),
+
+  // ---- do acaso, da guerra e do sobrenatural
+  T('desertor', 'desertora', 'reputacao', 'Fugiu da guerra no meio da noite.', { visto: -8, peso: { duelar: 0.5, brigar: 0.7 } }),
+  T('amaldicoado', 'amaldiçoada', 'marca', 'Carrega uma maldição que ninguém sabe desfazer.', { humor: -10, visto: -4 }),
+  T('abencoado', 'abençoada', 'marca', 'Tocado pela sorte (ou por uma estrela).', { humor: 8, visto: 3 }),
+  T('pactuado', 'pactuada', 'adquirido', 'Fez um pacto numa encruzilhada.', { oculto: true, estresse: 8 }),
+  T('licantropo', 'licantropa', 'adquirido', 'Nas noites de lua cheia, vira outra coisa.', { oculto: true, combate: 4, estresse: 6 }),
+  T('vidente', null, 'adquirido', 'Vê coisas que ainda não aconteceram.', { visto: 2, peso: { confidenciar: 1.4 } }),
+  T('viciado', 'viciada', 'adquirido', 'Não passa um dia sem a erva-de-sonho.', { peso: { trabalhar: 0.6, roubar: 1.6, beber: 1.3 }, humor: -6, visto: -4 }),
 ];
 
 export const TRACOS: Traco[] = TRACOS_BASE.map((t) => (MASC[t.id] ? { ...t, m: MASC[t.id]! } : t));
@@ -163,6 +177,7 @@ export interface Profissao {
   /** aptidão: quanto a pessoa combina com a profissão (≥ 0) */
   apto?: (p: Pessoa) => number;
   regra?: RuleProfession;
+  filtro?: RuleFilter;
 }
 
 const temT = (p: Pessoa, ...ids: string[]) => ids.some((i) => p.tracos.includes(i));
@@ -212,6 +227,51 @@ export interface Catalogo {
   itens: Map<string, Item>;
   /** eventos do mundo declarados nas regras (`evento "Lua de Sangue":`) */
   eventos: Map<string, RuleEvent>;
+  /** povos, etnias e culturas (das regras e das fichas `tipo: cultura`) */
+  etnias: Map<string, Etnia>;
+  /** vínculos inventados pelo mundo (`vínculo "Irmãos de sangue":`) */
+  vinculos: Map<string, VinculoDef>;
+}
+
+export type Filtro = RuleFilter;
+export { emptyFilter as filtroVazio, filterIsEmpty as filtroVazioDe };
+
+export interface Etnia {
+  id: string;
+  nome: string;
+  plural: string;
+  desc: string;
+  /** espécie (id) a que pertence; null = qualquer */
+  especie: string | null;
+  olhos: Record<string, number>;
+  cabelo: Record<string, number>;
+  altura: number;
+  mods: Record<string, number>;
+  nomesM: string[];
+  nomesF: string[];
+  sobrenomes: string[];
+  tracos: string[];
+  talvez: Record<string, number>;
+  gostos: string[];
+  frequencia: number;
+  /** opinião sobre gente de outro povo (id → pontos; "" = o próprio povo) */
+  afinidade: Record<string, number>;
+  nota: string | null;
+}
+
+export interface VinculoDef {
+  id: string;
+  nome: string;
+  desc: string;
+  simbolo: string;
+  papeis: [string, string] | null;
+  secreto: boolean;
+  exclusivo: boolean;
+  romantico: boolean;
+  opiniao: number;
+  peso: Record<string, number>;
+  porMes: Record<string, number>;
+  regra: RuleBond;
 }
 
 export interface Item {
@@ -278,6 +338,8 @@ export interface Atributo {
   porAno: number;
   /** só estas espécies têm (ids; vazio = todos) */
   so: string[];
+  /** quem tem: etnia, sexo, idade, facção (e espécie) */
+  filtro: RuleFilter;
   desc: string;
 }
 
@@ -353,6 +415,28 @@ function especiesDasFichas(entities: Entity[]): Especie[] {
   return out;
 }
 
+/** Povos das fichas `tipo: cultura` (ou `etnia`/`povo`): `espécie`, `frequência`, `nomes`, `sobrenomes`, `traços`, `gostos`, `olhos`, `cabelo`. */
+function etniasDasFichas(entities: Entity[]): Etnia[] {
+  const out: Etnia[] = [];
+  for (const e of entities) {
+    if (e.type !== 'cultura' && e.type !== 'etnia' && e.type !== 'povo') continue;
+    const get = (...ks: string[]) => {
+      for (const k of Object.keys(e.props)) if (ks.includes(fold(k).trim())) return asText(e.props[k]!).trim();
+      return '';
+    };
+    const lista = (...ks: string[]) => get(...ks).split(/[,;·]/).map((x) => x.replace(/\[\[|\]\]/g, '').trim()).filter(Boolean);
+    const freq = numDe(get('frequencia', 'proporcao'));
+    const cor = (v: string) => (v ? { [fold(v.split(/[,;]/)[0]!).trim()]: 0.6 } : {});
+    out.push({
+      id: fold(e.name).trim(), nome: e.name, plural: e.name, desc: e.summary, especie: lista('especie', 'raca')[0] ? especieId(lista('especie', 'raca')[0]) : null,
+      olhos: cor(get('olhos')), cabelo: cor(get('cabelo', 'cabelos')), altura: 0, mods: {}, nomesM: lista('nomes', 'nomes masculinos'), nomesF: lista('nomes femininos'),
+      sobrenomes: lista('sobrenomes', 'familias', 'casas'), tracos: lista('tracos', 'traços').map((x) => fold(x)), talvez: {}, gostos: lista('gostos', 'costumes'),
+      frequencia: freq === null ? 0 : freq > 1 ? freq / 100 : freq, afinidade: {}, nota: e.path,
+    });
+  }
+  return out;
+}
+
 /** Catálogo de fábrica somado ao que as regras do mundo declararam. */
 export function catalogo(prog?: Program | null, entities: Entity[] = []): Catalogo {
   const tracos = new Map(TRACOS.map((t) => [t.id, t]));
@@ -363,13 +447,14 @@ export function catalogo(prog?: Program | null, entities: Entity[] = []): Catalo
       desc: r.desc || base?.desc || '', herda: r.inherit || base?.herda, peso: { ...(base?.peso ?? {}), ...r.weights },
       afinidade: { ...(base?.afinidade ?? {}), ...r.affinity }, humor: r.mood || base?.humor, estresse: r.stress || base?.estresse, regra: r,
       ...(r.opposite ? { oposto: r.opposite } : base?.oposto ? { oposto: base.oposto } : {}),
+      ...(filterIsEmpty(r.filter) ? {} : { filtro: r.filter }), ...(r.birth ? { nasce: r.birth } : {}),
     });
     // o oposto também passa a apontar de volta
     if (r.opposite && tracos.has(r.opposite) && !tracos.get(r.opposite)!.oposto) tracos.set(r.opposite, { ...tracos.get(r.opposite)!, oposto: r.id });
   }
   const profs = new Map(PROFISSOES.map((p) => [p.id, p]));
   for (const r of prog?.professions ?? []) {
-    profs.set(r.id, { id: r.id, m: r.m, f: r.f, renda: r.income, hab: r.skill, status: r.status, risco: r.risk, viaja: r.travels, regra: r, apto: () => 1 });
+    profs.set(r.id, { id: r.id, m: r.m, f: r.f, renda: r.income, hab: r.skill, status: r.status, risco: r.risk, viaja: r.travels, regra: r, apto: () => 1, ...(filterIsEmpty(r.filter) ? {} : { filtro: r.filter }) });
   }
   const gostos = [...new Set([...GOSTOS, ...(prog?.tastes ?? [])])];
   const especies = new Map(especiesDasFichas(entities).map((e) => [e.id, e]));
@@ -385,7 +470,10 @@ export function catalogo(prog?: Program | null, entities: Entity[] = []): Catalo
   }
   const atributos = new Map<string, Atributo>();
   for (const a of prog?.attributes ?? []) {
-    atributos.set(a.id, { id: a.id, nome: a.name, min: a.min, max: a.max, media: a.mean, desvio: a.sd, herda: a.inherit, cat: a.category, porAno: a.perYear, so: a.only, desc: a.desc });
+    atributos.set(a.id, {
+      id: a.id, nome: a.name, min: a.min, max: a.max, media: a.mean, desvio: a.sd, herda: a.inherit, cat: a.category, porAno: a.perYear,
+      so: [...new Set([...a.only, ...(a.filter?.species ?? [])])], filtro: a.filter ?? emptyFilter(), desc: a.desc,
+    });
   }
   const itens = new Map(itensDasFichas(entities).map((i) => [i.id, i]));
   for (const r of prog?.items ?? []) {
@@ -398,7 +486,26 @@ export function catalogo(prog?: Program | null, entities: Entity[] = []): Catalo
     });
   }
   const eventos = new Map((prog?.events ?? []).map((e) => [e.id, e]));
-  return { tracos, profs, gostos, especies, atributos, itens, eventos };
+  const etnias = new Map(etniasDasFichas(entities).map((e) => [e.id, e]));
+  for (const r of prog?.ethnicities ?? []) {
+    const base = etnias.get(r.id);
+    etnias.set(r.id, {
+      id: r.id, nome: r.name, plural: r.plural, desc: r.desc || base?.desc || '', especie: r.species ?? base?.especie ?? null,
+      olhos: { ...(base?.olhos ?? {}), ...r.eyes }, cabelo: { ...(base?.cabelo ?? {}), ...r.hair }, altura: r.height || base?.altura || 0, mods: { ...(base?.mods ?? {}), ...r.mods },
+      nomesM: r.namesM.length ? r.namesM : base?.nomesM ?? [], nomesF: r.namesF.length ? r.namesF : base?.nomesF ?? [], sobrenomes: r.surnames.length ? r.surnames : base?.sobrenomes ?? [],
+      tracos: [...new Set([...(base?.tracos ?? []), ...r.traits])], talvez: { ...(base?.talvez ?? {}), ...r.maybe }, gostos: [...new Set([...(base?.gostos ?? []), ...r.tastes])],
+      frequencia: r.frequency || base?.frequencia || 0, afinidade: { ...(base?.afinidade ?? {}), ...r.affinity }, nota: base?.nota ?? null,
+    });
+  }
+  const vinculos = new Map<string, VinculoDef>();
+  for (const r of prog?.bonds ?? []) {
+    vinculos.set(r.id, {
+      id: r.id, nome: r.name, desc: r.desc, simbolo: r.symbol, papeis: r.roles, secreto: r.secret, exclusivo: r.exclusive, romantico: r.romantic, opiniao: r.opinion,
+      peso: r.weights, porMes: r.perMonth, regra: r,
+    });
+  }
+  for (const e of etnias.values()) for (const g of e.gostos) if (!gostos.includes(g)) gostos.push(g);
+  return { tracos, profs, gostos, especies, atributos, itens, eventos, etnias, vinculos };
 }
 
 /** Acha o traço do catálogo por um texto livre ("ciumenta", "covarde no aperto", "Leal"). */
@@ -413,6 +520,17 @@ export function tracoDoTexto(cat: Catalogo, texto: string): string | null {
 }
 
 /** Acha a profissão por um texto livre ("ferreira", "Curandeiro da vila"). */
+/** Acha o povo por um texto livre ("nórdica", "[[Nórdicos]]"). */
+export function etniaDoTexto(cat: Catalogo, texto: string): string | null {
+  const k = fold(texto.replace(/\[\[|\]\]/g, '').split('|')[0]!.split('/').pop()!.replace(/\.md$/i, '')).trim();
+  if (!k) return null;
+  for (const e of cat.etnias.values()) if (e.id === k || fold(e.nome) === k || fold(e.plural) === k) return e.id;
+  // "nórdica" → "nordico", "élfica" → "elfico"
+  const raiz = k.replace(/(as|os|a|o|es|s)$/, '');
+  for (const e of cat.etnias.values()) if (raiz.length >= 4 && (e.id.startsWith(raiz) || fold(e.plural).startsWith(raiz))) return e.id;
+  return null;
+}
+
 export function profDoTexto(cat: Catalogo, texto: string): string | null {
   const k = fold(texto).trim();
   if (!k) return null;
