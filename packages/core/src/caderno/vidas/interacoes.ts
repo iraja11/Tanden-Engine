@@ -544,7 +544,7 @@ export const INTERACOES: Interacao[] = [
   },
   {
     id: 'roubar', nome: 'Roubar', verbo: 'roubar', cat: 'conflito', alvo: true,
-    pode: (s, a, b) => s.idade(a) >= 12 && B(b).dinheiro > 20 && !s.proximos(a.id, B(b).id) && a.conjuge !== B(b).id && s.parceiro(a)?.id !== B(b).id,
+    pode: (s, a, b) => s.idade(a) >= 12 && (B(b).dinheiro > 20 || s.valorItens(B(b)) > 0) && !s.proximos(a.id, B(b).id) && a.conjuge !== B(b).id && s.parceiro(a)?.id !== B(b).id,
     peso: (_s, a) => (a.dinheiro < 15 || a.prof === 'ladrão' ? 0.05 : 0.008) * (a.prof === 'ladrão' ? 6 : 1),
     fazer: (s, a, b, g) => {
       const o = B(b);
@@ -556,6 +556,7 @@ export const INTERACOES: Interacao[] = [
         o.estresse = Math.min(100, o.estresse + 10);
         s.say('conflito', 'roubo', `🤫 ${s.L(a.id)} rouba ${Math.round(v)} moedas de ${s.L(o.id)}.`, [a.id, o.id], 2, true);
         s.emitir('roubo', [a.id, o.id]);
+        s.roubarItem(a, o);
       } else {
         s.lembra(o.id, a.id, 'tentou me roubar', -35, 96);
         s.mexe(o.id, a.id, { confianca: -40 });

@@ -103,6 +103,8 @@ export interface Pessoa {
   estados: Record<string, number>;
   /** campos livres que as regras criam (`p.rancor += 1`) */
   campos: Record<string, CampoValor>;
+  /** itens que carrega (ids do catálogo; um comum pode aparecer mais de uma vez) */
+  itens?: string[];
 }
 
 export type CampoValor = number | string | boolean | null | string[];
@@ -203,6 +205,10 @@ export type Comando =
   | { c: 'conduzir'; p: string; on: boolean }
   | { c: 'proteger'; p: string; on: boolean }
   | { c: 'evento'; tipo: Efeito['tipo']; lugar: string | null; meses?: number }
+  /** evento do mundo declarado nas regras (`evento "Lua de Sangue":`) */
+  | { c: 'mundo'; id: string; lugar: string | null }
+  /** dá (on) ou tira um item */
+  | { c: 'item'; p: string; item: string; on: boolean }
   | { c: 'ajuste'; k: keyof Ajustes; v: number }
   | { c: 'decidir'; id: number; opcao: string }
   | { c: 'matar'; p: string; causa?: string }

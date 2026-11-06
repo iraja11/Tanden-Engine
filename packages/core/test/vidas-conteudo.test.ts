@@ -287,3 +287,140 @@ describe('construtor', () => {
     expect(s.eventos.some((e) => e.texto.includes('jura vingança'))).toBe(true);
   });
 });
+
+describe('texto com variação', () => {
+  it('sorteia opções (com {a} dentro) e concorda o gênero', () => {
+    const s = simular(mundo(`quando mês em personagem:
+  crônica "{personagem} acorda {cansado|exausto|moído}, {personagem:sozinho/sozinha}. {{personagem} boceja|Ninguém repara}."`));
+    s.avancar(6);
+    const t = s.eventos.filter((e) => e.cat === 'regra').map((e) => e.texto);
+    expect(t.some((x) => x.startsWith('[[Mira]]') && x.includes('sozinha'))).toBe(true);
+    expect(t.some((x) => x.startsWith('[[Kael]]') && x.includes('sozinho.'))).toBe(true);
+    expect(new Set(t.map((x) => /acorda (\w+)/.exec(x)?.[1])).size).toBeGreaterThan(1);
+    expect(t.some((x) => x.includes('[[Kael]] boceja') || x.includes('[[Mira]] boceja'))).toBe(true);
+    expect(t.every((x) => !x.includes('{'))).toBe(true);
+  });
+});
+
+describe('itens', () => {
+  const regras = `item "Espada de Aurora":
+  único
+  tipo arma
+  raridade lendária
+  valor 500
+  descrição "Brilha quando há mentira por perto."
+  combate +6
+  sanidade +5
+  traço "corajoso"
+  dono "Kael"
+  ao ganhar:
+    crônica "A espada aceita {dono}."
+
+item "Anel Negro":
+  único
+  cobiçado
+  por mês sanidade -2
+  em "Pedravale"
+
+atributo "Sanidade":
+  média 50
+  desvio 0`;
+
+  it('dono inicial, ajustes e traço enquanto possui; perder tira o traço', () => {
+    const s = simular(mundo(regras));
+    const kael = s.pessoa(`${W}/Personagens/Kael.md`)!;
+    expect(kael.itens).toEqual(['espada de aurora']);
+    expect(kael.tracos).toContain('corajoso');
+    expect(s.getCampo(kael.id, 'combate')).toBeCloseTo(kael.hab.combate + 6, 1);
+    expect(s.getCampo(kael.id, 'sanidade')).toBe(55);
+    expect(s.getCampo(kael.id, 'itens')).toEqual(['Espada de Aurora']);
+    s.comando({ c: 'item', p: kael.id, item: 'espada de aurora', on: false });
+    expect(kael.tracos).not.toContain('corajoso');
+    expect(s.perdidos.get('espada de aurora')).toBe(LUGAR);
+    // dar a outra pessoa roda "ao ganhar"
+    const mira = s.pessoa(`${W}/Personagens/Mira.md`)!;
+    s.comando({ c: 'item', p: mira.id, item: 'espada de aurora', on: true });
+    expect(s.donoDe('espada de aurora')).toBe(mira);
+    expect(s.eventos.some((e) => e.texto.includes('A espada aceita [[Mira]]'))).toBe(true);
+  });
+
+  it('herança na morte, item largado é achado, maldição por mês', () => {
+    const s = simular(mundo(regras), 10, 3);
+    const kael = s.pessoa(`${W}/Personagens/Kael.md`)!;
+    s.morrer(kael, 'de repente');
+    const r = s.reliquias().find((x) => x.item.id === 'espada de aurora')!;
+    // sem filhos adultos nem cônjuge: fica largada, ou foi herdada por alguém
+    expect(r.dono === null ? r.lugar : r.dono.id).toBeTruthy();
+    s.avancar(12 * 15);
+    const anel = s.reliquias().find((x) => x.item.id === 'anel negro')!;
+    expect(anel.historia.length).toBeGreaterThan(1);
+    if (anel.dono) expect(anel.dono.campos['sanidade']).toBeLessThan(50);
+  });
+
+  it('ficha tipo: item vira item único com ajustes', () => {
+    const w = mundo('', [{ path: `${W}/Itens/Coroa de Ferro.md`, text: note('tipo: item\nmundo: Aerth\ndono: "[[Mira]]"\nvalor: 900\najustes: "lábia +4, beleza +10"\nconcede: orgulhoso') }]);
+    const s = simular(w);
+    const mira = s.pessoa(`${W}/Personagens/Mira.md`)!;
+    expect(mira.itens).toEqual(['coroa de ferro']);
+    expect(mira.tracos).toContain('orgulhoso');
+    expect(s.getCampo(mira.id, 'labia')).toBeCloseTo(mira.hab.labia + 4, 1);
+    expect(s.reliquias()[0]!.item.nota).toBe(`${W}/Itens/Coroa de Ferro.md`);
+  });
+
+  it('funções das regras: dar_item, tem_item, dono', () => {
+    const s = simular(mundo(`${regras}
+
+quando início:
+  dar_item(ficha("Mira"), "Anel Negro")
+  se tem_item(ficha("Mira"), "Anel Negro") e dono("Espada de Aurora") = ficha("Kael"):
+    crônica "ok {dono(\\"Anel Negro\\")}"`));
+    expect(s.eventos.some((e) => e.texto === 'ok [[Mira]]')).toBe(true);
+  });
+});
+
+describe('eventos do mundo e espécies variadas', () => {
+  it('evento declarado começa, roda todo mês e acaba', () => {
+    const s = simular(mundo(`evento "Lua de Sangue":
+  dura 3 meses
+  descrição "o céu fica vermelho"
+  peso brigar * 3
+  todo mês:
+    personagem.medo += 1
+  ao acabar:
+    crônica "O céu volta ao normal."`));
+    expect(s.comecarEvento('Lua de Sangue', null, true)).toBe(true);
+    s.avancar(5);
+    const kael = s.pessoa(`${W}/Personagens/Kael.md`)!;
+    expect(kael.campos['medo']).toBe(3);
+    expect(s.eventosAtivos.length).toBe(0);
+    expect(s.eventos.some((e) => e.texto.includes('O céu volta ao normal'))).toBe(true);
+  });
+
+  it('espécie com traços possíveis e atributo só dela', () => {
+    const s = simular(mundo(`espécie "Tiefling":
+  pode ter "irascivel" 100%, "belo" 0%
+  frequência 100%
+
+atributo "Chifres" 0 a 10:`.replace(' 0 a 10:', ' 0 a 10') + `
+
+atributo "Envergadura":
+  só para "Dragão"`), 12, 4);
+    const tief = s.vivos().filter((p) => p.especie === 'Tiefling');
+    expect(tief.length).toBeGreaterThan(5);
+    for (const p of tief) {
+      expect(p.tracos).toContain('irascivel');
+      expect(p.tracos).not.toContain('belo');
+      expect(p.campos['envergadura']).toBeUndefined();
+      expect(typeof p.campos['chifres']).toBe('number');
+    }
+  });
+
+  it('traço com ajuste muda força', () => {
+    const s = simular(mundo(`traço "Gigante de sangue":
+  ajuste força +30`));
+    const kael = s.pessoa(`${W}/Personagens/Kael.md`)!;
+    const antes = s.atrib(kael).forca;
+    s.comando({ c: 'traco', p: kael.id, add: 'gigante de sangue' });
+    expect(s.atrib(kael).forca).toBeGreaterThan(antes);
+  });
+});

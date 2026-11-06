@@ -3,7 +3,7 @@ import { findTable, rollTable, type RollTable } from '../../rpg/tables';
 import type { PropValue } from '../frontmatter';
 import { linkTarget } from '../markdown';
 import { normalizeType, type Entity, type World } from '../mundo';
-import { fold, parseExprSource, parseLoose, RuleError, type Expr, type FlowKind, type Program, type RuleIssue, type RuleScheme, type Src, type Stmt } from './parse';
+import { fold, parseExprSource, parseLoose, parseTemplate, RuleError, type Expr, type FlowKind, type Program, type RuleIssue, type RuleScheme, type Src, type Stmt } from './parse';
 
 /*
  * Interpretador das regras do mundo.
@@ -376,6 +376,17 @@ export class Rules {
     }
   }
 
+  /** Roda um bloco solto (itens, eventos do mundo) com as variáveis dadas. */
+  runBody(body: Stmt[], vars: Record<string, Val>, src: Src): void {
+    if (!body.length) return;
+    this.guard(src, () => this.exec(body, new Map(Object.entries(vars)), null));
+  }
+
+  /** Confere uma condição solta com as variáveis dadas (erro = não). */
+  test(expr: Expr, vars: Record<string, Val>, src: Src): boolean {
+    return this.truthy(this.guard(src, () => this.eval(expr, new Map(Object.entries(vars)), null)));
+  }
+
   /** Tramas em andamento (para a tela): nome, etapa, quem e há quantas voltas. */
   activeSchemes(): Array<{ id: number; name: string; stage: string; step: number; steps: number; who: string[]; age: number }> {
     return this.schemes.map((r) => ({
@@ -556,9 +567,7 @@ export class Rules {
       case 'say': {
         const v = s.value;
         const actors: string[] = [];
-        const text = v.t === 'tpl'
-          ? v.parts.map((p) => (typeof p === 'string' ? p : this.show(this.eval(p, env, subject), s.kind === 'cronica', actors))).join('')
-          : this.show(this.eval(v, env, subject), s.kind === 'cronica', actors);
+        const text = this.render(v, env, subject, s.kind === 'cronica', actors);
         if (s.kind === 'cronica') this.host.chronicle?.(text, actors);
         else this.host.notify?.(text);
         return;
@@ -647,7 +656,7 @@ export class Rules {
       case 'lit':
         return e.v;
       case 'tpl':
-        return e.parts.map((p) => (typeof p === 'string' ? p : this.show(this.eval(p, env, subject)))).join('');
+        return this.render(e, env, subject, false);
       case 'list':
         return e.items.map((x) => this.eval(x, env, subject));
       case 'id':
@@ -816,6 +825,9 @@ export class Rules {
         const n = name !== undefined && name !== null ? fold(this.show(name)).trim() : null;
         return !!p && this.schemes.some((r) => r.who.includes(p) && (!n || fold(r.scheme.name).trim() === n));
       }
+      case '__escolha':
+      case '__genero':
+        return this.render(e, env, subject, false);
       case 'primeiro': { const l = args()[0]; return Array.isArray(l) ? l[0] ?? null : l ?? null; }
       case 'ultimo': { const l = args()[0]; return Array.isArray(l) ? l[l.length - 1] ?? null : l ?? null; }
       case 'todos':
@@ -872,13 +884,42 @@ export class Rules {
 
   /** Preenche os {a.nome} de um texto com as variáveis da regra; o que não der, fica como está. */
   private fill(text: string, env: Env, subject: Ent | null): string {
-    return text.replace(/\{([^{}]+)\}/g, (whole, inner: string) => {
-      try {
-        return this.show(this.eval(parseExprSource(inner), env, subject), true);
-      } catch {
-        return whole;
-      }
-    });
+    try {
+      return this.render(parseTemplate(text, { path: 'tabela', line: 0 }, true), env, subject, true);
+    } catch {
+      return text;
+    }
+  }
+
+  /** Texto de um modelo: valores, opções sorteadas (`{a|b}`) e formas por gênero (`{p:o/a}`). */
+  private render(e: Expr, env: Env, subject: Ent | null, links: boolean, actors?: string[]): string {
+    if (e.t === 'tpl') return e.parts.map((p) => (typeof p === 'string' ? p : this.render(p, env, subject, links, actors))).join('');
+    if (e.t === 'call' && e.name === '__escolha') {
+      const o = e.args[Math.floor(this.host.rng() * e.args.length)]!;
+      return this.render(o, env, subject, links, actors);
+    }
+    if (e.t === 'call' && e.name === '__genero') {
+      const forms = e.args.slice(1).map((x) => (x.t === 'lit' ? String(x.v) : ''));
+      const g = this.genderOf(this.eval(e.args[0]!, env, subject));
+      return (g === 'f' ? forms[1] : g === 'n' ? forms[2] ?? forms[0] : forms[0]) ?? forms[0] ?? '';
+    }
+    if (e.t === 'lit' && typeof e.v === 'string') return e.v;
+    return this.show(this.eval(e, env, subject), links, actors);
+  }
+
+  /** Gênero de uma ficha para a gramática: f, m ou n (neutro). */
+  private genderOf(v: Val): 'f' | 'm' | 'n' {
+    if (Array.isArray(v)) return v.length && v.every((x) => this.genderOf(x) === 'f') ? 'f' : 'm';
+    if (!(v instanceof Ent)) return 'm';
+    for (const k of ['genero', 'sexo']) {
+      const x = this.field(v, k);
+      if (x === null || x === undefined || x === '') continue;
+      const t = fold(String(x instanceof Ent ? this.nameOf(x.path) : x)).trim();
+      if (/^(f|fem|mulher|femea|menina)/.test(t)) return 'f';
+      if (/^(n|nao.?bin|neutr|enby)/.test(t)) return 'n';
+      return 'm';
+    }
+    return 'm';
   }
 
   private listOf(e: Expr, env: Env, subject: Ent | null): Val[] {

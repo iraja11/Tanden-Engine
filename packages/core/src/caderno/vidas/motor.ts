@@ -5,7 +5,7 @@ import { asText } from '../frontmatter';
 import type { Entity, World } from '../mundo';
 import { fold, type Program, type RuleIssue } from '../regras/parse';
 import { Ent, Rules, type Val } from '../regras/run';
-import { catalogo, especieId, nomeProf, nomeTraco, ATIVIDADE, type Catalogo, type Especie, type Profissao } from './catalogo';
+import { catalogo, especieId, nomeProf, nomeTraco, ATIVIDADE, type Catalogo, type Especie, type Item, type Profissao } from './catalogo';
 import { atributos, alturaDe, cabeloDe, consanguinidade, herdar, olhosDe, tracosDosGenes } from './genetica';
 import { INTERACOES, type Interacao } from './interacoes';
 import { lutar, type Modo } from './combate';
@@ -126,6 +126,15 @@ export class Vidas {
   /** quem sabe algum segredo dos outros (para a fofoca), refeito todo mês */
   private sabedores = new Set<string>();
   private atribCache = new Map<string, ReturnType<typeof atributos>>();
+  /** itens únicos sem dono: id → lugar onde estão largados */
+  readonly perdidos = new Map<string, string>();
+  readonly destruidos = new Set<string>();
+  /** quem teve cada item, e como passou de mão */
+  readonly historiaItens = new Map<string, Array<{ t: number; dono: string | null; como: string; lugar?: string }>>();
+  /** traços que vieram de itens (pessoa → traço → quantos itens dão) */
+  private tracosDeItem = new Map<string, Map<string, number>>();
+  /** eventos do mundo declarados nas regras, em andamento */
+  eventosAtivos: Array<{ id: string; nome: string; lugar: string | null; desde: number; ate: number }> = [];
   /** campos livres das relações (`relação(a, b).dívida += 10`), de `a>b` */
   private relCampos = new Map<string, Record<string, CampoValor>>();
   private readonly entPorCaminho: Map<string, Entity>;
@@ -165,6 +174,7 @@ export class Vidas {
         this.casamentos.set(parKey(l.a, l.b), this.t + 6);
       } else if (l.v) this.liga(l.a, l.b, l.v);
     }
+    this.iniciarItens();
     this.ligarRegras();
     this.mapearPresenca();
     this.rt?.emit('inicio');
@@ -242,7 +252,10 @@ export class Vidas {
     if (!a) {
       // a curva de idade usa a idade biológica (uma espécie com maioridade própria envelhece no ritmo dela)
       a = atributos({ ...p, vida: 70 }, this.idadeBio(p));
-      const m = this.esp(p)?.mods;
+      const m0 = this.esp(p)?.mods;
+      const extra = ['forca', 'agilidade', 'intelecto', 'inteligencia', 'beleza', 'fertilidade'].some((k) => this.bonus(p, k));
+      const m = m0 || extra ? { ...(m0 ?? {}) } : null;
+      if (m) for (const k of ['forca', 'agilidade', 'intelecto', 'beleza', 'fertilidade']) m[k] = (m[k] ?? 0) + this.bonus(p, k) + (k === 'intelecto' ? this.bonus(p, 'inteligencia') : 0);
       if (m) {
         const k = (n?: number) => (n ?? 0) / 100;
         a = {
@@ -691,6 +704,7 @@ export class Vidas {
 
   ganhaTraco(p: Pessoa, id: string, contar = true): boolean {
     if (p.tracos.includes(id)) return false;
+    this.atribCache.delete(p.id);
     const t = this.cat.tracos.get(id);
     if (t?.oposto) p.tracos = p.tracos.filter((x) => x !== t.oposto);
     p.tracos.push(id);
@@ -703,6 +717,7 @@ export class Vidas {
   }
   perdeTraco(p: Pessoa, id: string): void {
     p.tracos = p.tracos.filter((x) => x !== id);
+    this.atribCache.delete(p.id);
     this.mudouPessoa();
   }
 
@@ -965,6 +980,7 @@ export class Vidas {
       for (const h of herdeiros) h.dinheiro += parte;
       p.dinheiro = 0;
     }
+    this.herdarItens(p, herdeiros);
     for (const o of this.ligados(p.id)) for (const v of ['namoro', 'noivado', 'amantes'] as Vinculo[]) this.desliga(p.id, o, v);
     this.romCache.clear();
     this.parCache.clear();
@@ -1081,6 +1097,17 @@ export class Vidas {
     return cruz?.gera ?? mae.especie;
   }
 
+  /** Uniforme fixo por pessoa e chave (0 a 1). */
+  private unif(p: Pessoa, chave: string): number {
+    return seededRng(hash53(`${p.id}|${chave}`, this.semente) % 2147483647 || 1)();
+  }
+
+  /** A pessoa tem este atributo? (atributos `só para` certas espécies) */
+  temAtributo(p: Pessoa, id: string): boolean {
+    const a = this.cat.atributos.get(id);
+    return !!a && (!a.so.length || a.so.includes(this.eid(p)));
+  }
+
   /** Sorteio fixo por pessoa e atributo (não gasta a sorte da simulação: acrescentar um atributo não muda o resto da história). */
   private sorteioDe(p: Pessoa, chave: string): number {
     const r = seededRng(hash53(`${p.id}|${chave}`, this.semente) % 2147483647 || 1);
@@ -1097,6 +1124,7 @@ export class Vidas {
 
   private herdarAtributos(b: Pessoa, mae: Pessoa, pai: Pessoa | null): void {
     for (const a of this.cat.atributos.values()) {
+      if (!this.temAtributo(b, a.id)) continue;
       const proprio = this.atributoInicial(b, a.id);
       const vm = mae.campos[a.id];
       const vp = pai?.campos[a.id];
@@ -1129,7 +1157,10 @@ export class Vidas {
     const e = this.esp(p);
     if (e?.vida && p.vida === 70) p.vida = e.vida;
     for (const t of e?.tracos ?? []) if (!p.tracos.includes(t)) p.tracos.push(t);
+    // traços que a espécie pode ter: sorteio fixo por pessoa
+    for (const [t, c] of Object.entries(e?.talvez ?? {})) if (!p.tracos.includes(t) && this.unif(p, `talvez:${t}`) < c) p.tracos.push(t);
     for (const a of this.cat.atributos.values()) {
+      if (!this.temAtributo(p, a.id)) continue;
       if (typeof p.campos[a.id] !== 'number') p.campos[a.id] = this.atributoInicial(p, a.id);
     }
     if (e?.criatura) p.prof = null;
@@ -1222,12 +1253,14 @@ export class Vidas {
     if (novoAno) {
       for (const a of this.cat.atributos.values()) {
         if (!a.porAno) continue;
-        for (const p of vivos) p.campos[a.id] = clamp(Math.round(((Number(p.campos[a.id]) || 0) + a.porAno) * 10) / 10, a.min, a.max);
+        for (const p of vivos) if (this.temAtributo(p, a.id)) p.campos[a.id] = clamp(Math.round(((Number(p.campos[a.id]) || 0) + a.porAno) * 10) / 10, a.min, a.max);
       }
     }
     for (const p of vivos) this.vida(p);
     this.mapearPresenca();
     this.efeitosDoMundo();
+    this.itensDoMes();
+    this.eventosDoMundo();
     // encontros
     const ordem = this.embaralhar(this.vivos());
     for (const p of ordem) if (p.morte === null) this.agir(p);
@@ -1236,6 +1269,12 @@ export class Vidas {
     if (this.rt) {
       if (this.mudouGente) this.ligarRegras();
       this.rt.month(anoDe(t), novoAno);
+      for (const p of this.vivos()) {
+        for (const id of [...(p.itens ?? [])]) {
+          const it = this.cat.itens.get(id);
+          if (it?.regra?.monthly.length && p.morte === null) this.rt.runBody(it.regra.monthly, { dono: new Ent(p.id), item: it.nome, isto: new Ent(p.id) }, it.regra.src);
+        }
+      }
       this.coletarIssues();
     }
     if (mesDoAno(t) === 12) {
@@ -1666,6 +1705,15 @@ export class Vidas {
     if (i.cat === 'conflito' && i.id !== 'insultar' && i.id !== 'discutir' && a.estados['brigou']) w *= 0.2;
     if (this.efeito('festa', a.local) && (i.id === 'flertar' || i.id === 'conversar' || i.id === 'atividade')) w *= 2;
     if (this.efeito('fome', a.local) && i.id === 'roubar') w *= 3;
+    if (b && i.id === 'roubar') {
+      const v = this.valorItens(b);
+      if (v) w *= 1 + Math.min(4, v / 150) * (a.tracos.includes('ganancioso') ? 2 : 1);
+    }
+    for (const ev of this.eventosAtivos) {
+      if (ev.lugar !== null && ev.lugar !== a.local) continue;
+      const m = this.cat.eventos.get(ev.id)?.weights[i.id];
+      if (m !== undefined) w *= m;
+    }
     const m = a.meta;
     if (m && b) {
       if (m.alvo === b.id && m.tipo === 'vinganca' && i.cat === 'conflito') w *= 3;
@@ -2018,7 +2066,260 @@ export class Vidas {
         if (p) p.nota = cmd.nota;
         return;
       }
+      case 'mundo': {
+        this.comecarEvento(cmd.id, cmd.lugar, true);
+        return;
+      }
+      case 'item': {
+        const p = this.vivo(cmd.p);
+        const it = this.cat.itens.get(cmd.item);
+        if (!p || !it) return;
+        if (cmd.on) {
+          const de = this.donoDe(it.id);
+          if (this.ganharItem(p, it.id, 'voce')) this.say('voce', 'item', `${this.L(p.id)} recebe ${this.itemTxt(it)}${de && de !== p ? ` (que era de ${this.L(de.id)})` : ''}.`, [p.id, ...(de && de !== p ? [de.id] : [])], 2);
+        } else if (p.itens?.includes(it.id)) {
+          this.perderItem(p, it.id, 'voce');
+          if (it.unico) this.perdidos.set(it.id, p.local);
+          this.say('voce', 'item', `${this.L(p.id)} perde ${this.itemTxt(it)}${it.unico ? ` em [[${this.lugarNome(p.local)}]]` : ''}.`, [p.id], 2);
+        }
+        return;
+      }
     }
+  }
+
+  // ================================================================ itens
+
+  /** Coloca os itens do catálogo com quem diz a ficha (ou largados num lugar). */
+  private iniciarItens(): void {
+    for (const it of this.cat.itens.values()) {
+      const d = it.dono ? this.acharPessoa(it.dono) : null;
+      if (d && d.morte === null) {
+        this.ganharItem(d, it.id, 'inicio', true);
+        continue;
+      }
+      if (it.unico && it.lugar) {
+        const l = this.acharLugar(it.lugar);
+        if (l) {
+          this.perdidos.set(it.id, l);
+          this.historiaItens.set(it.id, [{ t: this.t, dono: null, como: 'largado', lugar: l }]);
+        }
+      }
+    }
+  }
+
+  private acharPessoa(s: string): Pessoa | null {
+    const direto = this.pessoas.get(s) ?? [...this.pessoas.values()].find((p) => p.nota === s);
+    if (direto) return direto;
+    const id = this.porNome.get(fold(s.split('/').pop()!.replace(/\.md$/i, '').trim()));
+    return id ? this.pessoas.get(id) ?? null : null;
+  }
+
+  private acharLugar(s: string): string | null {
+    if (this.lugares.has(s)) return s;
+    const k = fold(s.split('/').pop()!.replace(/\.md$/i, '').trim());
+    return [...this.lugares].find(([, nome]) => fold(nome) === k)?.[0] ?? null;
+  }
+
+  /** Item pelo nome ou id ("Espada de Aurora", "espada de aurora"). */
+  idItem(texto: string): string | null {
+    const k = fold(texto).trim();
+    if (this.cat.itens.has(k)) return k;
+    return [...this.cat.itens.values()].find((i) => fold(i.nome) === k || fold(i.plural) === k)?.id ?? null;
+  }
+
+  itemTxt(it: Item): string {
+    return it.nota ? `[[${it.nome}]]` : `*${it.nome}*`;
+  }
+
+  itensDe(p: Pessoa): Item[] {
+    return (p.itens ?? []).map((id) => this.cat.itens.get(id)).filter((x): x is Item => !!x);
+  }
+
+  /** Quem tem o item agora (para únicos; nos comuns, o primeiro que achar). */
+  donoDe(id: string): Pessoa | null {
+    for (const p of this.pessoas.values()) if (p.morte === null && p.itens?.includes(id)) return p;
+    return null;
+  }
+
+  valorItens(p: Pessoa): number {
+    return this.itensDe(p).reduce((s, i) => s + i.valor * (i.cobicado ? 2 : 1), 0);
+  }
+
+  /** Soma dos ajustes de itens e traços num campo (força, combate, sanidade...). */
+  bonus(p: Pessoa, campo: string): number {
+    let b = 0;
+    for (const id of p.itens ?? []) b += this.cat.itens.get(id)?.mods[campo] ?? 0;
+    for (const t of p.tracos) b += this.cat.tracos.get(t)?.regra?.mods[campo] ?? 0;
+    return b;
+  }
+
+  /** Habilidade com os ajustes de itens e traços. */
+  habilidade(p: Pessoa, h: Habilidade): number {
+    return clamp(p.hab[h] + this.bonus(p, h), 0, 30);
+  }
+
+  /** Dá um item (tirando de quem tinha, se for único). Não escreve na crônica: quem chama conta como foi. */
+  ganharItem(p: Pessoa, id: string, como: string, silencioso = false): boolean {
+    const it = this.cat.itens.get(id);
+    if (!it || this.destruidos.has(id) || p.morte !== null) return false;
+    if (it.unico) {
+      const d = this.donoDe(id);
+      if (d === p) return false;
+      if (d) this.perderItem(d, id, como, silencioso);
+      this.perdidos.delete(id);
+    }
+    (p.itens ??= []).push(id);
+    const dados = this.tracosDeItem.get(p.id) ?? new Map<string, number>();
+    for (const t of it.tracos) {
+      if (dados.has(t)) dados.set(t, dados.get(t)! + 1);
+      else if (!p.tracos.includes(t)) {
+        p.tracos.push(t);
+        dados.set(t, 1);
+      }
+    }
+    this.tracosDeItem.set(p.id, dados);
+    this.atribCache.delete(p.id);
+    this.mudouPessoa();
+    if (it.unico) this.historiaItens.set(id, [...(this.historiaItens.get(id) ?? []), { t: this.t, dono: p.id, como }]);
+    if (!silencioso) {
+      this.emitir('item_ganho', [p.id], [it.nome, como]);
+      if (it.regra?.onGain.length && this.rt) this.rt.runBody(it.regra.onGain, { dono: new Ent(p.id), item: it.nome, como, isto: new Ent(p.id) }, it.regra.src);
+    }
+    return true;
+  }
+
+  perderItem(p: Pessoa, id: string, como: string, silencioso = false): void {
+    const i = p.itens?.indexOf(id) ?? -1;
+    if (i < 0) return;
+    p.itens!.splice(i, 1);
+    const it = this.cat.itens.get(id);
+    const dados = this.tracosDeItem.get(p.id);
+    for (const t of it?.tracos ?? []) {
+      const n = dados?.get(t);
+      if (n === undefined) continue;
+      if (n > 1) dados!.set(t, n - 1);
+      else {
+        dados!.delete(t);
+        p.tracos = p.tracos.filter((x) => x !== t);
+      }
+    }
+    this.atribCache.delete(p.id);
+    this.mudouPessoa();
+    if (!silencioso && it && p.morte === null) {
+      this.emitir('item_perdido', [p.id], [it.nome, como]);
+      if (it.regra?.onLose.length && this.rt) this.rt.runBody(it.regra.onLose, { dono: new Ent(p.id), item: it.nome, como, isto: new Ent(p.id) }, it.regra.src);
+    }
+  }
+
+  /** Itens de quem morreu: para o filho mais velho adulto, senão o cônjuge, senão outro herdeiro; sem ninguém, ficam onde a pessoa estava. */
+  private herdarItens(p: Pessoa, herdeiros: Pessoa[]): void {
+    if (!p.itens?.length) return;
+    const filhos = herdeiros.filter((h) => p.pais && (h.pais.includes(p.id) || h.paiOficial === p.id) && this.adulto(h)).sort((a, b) => a.nasc - b.nasc);
+    const herdeiro = filhos[0] ?? herdeiros.find((h) => this.adulto(h)) ?? herdeiros[0] ?? null;
+    const lugar = this.ondeEsta(p) ?? p.local;
+    for (const id of [...p.itens]) {
+      const it = this.cat.itens.get(id);
+      if (!it) continue;
+      this.perderItem(p, id, 'morte', true);
+      if (herdeiro) {
+        this.ganharItem(herdeiro, id, 'heranca');
+        if (it.unico || it.valor >= 50) this.say('familia', 'heranca', `${this.L(herdeiro.id)} herda ${this.itemTxt(it)} de ${this.L(p.id)}.`, [herdeiro.id, p.id], it.unico ? 3 : 2);
+      } else if (it.unico) {
+        this.perdidos.set(id, lugar);
+        this.historiaItens.set(id, [...(this.historiaItens.get(id) ?? []), { t: this.t, dono: null, como: 'morte', lugar }]);
+        this.say('mundo', 'item', `Com a morte de ${this.L(p.id)}, ${this.itemTxt(it)} fica esquecid${/a$/.test(fold(it.nome.split(' ')[0]!)) ? 'a' : 'o'} em [[${this.lugarNome(lugar)}]].`, [p.id], 2);
+      }
+    }
+  }
+
+  /** Depois de um roubo bem-sucedido: às vezes o ladrão leva o item mais valioso. */
+  roubarItem(ladrao: Pessoa, vitima: Pessoa): boolean {
+    const alvo = this.itensDe(vitima).sort((a, b) => b.valor * (b.cobicado ? 2 : 1) - a.valor * (a.cobicado ? 2 : 1))[0];
+    if (!alvo || !this.chance(alvo.cobicado ? 0.7 : 0.4)) return false;
+    if (!this.ganharItem(ladrao, alvo.id, 'roubo')) return false;
+    if (!alvo.unico) this.perderItem(vitima, alvo.id, 'roubo');
+    this.say('conflito', 'roubo', `🤫 ${this.L(ladrao.id)} rouba ${this.itemTxt(alvo)} de ${this.L(vitima.id)}.`, [ladrao.id, vitima.id], alvo.unico ? 3 : 2, true);
+    this.lembra(vitima.id, ladrao.id, `levou ${alvo.nome}`, -10, 120);
+    return true;
+  }
+
+  private itensDoMes(): void {
+    for (const p of this.vivos()) {
+      for (const it of this.itensDe(p)) {
+        for (const [k, d] of Object.entries(it.porMes)) {
+          if (k === 'humor') this.humor(p, d);
+          else if (k === 'estresse') this.estresse(p, d);
+          else if (k === 'saude') p.saude = clamp(p.saude + d, 0, 100);
+          else if (k === 'dinheiro') p.dinheiro = Math.max(0, p.dinheiro + d);
+          else if (this.temAtributo(p, k)) {
+            const a = this.cat.atributos.get(k)!;
+            p.campos[k] = clamp(Math.round(((Number(p.campos[k]) || 0) + d) * 10) / 10, a.min, a.max);
+          } else p.campos[k] = (Number(p.campos[k]) || 0) + d;
+        }
+        if (p.saude <= 0 && p.morte === null && !p.protegido) this.morrer(p, `consumid${this.g(p, 'o', 'a')} por ${it.nome}`);
+      }
+    }
+    // itens largados: quem passa pelo lugar pode achar
+    for (const [id, lugar] of [...this.perdidos]) {
+      const aqui = (this.presentes.get(lugar) ?? []).map((x) => this.pessoas.get(x)!).filter((x) => x && this.adulto(x) && !this.criatura(x));
+      if (!aqui.length || !this.chance(0.012 * Math.min(4, aqui.length))) continue;
+      const curiosos = aqui.filter((x) => x.tracos.includes('curioso') || x.tracos.includes('aventureiro'));
+      const p = this.pick(curiosos.length ? curiosos : aqui);
+      const it = this.cat.itens.get(id)!;
+      if (this.ganharItem(p, id, 'achou')) this.say('vida', 'achado', `${this.L(p.id)} encontra ${this.itemTxt(it)} em [[${this.lugarNome(lugar)}]].`, [p.id], 3);
+    }
+  }
+
+  /** Uma relíquia: quem tem, onde está, e por quem passou. */
+  reliquias(): Array<{ item: Item; dono: Pessoa | null; lugar: string | null; destruido: boolean; historia: Array<{ t: number; dono: string | null; como: string; lugar?: string }> }> {
+    return [...this.cat.itens.values()].filter((i) => i.unico).map((item) => ({
+      item, dono: this.donoDe(item.id), lugar: this.perdidos.get(item.id) ?? null, destruido: this.destruidos.has(item.id), historia: this.historiaItens.get(item.id) ?? [],
+    }));
+  }
+
+  // ================================================================ eventos do mundo (declarados)
+
+  private eventosDoMundo(): void {
+    if (!this.cat.eventos.size) return;
+    // acabam
+    for (const ev of [...this.eventosAtivos]) {
+      if (ev.ate >= this.t) continue;
+      this.eventosAtivos.splice(this.eventosAtivos.indexOf(ev), 1);
+      const d = this.cat.eventos.get(ev.id);
+      if (d?.onEnd.length && this.rt) this.rt.runBody(d.onEnd, { lugar: this.placeVal(ev.lugar) }, d.src);
+      this.say('mundo', 'evento', `Acaba ${d?.name ?? ev.nome}${ev.lugar ? ` em [[${this.lugarNome(ev.lugar)}]]` : ''}.`, [], 1);
+    }
+    // começam sozinhos (chance por ano repartida nos meses)
+    for (const d of this.cat.eventos.values()) {
+      if (d.chance <= 0 || this.eventosAtivos.some((e) => e.id === d.id)) continue;
+      const pm = d.chance >= 1 ? 1 : 1 - Math.pow(1 - d.chance, 1 / 12);
+      if (!this.chance(pm)) continue;
+      this.comecarEvento(d.id, null, false);
+    }
+    // todo mês: para cada pessoa no lugar
+    for (const ev of this.eventosAtivos) {
+      const d = this.cat.eventos.get(ev.id);
+      if (!d?.monthly.length || !this.rt) continue;
+      const gente = ev.lugar === null ? this.vivos().map((p) => p.id) : this.presentes.get(ev.lugar) ?? [];
+      for (const id of gente) if (this.vivo(id)) this.rt.runBody(d.monthly, { personagem: new Ent(id), isto: new Ent(id), lugar: this.placeVal(ev.lugar) }, d.src);
+    }
+  }
+
+  /** Começa um evento declarado (num lugar sorteado entre os que têm gente, se não for global). */
+  comecarEvento(id: string, lugar: string | null, voce: boolean): boolean {
+    const d = this.cat.eventos.get(id) ?? [...this.cat.eventos.values()].find((e) => fold(e.name) === fold(id));
+    if (!d) return false;
+    let l: string | null = d.global ? null : lugar;
+    if (!d.global && !l) {
+      const comGente = [...this.presentes.keys()].filter((k) => k !== GUERRA && (!d.where || !this.rt || this.rt.test(d.where, { lugar: this.placeVal(k) }, d.src)));
+      if (!comGente.length) return false;
+      l = this.pick(comGente);
+    } else if (!voce && d.where && this.rt && !this.rt.test(d.where, { lugar: this.placeVal(l) }, d.src)) return false;
+    this.eventosAtivos.push({ id: d.id, nome: d.name, lugar: l, desde: this.t, ate: this.t + d.months - 1 });
+    this.say(voce ? 'voce' : 'mundo', 'evento', `✦ ${d.name}${l ? ` em [[${this.lugarNome(l)}]]` : ''}${d.desc ? `: ${d.desc}` : '.'}`, [], 3);
+    if (d.onStart.length && this.rt) this.rt.runBody(d.onStart, { lugar: this.placeVal(l) }, d.src);
+    this.emitir(fold(d.name).replace(/\s+/g, '_'), [], l ? [this.placeVal(l)] : []);
+    return true;
   }
 
   /** Um id novo para uma pessoa que você acrescenta no meio da história. */
@@ -2086,7 +2387,8 @@ export class Vidas {
 
   private ligarRegras(): void {
     const prog = this.opts.rules;
-    if (!prog || !(prog.handlers.length || prog.interactions.length || prog.schemes.length || prog.traits.some((t) => t.emerge) || prog.professions.some((p) => p.requires))) {
+    if (!prog || !(prog.handlers.length || prog.interactions.length || prog.schemes.length || prog.events.length || prog.traits.some((t) => t.emerge) || prog.professions.some((p) => p.requires)
+      || prog.items.some((i) => i.onGain.length || i.onLose.length || i.monthly.length))) {
       this.mudouGente = false;
       return;
     }
@@ -2192,7 +2494,8 @@ export class Vidas {
       case 'altura': return this.aparencia(p).altura;
       case 'olhos': return olhosDe(p.genes);
       case 'cabelo': return cabeloDe(p.genes);
-      case 'combate': case 'labia': case 'intriga': case 'oficio': case 'saber': return Math.round(p.hab[f as Habilidade] * 10) / 10;
+      case 'combate': case 'labia': case 'intriga': case 'oficio': case 'saber': return Math.round(this.habilidade(p, f as Habilidade) * 10) / 10;
+      case 'itens': return (p.itens ?? []).map((id) => this.cat.itens.get(id)?.nome ?? id);
       case 'abertura': return Math.round(p.big5[0]);
       case 'conscienciosidade': return Math.round(p.big5[1]);
       case 'extroversao': return Math.round(p.big5[2]);
@@ -2223,6 +2526,8 @@ export class Vidas {
       case 'criatura': return this.criatura(p);
       case 'tramas': return this.tramas(p.id).map((x) => x.nome);
     }
+    const atr = this.cat.atributos.get(f);
+    if (atr && typeof p.campos[f] === 'number') return clamp(Math.round(((p.campos[f] as number) + this.bonus(p, f)) * 10) / 10, atr.min, atr.max);
     if (f in p.campos) {
       const v = p.campos[f]!;
       return Array.isArray(v) ? v.map((x) => (this.porNome.has(fold(x)) ? new Ent(this.porNome.get(fold(x))!) : x)) : v;
@@ -2335,6 +2640,50 @@ export class Vidas {
         const x = qualquer(a);
         const y = qualquer(b);
         return x && y ? this.atracao(x, y) : 0;
+      },
+      dar_item: ([a, i]) => {
+        const p = exige(a, 'dar_item');
+        const id = this.idItem(texto(i));
+        if (!id) throw new Error(`não há item "${texto(i)}" (declare com item "..." ou crie uma ficha tipo: item)`);
+        return this.ganharItem(p, id, 'regra');
+      },
+      tirar_item: ([a, i]) => {
+        const p = exige(a, 'tirar_item');
+        const id = this.idItem(texto(i));
+        if (!id || !p.itens?.includes(id)) return false;
+        this.perderItem(p, id, 'regra');
+        if (this.cat.itens.get(id)!.unico) this.perdidos.set(id, this.ondeEsta(p) ?? p.local);
+        return true;
+      },
+      destruir_item: ([i]) => {
+        const id = this.idItem(texto(i));
+        if (!id) return false;
+        const d = this.donoDe(id);
+        if (d) this.perderItem(d, id, 'destruido');
+        this.perdidos.delete(id);
+        if (this.cat.itens.get(id)!.unico) {
+          this.destruidos.add(id);
+          this.historiaItens.set(id, [...(this.historiaItens.get(id) ?? []), { t: this.t, dono: null, como: 'destruido' }]);
+        }
+        return true;
+      },
+      tem_item: ([a, i]) => {
+        const p = pe(a);
+        const id = this.idItem(texto(i));
+        return !!p && !!id && !!p.itens?.includes(id);
+      },
+      dono: ([i]) => {
+        const id = this.idItem(texto(i));
+        return id ? this.entOf(this.donoDe(id)?.id) : null;
+      },
+      comecar_evento: ([n, l]) => {
+        const key = l instanceof Ent ? l.path : l ? [...this.lugares].find(([, nome]) => fold(nome) === fold(texto(l)))?.[0] ?? null : null;
+        return this.comecarEvento(texto(n), key, false);
+      },
+      evento_ativo: ([n, l]) => {
+        const k = fold(texto(n));
+        const key = l instanceof Ent ? l.path : l ? [...this.lugares].find(([, nome]) => fold(nome) === fold(texto(l)))?.[0] ?? null : null;
+        return this.eventosAtivos.some((e) => (e.id === k || fold(e.nome) === k) && (!key || e.lugar === null || e.lugar === key));
       },
       odio: ([a, b]) => {
         const x = qualquer(a);

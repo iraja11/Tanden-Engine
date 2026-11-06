@@ -1,5 +1,5 @@
 import { fold } from '../regras/parse';
-import type { Program, RuleProfession, RuleTrait } from '../regras/parse';
+import type { Program, RuleEvent, RuleItem, RuleProfession, RuleTrait } from '../regras/parse';
 import { asText } from '../frontmatter';
 import type { Entity } from '../mundo';
 import type { Habilidade, Pessoa } from './tipos';
@@ -208,6 +208,33 @@ export interface Catalogo {
   especies: Map<string, Especie>;
   /** atributos numéricos declarados nas regras (`atributo "Sanidade":`) */
   atributos: Map<string, Atributo>;
+  /** itens (das regras e das fichas `tipo: item`) */
+  itens: Map<string, Item>;
+  /** eventos do mundo declarados nas regras (`evento "Lua de Sangue":`) */
+  eventos: Map<string, RuleEvent>;
+}
+
+export interface Item {
+  id: string;
+  nome: string;
+  plural: string;
+  unico: boolean;
+  tipo: string;
+  raridade: string;
+  valor: number;
+  desc: string;
+  /** ajustes enquanto possui (campo sem acento → pontos) */
+  mods: Record<string, number>;
+  /** muda todo mês enquanto possui */
+  porMes: Record<string, number>;
+  tracos: string[];
+  /** quem tem no começo (nome ou caminho da ficha) */
+  dono: string | null;
+  /** onde está largado no começo (nome ou caminho do lugar) */
+  lugar: string | null;
+  cobicado: boolean;
+  regra: RuleItem | null;
+  nota: string | null;
 }
 
 export interface Especie {
@@ -228,6 +255,8 @@ export interface Especie {
   mods: Record<string, number>;
   /** traços de nascença */
   tracos: string[];
+  /** traços que cada um pode ter ao nascer (id → chance 0 a 1) */
+  talvez: Record<string, number>;
   cruza: Array<{ com: string; gera: string | null }>;
   criatura: boolean;
   /** fração dos figurantes desta espécie */
@@ -247,6 +276,8 @@ export interface Atributo {
   herda: number;
   cat: string;
   porAno: number;
+  /** só estas espécies têm (ids; vazio = todos) */
+  so: string[];
   desc: string;
 }
 
@@ -257,6 +288,42 @@ const numDe = (v: string) => {
   const n = Number(v.replace(',', '.').replace(/[^\d.-]/g, ''));
   return v.trim() && Number.isFinite(n) ? n : null;
 };
+
+/** "combate +5, sanidade -10" → { combate: 5, sanidade: -10 } */
+export function lerAjustes(texto: string): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const m of texto.matchAll(/([\p{L}][\p{L}\p{M}\s_]*?)\s*([+\-−]\s*\d+(?:[.,]\d+)?)/gu)) {
+    out[fold(m[1]!).trim().replace(/_/g, ' ')] = Number(m[2]!.replace(/\s/g, '').replace('−', '-').replace(',', '.'));
+  }
+  return out;
+}
+
+/** Itens das fichas `tipo: item`: `dono`, `único`, `raridade`, `categoria`, `valor`, `ajustes`, `concede`, `local`. Fichas de item são únicas, salvo `único: não`. */
+function itensDasFichas(entities: Entity[]): Item[] {
+  const out: Item[] = [];
+  for (const e of entities) {
+    if (e.type !== 'item') continue;
+    const get = (...ks: string[]) => {
+      for (const k of Object.keys(e.props)) if (ks.includes(fold(k).trim())) return asText(e.props[k]!).trim();
+      return '';
+    };
+    const link = (...ks: string[]) => {
+      const rel = e.relations.find((r) => ks.includes(fold(r.label).trim()));
+      if (rel) return rel.to ?? rel.target;
+      const t = get(...ks).replace(/^\[\[|\]\]$/g, '').split('|')[0]!.trim();
+      return t || null;
+    };
+    const unico = get('unico', 'única', 'unica');
+    out.push({
+      id: fold(e.name).trim(), nome: e.name, plural: e.name, unico: !/^(nao|não|false|falso)$/i.test(unico), tipo: fold(get('categoria', 'tipo de item') || 'item'),
+      raridade: get('raridade'), valor: numDe(get('valor', 'preco')) ?? 0, desc: e.summary || get('poder', 'descricao'),
+      mods: lerAjustes(get('ajustes', 'bonus', 'bônus')), porMes: lerAjustes(get('por mes', 'maldicao', 'maldição').replace(/^[^+\-−]*$/, '')),
+      tracos: get('concede', 'tracos', 'traços').split(',').map((x) => fold(x).trim()).filter(Boolean), dono: link('dono', 'dona', 'portador', 'portadora'),
+      lugar: link('local', 'onde', 'perdido em'), cobicado: /^(sim|true)$/i.test(get('cobicado', 'cobiçado')), regra: null, nota: e.path,
+    });
+  }
+  return out;
+}
 
 /** Espécies das fichas: `expectativa de vida`, `maioridade`, `fertilidade`, `gestação`, `altura`, `cruza com`, `frequência`, `criatura`. */
 function especiesDasFichas(entities: Entity[]): Especie[] {
@@ -279,7 +346,7 @@ function especiesDasFichas(entities: Entity[]): Especie[] {
     out.push({
       id: especieId(e.name), nome: e.name, plural: e.name, vida: numDe(get('expectativa de vida', 'longevidade', 'vida')), maioridade: numDe(get('maioridade', 'idade adulta')),
       fertilidade: pct(get('fertilidade')) ?? 1, gestacao: numDe(get('gestacao', 'gravidez')) ?? 9, altura: numDe(get('altura', 'altura media')), mods: {},
-      tracos: get('tracos', 'traços').split(',').map((x) => fold(x).trim()).filter(Boolean), cruza, criatura: e.type === 'criatura' || /^(sim|true|verdadeiro)$/i.test(crit),
+      tracos: get('tracos', 'traços').split(',').map((x) => fold(x).trim()).filter(Boolean), talvez: {}, cruza, criatura: e.type === 'criatura' || /^(sim|true|verdadeiro)$/i.test(crit),
       frequencia: pct(get('frequencia', 'proporcao')) ?? 0, desc: e.summary, nota: e.path,
     });
   }
@@ -311,16 +378,27 @@ export function catalogo(prog?: Program | null, entities: Entity[] = []): Catalo
     especies.set(r.id, {
       id: r.id, nome: r.name, plural: r.plural, vida: r.life ?? base?.vida ?? null, maioridade: r.adult ?? base?.maioridade ?? null,
       fertilidade: r.fertility ?? base?.fertilidade ?? 1, gestacao: r.gestation ?? base?.gestacao ?? 9, altura: r.height ?? base?.altura ?? null,
-      mods: { ...(base?.mods ?? {}), ...r.mods }, tracos: [...new Set([...(base?.tracos ?? []), ...r.traits])],
+      mods: { ...(base?.mods ?? {}), ...r.mods }, tracos: [...new Set([...(base?.tracos ?? []), ...r.traits])], talvez: { ...(base?.talvez ?? {}), ...r.maybe },
       cruza: [...(base?.cruza ?? []), ...r.crosses.map((c) => ({ com: c.with, gera: c.gives }))], criatura: r.creature || !!base?.criatura,
       frequencia: r.frequency || base?.frequencia || 0, desc: r.desc || base?.desc || '', nota: base?.nota ?? null,
     });
   }
   const atributos = new Map<string, Atributo>();
   for (const a of prog?.attributes ?? []) {
-    atributos.set(a.id, { id: a.id, nome: a.name, min: a.min, max: a.max, media: a.mean, desvio: a.sd, herda: a.inherit, cat: a.category, porAno: a.perYear, desc: a.desc });
+    atributos.set(a.id, { id: a.id, nome: a.name, min: a.min, max: a.max, media: a.mean, desvio: a.sd, herda: a.inherit, cat: a.category, porAno: a.perYear, so: a.only, desc: a.desc });
   }
-  return { tracos, profs, gostos, especies, atributos };
+  const itens = new Map(itensDasFichas(entities).map((i) => [i.id, i]));
+  for (const r of prog?.items ?? []) {
+    const base = itens.get(r.id);
+    itens.set(r.id, {
+      id: r.id, nome: r.name, plural: r.plural, unico: r.unique || !!base?.unico, tipo: r.kind || base?.tipo || 'item', raridade: r.rarity || base?.raridade || '',
+      valor: r.value || base?.valor || 0, desc: r.desc || base?.desc || '', mods: { ...(base?.mods ?? {}), ...r.mods }, porMes: { ...(base?.porMes ?? {}), ...r.perMonth },
+      tracos: [...new Set([...(base?.tracos ?? []), ...r.traits])], dono: r.owner ?? base?.dono ?? null, lugar: r.place ?? base?.lugar ?? null,
+      cobicado: r.coveted || !!base?.cobicado, regra: r, nota: base?.nota ?? null,
+    });
+  }
+  const eventos = new Map((prog?.events ?? []).map((e) => [e.id, e]));
+  return { tracos, profs, gostos, especies, atributos, itens, eventos };
 }
 
 /** Acha o traço do catálogo por um texto livre ("ciumenta", "covarde no aperto", "Leal"). */
