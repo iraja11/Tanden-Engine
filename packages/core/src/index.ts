@@ -60,3 +60,4 @@ export * from './vida';
 export * from './saude';
 export * from './agenda';
 export * from './flashcards';
+export * from './sorte';
