@@ -65,6 +65,9 @@ quando roubo(ladrão, vítima, coisa):
 | `interação "Visões" de p em personagem onde fé > 8:` | Acontecimento ocasional de uma ficha só. |
 | `seja limite = 7` | Constante do mundo. |
 | `traço "Nome":`, `profissão "Nome":`, `gosto "Nome"` | Catálogo da simulação de vidas (ver abaixo). |
+| `atributo "Sanidade":`, `espécie "Elfo":`, `criatura "Lobo":` | Valores numéricos das pessoas, espécies e criaturas (ver abaixo). |
+| `item "Espada de Aurora":`, `evento "Lua de Sangue":` | Itens (comuns ou únicos) e eventos do mundo com duração (ver abaixo). |
+| `trama "Nome" entre a em X, b em Y onde ...:` | Interação em **etapas** que dura meses (ver [Tramas](#tramas-em-etapas)). |
 
 ## Comandos (dentro dos blocos, recuados)
 
@@ -110,6 +113,21 @@ Variáveis prontas: `ano` (o ano da simulação; fora dela, o `ano` da nota do
 mundo ou a última data da linha do tempo) e `mundo`. Na simulação,
 `facção.poder`, `riqueza` e `estabilidade` são os da simulação, na escala 1 a 10
 das fichas.
+
+## Texto com variação
+
+Em qualquer texto entre aspas (crônica, aviso, descrição) e nos bancos de texto:
+
+| Escreva | Sai |
+|---|---|
+| `{a}`, `{a.nome}`, `{dado("1d6")}` | o valor |
+| `{rico\|abastado\|cheio da grana}` | uma das opções, sorteada (cada uma pode ter `{a}` dentro: `{{a} ri\|{a} chora}`) |
+| `{a:cansado/cansada}` | a forma do gênero de quem é `a` (masculino/feminino; uma terceira forma vale para quem é neutro: `{a:o/a/e}`) |
+
+```regras
+quando mês em personagem onde personagem.estresse > 80:
+  crônica "{personagem} anda {nervos|irritad{personagem:o/a}|à flor da pele} e {ninguém ousa falar com {personagem:ele/ela}|a vizinhança evita a casa}."
+```
 
 ## Bancos de texto
 
@@ -168,6 +186,144 @@ profissão "Alquimista" "Alquimista":
 gosto "Falcoaria"
 gostos "Xadrez", "Ópera"
 ```
+
+### Atributos, espécies e criaturas
+
+```regras
+atributo "Sanidade":
+  faixa 0 a 100              # ou numa linha só: atributo "Fé" 0 a 10
+  média 70                   # ao nascer
+  desvio 12                  # 2 em cada 3 nascem entre 58 e 82
+  herdável 40%               # quanto vem da média dos pais
+  categoria mental           # físico, mental, social... (só para mostrar)
+  por ano -1                 # muda sozinho todo janeiro
+  descrição "O quanto ainda se agarra à realidade."
+
+espécie "Elfo" "Elfos":
+  vida 700                   # expectativa de vida em anos
+  maioridade 100             # adulto aos 100 (sem isto, proporcional à vida)
+  fertilidade 30%
+  gestação 12 meses
+  altura 185                 # cm, em média
+  beleza +15                 # força, agilidade, intelecto, beleza, fertilidade
+  sanidade +10               # ou qualquer atributo declarado
+  traços "longevo"           # de nascença, todo elfo tem
+  cruza com "Humano" gera "Meio-elfo"
+  frequência 15%             # dos figurantes gerados
+
+criatura "Lobo" "Lobos":     # = espécie com "criatura"
+  vida 13
+  maioridade 2
+  gestação 2 meses
+  frequência 8%
+```
+
+- Todo mundo nasce com um valor de cada atributo (sorteado de um jeito fixo por pessoa, então acrescentar um atributo não muda o resto da história). Leia e mude como qualquer campo: `p.sanidade < 20`, `p.sanidade -= 5`. O valor fica sempre dentro da faixa.
+- Quem não tem espécie escrita é **humano**: uma `espécie "Humano"` com ajustes vale para essa gente, e `cruza com "Humano"` funciona.
+- A espécie da ficha vem de `espécie: Elfo` ou `espécie: "[[Elfo]]"`. Fichas `tipo: espécie`/`criatura` também contam (`expectativa de vida`, `maioridade`, `fertilidade`, `gestação`, `altura`, `cruza com`, `frequência`); o que a regra disser vale por cima.
+- Espécies diferentes só têm filhos com `cruza com`; os filhos são da espécie do `gera` (ou da mãe).
+- **Criaturas** não conversam, não namoram gente, não trabalham e não têm profissão. Com gente de outra espécie, só conflito (as suas regras dizem como atacam: veja a receita *Lobos na floresta*). Entre si, vivem, brigam e se reproduzem.
+- Nos figurantes, famílias inteiras sorteiam uma espécie com `frequência`, com as idades na escala dela (um elfo adulto tem mais de 100 anos); criaturas entram soltas.
+- Campos: `p.espécie` (nome) e `p.criatura` (sim/não). Função: `espécie(p)`.
+
+- Espécies podem ter traços **possíveis**: `pode ter "irascivel" 40%, "belo" 10%` (cada um sorteia ao nascer).
+- Atributo de uma espécie só: `só para "Dragão", "Wyvern"` dentro de `atributo`.
+- Traços mexem em números: `ajuste força +10`, `ajuste sanidade -5` dentro de `traço`.
+
+### Itens
+
+```regras
+item "Anel do Rei Morto":
+  único                      # só existe um (fichas tipo: item já são únicas)
+  tipo joia
+  raridade lendária          # lendária/única também deixam único
+  valor 800
+  cobiçado                   # ladrões vão atrás
+  descrição "Frio ao toque, quente na ganância."
+  dono "Kael"                # com quem começa (ou: em "Pedravale", largado lá)
+  lábia +5                   # ajustes enquanto tem: habilidades, força, beleza, atributos...
+  por mês humor -2           # muda todo mês enquanto tem (maldição)
+  traços "ganancioso"        # ganha enquanto tem; perde junto com o item
+  ao ganhar:
+    crônica "{dono} põe o anel no dedo."
+  ao perder:
+    dono.humor += 20
+  todo mês:
+    se chance(5%):
+      crônica "{dono} ouve sussurros vindos do anel."
+```
+
+- Dentro dos blocos, `dono` é quem tem e `item` é o nome; em `ao ganhar`, `como` diz de onde veio (`heranca`, `roubo`, `achou`, `regra`, `voce`).
+- **Fichas `tipo: item`** viram itens únicos: `dono: "[[Kael]]"`, `valor`, `raridade`, `categoria`, `ajustes: "combate +5, sanidade -10"`, `concede: corajoso`, `por mês: "humor -1"`, `local: "[[Pedravale]]"`, `cobiçado: sim` (`único: não` para um item comum).
+- Na simulação: quem morre deixa os itens para o filho adulto mais velho (senão o cônjuge, senão outro herdeiro); sem ninguém, o item fica largado onde a pessoa estava. Quem passa por um lugar pode **achar** o que está largado (curiosos acham mais). Ladrões preferem quem carrega coisas valiosas e às vezes levam o item. Um item único sem dono começa largado no lugar da simulação.
+- Funções: `dar_item(p, "Anel")`, `tirar_item(p, "Anel")` (fica largado ali), `destruir_item("Anel")`, `tem_item(p, "Anel")`, `dono("Anel")`. Campo `p.itens` (nomes). Eventos: `quando item_ganho(p, nome, como)`, `item_perdido(p, nome, como)`.
+- A aba **Relíquias** da simulação mostra cada item único, com quem está e por quem passou.
+
+### Eventos do mundo
+
+```regras
+evento "Lua de Sangue":
+  chance 5%                  # por ano; 0 (ou sem chance) = só à mão
+  dura 2 meses
+  descrição "o céu fica vermelho"
+  global                     # no mundo todo (sem isto: num lugar sorteado entre os que têm gente)
+  onde lugar.perigos existe  # só começa onde isto vale (`lugar`)
+  peso brigar * 3            # enquanto dura, muda a vontade das interações
+  ao começar:
+    crônica "Um uivo corta {lugar}."
+  todo mês:                  # para cada pessoa no lugar: `personagem`
+    personagem.medo += 1
+  ao acabar:
+    crônica "A lua volta a ser branca."
+```
+
+Os eventos declarados aparecem como botões em **Mundo e ajustes**. Nas regras: `começar_evento("Lua de Sangue", lugar)`, `evento_ativo("Lua de Sangue")`, e `quando lua_de_sangue(lugar):` reage ao começo.
+
+### Tramas em etapas
+
+Uma interação que dura meses: começa como uma interação comum (`entre`, `onde`, `atração`, `chance` por ano), mas o corpo é uma sequência de **etapas**. Cada etapa roda quando chega a vez dela e espera `dura N meses` (padrão 1) antes da próxima. As variáveis (`seja`) valem de uma etapa para a outra.
+
+```regras
+trama "Sedução lenta" entre a em personagem, b em personagem onde atração(a, b) > 60 e não trama(a):
+  chance = 15%
+  etapa "Olhares":
+    dura 2 meses
+    relação(b, a).atração += 5
+    crônica "{a} começa a rondar {b}."
+  etapa "Convite":
+    se atração(b, a) < 40:
+      falhar "{b} recusa o convite de {a}."
+    se chance(30%):
+      repetir                # tenta de novo depois de "dura"
+    crônica "{b} aceita o convite de {a}."
+  etapa "Noite":
+    caso(a, b)
+  ao concluir:
+    crônica "{a} conquista {b}."
+  ao falhar:
+    a.humor -= 20
+```
+
+| Dentro de uma etapa | O que faz |
+|---|---|
+| (nada) | vai para a próxima etapa depois de `dura`; depois da última, a trama acaba bem (`ao concluir`) |
+| `seguir` | idem, na hora |
+| `esperar 3` | vai para a próxima, mas daqui a 3 meses |
+| `repetir` / `repetir 2` | roda esta etapa de novo (depois de `dura`, ou de 2 meses) |
+| `ir para "Convite"` | pula para outra etapa |
+| `falhar` / `falhar "texto"` | acaba mal: roda `ao falhar` (o texto entra na crônica) |
+| `concluir` / `concluir "texto"` | acaba bem: roda `ao concluir` |
+
+- Quem já puxa uma trama não começa outra igual; `trama(p)` ou `trama(p, "Sedução lenta")` diz se `p` está numa (bom para o `onde`).
+- Se alguém da trama morre, ela acaba sem alarde.
+- Na simulação de facções (ano a ano) as tramas também rodam; `dura` em meses vira anos arredondados (no mínimo 1).
+- O painel de cada pessoa mostra as tramas em andamento e em que etapa estão.
+
+### Valores e relações
+
+- `ódio(a, b)` (0 a 100) é a opinião negativa: `ódio(a, b) > 50`. Também `relação(a, b).ódio`.
+- Relações aceitam **campos livres**: `relação(a, b).dívida += 10`, `relação(a, b).juramento = sim`. Leia igual: `relação(a, b).dívida > 0`.
+- Compare com `>`, `<`, `>=`, `<=`, `=`, `!=` ou em português (`pelo menos`, `no máximo`...).
 
 Os ids das interações para `peso`: `conversar`, `atividade`, `elogiar`,
 `presentear`, `ajudar`, `confidenciar`, `fofocar`, `insultar`, `discutir`,
@@ -247,9 +403,11 @@ amante)`, `traicao(traidor, vítima, amante)`, `gravidez(mãe, pai)`,
 
 ### O construtor
 
-A aba **Regras** tem um construtor que escreve estes blocos por você (condições
-e efeitos escolhidos em listas) e receitas prontas. O texto gerado é esta mesma
-linguagem: dá para abrir a nota e ajustar.
+A aba **Regras** tem um construtor que escreve estes blocos por você, com abas
+para interação, trama em etapas, traço, atributo, espécie/criatura e profissão
+(condições e efeitos escolhidos em listas, inclusive qualquer valor da pessoa
+ou da relação), e receitas prontas. O texto gerado é esta mesma linguagem: dá
+para abrir a nota e ajustar.
 
 ## Limites
 

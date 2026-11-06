@@ -20,7 +20,7 @@
 
   let criando = $state(false);
   let sel = $state<string | null>(null);
-  let aba = $state<'cronica' | 'teia' | 'numeros' | 'mundo'>('cronica');
+  let aba = $state<'cronica' | 'teia' | 'numeros' | 'reliquias' | 'mundo'>('cronica');
   let busca = $state('');
   let mostrarMortos = $state(false);
 
@@ -34,8 +34,11 @@
       t: sim.t, data: sim.data(), inicio: sim.data(sim.cfg.inicio), nome: sim.cfg.nome, vivos: sim.vivos().length, issues: [...sim.issues],
       efeitos: sim.efeitos.map((e) => `${e.tipo}${e.lugar ? ` em ${sim.lugarNome(e.lugar)}` : ''} até ${sim.data(e.ate)}`), ajustes: { ...sim.ajustes },
       lugares: [...sim.lugares].filter(([k]) => !k.startsWith('§')),
+      eventosAtivos: sim.eventosAtivos.map((e) => `${e.nome}${e.lugar ? ` em ${sim.lugarNome(e.lugar)}` : ''} até ${sim.data(e.ate)}`),
+      reliquias: sim.reliquias(),
     };
   });
+  const meusEventos = $derived(sim ? [...sim.cat.eventos.values()] : []);
   let largura = $state(1000);
   const tres = $derived(largura >= 1120);
   // trocou de mundo: fecha a simulação do outro
@@ -51,10 +54,25 @@
   let ultimo = $state<string>('');
   function andar(meses: number, importante = false) {
     const r = vidas.andar(meses, importante);
-    if (!r) return;
+    if (!r) return null;
     ultimo = r.parou === 'decisao' ? 'Uma decisão espera por você.' : r.parou === 'evento' ? `Parou num marco depois de ${r.meses} ${r.meses === 1 ? 'mês' : 'meses'}.`
       : r.parou === 'fim' ? 'Não sobrou ninguém vivo.' : `${r.meses} ${r.meses === 1 ? 'mês' : 'meses'}: ${r.novos.filter((e) => e.peso >= 2).length} acontecimentos notáveis.`;
+    return r;
   }
+
+  // tocar: o tempo anda sozinho, no ritmo escolhido; para numa decisão (ou num marco, se pedir)
+  let tocando = $state(false);
+  let ritmo = $state(1);
+  let pausarMarcos = $state(true);
+  $effect(() => {
+    if (!tocando || !sim) return;
+    const h = setInterval(() => {
+      if (vidas.ocupado) return;
+      const r = andar(ritmo, pausarMarcos);
+      if (!r || r.parou === 'decisao' || r.parou === 'fim' || (pausarMarcos && r.parou === 'evento')) tocando = false;
+    }, 650);
+    return () => clearInterval(h);
+  });
   const decorrido = $derived.by(() => {
     if (!sim || !estado) return '';
     const m = estado.t - sim.cfg.inicio;
@@ -170,7 +188,7 @@
   let evMeses = $state(3);
   function novoFigurante() {
     if (!sim) return;
-    const cat = catalogo(cadernos.program(world));
+    const cat = catalogo(cadernos.program(world), world.entities);
     const rng = seededRng(sim.t * 7 + sim.todas().length);
     const p = gerarPessoa(rng, cat, { id: sim.novoId(), inicio: sim.t, lugar: sim.cfg.lugar, nomes: { estilo: 'iberico', amostras: [] } });
     p.prof = sim.escolherProf(p);
@@ -189,7 +207,7 @@
     if (!sim || !fichaNova) return;
     const e = world.entities.find((x) => x.path === fichaNova);
     if (!e) return;
-    const p = pessoaDaFicha(e, world, catalogo(cadernos.program(world)), { inicio: sim.t, lugar: sim.cfg.lugar });
+    const p = pessoaDaFicha(e, world, catalogo(cadernos.program(world), world.entities), { inicio: sim.t, lugar: sim.cfg.lugar });
     if (!p) {
       cadernos.say(`${e.name} não está viva em ${sim.data()}.`);
       return;
@@ -243,6 +261,13 @@
         <button class="go" onclick={() => andar(12)}>▶▶ 1 ano</button>
         <button class="go" onclick={() => andar(120)}>10 anos</button>
         <button class="go strong" onclick={() => andar(240, true)} title="Anda até o primeiro marco (nascimento, morte, casamento, traição descoberta...) de alguém com ficha ou conduzido por você">⏩ até algo importante</button>
+        <span class="play">
+          <button class="go" class:on={tocando} onclick={() => (tocando = !tocando)} title="O tempo anda sozinho até você pausar">{tocando ? '⏸ Pausar' : '⏵ Tocar'}</button>
+          <select bind:value={ritmo} aria-label="Ritmo">
+            <option value={1}>um mês por vez</option><option value={3}>uma estação</option><option value={12}>um ano por vez</option>
+          </select>
+          <label class="chk" title="Para sozinho num nascimento, morte, casamento ou traição de alguém com ficha"><input type="checkbox" bind:checked={pausarMarcos} /> pausar em marcos</label>
+        </span>
       </div>
       <div class="menu">
         <button class="ghost sm" onclick={gravar} title="Grava o estado de agora nas fichas (cria as de quem nasceu)">💾 Gravar nas fichas</button>
@@ -280,7 +305,7 @@
             <li>
               <button class:on={sel === g.p.id} class:dead={g.p.morte !== null} onclick={() => (sel = sel === g.p.id ? null : g.p.id)}>
                 <span class="nm">{g.p.conduzido ? '🎮 ' : ''}{g.p.nome}</span>
-                <small>{g.idade}{g.p.prof ? ` · ${sim.nomeProf(g.p)}` : ''}{g.par ? (g.p.conjuge ? ' · ♥' : ' · ♡') : ''}{g.amantes ? ' · 🤫' : ''}{g.p.gravidez ? ' · 🤰' : ''}{g.p.morte === null && g.onde === null ? ' · 🐎' : ''}{g.p.estados['enlutado'] ? ' · 🖤' : ''}{g.p.nota ? '' : ' ·  figurante'}</small>
+                <small>{g.idade}{g.p.especie ? ` · ${sim.criatura(g.p) ? '🐾 ' : ''}${sim.especieNome(g.p)}` : ''}{g.p.prof ? ` · ${sim.nomeProf(g.p)}` : ''}{g.par ? (g.p.conjuge ? ' · ♥' : ' · ♡') : ''}{g.amantes ? ' · 🤫' : ''}{g.p.gravidez ? ' · 🤰' : ''}{g.p.morte === null && g.onde === null ? ' · 🐎' : ''}{g.p.estados['enlutado'] ? ' · 🖤' : ''}{g.p.nota ? '' : ' ·  figurante'}</small>
               </button>
             </li>
           {/each}
@@ -302,7 +327,7 @@
           <PessoaPainel {sim} id={sel} onselect={(id) => (sel = id)} onopen={onOpenNote} onclose={() => (sel = null)} />
         {/if}
         <nav class="abas">
-          {#each [['cronica', 'Crônica'], ['teia', 'Teia'], ['numeros', 'Números'], ['mundo', 'Mundo e ajustes']] as [k, l] (k)}
+          {#each [['cronica', 'Crônica'], ['teia', 'Teia'], ['numeros', 'Números'], ...(estado?.reliquias.length ? [['reliquias', 'Relíquias']] : []), ['mundo', 'Mundo e ajustes']] as [k, l] (k)}
             <button class:on={aba === k} onclick={() => (aba = k as typeof aba)}>{l}</button>
           {/each}
         </nav>
@@ -363,8 +388,40 @@
             </div>
             {#if contagem.profs.length}<p class="profs">{#each contagem.profs as [n, c] (n)}<span>{n} <b>{c}</b></span>{/each}</p>{/if}
           {/if}
+        {:else if aba === 'reliquias'}
+          <section class="relq">
+            {#each estado?.reliquias ?? [] as r (r.item.id)}
+              <details class="rq">
+                <summary>
+                  <b>★ {r.item.nome}</b>
+                  <span class="dim">{r.item.tipo}{r.item.raridade ? ` · ${r.item.raridade}` : ''} · 🪙 {r.item.valor}</span>
+                  <span class="onde">
+                    {#if r.destruido}destruído
+                    {:else if r.dono}com <button class="lk" onclick={() => (sel = r.dono!.id)}>{r.dono.nome}</button>
+                    {:else if r.lugar}largado em {sim.lugarNome(r.lugar)}
+                    {:else}fora da história{/if}
+                  </span>
+                </summary>
+                {#if r.item.desc}<p class="dim small">{r.item.desc}</p>{/if}
+                <ol class="hist">
+                  {#each r.historia as h, i (i)}
+                    <li><small>{sim.data(h.t)}</small> {({ inicio: 'começa com', heranca: 'herdado por', roubo: 'roubado por', achou: 'achado por', voce: 'dado a', regra: 'passa a', largado: 'largado em', morte: 'esquecido em', destruido: 'destruído', presente: 'presente para' } as Record<string, string>)[h.como] ?? h.como}
+                      {#if h.dono}<button class="lk" onclick={() => (sel = h.dono!)}>{sim.pessoa(h.dono)?.nome ?? h.dono}</button>{:else if h.lugar} {sim.lugarNome(h.lugar)}{/if}</li>
+                  {/each}
+                </ol>
+              </details>
+            {/each}
+            <p class="dim small">Itens únicos passam por herança, roubo e achados. Dê ou tire itens no painel de cada pessoa; crie itens na aba Regras (🗡 Item) ou com fichas tipo: item.</p>
+          </section>
         {:else}
           <section class="mundo">
+            {#if meusEventos.length}
+              <h4>Eventos do seu mundo</h4>
+              <div class="evbtns">
+                {#each meusEventos as e (e.id)}<button class="ghost" onclick={() => vidas.agir({ c: 'mundo', id: e.id, lugar: evLugar || null })} title={e.desc}>✦ {e.name}<small>{e.desc || `${e.months} ${e.months === 1 ? 'mês' : 'meses'}${e.global ? ', no mundo todo' : ''}`}</small></button>{/each}
+              </div>
+              {#if estado?.eventosAtivos.length}<p class="dim small">Agora: {estado.eventosAtivos.join(' · ')}</p>{/if}
+            {/if}
             <h4>Acontecimentos</h4>
             <div class="row">
               <select bind:value={evLugar}>
@@ -415,6 +472,16 @@
   .menu { margin-left: auto; }
   .go { border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); border-radius: 9px; padding: 6px 11px; font: 600 12.5px var(--f-display); }
   .go:hover { border-color: var(--ember); }
+  .go.on { border-color: var(--ember); background: color-mix(in srgb, var(--ember) 18%, var(--surface-2)); }
+  .play { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .play select { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); padding: 4px 6px; font-size: 12px; }
+  .relq { display: grid; gap: 6px; }
+  .rq { border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; background: var(--surface-2); }
+  .rq summary { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; cursor: pointer; font-size: 13px; }
+  .rq .onde { margin-left: auto; font-size: 12.5px; }
+  .hist { margin: 6px 0 2px; padding-left: 18px; display: grid; gap: 2px; font-size: 12.5px; }
+  .hist small { color: var(--muted); font-family: var(--f-mono); margin-right: 4px; }
+  .lk { border: 0; background: none; color: var(--ink); padding: 0 2px; box-shadow: inset 0 -1px 0 var(--ember); font: inherit; }
   .go.strong { background: var(--ember); color: var(--on-ember); border-color: transparent; }
   .ultimo { flex-basis: 100%; margin: 0; font-size: 12.5px; color: var(--muted); }
   .aviso { border: 1px solid color-mix(in srgb, #ffc08a 50%, var(--line)); border-radius: 12px; padding: 6px 12px; font-size: 12.5px; }

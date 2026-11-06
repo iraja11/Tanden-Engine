@@ -28,6 +28,8 @@ import {
   safeFileName,
   type ParseHtml,
   type PdfTextItem,
+  parseBoard,
+  readXlsx,
 } from '@tanden/core';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
@@ -227,6 +229,17 @@ class Files {
    * O aviso oferece "Desfazer". Devolve onde ficou a cópia.
    */
   async remove(path: string): Promise<string | null> {
+    // notas, planilhas e quadros têm histórico em .tanden/: apagar só o arquivo
+    // fazia o sync seguinte reconstruí-lo. Eles passam pelo store, que grava a lápide.
+    const managed = await this.removeManaged(path);
+    if (managed !== undefined) {
+      const t = managed;
+      this.forget(path);
+      this.list = this.list.filter((p) => p !== path);
+      if (this.open === path) this.open = null;
+      this.say(`"${path.split('/').pop()}" apagado${t ? ' (cópia em .trash/)' : ''}.`, t ? { action: { label: 'Desfazer', run: () => void this.restore(t, path) } } : {});
+      return t;
+    }
     const data = await this.read(path);
     let trashed: string | null = null;
     if (data) {
@@ -249,6 +262,17 @@ class Files {
     return trashed;
   }
 
+  /**
+   * Apaga pelo store certo (nota, planilha, quadro), com lápide para o sync não
+   * trazer de volta. Devolve a cópia na lixeira, ou undefined se não é desses.
+   */
+  private async removeManaged(path: string): Promise<string | null | undefined> {
+    if (/\.md$/i.test(path) && engine.vault.has(path)) return engine.deleteNote(path);
+    if (/\.xlsx$/i.test(path) && engine.sheets.has(path)) return sheets.remove(path);
+    if (/\.canvas$/i.test(path) && engine.boards.has(path)) return quadros.remove(path);
+    return undefined;
+  }
+
   /** Traz de volta um arquivo apagado (o "Desfazer" do aviso). */
   async restore(trashed: string, path: string): Promise<void> {
     const data = await engine.storage.read(trashed);
@@ -256,8 +280,29 @@ class Files {
       this.say('A cópia na lixeira sumiu; não deu para desfazer.', { error: true });
       return;
     }
-    const to = this.exists(path) ? freePath(this.exists, path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '', stem(path), path.split('.').pop()!.toLowerCase()) : path;
-    await this.write(to, data);
+    const to = this.exists(path) || engine.sheets.has(path) || engine.boards.has(path)
+      ? freePath((p) => this.exists(p) || engine.sheets.has(p) || engine.boards.has(p), path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '', stem(path), path.split('.').pop()!.toLowerCase())
+      : path;
+    // recriar pelo store começa uma geração nova; gravar o arquivo cru seria
+    // confundido com a sobra do que foi apagado (e sumiria de novo)
+    if (/\.md$/i.test(to)) engine.writeNote(to, new TextDecoder().decode(data));
+    else if (/\.xlsx$/i.test(to)) {
+      engine.sheets.create(to, readXlsx(data));
+      sheets.open(to);
+    } else if (/\.canvas$/i.test(to)) {
+      const b = parseBoard(new TextDecoder().decode(data));
+      if (!b) {
+        this.say('A cópia na lixeira está ilegível; não deu para desfazer.', { error: true });
+        return;
+      }
+      engine.boards.create(to, b.kind ?? 'livre', (e) => {
+        for (const n of b.nodes) e.setNode(n);
+        for (const ed of b.edges) e.setEdge(ed);
+        for (const k of b.ink ?? []) e.addInk(k);
+      });
+      engine.boardList = engine.boards.list();
+      engine.boardEdited();
+    } else await this.write(to, data);
     await engine.storage.remove(trashed);
     this.say(`"${to.split('/').pop()}" voltou.`, { path: to });
     if (fileKind(to) === 'pdf') void biblioteca.scan();

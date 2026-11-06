@@ -30,6 +30,9 @@ const BUTTONS: Array<{ mark: Mark | 'link' | 'wiki'; label: string; title: strin
   { mark: 'math', label: '√x', title: 'Fórmula (Ctrl+Shift+M)', cls: 'm' },
 ];
 
+/** tela de toque: a barra do sistema (copiar/colar) aparece em cima da seleção */
+const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+
 function bar(state: EditorState): readonly Tooltip[] {
   const r = state.selection.main;
   if (r.empty || state.field(mouseDown) || state.selection.ranges.length > 1) return [];
@@ -39,7 +42,7 @@ function bar(state: EditorState): readonly Tooltip[] {
     {
       pos: r.from,
       end: r.to,
-      above: true,
+      above: !coarse,
       strictSide: false,
       arrow: false,
       create: (view) => {
@@ -72,7 +75,7 @@ function bar(state: EditorState): readonly Tooltip[] {
           });
           dom.append(el);
         }
-        return { dom, offset: { x: 0, y: 6 } };
+        return { dom, offset: { x: 0, y: coarse ? 10 : 6 } };
       },
     },
   ];

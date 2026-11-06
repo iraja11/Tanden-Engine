@@ -192,7 +192,14 @@
 .cm-bubble .b { font-weight: 800; } .cm-bubble .i { font-style: italic; font-family: serif; font-size: 15px; }
 .cm-bubble .s { text-decoration: line-through; } .cm-bubble .c, .cm-bubble .w { font: 11.5px var(--f-mono); }
 .cm-bubble .h { color: #f5c542; } .cm-bubble .m { font-family: serif; font-style: italic; }
-.cm-bubble i { width: 1px; height: 18px; background: var(--line); margin: 0 3px; }
+.cm-bubble i { width: 1px; height: 18px; background: var(--line); margin: 0 3px; flex: none; }
+.cm-bubble button { flex: none; }
+/* celular: a barra não passa da largura da tela; rola de lado se precisar */
+.cm-bubble { max-width: calc(100vw - 32px); overflow-x: auto; scrollbar-width: none; }
+.cm-bubble::-webkit-scrollbar { display: none; }
+@media (pointer: coarse) {
+  .cm-bubble button { min-width: 36px; height: 36px; }
+}
 
 /* ---------- menus (/, [[, @) ---------- */
 .cm-tooltip.cm-tooltip-autocomplete { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
@@ -211,7 +218,7 @@
 .cm-completionMatchedText { text-decoration: none !important; color: var(--ember); }
 
 /* menu flutuante (alça, barra) */
-.tdn-menu { position: fixed; z-index: 90; min-width: 220px; max-width: 300px; padding: 5px; display: grid; background: var(--surface); border: 1px solid var(--line);
+.tdn-menu { position: fixed; z-index: 90; min-width: min(220px, calc(100vw - 16px)); max-width: min(300px, calc(100vw - 16px)); overflow-y: auto; overscroll-behavior: contain; padding: 5px; display: grid; background: var(--surface); border: 1px solid var(--line);
   border-radius: 12px; box-shadow: 0 22px 44px -18px var(--shadow), 0 0 0 1px var(--ember-glow); animation: bubble-in .12s var(--ease); }
 .tdn-menu-title { padding: 6px 10px 4px; font: 600 10.5px var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 .tdn-menu button { display: flex; align-items: center; gap: 10px; text-align: left; border: 0; background: none; padding: 6px 10px; border-radius: 8px;

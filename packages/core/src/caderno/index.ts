@@ -9,3 +9,4 @@ export * from './mapa';
 export * from './simulacao';
 export * from './regras';
 export * from './vidas';
+export * from './terreno-pintura';

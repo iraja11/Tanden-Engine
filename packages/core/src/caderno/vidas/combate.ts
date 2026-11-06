@@ -29,7 +29,7 @@ function poder(s: Vidas, p: Pessoa): number {
   let bonus = 0;
   for (const t of p.tracos) bonus += s.cat.tracos.get(t)?.combate ?? 0;
   const saude = p.saude < 50 ? -6 : 0;
-  return p.hab.combate * 2 + a.forca * 18 + a.agilidade * 10 + bonus + saude + (s.crianca(p) ? -15 : 0);
+  return s.habilidade(p, 'combate') * 2 + a.forca * 18 + a.agilidade * 10 + bonus + saude + (s.crianca(p) ? -15 : 0);
 }
 
 /** Luta entre `a` e `b` (b = null: bandidos na estrada). Escreve na crônica e devolve o resultado. */

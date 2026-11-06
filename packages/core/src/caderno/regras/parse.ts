@@ -150,7 +150,11 @@ export type Stmt = { src: Src } & (
   | { t: 'convoke'; action: Expr; target: Expr }
   | { t: 'stop' }
   | { t: 'expr'; e: Expr }
+  /** controle de uma trama em etapas: seguir, falhar, concluir, repetir, ir para "Etapa", esperar N (meses) */
+  | { t: 'flow'; kind: FlowKind; arg: Expr | null }
 );
+
+export type FlowKind = 'seguir' | 'falhar' | 'concluir' | 'repetir' | 'ir' | 'esperar';
 
 /** Lê uma linha de tokens. Para em ":" (fim de cabeçalho) e nas palavras-chave dadas. */
 class P {
@@ -328,18 +332,84 @@ class P {
 
 /** "olá {p.nome}" → partes de texto e expressões. */
 function template(s: string, src: Src): Expr {
+  return parseTemplate(s, src);
+}
+
+/**
+ * Texto com partes trocáveis entre chaves:
+ *  - `{a}`, `{a.nome}`, `{dado("1d6")}`: o valor de uma expressão;
+ *  - `{rico|abastado|cheio da grana}`: uma das opções, sorteada (pode ter `{a}` dentro);
+ *  - `{a:cansado/cansada}` ou `{a:o/a/e}`: a forma do gênero de quem é `a`.
+ * `tolerant`: uma chave que não dá para ler fica como está (bancos de texto).
+ */
+export function parseTemplate(s: string, src: Src, tolerant = false): Expr {
   if (!s.includes('{')) return { t: 'lit', v: s };
   const parts: Array<string | Expr> = [];
-  let last = 0;
-  for (const m of s.matchAll(/\{([^{}]+)\}/g)) {
-    if (m.index! > last) parts.push(s.slice(last, m.index));
-    const p = new P(lexLine(m[1]!, src), src);
-    parts.push(p.expr());
-    p.end();
-    last = m.index! + m[0].length;
+  let buf = '';
+  let i = 0;
+  while (i < s.length) {
+    if (s[i] !== '{') {
+      buf += s[i++];
+      continue;
+    }
+    let d = 0;
+    let j = i;
+    for (; j < s.length; j++) {
+      if (s[j] === '{') d++;
+      else if (s[j] === '}' && --d === 0) break;
+    }
+    if (j >= s.length) {
+      buf += s.slice(i);
+      break;
+    }
+    const inner = s.slice(i + 1, j);
+    let e: Expr;
+    try {
+      e = braceExpr(inner, src, tolerant);
+    } catch (err) {
+      if (!tolerant) throw err;
+      e = { t: 'lit', v: `{${inner}}` };
+    }
+    if (buf) parts.push(buf);
+    buf = '';
+    parts.push(e);
+    i = j + 1;
   }
-  if (last < s.length) parts.push(s.slice(last));
+  if (buf) parts.push(buf);
   return { t: 'tpl', parts };
+}
+
+/** Divide no separador só no nível de fora das chaves. */
+function splitTop(s: string, sep: string): string[] {
+  const out: string[] = [];
+  let d = 0;
+  let cur = '';
+  for (const c of s) {
+    if (c === '{') d++;
+    else if (c === '}') d--;
+    if (c === sep && d === 0) {
+      out.push(cur);
+      cur = '';
+    } else cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+
+function braceExpr(inner: string, src: Src, tolerant: boolean): Expr {
+  const opts = splitTop(inner, '|');
+  if (opts.length > 1) return { t: 'call', name: '__escolha', raw: '', args: opts.map((o) => parseTemplate(o, src, tolerant)) };
+  const g = /^\s*([\p{L}_][\p{L}\p{M}\p{N}_.]*)\s*:\s*([^{}:]*\/[^{}:]*)$/u.exec(inner);
+  if (g) {
+    const p = new P(lexLine(g[1]!, src), src);
+    const who = p.expr();
+    p.end();
+    return { t: 'call', name: '__genero', raw: '', args: [who, ...g[2]!.split('/').map((f): Expr => ({ t: 'lit', v: f.trim() }))] };
+  }
+  const p = new P(lexLine(inner, src), src);
+  const e = p.expr();
+  p.end();
+  return e;
 }
 
 // ------------------------------------------------------------------ comandos
@@ -377,6 +447,24 @@ function parseStmt(p: P, l: Line, k: string): Stmt {
   const noKids = () => {
     if (l.kids.length) throw p.err('esta linha não abre bloco');
   };
+  // controle das tramas (só vale dentro de uma etapa; o interpretador confere)
+  const FLOW: Record<string, FlowKind> = {
+    seguir: 'seguir', avancar: 'seguir', prosseguir: 'seguir', falhar: 'falhar', fracassar: 'falhar', concluir: 'concluir', encerrar: 'concluir',
+    repetir: 'repetir', ir: 'ir', esperar: 'esperar', aguardar: 'esperar',
+  };
+  if (FLOW[k] && l.toks[1]?.v !== '(' && l.toks[1]?.v !== '=' && l.toks[1]?.v !== '.' && !/^[+\-*/]=$/.test(l.toks[1]?.v ?? '')) {
+    const kind = FLOW[k]!;
+    p.next();
+    if (kind === 'ir') p.key('para', 'a', 'pra');
+    let arg: Expr | null = null;
+    if (!p.done()) arg = p.expr();
+    // "esperar 3 meses" / "repetir em 2 meses"
+    if (p.isKey('mes', 'meses')) p.next();
+    p.end();
+    noKids();
+    if ((kind === 'ir' || kind === 'esperar') && !arg) throw p.err(kind === 'ir' ? 'ir para qual etapa? (ex.: ir para "Convite")' : 'esperar quantos meses? (ex.: esperar 2)');
+    return { src, t: 'flow', kind, arg };
+  }
   switch (k) {
     case 'se': {
       p.next();
@@ -538,6 +626,8 @@ export interface RuleTrait {
   affinity: Record<string, number>;
   mood: number;
   stress: number;
+  /** ajustes enquanto tem o traço: força, intelecto, combate, atributos... */
+  mods: Record<string, number>;
   /** surge sozinho na pessoa quando a condição vale (conferido uma vez por ano) */
   emerge: Expr | null;
   emergeChance: number;
@@ -554,6 +644,120 @@ export interface RuleProfession {
   risk: number;
   travels: boolean;
   requires: Expr | null;
+  src: Src;
+}
+
+/** Atributo numérico das pessoas (sanidade, fé, envergadura...), com faixa, herança e espécie. */
+export interface RuleAttribute {
+  id: string;
+  name: string;
+  min: number;
+  max: number;
+  mean: number;
+  sd: number;
+  /** quanto vem dos pais (0 a 1) */
+  inherit: number;
+  /** físico, mental, social... (só para mostrar) */
+  category: string;
+  /** muda sozinho a cada ano */
+  perYear: number;
+  /** só estas espécies têm (vazio = todos) */
+  only: string[];
+  desc: string;
+  src: Src;
+}
+/** Espécie (ou criatura) da simulação: vida, maioridade, fertilidade, corpo, cruzamentos. */
+export interface RuleSpecies {
+  id: string;
+  name: string;
+  plural: string;
+  /** expectativa de vida em anos */
+  life: number | null;
+  /** idade adulta em anos */
+  adult: number | null;
+  /** multiplicador da fertilidade */
+  fertility: number | null;
+  /** meses de gestação */
+  gestation: number | null;
+  /** altura média em cm */
+  height: number | null;
+  /** ajustes de atributos e características (força, intelecto, beleza, saúde, ou atributos declarados) */
+  mods: Record<string, number>;
+  /** traços de nascença de todos da espécie */
+  traits: string[];
+  /** traços que cada um pode ter ao nascer (traço → chance) */
+  maybe: Record<string, number>;
+  crosses: Array<{ with: string; gives: string | null }>;
+  /** criatura: não conversa, não namora, não trabalha; só briga e se reproduz com a própria espécie */
+  creature: boolean;
+  /** fração dos figurantes gerados que nasce desta espécie */
+  frequency: number;
+  desc: string;
+  src: Src;
+}
+/** Item do mundo (comum ou único, como as relíquias de Skyrim), com efeitos enquanto alguém o tem. */
+export interface RuleItem {
+  id: string;
+  name: string;
+  plural: string;
+  /** só existe um no mundo */
+  unique: boolean;
+  /** arma, joia, livro, relíquia... */
+  kind: string;
+  rarity: string;
+  value: number;
+  desc: string;
+  /** ajustes enquanto possui: combate +5, força +10, sanidade -10 */
+  mods: Record<string, number>;
+  /** muda todo mês enquanto possui: humor, estresse, saúde, dinheiro ou atributos */
+  perMonth: Record<string, number>;
+  /** traços que a pessoa ganha enquanto tem o item */
+  traits: string[];
+  /** quem tem no começo (nome) */
+  owner: string | null;
+  /** onde está largado no começo (nome do lugar), se ninguém tem */
+  place: string | null;
+  /** atrai ladrões e cobiça */
+  coveted: boolean;
+  onGain: Stmt[];
+  onLose: Stmt[];
+  monthly: Stmt[];
+  src: Src;
+}
+/** Evento do mundo com duração (como festa, peste, fome), declarado nas regras. */
+export interface RuleEvent {
+  id: string;
+  name: string;
+  /** chance por ano de começar sozinho (0 = só à mão ou por `começar_evento`) */
+  chance: number;
+  /** meses que dura */
+  months: number;
+  /** um lugar sorteado (padrão) ou o mundo todo */
+  global: boolean;
+  /** só começa onde/quando isto vale (`lugar` é o lugar sorteado) */
+  where: Expr | null;
+  desc: string;
+  onStart: Stmt[];
+  /** roda todo mês para cada pessoa no lugar (`personagem`, `lugar`) */
+  monthly: Stmt[];
+  onEnd: Stmt[];
+  /** ajusta o peso das interações enquanto dura (id → ×) */
+  weights: Record<string, number>;
+  src: Src;
+}
+/** Uma etapa de trama: corre quando chega a vez dela e espera `months` antes da próxima. */
+export interface RuleStage { name: string; months: Expr | null; body: Stmt[]; src: Src }
+/** Interação em várias etapas, que dura meses (uma sedução, uma conspiração, uma vingança). */
+export interface RuleScheme {
+  name: string;
+  a: RuleParty;
+  b: RuleParty | null;
+  where: Expr | null;
+  attraction: Expr | null;
+  chance: Expr | null;
+  stages: RuleStage[];
+  onFail: Stmt[];
+  onDone: Stmt[];
   src: Src;
 }
 
@@ -574,11 +778,17 @@ export interface Program {
   traits: RuleTrait[];
   professions: RuleProfession[];
   tastes: string[];
+  attributes: RuleAttribute[];
+  species: RuleSpecies[];
+  schemes: RuleScheme[];
+  items: RuleItem[];
+  events: RuleEvent[];
   issues: RuleIssue[];
 }
 
 export const emptyProgram = (): Program => ({
-  types: [], groups: [], computed: [], actions: [], handlers: [], interactions: [], globals: [], traits: [], professions: [], tastes: [], issues: [],
+  types: [], groups: [], computed: [], actions: [], handlers: [], interactions: [], globals: [], traits: [], professions: [], tastes: [],
+  attributes: [], species: [], schemes: [], items: [], events: [], issues: [],
 });
 
 /** "+50%" → 1,5; "-30%" → 0,7; "* 2" ou "x2" → 2; "2" → 2. */
@@ -751,19 +961,7 @@ function decl(prog: Program, l: Line): void {
       // interação "Peregrinação" entre devoto em personagem, templo em lugar onde ...:
       p.next();
       const name = str(p, 'o nome da interação entre aspas');
-      const kind = p.key('entre', 'de', 'para').key;
-      const a: RuleParty = { v: p.ident().key, type: '' };
-      p.key('em', 'de');
-      a.type = p.ident('um tipo').key;
-      let b: RuleParty | null = null;
-      if (kind === 'entre' || p.isOp(',') || p.isKey('e', 'com')) {
-        if (!p.isOp(',') && !p.isKey('e', 'com')) throw p.err('"entre" pede duas partes: entre a em X, b em Y');
-        p.next();
-        b = { v: p.ident().key, type: '' };
-        p.key('em', 'de');
-        b.type = p.ident('um tipo').key;
-      }
-      const where = p.isKey('onde', 'se', 'quando') ? (p.next(), p.expr()) : null;
+      const { a, b, where } = parties(p);
       p.endHeader();
       needKids(p, l);
       let attraction: Expr | null = null;
@@ -789,7 +987,7 @@ function decl(prog: Program, l: Line): void {
       const f = p.done() ? m : str(p, 'a forma feminina entre aspas');
       p.endHeader();
       const t: RuleTrait = {
-        id: fold(m).trim(), m, f, opposite: null, inherit: 0, desc: '', category: 'personalidade', weights: {}, affinity: {}, mood: 0, stress: 0,
+        id: fold(m).trim(), m, f, opposite: null, inherit: 0, desc: '', category: 'personalidade', weights: {}, affinity: {}, mood: 0, stress: 0, mods: {},
         emerge: null, emergeChance: 1, src,
       };
       for (const kid of l.kids) {
@@ -810,7 +1008,12 @@ function decl(prog: Program, l: Line): void {
           q.key('onde', 'se', 'quando');
           t.emerge = q.expr();
         } else if (kk === 'chance') t.emergeChance = pct(q);
-        else throw q.err(`dentro de "traço" vale oposto, herdável, descrição, categoria, peso, afinidade, humor, estresse, surge e chance; veio "${kid.toks[0]!.v}"`);
+        else if (kk === 'ajuste' || kk === 'bonus') {
+          const words: string[] = [];
+          while (q.peek() && (q.peek()!.k === 'id' || q.peek()!.k === 'str')) words.push(fold(q.next().v).trim());
+          if (!words.length) throw q.err('ajuste de quê? (ex.: ajuste força +10)');
+          t.mods[words.join(' ').replace(/_/g, ' ')] = signed(q);
+        } else throw q.err(`dentro de "traço" vale oposto, herdável, descrição, categoria, peso, afinidade, humor, estresse, ajuste, surge e chance; veio "${kid.toks[0]!.v}"`);
         q.end();
       }
       prog.traits.push(t);
@@ -839,6 +1042,312 @@ function decl(prog: Program, l: Line): void {
       prog.professions.push(t);
       return;
     }
+    case 'trama': {
+      // trama "Sedução lenta" entre a em personagem, b em personagem onde ...:
+      p.next();
+      const name = str(p, 'o nome da trama entre aspas');
+      const { a, b, where } = parties(p);
+      p.endHeader();
+      needKids(p, l);
+      const sc: RuleScheme = { name, a, b, where, attraction: null, chance: null, stages: [], onFail: [], onDone: [], src };
+      for (const kid of l.kids) {
+        const f = kid.toks[0]!;
+        const q = new P(kid.toks, kid.src);
+        if (f.k === 'id' && (f.key === 'atracao' || f.key === 'chance' || f.key === 'peso') && kid.toks[1]?.v === '=') {
+          const r = new P(kid.toks.slice(2), kid.src);
+          const e = r.expr();
+          r.end();
+          if (f.key === 'chance') sc.chance = e;
+          else sc.attraction = e;
+        } else if (f.k === 'id' && f.key === 'etapa') {
+          q.next();
+          const nome = str(q, 'o nome da etapa entre aspas');
+          q.endHeader();
+          needKids(q, kid);
+          let months: Expr | null = null;
+          const rest: Line[] = [];
+          for (const g of kid.kids) {
+            if (g.toks[0]?.k === 'id' && (g.toks[0].key === 'dura' || g.toks[0].key === 'duracao') && !g.kids.length) {
+              const r = new P(g.toks.slice(1), g.src);
+              months = r.expr();
+              if (r.isKey('mes', 'meses')) r.next();
+              r.end();
+            } else rest.push(g);
+          }
+          sc.stages.push({ name: nome, months, body: parseBlock(rest), src: kid.src });
+        } else if (f.k === 'id' && (f.key === 'ao' || f.key === 'se') && ['falhar', 'fracassar', 'concluir', 'fim', 'terminar'].includes(kid.toks[1]?.key ?? '')) {
+          q.next();
+          const w = q.next().key;
+          q.endHeader();
+          needKids(q, kid);
+          if (w === 'falhar' || w === 'fracassar') sc.onFail = parseBlock(kid.kids);
+          else sc.onDone = parseBlock(kid.kids);
+        } else {
+          throw q.err(`dentro de "trama" vale chance =, atração =, etapa "Nome":, ao falhar: e ao concluir:; veio "${f.v}"`);
+        }
+      }
+      if (!sc.stages.length) throw p.err('a trama precisa de pelo menos uma etapa (etapa "Nome":)');
+      prog.schemes.push(sc);
+      return;
+    }
+    case 'item':
+    case 'objeto':
+    case 'artefato':
+    case 'reliquia': {
+      // item "Espada de Aurora":
+      p.next();
+      const name = str(p, 'o nome do item entre aspas');
+      const plural = p.done() || p.isOp(':') ? name : str(p, 'o plural entre aspas');
+      const it: RuleItem = {
+        id: fold(name).trim(), name, plural, unique: k === 'artefato' || k === 'reliquia', kind: k === 'item' || k === 'objeto' ? 'item' : k, rarity: '', value: 10, desc: '',
+        mods: {}, perMonth: {}, traits: [], owner: null, place: null, coveted: false, onGain: [], onLose: [], monthly: [], src,
+      };
+      if (p.isOp(':')) {
+        p.endHeader();
+        for (const kid of l.kids) {
+          const q = new P(kid.toks, kid.src);
+          const kk = kid.toks[0]!.key;
+          const k2 = kid.toks[1]?.key ?? '';
+          // blocos: ao ganhar / ao perder / todo mês
+          if ((kk === 'ao' || kk === 'quando') && ['ganhar', 'ganha', 'receber', 'recebe', 'perder', 'perde'].includes(k2)) {
+            q.next();
+            q.next();
+            q.endHeader();
+            needKids(q, kid);
+            if (k2.startsWith('ganh') || k2.startsWith('receb')) it.onGain = parseBlock(kid.kids);
+            else it.onLose = parseBlock(kid.kids);
+            continue;
+          }
+          if (kk === 'todo' && k2 === 'mes') {
+            q.next();
+            q.next();
+            q.endHeader();
+            needKids(q, kid);
+            it.monthly = parseBlock(kid.kids);
+            continue;
+          }
+          q.next();
+          if (kk === 'unico' || kk === 'unica') it.unique = true;
+          else if (kk === 'comum') it.unique = false;
+          else if (kk === 'cobicado' || kk === 'cobicada') it.coveted = true;
+          else if (kk === 'tipo' || kk === 'categoria') it.kind = fold(q.next().v);
+          else if (kk === 'raridade') {
+            it.rarity = q.next().v;
+            if (/^(lend|unic|artef|mitic)/.test(fold(it.rarity))) it.unique = true;
+          } else if (kk === 'valor' || kk === 'preco') it.value = signed(q);
+          else if (kk === 'descricao') it.desc = str(q, 'a descrição entre aspas');
+          else if (kk === 'dono' || kk === 'dona') it.owner = str(q, 'o nome de quem tem o item');
+          else if (kk === 'em' || kk === 'local' || kk === 'onde' || kk === 'perdido' || kk === 'perdida') {
+            if (q.isKey('em')) q.next();
+            it.place = str(q, 'o lugar entre aspas');
+          } else if (kk === 'traco' || kk === 'tracos' || kk === 'concede') {
+            for (;;) {
+              it.traits.push(fold(str(q, 'o traço entre aspas')).trim());
+              if (!q.isOp(',')) break;
+              q.next();
+            }
+          } else if (kk === 'por' && q.isKey('mes')) {
+            q.next();
+            const words: string[] = [];
+            while (q.peek() && (q.peek()!.k === 'id' || q.peek()!.k === 'str')) words.push(fold(q.next().v).trim());
+            if (!words.length) throw q.err('por mês o quê? (ex.: por mês sanidade -1)');
+            it.perMonth[words.join(' ').replace(/_/g, ' ')] = signed(q);
+          } else {
+            // ajuste enquanto possui: "combate +5"
+            q.i = 0;
+            if (q.isKey('ajuste', 'bonus')) q.next();
+            const words: string[] = [];
+            while (q.peek() && (q.peek()!.k === 'id' || q.peek()!.k === 'str')) words.push(fold(q.next().v).trim());
+            if (!words.length || !q.peek()) {
+              throw q.err(`dentro de "item" vale único, tipo, raridade, valor, descrição, dono, em "lugar", traço, cobiçado, por mês, ao ganhar:, ao perder:, todo mês: ou um ajuste como "combate +5"; veio "${kid.toks[0]!.v}"`);
+            }
+            it.mods[words.join(' ').replace(/_/g, ' ')] = signed(q);
+          }
+          q.end();
+        }
+      } else p.end();
+      prog.items.push(it);
+      return;
+    }
+    case 'evento': {
+      // evento "Lua de Sangue":
+      p.next();
+      const name = str(p, 'o nome do evento entre aspas');
+      p.endHeader();
+      const ev: RuleEvent = { id: fold(name).trim(), name, chance: 0, months: 1, global: false, where: null, desc: '', onStart: [], monthly: [], onEnd: [], weights: {}, src };
+      for (const kid of l.kids) {
+        const q = new P(kid.toks, kid.src);
+        const kk = kid.toks[0]!.key;
+        const k2 = kid.toks[1]?.key ?? '';
+        if ((kk === 'ao' || kk === 'quando') && ['comecar', 'inicio', 'acabar', 'fim', 'terminar'].includes(k2)) {
+          q.next();
+          q.next();
+          q.endHeader();
+          needKids(q, kid);
+          if (k2 === 'comecar' || k2 === 'inicio') ev.onStart = parseBlock(kid.kids);
+          else ev.onEnd = parseBlock(kid.kids);
+          continue;
+        }
+        if (kk === 'todo' && k2 === 'mes') {
+          q.next();
+          q.next();
+          if (q.isKey('em')) {
+            q.next();
+            q.ident('um tipo');
+          }
+          q.endHeader();
+          needKids(q, kid);
+          ev.monthly = parseBlock(kid.kids);
+          continue;
+        }
+        q.next();
+        if (kk === 'chance') ev.chance = pct(q);
+        else if (kk === 'dura' || kk === 'duracao') {
+          ev.months = Math.max(1, signed(q));
+          if (q.isKey('mes', 'meses')) q.next();
+        } else if (kk === 'global' || kk === 'mundo') ev.global = true;
+        else if (kk === 'onde' || kk === 'se' || kk === 'quando') ev.where = q.expr();
+        else if (kk === 'descricao') ev.desc = str(q, 'a descrição entre aspas');
+        else if (kk === 'peso') ev.weights[fold(q.ident('o nome de uma interação (ex.: flertar)').v)] = multiplier(q);
+        else throw q.err(`dentro de "evento" vale chance, dura, global, onde, descrição, peso, ao começar:, todo mês:, ao acabar:; veio "${kid.toks[0]!.v}"`);
+        q.end();
+      }
+      prog.events.push(ev);
+      return;
+    }
+    case 'atributo': {
+      // atributo "Sanidade":   (ou numa linha: atributo "Fé" 0 a 10)
+      p.next();
+      const name = str(p, 'o nome do atributo entre aspas');
+      const at: RuleAttribute = { id: fold(name).trim(), name, min: 0, max: 100, mean: NaN, sd: NaN, inherit: 0, category: 'geral', perYear: 0, only: [], desc: '', src };
+      const faixa = (q: P) => {
+        if (q.isKey('de', 'entre')) q.next();
+        at.min = signed(q);
+        q.key('a', 'e', 'ate');
+        at.max = signed(q);
+      };
+      if (!p.done() && !p.isOp(':')) faixa(p);
+      if (p.isOp(':')) {
+        p.endHeader();
+        for (const kid of l.kids) {
+          const q = new P(kid.toks, kid.src);
+          const kk = kid.toks[0]!.key;
+          q.next();
+          if (kk === 'faixa' || kk === 'escala' || kk === 'vai') faixa(q);
+          else if (kk === 'media' || kk === 'inicial' || kk === 'comeca') at.mean = signed(q);
+          else if (kk === 'desvio' || kk === 'variacao' || kk === 'espalhamento') at.sd = signed(q);
+          else if (kk === 'herdavel' || kk === 'heranca' || kk === 'hereditario') at.inherit = pct(q);
+          else if (kk === 'categoria' || kk === 'tipo') at.category = fold(str(q, 'a categoria'));
+          else if (kk === 'por' && q.isKey('ano')) {
+            q.next();
+            at.perYear = signed(q);
+          } else if (kk === 'descricao') at.desc = str(q, 'a descrição entre aspas');
+          else if (kk === 'so' || kk === 'apenas' || kk === 'somente') {
+            // só para "Dragão", "Wyvern"
+            if (q.isKey('para', 'de', 'em')) q.next();
+            for (;;) {
+              at.only.push(fold(str(q, 'a espécie entre aspas')).trim());
+              if (!q.isOp(',')) break;
+              q.next();
+            }
+          } else throw q.err(`dentro de "atributo" vale faixa, média, desvio, herdável, categoria, por ano, só para e descrição; veio "${kid.toks[0]!.v}"`);
+          q.end();
+        }
+      } else p.end();
+      if (at.max <= at.min) throw p.err('a faixa do atributo precisa ir de um número menor para um maior (ex.: faixa 0 a 100)');
+      if (!Number.isFinite(at.mean)) at.mean = (at.min + at.max) / 2;
+      if (!Number.isFinite(at.sd)) at.sd = (at.max - at.min) / 6;
+      prog.attributes.push(at);
+      return;
+    }
+    case 'especie':
+    case 'raca':
+    case 'criatura': {
+      // espécie "Elfo" "Elfos":   /   criatura "Lobo" "Lobos":
+      p.next();
+      const name = str(p, 'o nome da espécie entre aspas');
+      const plural = p.done() || p.isOp(':') ? `${name}s` : str(p, 'o plural entre aspas');
+      const sp: RuleSpecies = {
+        id: fold(name).trim(), name, plural, life: null, adult: null, fertility: null, gestation: null, height: null, mods: {}, traits: [], maybe: {}, crosses: [],
+        creature: k === 'criatura', frequency: 0, desc: '', src,
+      };
+      if (p.isOp(':')) {
+        p.endHeader();
+        for (const kid of l.kids) {
+          const q = new P(kid.toks, kid.src);
+          const kk = kid.toks[0]!.key;
+          if (kk === 'criatura' || kk === 'animal' || kk === 'fera' || kk === 'monstro') {
+            q.next();
+            sp.creature = true;
+          } else if (kk === 'vida' || kk === 'longevidade' || kk === 'expectativa') {
+            q.next();
+            if (q.isKey('de')) q.next();
+            if (q.isKey('vida')) q.next();
+            sp.life = signed(q);
+            if (q.isKey('anos', 'ano')) q.next();
+          } else if (kk === 'maioridade' || kk === 'adulto' || kk === 'adulta') {
+            q.next();
+            if (q.isKey('aos', 'com')) q.next();
+            sp.adult = signed(q);
+            if (q.isKey('anos', 'ano')) q.next();
+          } else if (kk === 'fertilidade') {
+            q.next();
+            sp.fertility = pct(q);
+          } else if (kk === 'gestacao' || kk === 'gravidez') {
+            q.next();
+            sp.gestation = signed(q);
+            if (q.isKey('mes', 'meses')) q.next();
+          } else if (kk === 'altura' || kk === 'tamanho') {
+            q.next();
+            sp.height = signed(q);
+            if (q.isKey('cm')) q.next();
+          } else if (kk === 'traco' || kk === 'tracos') {
+            q.next();
+            for (;;) {
+              sp.traits.push(fold(str(q, 'o traço entre aspas')).trim());
+              if (!q.isOp(',')) break;
+              q.next();
+            }
+          } else if (kk === 'pode' && q.peek(1)?.key === 'ter') {
+            // pode ter "asas negras" 20%, "olhos de gato" 5%
+            q.next();
+            q.next();
+            for (;;) {
+              const t = fold(str(q, 'o traço entre aspas')).trim();
+              sp.maybe[t] = q.peek()?.k === 'num' ? pct(q) : 0.25;
+              if (!q.isOp(',')) break;
+              q.next();
+            }
+          } else if (kk === 'cruza') {
+            q.next();
+            q.key('com');
+            const w = fold(str(q, 'a espécie entre aspas')).trim();
+            let gives: string | null = null;
+            if (q.isKey('gera', 'da', 'nasce', 'vira')) {
+              q.next();
+              gives = str(q, 'a espécie dos filhos entre aspas');
+            }
+            sp.crosses.push({ with: w, gives });
+          } else if (kk === 'frequencia' || kk === 'comum' || kk === 'proporcao') {
+            q.next();
+            sp.frequency = pct(q);
+          } else if (kk === 'descricao') {
+            q.next();
+            sp.desc = str(q, 'a descrição entre aspas');
+          } else {
+            // ajuste: "força +10", "atributo sanidade -20", "beleza -5"
+            if (kk === 'atributo' || kk === 'ajuste') q.next();
+            const words: string[] = [];
+            while (q.peek() && (q.peek()!.k === 'id' || q.peek()!.k === 'str')) words.push(fold(q.next().v).trim());
+            if (!words.length || !q.peek()) throw q.err(`dentro de "espécie" vale vida, maioridade, fertilidade, gestação, altura, traço, cruza com, criatura, frequência, descrição ou um ajuste como "força +10"; veio "${kid.toks[0]!.v}"`);
+            sp.mods[words.join(' ').replace(/_/g, ' ')] = signed(q);
+          }
+          q.end();
+        }
+      } else p.end();
+      prog.species.push(sp);
+      return;
+    }
     case 'gosto':
     case 'gostos': {
       p.next();
@@ -860,7 +1369,25 @@ function decl(prog: Program, l: Line): void {
       return;
     }
   }
-  throw p.err(`não sei começar com "${l.toks[0]!.v}". Use tipo, grupo, calcular, ação, quando, interação, traço, profissão, gosto ou seja`);
+  throw p.err(`não sei começar com "${l.toks[0]!.v}". Use tipo, grupo, calcular, ação, quando, interação, trama, traço, atributo, espécie, criatura, item, evento, profissão, gosto ou seja`);
+}
+
+/** "entre a em X, b em Y onde ..." ou "de p em X onde ..." */
+function parties(p: P): { a: RuleParty; b: RuleParty | null; where: Expr | null } {
+  const kind = p.key('entre', 'de', 'para').key;
+  const a: RuleParty = { v: p.ident().key, type: '' };
+  p.key('em', 'de');
+  a.type = p.ident('um tipo').key;
+  let b: RuleParty | null = null;
+  if (kind === 'entre' || p.isOp(',') || p.isKey('e', 'com')) {
+    if (!p.isOp(',') && !p.isKey('e', 'com')) throw p.err('"entre" pede duas partes: entre a em X, b em Y');
+    p.next();
+    b = { v: p.ident().key, type: '' };
+    p.key('em', 'de');
+    b.type = p.ident('um tipo').key;
+  }
+  const where = p.isKey('onde', 'se', 'quando') ? (p.next(), p.expr()) : null;
+  return { a, b, where };
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

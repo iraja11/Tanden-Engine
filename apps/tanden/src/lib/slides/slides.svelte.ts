@@ -102,7 +102,7 @@ class Slides {
     if (this.started) return;
     this.started = true;
     engine.bus.on('*', (e) => {
-      if (e.type === 'note.created' || e.type === 'note.changed' || e.type === 'sync.finished') this.schedule();
+      if (e.type === 'note.created' || e.type === 'note.deleted' || e.type === 'note.changed' || e.type === 'sync.finished') this.schedule();
     });
     this.refresh();
   }

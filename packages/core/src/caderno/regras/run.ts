@@ -3,7 +3,7 @@ import { findTable, rollTable, type RollTable } from '../../rpg/tables';
 import type { PropValue } from '../frontmatter';
 import { linkTarget } from '../markdown';
 import { normalizeType, type Entity, type World } from '../mundo';
-import { fold, parseExprSource, parseLoose, RuleError, type Expr, type Program, type RuleIssue, type Src, type Stmt } from './parse';
+import { fold, parseExprSource, parseLoose, parseTemplate, RuleError, type Expr, type FlowKind, type Program, type RuleIssue, type RuleScheme, type Src, type Stmt } from './parse';
 
 /*
  * Interpretador das regras do mundo.
@@ -61,6 +61,24 @@ type Env = Map<string, Val>;
 
 class Stop {}
 
+/** Sinal de controle de uma etapa de trama (seguir, falhar, ir para...). */
+class Flow {
+  constructor(readonly kind: FlowKind, readonly arg: Val) {}
+}
+
+/** Uma trama em andamento: em que etapa está, quando roda de novo e as variáveis dela. */
+export interface SchemeRun {
+  id: number;
+  scheme: RuleScheme;
+  stage: number;
+  /** volta (tick) em que a etapa atual roda */
+  next: number;
+  env: Env;
+  since: number;
+  /** quem está na trama (caminhos das fichas) */
+  who: string[];
+}
+
 const norm = (s: string) => fold(s).replace(/[_\s]+/g, ' ').trim();
 const NUM = /^-?\d+(?:[.,]\d+)?$/;
 
@@ -73,6 +91,11 @@ export class Rules {
   private steps = 0;
   private depth = 0;
   private memberCache = new Map<string, Ent[]>();
+  /** tramas em andamento */
+  readonly schemes: SchemeRun[] = [];
+  /** voltas de interação já dadas (o relógio das tramas) */
+  private clock = 0;
+  private schemeSeq = 0;
 
   constructor(readonly program: Program, public world: World, readonly host: RuleHost) {
     this.byPath = new Map();
@@ -213,44 +236,162 @@ export class Rules {
   // ---------------------------------------------------------------- interações
 
   private interact(): void {
-    const rng = this.host.rng;
-    for (const it of this.program.interactions) {
-      this.guard(it.src, () => {
-        const as = this.shuffle(this.members(it.a.type));
-        const bs = it.b ? this.members(it.b.type) : [];
-        const bSet = it.b && this.host.candidates ? new Set(bs.map((x) => x.path)) : null;
-        for (const a of as) {
-          const env: Env = new Map([[it.a.v, a]]);
-          let partner: Ent | null = null;
-          if (it.b) {
-            // cada um escolhe um parceiro, puxado pela atração (peso > 0)
-            const cands: Array<{ b: Ent; w: number }> = [];
-            const near = this.host.candidates?.(a.path, it.b.type);
-            const pool = near && bSet ? near.filter((p) => bSet.has(p)).map((p) => new Ent(p)) : bs;
-            for (const b of pool) {
-              if (b.path === a.path) continue;
-              const e2: Env = new Map([[it.a.v, a], [it.b.v, b]]);
-              if (it.where && !this.truthy(this.eval(it.where, e2, null))) continue;
-              const w = it.attraction ? this.num(this.eval(it.attraction, e2, null)) : 1;
-              if (w > 0) cands.push({ b, w });
-            }
-            if (!cands.length) continue;
-            let r = rng() * cands.reduce((s, c) => s + c.w, 0);
-            partner = cands[cands.length - 1]!.b;
-            for (const c of cands) if ((r -= c.w) <= 0) { partner = c.b; break; }
-            env.set(it.b.v, partner);
-          } else if (it.where && !this.truthy(this.eval(it.where, env, null))) continue;
-          else if (it.attraction && this.num(this.eval(it.attraction, env, null)) <= 0) continue;
-          let p = it.chance ? this.num(this.eval(it.chance, env, null)) : 0.1;
-          if (p > 1) p /= 100;
-          // chance por ano; numa volta mensal, a parte do mês (12 meses a 1,4% ≈ 15% no ano)
-          const per = this.host.period ?? 1;
-          if (per < 1 && p > 0) p = p >= 1 ? 1 : 1 - Math.pow(1 - p, per);
-          if (rng() >= p) continue;
-          this.exec(it.body, env, null);
-        }
-      });
+    this.clock++;
+    this.advanceSchemes();
+    for (const it of this.program.interactions) this.fire(it, (env) => this.exec(it.body, env, null));
+    for (const sc of this.program.schemes) {
+      // quem já puxa esta trama não começa outra igual
+      const busy = new Set(this.schemes.filter((r) => r.scheme === sc).map((r) => r.who[0]!));
+      this.fire(sc, (env, a) => this.startScheme(sc, env, a), busy);
     }
+  }
+
+  /**
+   * Para cada `a` do tipo: escolhe um `b` (puxado pela atração), confere o
+   * `onde` e sorteia a chance (anual, repartida pelas voltas). Se der, chama `run`.
+   */
+  private fire(
+    it: { a: { v: string; type: string }; b: { v: string; type: string } | null; where: Expr | null; attraction: Expr | null; chance: Expr | null; src: Src },
+    run: (env: Env, a: Ent) => void, skip?: Set<string>,
+  ): void {
+    const rng = this.host.rng;
+    this.guard(it.src, () => {
+      const as = this.shuffle(this.members(it.a.type));
+      const bs = it.b ? this.members(it.b.type) : [];
+      const bSet = it.b && this.host.candidates ? new Set(bs.map((x) => x.path)) : null;
+      for (const a of as) {
+        if (skip?.has(a.path)) continue;
+        const env: Env = new Map([[it.a.v, a]]);
+        let partner: Ent | null = null;
+        if (it.b) {
+          // cada um escolhe um parceiro, puxado pela atração (peso > 0)
+          const cands: Array<{ b: Ent; w: number }> = [];
+          const near = this.host.candidates?.(a.path, it.b.type);
+          const pool = near && bSet ? near.filter((p) => bSet.has(p)).map((p) => new Ent(p)) : bs;
+          for (const b of pool) {
+            if (b.path === a.path) continue;
+            const e2: Env = new Map([[it.a.v, a], [it.b.v, b]]);
+            if (it.where && !this.truthy(this.eval(it.where, e2, null))) continue;
+            const w = it.attraction ? this.num(this.eval(it.attraction, e2, null)) : 1;
+            if (w > 0) cands.push({ b, w });
+          }
+          if (!cands.length) continue;
+          let r = rng() * cands.reduce((s, c) => s + c.w, 0);
+          partner = cands[cands.length - 1]!.b;
+          for (const c of cands) if ((r -= c.w) <= 0) { partner = c.b; break; }
+          env.set(it.b.v, partner);
+        } else if (it.where && !this.truthy(this.eval(it.where, env, null))) continue;
+        else if (it.attraction && this.num(this.eval(it.attraction, env, null)) <= 0) continue;
+        let p = it.chance ? this.num(this.eval(it.chance, env, null)) : 0.1;
+        if (p > 1) p /= 100;
+        // chance por ano; numa volta mensal, a parte do mês (12 meses a 1,4% ≈ 15% no ano)
+        const per = this.host.period ?? 1;
+        if (per < 1 && p > 0) p = p >= 1 ? 1 : 1 - Math.pow(1 - p, per);
+        if (rng() >= p) continue;
+        run(env, a);
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------- tramas
+
+  /** Voltas que valem `months` meses (no mínimo 1). */
+  private ticksFor(months: number): number {
+    const per = this.host.period ?? 1;
+    return Math.max(1, Math.round(months / (12 * per)));
+  }
+
+  private startScheme(sc: RuleScheme, env: Env, a: Ent): void {
+    const who = [a.path, ...(sc.b ? [(env.get(sc.b.v) as Ent).path] : [])];
+    const run: SchemeRun = { id: ++this.schemeSeq, scheme: sc, stage: 0, next: this.clock, env, since: this.clock, who };
+    this.schemes.push(run);
+    this.runStage(run);
+  }
+
+  private advanceSchemes(): void {
+    for (const r of [...this.schemes]) {
+      if (!this.schemes.includes(r) || r.next > this.clock) continue;
+      // alguém saiu de cena (morreu, sumiu): a trama acaba sem alarde
+      if (r.who.some((p) => !this.byPath.has(p))) {
+        this.endScheme(r);
+        continue;
+      }
+      this.runStage(r);
+    }
+  }
+
+  private endScheme(r: SchemeRun, body?: Stmt[]): void {
+    const i = this.schemes.indexOf(r);
+    if (i >= 0) this.schemes.splice(i, 1);
+    if (body?.length) this.guard(r.scheme.src, () => this.exec(body, r.env, null));
+  }
+
+  private runStage(r: SchemeRun): void {
+    const st = r.scheme.stages[r.stage]!;
+    let flow: Flow | null = null;
+    let erro = false;
+    this.guard(st.src, () => {
+      try {
+        this.exec(st.body, r.env, null);
+      } catch (e) {
+        if (e instanceof Flow) flow = e;
+        else {
+          erro = true;
+          throw e;
+        }
+      }
+    });
+    if (erro) return this.endScheme(r);
+    const f = flow as Flow | null;
+    const months = (m: Val | null | undefined) => {
+      if (m === null || m === undefined) return st.months ? this.num(this.guard(st.src, () => this.eval(st.months!, r.env, null))) : 1;
+      return this.num(m);
+    };
+    switch (f?.kind ?? 'seguir') {
+      case 'falhar':
+        return this.endScheme(r, r.scheme.onFail);
+      case 'concluir':
+        return this.endScheme(r, r.scheme.onDone);
+      case 'repetir':
+        r.next = this.clock + this.ticksFor(months(f?.arg));
+        return;
+      case 'ir': {
+        const alvo = fold(this.show(f!.arg)).trim();
+        const i = r.scheme.stages.findIndex((x) => fold(x.name).trim() === alvo);
+        if (i < 0) {
+          this.issues.push({ path: st.src.path, line: st.src.line, message: `a trama "${r.scheme.name}" não tem a etapa "${this.show(f!.arg)}"` });
+          return this.endScheme(r);
+        }
+        r.stage = i;
+        r.next = this.clock + this.ticksFor(months(null));
+        return;
+      }
+      case 'esperar':
+      case 'seguir': {
+        if (r.stage + 1 >= r.scheme.stages.length) return this.endScheme(r, r.scheme.onDone);
+        r.next = this.clock + this.ticksFor(months(f?.kind === 'esperar' ? f.arg : null));
+        r.stage++;
+        return;
+      }
+    }
+  }
+
+  /** Roda um bloco solto (itens, eventos do mundo) com as variáveis dadas. */
+  runBody(body: Stmt[], vars: Record<string, Val>, src: Src): void {
+    if (!body.length) return;
+    this.guard(src, () => this.exec(body, new Map(Object.entries(vars)), null));
+  }
+
+  /** Confere uma condição solta com as variáveis dadas (erro = não). */
+  test(expr: Expr, vars: Record<string, Val>, src: Src): boolean {
+    return this.truthy(this.guard(src, () => this.eval(expr, new Map(Object.entries(vars)), null)));
+  }
+
+  /** Tramas em andamento (para a tela): nome, etapa, quem e há quantas voltas. */
+  activeSchemes(): Array<{ id: number; name: string; stage: string; step: number; steps: number; who: string[]; age: number }> {
+    return this.schemes.map((r) => ({
+      id: r.id, name: r.scheme.name, stage: r.scheme.stages[r.stage]!.name, step: r.stage + 1, steps: r.scheme.stages.length, who: [...r.who], age: this.clock - r.since,
+    }));
   }
 
   private shuffle<T>(list: T[]): T[] {
@@ -364,6 +505,10 @@ export class Rules {
       return fn();
     } catch (e) {
       if (e instanceof Stop) return null;
+      if (e instanceof Flow) {
+        this.issues.push({ path: src.path, line: src.line, message: `"${e.kind}" só vale dentro de uma etapa de trama` });
+        return null;
+      }
       const s = e instanceof RuleError && e.src ? e.src : src;
       this.issues.push({ path: s.path, line: s.line, message: e instanceof RuleError ? e.message : String(e) });
       if (this.issues.length > 200) this.issues.splice(0, 100);
@@ -422,9 +567,7 @@ export class Rules {
       case 'say': {
         const v = s.value;
         const actors: string[] = [];
-        const text = v.t === 'tpl'
-          ? v.parts.map((p) => (typeof p === 'string' ? p : this.show(this.eval(p, env, subject), s.kind === 'cronica', actors))).join('')
-          : this.show(this.eval(v, env, subject), s.kind === 'cronica', actors);
+        const text = this.render(v, env, subject, s.kind === 'cronica', actors);
         if (s.kind === 'cronica') this.host.chronicle?.(text, actors);
         else this.host.notify?.(text);
         return;
@@ -469,6 +612,14 @@ export class Rules {
       case 'expr':
         this.eval(s.e, env, subject);
         return;
+      case 'flow': {
+        // "falhar "{a} desiste."": a frase entra na crônica antes de encerrar
+        if ((s.kind === 'falhar' || s.kind === 'concluir') && s.arg) {
+          this.stmt({ src: s.src, t: 'say', kind: 'cronica', value: s.arg }, env, subject);
+          throw new Flow(s.kind, null);
+        }
+        throw new Flow(s.kind, s.arg ? this.eval(s.arg, env, subject) : null);
+      }
     }
   }
 
@@ -505,7 +656,7 @@ export class Rules {
       case 'lit':
         return e.v;
       case 'tpl':
-        return e.parts.map((p) => (typeof p === 'string' ? p : this.show(this.eval(p, env, subject)))).join('');
+        return this.render(e, env, subject, false);
       case 'list':
         return e.items.map((x) => this.eval(x, env, subject));
       case 'id':
@@ -665,6 +816,18 @@ export class Rules {
         }
         return best;
       }
+      case 'trama':
+      case 'emtrama':
+      case 'tramando': {
+        // trama(p) / trama(p, "Sedução lenta"): p está numa trama em andamento?
+        const [who = null, name] = args();
+        const p = who instanceof Ent ? who.path : null;
+        const n = name !== undefined && name !== null ? fold(this.show(name)).trim() : null;
+        return !!p && this.schemes.some((r) => r.who.includes(p) && (!n || fold(r.scheme.name).trim() === n));
+      }
+      case '__escolha':
+      case '__genero':
+        return this.render(e, env, subject, false);
       case 'primeiro': { const l = args()[0]; return Array.isArray(l) ? l[0] ?? null : l ?? null; }
       case 'ultimo': { const l = args()[0]; return Array.isArray(l) ? l[l.length - 1] ?? null : l ?? null; }
       case 'todos':
@@ -721,13 +884,42 @@ export class Rules {
 
   /** Preenche os {a.nome} de um texto com as variáveis da regra; o que não der, fica como está. */
   private fill(text: string, env: Env, subject: Ent | null): string {
-    return text.replace(/\{([^{}]+)\}/g, (whole, inner: string) => {
-      try {
-        return this.show(this.eval(parseExprSource(inner), env, subject), true);
-      } catch {
-        return whole;
-      }
-    });
+    try {
+      return this.render(parseTemplate(text, { path: 'tabela', line: 0 }, true), env, subject, true);
+    } catch {
+      return text;
+    }
+  }
+
+  /** Texto de um modelo: valores, opções sorteadas (`{a|b}`) e formas por gênero (`{p:o/a}`). */
+  private render(e: Expr, env: Env, subject: Ent | null, links: boolean, actors?: string[]): string {
+    if (e.t === 'tpl') return e.parts.map((p) => (typeof p === 'string' ? p : this.render(p, env, subject, links, actors))).join('');
+    if (e.t === 'call' && e.name === '__escolha') {
+      const o = e.args[Math.floor(this.host.rng() * e.args.length)]!;
+      return this.render(o, env, subject, links, actors);
+    }
+    if (e.t === 'call' && e.name === '__genero') {
+      const forms = e.args.slice(1).map((x) => (x.t === 'lit' ? String(x.v) : ''));
+      const g = this.genderOf(this.eval(e.args[0]!, env, subject));
+      return (g === 'f' ? forms[1] : g === 'n' ? forms[2] ?? forms[0] : forms[0]) ?? forms[0] ?? '';
+    }
+    if (e.t === 'lit' && typeof e.v === 'string') return e.v;
+    return this.show(this.eval(e, env, subject), links, actors);
+  }
+
+  /** Gênero de uma ficha para a gramática: f, m ou n (neutro). */
+  private genderOf(v: Val): 'f' | 'm' | 'n' {
+    if (Array.isArray(v)) return v.length && v.every((x) => this.genderOf(x) === 'f') ? 'f' : 'm';
+    if (!(v instanceof Ent)) return 'm';
+    for (const k of ['genero', 'sexo']) {
+      const x = this.field(v, k);
+      if (x === null || x === undefined || x === '') continue;
+      const t = fold(String(x instanceof Ent ? this.nameOf(x.path) : x)).trim();
+      if (/^(f|fem|mulher|femea|menina)/.test(t)) return 'f';
+      if (/^(n|nao.?bin|neutr|enby)/.test(t)) return 'n';
+      return 'm';
+    }
+    return 'm';
   }
 
   private listOf(e: Expr, env: Env, subject: Ent | null): Val[] {

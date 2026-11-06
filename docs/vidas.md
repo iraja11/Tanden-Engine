@@ -40,7 +40,7 @@ sempre a mesma pessoa):
 | `amigos`, `inimigos`, `rivais`, `amante`, `namorado(a)`, `noivo(a)` | laços iniciais (o caso com `amante` começa em segredo) |
 | `olhos`, `cabelo` | os genes se ajustam para dar essa aparência |
 | `orientação` (`hétero`, `homo`, `bi`, `assexual`) | por quem sente atração |
-| `espécie` → `[[Elfo]]` com `expectativa de vida` | envelhece na escala da espécie |
+| `espécie` → `Elfo` ou `[[Elfo]]` | espécie (das regras ou de uma ficha `tipo: espécie`): vida, maioridade, corpo, cruzamentos |
 | `gostos`, `dinheiro`, `casa` (sobrenome) | gostos, dinheiro, família |
 | `for`, `int`, `car` (ficha de 5e) | pistas para combate, saber e lábia |
 
@@ -127,9 +127,17 @@ Em **Mundo e ajustes**: festas, pestes, fome, guerra (quem sabe lutar vai para o
 front) e fartura num lugar, e os ajustes do mundo (romance, violência,
 fertilidade, mortalidade, drama, vida social).
 
-Na barra de cima: **▶ 1 mês**, **1 ano**, **10 anos** e **⏩ até algo
+Na barra de cima: **▶ 1 mês**, **1 ano**, **10 anos**, **⏩ até algo
 importante** (para no primeiro nascimento, morte, casamento ou traição
-descoberta de alguém com ficha ou conduzido por você).
+descoberta de alguém com ficha ou conduzido por você) e **⏵ Tocar**: o tempo
+anda sozinho (um mês, uma estação ou um ano por vez) até você pausar, até
+uma decisão sua, ou até um marco (se marcar "pausar em marcos").
+
+**Itens.** Cada pessoa carrega itens (no painel: ★ para os únicos, dar e
+tirar). Itens dão bônus, traços e maldições, passam por herança, roubo e
+achados; a aba **Relíquias** conta a história de cada item único.
+**Eventos do seu mundo** (declarados nas regras) viram botões em **Mundo e
+ajustes**, ao lado de festa, peste, fome, guerra e fartura.
 
 ## Ver
 
@@ -157,17 +165,62 @@ mês e incharia o histórico de sincronização.)
   vira a mesma pessoa.
 - **📜 Salvar crônica** grava a crônica como nota.
 
-## Criar mecânicas
+## Criar conteúdo (o construtor)
 
-Na aba **Regras**, o **construtor de mecânicas** monta uma regra por partes:
-tipo (entre duas pessoas, de uma pessoa, quando algo acontece), condições
-(traço, opinião, atração, idade, vínculo, profissão, gosto...), chance por ano,
-efeitos (mexer na relação, humor, dinheiro, traço, namorar, casar, caso,
-engravidar, lutar, ferir, matar, lembrar, disparar um evento) e a frase da
-crônica. Ele mostra o código que vai escrever e confere os erros. As
-**receitas prontas** (Serenata, Vendeta de família, Casamento arranjado,
+Na aba **Regras**, o **construtor do mundo** monta por partes, sem código:
+
+- **🤝 Interação**: entre duas pessoas, de uma pessoa só, ou quando algo
+  acontece (casamento, traição descoberta, nascimento...). Condições por
+  qualquer valor ("ódio por b maior que 50", "sanidade menor que 20", "força
+  pelo menos 60", "é Elfo", "tem o traço ciumento"...), chance por ano,
+  efeitos (mudar valores da pessoa ou da relação, traços, namorar, casar,
+  caso, engravidar, lutar, ferir, matar, lembrar, disparar um evento) e a
+  frase da crônica.
+- **🧩 Trama em etapas**: uma interação que dura meses. Cada etapa tem uma
+  espera, uma condição para seguir (senão falha, tenta de novo ou volta) e o
+  que acontece; mais o que acontece no fim e se falhar.
+- **✦ Traço**: nome nos dois gêneros, tipo, oposto, herança, o que muda na
+  vontade de cada interação, o que pensa de quem tem outros traços, humor,
+  estresse e quando surge sozinho.
+- **📏 Atributo**: um número que todo mundo tem (sanidade, fé, honra,
+  envergadura das asas), com faixa, média, variação, herança e mudança por ano.
+- **🧬 Espécie / criatura**: vida, maioridade, fertilidade, gestação, altura,
+  ajustes de corpo e atributos, traços de nascença, com quem tem filhos (e de
+  que espécie nascem) e quantos figurantes são dela.
+- **🗡 Item**: comum ou único, tipo, raridade, valor, bônus enquanto alguém
+  tem, efeitos por mês (maldições), traços que dá, com quem começa (ou onde
+  está largado), e o que acontece ao ganhar, ao perder e todo mês.
+- **🌒 Evento do mundo**: chance por ano, duração, num lugar ou no mundo
+  todo, o que muda na vontade das pessoas, o que acontece todo mês com quem
+  está lá, e as frases de começo e fim.
+- **⚒ Profissão**: renda, habilidade, prestígio, risco e para quem.
+
+Em todo texto vale variar palavras: `{rico|abastado|cheio da grana}` sorteia
+uma, `{a:cansado/cansada}` concorda com o gênero.
+
+Ele mostra o código que vai escrever e confere os erros antes de gravar. As
+**receitas prontas** (Conspiração, Elfos e meio-elfos, Lobos na floresta,
+Sanidade e loucura, Serenata, Vendeta de família, Casamento arranjado,
 Bruxaria, Herança disputada, Febre que pega, Rito de passagem, Alquimista,
 Ciúme doentio...) entram com um clique.
 
 Tudo vira um bloco ` ```regras ` comum; a referência completa (inclusive os
 campos, funções e eventos da simulação de vidas) está em [regras.md](regras.md).
+
+## Escala: o que dá e o que vem
+
+O motor simula cada pessoa em detalhe, mês a mês. Hoje isso roda bem com
+algumas centenas de pessoas: num computador comum, 60 pessoas andam 10 anos em
+~0,6 s, 200 em ~2,3 s, 500 em ~8 s. Para mundos do tamanho de um CK3 (milhares
+de personagens, várias civilizações) o caminho não é simular todo mundo assim,
+e sim **dois níveis de detalhe**, como fazem Dwarf Fortress e o próprio CK3:
+
+1. **Pessoas notáveis** (fichas, nobres, quem você conduz, quem está perto da
+   história) no motor de hoje, com tudo.
+2. **Populações** por lugar e espécie: números (nascimentos, mortes, cultura,
+   fé, riqueza, exércitos) que andam por ano, baratos, ligados às facções.
+   Gente "sobe" da população quando vira importante (um herói, um
+   conspirador) e "desce" quando sai de cena.
+
+Isso está planejado, não feito: as espécies, atributos e tramas desta versão
+já foram desenhados para servir aos dois níveis.

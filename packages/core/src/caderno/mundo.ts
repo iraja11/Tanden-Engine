@@ -49,7 +49,8 @@ export const allTypes = (): EntityType[] => [...ENTITY_TYPES, ...custom];
 
 export const ENTITY_TYPES: EntityType[] = [
   { id: 'personagem', label: 'Personagem', plural: 'Personagens', fields: ['espécie', 'nascimento', 'morte', 'origem', 'afiliação', 'status'],
-    sections: ['Aparência', 'Personalidade', 'Motivações', 'História'], extras: ['motivação', 'medo', 'segredo', 'aliados', 'inimigos', 'pai', 'mãe', 'cultura', 'título', 'voz'] },
+    sections: ['Aparência', 'Personalidade', 'Motivações', 'História'],
+    extras: ['sexo', 'profissão', 'traços', 'gostos', 'local', 'cônjuge', 'pai', 'mãe', 'amigos', 'inimigos', 'motivação', 'medo', 'segredo', 'cultura', 'título', 'voz', 'olhos', 'cabelo', 'orientação'] },
   { id: 'lugar', label: 'Lugar', plural: 'Lugares', fields: ['parte de', 'clima', 'governante', 'fundação'], sections: ['Descrição', 'História'],
     extras: ['população', 'cultura', 'recursos', 'perigos', 'controle'] },
   { id: 'faccao', label: 'Facção', plural: 'Facções', fields: ['líder', 'sede', 'fundação', 'ideologia'], sections: ['Objetivos', 'História'],
@@ -57,12 +58,15 @@ export const ENTITY_TYPES: EntityType[] = [
   { id: 'evento', label: 'Evento', plural: 'Eventos', fields: ['data', 'fim', 'local', 'envolvidos'], sections: ['O que aconteceu', 'Consequências'], extras: ['causa', 'mortos'] },
   { id: 'conflito', label: 'Conflito', plural: 'Conflitos', fields: ['lados', 'início', 'fim', 'status', 'intensidade', 'causa'], sections: ['Causa', 'Lados', 'Desdobramentos'],
     extras: ['local', 'vencedor', 'mortos'] },
-  { id: 'item', label: 'Item', plural: 'Itens', fields: ['dono', 'origem', 'poder'], sections: ['Descrição', 'História'], extras: ['raridade', 'categoria', 'valor', 'peso', 'maldição'] },
-  { id: 'especie', label: 'Espécie', plural: 'Espécies', fields: ['habitat', 'expectativa de vida'], sections: ['Biologia', 'Cultura'], extras: ['altura', 'dieta', 'inimigos naturais'] },
+  { id: 'item', label: 'Item', plural: 'Itens', fields: ['dono', 'categoria', 'raridade', 'valor'], sections: ['Descrição', 'Poderes', 'História', 'Lendas'],
+    extras: ['único', 'ajustes', 'concede', 'por mês', 'local', 'cobiçado', 'origem', 'criador', 'poder', 'peso', 'maldição'] },
+  { id: 'especie', label: 'Espécie', plural: 'Espécies', fields: ['habitat', 'expectativa de vida', 'maioridade'], sections: ['Biologia', 'Sociedade', 'Cultura', 'Variações'],
+    extras: ['altura', 'fertilidade', 'gestação', 'cruza com', 'frequência', 'traços', 'dieta', 'idioma', 'inimigos naturais'] },
   { id: 'cultura', label: 'Cultura', plural: 'Culturas', fields: ['região', 'idioma', 'religião', 'valores'], sections: ['Costumes', 'Arte e festas', 'Tabus'],
     extras: ['comida', 'vestimenta', 'saudação', 'ritos de passagem'] },
   { id: 'conceito', label: 'Conceito', plural: 'Conceitos', fields: ['categoria'], sections: ['Como funciona', 'Limites'], extras: ['custo', 'origem', 'quem usa'] },
-  { id: 'criatura', label: 'Criatura', plural: 'Criaturas', fields: ['nd', 'habitat', 'pv', 'pv máx', 'ca'], sections: ['Descrição', 'Táticas'], extras: ['dieta', 'fraqueza'] },
+  { id: 'criatura', label: 'Criatura', plural: 'Criaturas', fields: ['nd', 'habitat', 'pv', 'pv máx', 'ca'], sections: ['Descrição', 'Ecologia', 'Táticas'],
+    extras: ['expectativa de vida', 'maioridade', 'gestação', 'frequência', 'traços', 'dieta', 'fraqueza', 'comportamento'] },
   { id: 'mapa', label: 'Mapa', plural: 'Mapas', fields: ['escala', 'unidade'], sections: ['Marcadores'] },
 ];
 

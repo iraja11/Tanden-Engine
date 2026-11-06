@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fit } from '../fit';
   import { parseRect } from '@tanden/core';
   import type { SheetCtl } from './ctl.svelte';
 
@@ -54,7 +55,7 @@
       onkeydown={(e) => { ctl.onEditKey(e); if (!ctl.edit) input?.blur(); }} />
 
     {#if ctl.edit && (sug.length || help)}
-      <div class="pop" role="listbox">
+      <div class="pop" role="listbox" use:fit>
         {#if sug.length}
           {#each sug as f, i (f.name)}
             <button class="opt" class:on={i === ctl.pick} role="option" aria-selected={i === ctl.pick}

@@ -342,3 +342,29 @@ export const formatKeymap: readonly KeyBinding[] = [
   { key: 'Mod-Shift-ArrowUp', run: (v) => moveBlock(v, -1) },
   { key: 'Mod-Shift-ArrowDown', run: (v) => moveBlock(v, 1) },
 ];
+
+/** símbolo digitado com texto selecionado → par em volta, em vez de apagar a seleção */
+const PAIRS: Record<string, string> = { '*': '*', _: '_', '~': '~', '=': '=', '`': '`', $: '$', '"': '"', '(': ')', '[': ']', '“': '”' };
+
+/**
+ * Selecionou e digitou * (ou _ ~ = ` $ " ( [): o texto fica entre o par e
+ * continua selecionado, então * de novo vira negrito, como no Obsidian.
+ * Não mexe durante a composição do teclado do celular nem em seleções que
+ * atravessam parágrafos (as marcas do Markdown não passam de um para outro).
+ */
+export function wrapSelection(view: EditorView, from: number, to: number, text: string): boolean {
+  const close = PAIRS[text];
+  if (!close || view.composing || from === to) return false;
+  const { state } = view;
+  const ranges = state.selection.ranges;
+  if (ranges.some((r) => r.empty) || !ranges.some((r) => r.from === from && r.to === to)) return false;
+  if (ranges.some((r) => /\n\s*\n/.test(state.sliceDoc(r.from, r.to)))) return false;
+  view.dispatch(
+    state.changeByRange((r) => ({
+      changes: [{ from: r.from, insert: text }, { from: r.to, insert: close }],
+      range: EditorSelection.range(r.anchor + text.length, r.head + text.length),
+    })),
+    { userEvent: 'input.type', scrollIntoView: true },
+  );
+  return true;
+}

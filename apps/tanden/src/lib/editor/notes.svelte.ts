@@ -352,7 +352,8 @@ class Notes {
 
   async remove(path: string): Promise<void> {
     const trashed = await engine.deleteNote(path);
-    files.say(trashed ? `"${noteName(path)}" foi para a lixeira (${trashed}).` : `"${noteName(path)}" apagada.`, trashed ? { path: undefined } : {});
+    const t = trashed;
+    files.say(t ? `"${noteName(path)}" foi para a lixeira.` : `"${noteName(path)}" apagada.`, t ? { action: { label: 'Desfazer', run: () => void files.restore(t, path) } } : {});
   }
 
   duplicate(path: string): string {

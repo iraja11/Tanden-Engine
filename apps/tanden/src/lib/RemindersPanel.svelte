@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fit } from './fit';
   import { REMINDERS_NOTE, bucketOf, parseQuickReminder, type Bucket, type Reminder } from '@tanden/core';
   import { reminders, repeatLabel, whenLabel } from './reminders.svelte';
   import { desktop } from './platform';
@@ -103,7 +104,7 @@
               <div class="snooze">
                 <button class="ghost" onclick={() => (menuFor = menuFor === r.key ? null : r.key)} aria-label="Adiar">⏱</button>
                 {#if menuFor === r.key}
-                  <div class="menu" transition:pop>
+                  <div class="menu" use:fit transition:pop>
                     {#each snoozes as [l, when] (l)}
                       <button onclick={() => { feel.local(() => reminders.snooze(r, when())); sound.play('tick'); menuFor = null; }}>{l}</button>
                     {/each}

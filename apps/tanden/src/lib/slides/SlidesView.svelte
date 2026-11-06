@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fit } from '../fit';
   import { TRANSITIONS, isDeck, parseDeck, slideAtLine, type Transition } from '@tanden/core';
   import { engine } from '../engine.svelte';
   import Editor from '../Editor.svelte';
@@ -8,6 +9,7 @@
   import { pop } from '../motion';
   import Slide from './Slide.svelte';
   import { slides } from './slides.svelte';
+  import { ask } from '../ask.svelte';
 
   // Tela de slides: texto da apresentação à esquerda, slide atual em destaque
   // e a fila de miniaturas. O cursor no texto escolhe o slide mostrado.
@@ -48,6 +50,18 @@
     const q = query.trim().toLowerCase();
     return (q ? notes.filter((p) => p.toLowerCase().includes(q)) : notes).slice(0, 40);
   });
+
+  async function removeDeck() {
+    const p = path;
+    if (!p) return;
+    if (!(await ask.confirm(`Apagar a apresentação "${name(p)}"?`, { detail: 'Uma cópia fica na lixeira (.trash/) e o aviso deixa desfazer.', ok: 'Apagar', danger: true }))) return;
+    sound.play('close');
+    cur = 0;
+    const next = slides.list.find((x) => x !== p);
+    await files.remove(p);
+    slides.refresh();
+    if (next) slides.open(next);
+  }
 
   function name(p: string) {
     return p.split('/').pop()!.replace(/\.md$/, '');
@@ -100,7 +114,7 @@
         <b>{path ? name(path) : 'Nenhuma apresentação'}</b> ▾
       </button>
       {#if menu === 'deck'}
-        <div class="menu" role="menu" transition:pop>
+        <div class="menu" role="menu" use:fit transition:pop>
           {#each slides.list as p (p)}
             <button role="menuitem" class:on={p === path} onclick={() => { menu = null; cur = 0; slides.open(p); sound.play('tick'); }}>
               {name(p)}<small>{p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : ''}</small>
@@ -110,10 +124,11 @@
       {/if}
     </div>
     <button class="icon" onclick={() => slides.create()} title="Nova apresentação" aria-label="Nova apresentação">+</button>
+    <button class="icon" onclick={removeDeck} disabled={!path} title="Apagar esta apresentação" aria-label="Apagar apresentação">🗑</button>
     <div class="menu-wrap">
       <button onclick={() => { menu = menu === 'note' ? null : 'note'; query = ''; }} aria-haspopup="menu" title="Criar slides a partir de uma nota">Da nota…</button>
       {#if menu === 'note'}
-        <div class="menu notes" role="menu" transition:pop>
+        <div class="menu notes" role="menu" use:fit transition:pop>
           <!-- svelte-ignore a11y_autofocus -->
           <input bind:value={query} placeholder="Buscar nota…" autofocus />
           {#each found as p (p)}
@@ -139,7 +154,7 @@
       <div class="menu-wrap">
         <button onclick={() => (menu = menu === 'export' ? null : 'export')} aria-haspopup="menu">Exportar ▾</button>
         {#if menu === 'export'}
-          <div class="menu right" role="menu" transition:pop>
+          <div class="menu right" role="menu" use:fit transition:pop>
             <button role="menuitem" onclick={() => { menu = null; void slides.export(path, 'pptx'); }}>PowerPoint (.pptx)<small>PowerPoint, Google Slides</small></button>
             <button role="menuitem" onclick={() => { menu = null; void slides.export(path, 'odp'); }}>LibreOffice (.odp)<small>Impress</small></button>
             <button role="menuitem" onclick={() => { menu = null; void slides.export(path, 'pdf'); }}>PDF<small>com o tema do app</small></button>

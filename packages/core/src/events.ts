@@ -12,6 +12,7 @@ export type TandenEvent =
   | { type: 'sync.finished'; merged: number; external: number; written: number }
   | { type: 'reminder.fired'; path: string; text: string; at: number }
   | { type: 'sheet.changed'; path: string; origin: 'local' | 'remote' | 'external' }
+  | { type: 'sheet.deleted'; path: string }
   | { type: 'annot.changed'; path: string; origin: 'local' | 'remote' }
   | { type: 'library.changed'; origin: 'local' | 'remote' }
   | { type: 'file.imported'; path: string; from: string };

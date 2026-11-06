@@ -1,13 +1,15 @@
 <script lang="ts">
   import {
-    biomeAtPercent, generateTerrain, mapDistance, mapInfo, placeOwners, readMarkers, setProp, suggestSpots, territoryGrid, travelTimes, typeInfo, writeMarkers,
-    type Entity, type MapMarker, type World,
+    ESTRUTURA_TAMANHO, biomeAtPercent, estruturaDe, mapDistance, mapInfo, nearWater, placeOwners, readMarkers, roadPath, rotasDoMundo, setProp, suggestSpots,
+    territoryGrid, travelTimes, typeInfo, writeMarkers,
+    type Entity, type Estrutura, type MapMarker, type Regiao, type Terrain, type World,
   } from '@tanden/core';
   import { files } from '../../files/files.svelte';
   import { theme } from '../../theme.svelte';
   import { cadernos } from '../cadernos.svelte';
   import { factionColor, typeColor, typeGlyph } from '../tipos';
-  import { BIOME_LABEL, paintTerrain } from './terrain-paint';
+  import EstruturaIcone from './EstruturaIcone.svelte';
+  import { BIOME_LABEL, GRADE, carregarTerreno, pintar, porNoCanvas } from './terrain-paint';
 
   // Mapas do mundo: imagem própria ou terreno gerado pela semente, com
   // marcadores que apontam para as fichas. Os marcadores ficam na tabela
@@ -62,15 +64,80 @@
   let canvas = $state<HTMLCanvasElement>();
   let imgUrl = $state<string | null>(null);
   let aspect = $state(1.5);
-  // só a semente importa: mover um marcador muda a nota, mas não refaz o terreno
+  // só a semente (e mar/rios) importa: mover um marcador muda a nota, mas não refaz o terreno
   const seed = $derived(info.image ? null : info.seed);
-  const terrain = $derived(seed !== null ? generateTerrain(seed, 480, 320) : null);
+  const seaOpt = $derived(info.sea);
+  const riverOpt = $derived(info.rivers);
+  const terrOpts = () => ({ ...(seaOpt !== null ? { sea: seaOpt } : {}), ...(riverOpt !== null ? { rivers: riverOpt } : {}) });
+  let terrain = $state.raw<Terrain | null>(null);
+  let painting = $state(false);
   $effect(() => {
-    const t = terrain;
-    if (t && canvas) {
-      paintTerrain(canvas, t);
+    const s = seed;
+    void seaOpt;
+    void riverOpt;
+    terrain = null;
+    detail = null;
+    if (s === null) return;
+    let alive = true;
+    painting = true;
+    const o = terrOpts();
+    void carregarTerreno(s, o).then((t) => {
+      if (!alive) return;
+      terrain = t;
       aspect = t.w / t.h;
+    });
+    // fundo em 2× a grade; a parte visível é redesenhada nítida quando aproxima
+    void pintar(s, o, GRADE.w * 2, GRADE.h * 2).then((px) => {
+      if (!alive) return;
+      if (canvas) porNoCanvas(canvas, px, GRADE.w * 2, GRADE.h * 2);
+      painting = false;
+    });
+    return () => { alive = false; };
+  });
+
+  // ---- detalhe: perto, a área visível é pintada de novo na resolução da tela
+  let detailCanvas = $state<HTMLCanvasElement>();
+  let detail = $state<Regiao | null>(null);
+  let vw = $state(0);
+  let vh = $state(0);
+  let detailTok = 0;
+  $effect(() => {
+    const z = zoom;
+    const X = tx;
+    const Y = ty;
+    const s = seed;
+    const w = vw;
+    const h = vh;
+    void seaOpt;
+    void riverOpt;
+    if (s === null || z < 1.4 || !w) {
+      detailTok++;
+      detail = null;
+      return;
     }
+    const timer = setTimeout(() => {
+      const W = w * z;
+      const H = (w / aspect) * z;
+      const c = (n: number) => Math.min(100, Math.max(0, n));
+      // um pouco de folga em volta, para arrastar sem ver a borda
+      const padX = (w / W) * 15;
+      const padY = (h / H) * 15;
+      const r = { x0: c((-X / W) * 100 - padX), y0: c((-Y / H) * 100 - padY), x1: c(((-X + w) / W) * 100 + padX), y1: c(((-Y + h) / H) * 100 + padY) };
+      if (r.x1 - r.x0 < 0.2 || r.y1 - r.y0 < 0.2) return;
+      const dpr = Math.min(2, globalThis.devicePixelRatio || 1);
+      let outW = ((r.x1 - r.x0) / 100) * W * dpr;
+      let outH = ((r.y1 - r.y0) / 100) * H * dpr;
+      const k = Math.min(1, Math.sqrt(2_600_000 / (outW * outH)));
+      outW = Math.max(1, Math.round(outW * k));
+      outH = Math.max(1, Math.round(outH * k));
+      const tok = ++detailTok;
+      void pintar(s, terrOpts(), outW, outH, r).then((px) => {
+        if (tok !== detailTok || !detailCanvas) return;
+        porNoCanvas(detailCanvas, px, outW, outH);
+        detail = r;
+      });
+    }, 180);
+    return () => clearTimeout(timer);
   });
   $effect(() => {
     const target = info.image;
@@ -275,6 +342,61 @@
     ctx.putImageData(img, 0, 0);
   });
 
+  // ---- estradas: as `rotas` entre lugares, contornando água e montanha
+  const rotas = $derived(rotasDoMundo(world.entities));
+  const posByPath = $derived.by(() => {
+    const m = new Map<string, { x: number; y: number }>();
+    markers.forEach((mk, i) => {
+      const e = entityOf(mk);
+      if (e) m.set(e.path, pos(i, mk));
+    });
+    return m;
+  });
+  const roadCache = new Map<string, Array<{ x: number; y: number }>>();
+  const estradas = $derived.by(() => {
+    const t = terrain;
+    return rotas.flatMap(([a, b]) => {
+      const pa = posByPath.get(a);
+      const pb = posByPath.get(b);
+      if (!pa || !pb) return [];
+      if (!t || drag) return [[pa, pb]];
+      const key = `${t.seed}|${pa.x},${pa.y}|${pb.x},${pb.y}`;
+      let r = roadCache.get(key);
+      if (!r) {
+        r = roadPath(t, pa, pb);
+        roadCache.set(key, r);
+      }
+      return [r];
+    });
+  });
+  const svgPts = (pts: Array<{ x: number; y: number }>) => pts.map((p) => `${(p.x * aspect).toFixed(2)},${p.y.toFixed(2)}`).join(' ');
+  // largura mínima de 1 px na tela, qualquer que seja o zoom
+  const unitPx = $derived(Math.max(0.01, (vw / aspect / 100) * zoom));
+  const minW = (px: number) => px / unitPx;
+
+  // ---- estruturas: o ícone de cada lugar (cidade, castelo, porto...) pela ficha, pelo nome e pela água ao lado
+  const donos = $derived(placeOwners(world));
+  const ESTRUTURAS: Array<[Estrutura, string]> = [
+    ['capital', 'capital'], ['cidade', 'cidade'], ['vila', 'vila'], ['aldeia', 'aldeia'], ['castelo', 'castelo'], ['forte', 'forte'], ['porto', 'porto'],
+    ['templo', 'templo'], ['torre', 'torre'], ['ruina', 'ruínas'], ['mina', 'mina'], ['caverna', 'caverna'], ['acampamento', 'acampamento'],
+    ['floresta', 'floresta'], ['montanha', 'montanha'], ['regiao', 'região (só o nome)'],
+  ];
+  function estruturaDoMarcador(mk: MapMarker, e: Entity | null): Estrutura | null {
+    if (!e || e.type !== 'lugar') return null;
+    return estruturaDe(e, { agua: terrain ? nearWater(terrain, mk.x, mk.y) : null });
+  }
+  function corDono(e: Entity | null): string {
+    const d = e ? donos.get(e.path) : undefined;
+    const f = d ? byPath.get(d) : undefined;
+    return f ? factionColor(f.name, factionList.map((x) => x.name)) : '#b5402f';
+  }
+  function setEstrutura(path: string, v: string) {
+    cadernos.update(path, (t) => setProp(t, 'estrutura', v || null));
+  }
+  function setTerreno(k: 'mar' | 'rios', v: string) {
+    if (map) cadernos.update(map.path, (t) => setProp(t, k, v || null));
+  }
+
   // ---- medida
   const dist = $derived(ruler.length === 2 ? mapDistance(ruler[0]!, ruler[1]!, info.scale, aspect) : null);
   const trips = $derived(dist === null ? null : travelTimes(dist, info.unit));
@@ -309,21 +431,27 @@
     </div>
   {:else}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="viewport mode-{mode}" bind:this={viewport} onwheel={wheel} style:aspect-ratio={aspect}>
+    <div class="viewport mode-{mode}" bind:this={viewport} bind:clientWidth={vw} bind:clientHeight={vh} onwheel={wheel} style:aspect-ratio={aspect}>
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div class="stage" bind:this={stage} style:aspect-ratio={aspect} style:transform="translate({tx}px, {ty}px) scale({zoom})" style:--z={zoom}
         onpointerdown={stageDown} onpointermove={stageMove} onpointerup={stageUp} onpointercancel={stageUp}>
         {#if info.image}
           {#if imgUrl}<img src={imgUrl} alt={map.name} draggable="false" onload={(e) => { const i = e.currentTarget as HTMLImageElement; if (i.naturalHeight) aspect = i.naturalWidth / i.naturalHeight; }} />{/if}
-        {:else if terrain}
-          {#key seed}<canvas bind:this={canvas} class="terrain" class:anim={theme.motion !== 'parado'}></canvas>{/key}
+        {:else if seed !== null}
+          <canvas bind:this={canvas} class="terrain" class:anim={theme.motion !== 'parado' && !painting} class:wait={painting}></canvas>
+          <canvas bind:this={detailCanvas} class="detail" style:display={detail ? 'block' : 'none'}
+            style:left="{detail?.x0 ?? 0}%" style:top="{detail?.y0 ?? 0}%" style:width="{detail ? detail.x1 - detail.x0 : 0}%" style:height="{detail ? detail.y1 - detail.y0 : 0}%"></canvas>
         {/if}
         {#if realm !== 'nenhum'}<canvas class="realm" bind:this={overlay}></canvas>{/if}
-        <svg class="over" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <svg class="over" viewBox="0 0 {100 * aspect} 100" preserveAspectRatio="none" aria-hidden="true">
           {#if terrain}
-            {#each terrain.rivers as r, i (i)}<polyline class="river" points={r.map((p) => `${p.x},${p.y}`).join(' ')} />{/each}
+            {#each terrain.rivers as r, i (i)}<polyline class="river" points={svgPts(r.pts)} stroke-width={Math.max(r.w, minW(r.w < 0.08 ? 0.7 : 1.1))} />{/each}
           {/if}
-          {#if ruler.length === 2}<line class="rule" x1={ruler[0]!.x} y1={ruler[0]!.y} x2={ruler[1]!.x} y2={ruler[1]!.y} />{/if}
+          {#each estradas as r, i (i)}
+            <polyline class="road-under" points={svgPts(r)} stroke-width={minW(3.2)} />
+            <polyline class="road" points={svgPts(r)} stroke-width={minW(1.6)} stroke-dasharray="{minW(5)} {minW(3)}" />
+          {/each}
+          {#if ruler.length === 2}<line class="rule" x1={ruler[0]!.x * aspect} y1={ruler[0]!.y} x2={ruler[1]!.x * aspect} y2={ruler[1]!.y} />{/if}
         </svg>
         {#each ruler as p, i (i)}<i class="rdot" style:left="{p.x}%" style:top="{p.y}%"></i>{/each}
         {#if dist !== null}
@@ -333,11 +461,25 @@
         {#each markers as m, i (i)}
           {@const e = entityOf(m)}
           {@const p = pos(i, m)}
-          <button class="pin" class:on={sel === i} class:ghost={!e} style:left="{p.x}%" style:top="{p.y}%" style:--c={e ? typeColor(e.type) : 'var(--silver)'}
-            onpointerdown={(ev) => markerDown(ev, i)} title={e ? `${e.name} (${typeInfo(e.type).label})` : m.label}>
-            <span class="dot">{e ? typeGlyph(e.type) : '•'}</span>
-            <span class="name">{e?.name ?? m.label.replace(/^\[\[|\]\]$/g, '')}</span>
-          </button>
+          {@const k = estruturaDoMarcador(m, e)}
+          {#if k === 'regiao'}
+            <button class="pin regiao" class:on={sel === i} style:left="{p.x}%" style:top="{p.y}%" onpointerdown={(ev) => markerDown(ev, i)} title={e?.name}>
+              {e?.name}
+            </button>
+          {:else if k}
+            {@const s = Math.round(24 * ESTRUTURA_TAMANHO[k])}
+            <button class="pin est" class:on={sel === i} class:capital={k === 'capital'} style:left="{p.x}%" style:top="{p.y}%" style:--s="{s}px" style:--c={corDono(e)}
+              onpointerdown={(ev) => markerDown(ev, i)} title={`${e!.name} (${k})`}>
+              <span class="icon"><EstruturaIcone kind={k} size={s} /></span>
+              <span class="name">{e!.name}</span>
+            </button>
+          {:else}
+            <button class="pin" class:on={sel === i} class:ghost={!e} style:left="{p.x}%" style:top="{p.y}%" style:--c={e ? typeColor(e.type) : 'var(--silver)'}
+              onpointerdown={(ev) => markerDown(ev, i)} title={e ? `${e.name} (${typeInfo(e.type).label})` : m.label}>
+              <span class="dot">{e ? typeGlyph(e.type) : '•'}</span>
+              <span class="name">{e?.name ?? m.label.replace(/^\[\[|\]\]$/g, '')}</span>
+            </button>
+          {/if}
         {/each}
 
         {#if pending}
@@ -382,7 +524,19 @@
             <span class="kind">Sem ficha</span>
             <b>{selMarker.label.replace(/^\[\[|\]\]$/g, '')}</b>
           {/if}
-          {#if terrain}<span class="sum">Terreno: {BIOME_LABEL[biomeAtPercent(terrain, selMarker.x, selMarker.y)]}</span>{/if}
+          {#if terrain}
+            {@const agua = nearWater(terrain, selMarker.x, selMarker.y)}
+            <span class="sum">Terreno: {BIOME_LABEL[biomeAtPercent(terrain, selMarker.x, selMarker.y)]}{agua ? ` · à beira de ${agua === 'mar' ? 'mar' : agua === 'lago' ? 'um lago' : 'um rio'}` : ''}</span>
+          {/if}
+          {#if selEntity?.type === 'lugar'}
+            {@const atual = estruturaDoMarcador(selMarker, selEntity)}
+            <label class="sum est-sel">Estrutura
+              <select value={typeof selEntity.props['estrutura'] === 'string' ? atual : ''} onchange={(ev) => setEstrutura(selEntity!.path, (ev.currentTarget as HTMLSelectElement).value)}>
+                <option value="">automática ({atual})</option>
+                {#each ESTRUTURAS as [v, l] (v)}<option value={v}>{l}</option>{/each}
+              </select>
+            </label>
+          {/if}
           <div class="pacts">
             {#if selEntity}<button class="primary sm" onclick={() => onopen(selEntity!.path)}>Abrir ficha</button>
             {:else if selMarker.target}<button class="primary sm" onclick={() => oncreate(selMarker!.target!, 'lugar')}>Criar ficha</button>{/if}
@@ -405,7 +559,21 @@
       </label>
       <span class="sp"></span>
       {#if terrain && unplacedPlaces.length}<button class="ghost sm" onclick={scatter} title="Põe os lugares sem marcador em pontos de terra firme">✨ Espalhar {unplacedPlaces.length} {unplacedPlaces.length === 1 ? 'lugar' : 'lugares'}</button>{/if}
-      {#if !info.image}<button class="ghost sm" onclick={reseed} title="Gera outro continente (os marcadores ficam onde estão)">🎲 Outro terreno</button>{/if}
+      {#if !info.image}
+        <label>Mar
+          <select value={seaOpt === null ? '' : String(Math.round(seaOpt * 100))} onchange={(e) => setTerreno('mar', (e.currentTarget as HTMLSelectElement).value ? `${(e.currentTarget as HTMLSelectElement).value}%` : '')}>
+            <option value="">padrão</option>
+            {#each [30, 40, 50, 55, 60, 70, 80] as n (n)}<option value={String(n)}>{n}%</option>{/each}
+          </select>
+        </label>
+        <label>Rios
+          <select value={riverOpt === null ? '' : String(riverOpt)} onchange={(e) => setTerreno('rios', (e.currentTarget as HTMLSelectElement).value)}>
+            <option value="">padrão</option>
+            <option value="0">nenhum</option><option value="0.5">poucos</option><option value="1">normal</option><option value="2">muitos</option><option value="3">rede densa</option>
+          </select>
+        </label>
+        <button class="ghost sm" onclick={reseed} title="Gera outro continente (os marcadores ficam onde estão)">🎲 Outro terreno</button>
+      {/if}
       <button class="ghost sm" onclick={pickImage}>{info.image ? 'Trocar imagem' : 'Usar minha imagem'}</button>
       {#if info.image}<button class="ghost sm" onclick={reseed}>Usar terreno gerado</button>{/if}
       <button class="ghost sm" onclick={() => onopen(map!.path)}>Nota do mapa</button>
@@ -430,7 +598,9 @@
   .mode-marcar .stage, .mode-regua .stage { cursor: crosshair; }
   .stage { position: absolute; left: 0; top: 0; width: 100%; transform-origin: 0 0; user-select: none; }
   .stage img, .terrain { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: fill; }
-  .terrain { image-rendering: auto; filter: saturate(1.05) contrast(1.05); }
+  .terrain { image-rendering: auto; transition: opacity .3s; }
+  .terrain.wait { opacity: .35; filter: blur(4px); }
+  .detail { position: absolute; display: block; pointer-events: none; image-rendering: auto; }
   .terrain.anim { animation: reveal .9s ease-out; }
   @keyframes reveal { from { opacity: 0; filter: blur(8px) saturate(.4); transform: scale(1.03); } }
   .realm { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; image-rendering: auto; mix-blend-mode: normal; animation: reveal .6s ease-out; }
@@ -440,7 +610,9 @@
   .realms i { width: 9px; height: 9px; border-radius: 3px; background: var(--c); box-shadow: 0 0 6px var(--c); }
   .foot select { background: var(--surface); border: 1px solid var(--line); border-radius: 7px; color: var(--ink); padding: 3px 6px; font: inherit; font-size: 12px; }
   .over { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
-  .river { fill: none; stroke: #7db8de; stroke-width: 2.4; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; opacity: .85; }
+  .river { fill: none; stroke: #5f9cc6; stroke-linejoin: round; stroke-linecap: round; opacity: .95; }
+  .road-under { fill: none; stroke: #f3e6c4; stroke-linejoin: round; stroke-linecap: round; opacity: .55; }
+  .road { fill: none; stroke: #5b3f26; stroke-linejoin: round; stroke-linecap: round; opacity: .9; }
   .rule { stroke: #fff; stroke-width: 2; stroke-dasharray: 6 5; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 2px #000); animation: march 1s linear infinite; }
   @keyframes march { to { stroke-dashoffset: -11; } }
   .rdot { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px #000a; transform: scale(calc(1 / var(--z))); }
@@ -451,6 +623,16 @@
   .pin .dot { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; line-height: 1;
     background: color-mix(in srgb, var(--c) 85%, #000); border: 2px solid #fff; box-shadow: 0 2px 6px #0008; }
   .pin .name { font: 600 12px var(--f-display); letter-spacing: .02em; text-shadow: 0 1px 2px #000, 0 0 6px #000; white-space: nowrap; }
+  .pin.est { flex-direction: column; gap: 1px; transform: translate(-50%, calc(var(--s) * -0.5)) scale(calc(1 / var(--z))); transform-origin: 50% calc(var(--s) * 0.5); }
+  .pin.est .icon { display: block; border-radius: 50%; transition: filter .15s; }
+  .pin.est .name { font-size: 11.5px; }
+  .pin.est.capital .name { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+  .pin.est:hover .icon, .pin.est.on .icon { filter: drop-shadow(0 0 5px var(--c)) drop-shadow(0 0 2px #fff); }
+  .pin.regiao { transform: translate(-50%, -50%) scale(calc(1 / var(--z))); transform-origin: 50% 50%; font: italic 600 15px var(--f-display); letter-spacing: .32em;
+    text-transform: uppercase; color: #fff8e6; text-shadow: 0 1px 3px #000, 0 0 10px #000a; white-space: nowrap; opacity: .9; }
+  .pin.regiao.on { color: var(--ember-soft); }
+  .est-sel { display: flex; align-items: center; gap: 6px; }
+  .est-sel select { background: var(--surface); border: 1px solid var(--line); border-radius: 7px; color: var(--ink); padding: 2px 6px; font: inherit; font-size: 12px; }
   .pin.ghost .dot { background: #0006; border-style: dashed; }
   .pin:hover .dot, .pin.on .dot { box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 45%, transparent), 0 0 18px var(--c); }
   .pin.on .dot::after { content: ''; position: absolute; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--c); animation: ping 1.4s ease-out infinite; }
