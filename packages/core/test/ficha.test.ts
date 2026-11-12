@@ -200,3 +200,21 @@ describe('ataques da ficha', () => {
     expect(readAttackRows(t)).toMatchObject([{ name: 'Espada longa', hit: '@for+@prof', damage: '1d8+@for cortante', notes: 'Versátil' }]);
   });
 });
+
+describe('habilidades', () => {
+  it('lê usos, gasta e recupera no descanso certo', async () => {
+    const { actionKind, abilityMax, readAbilities, writeAbilities, sheetVars } = await import('../src/index');
+    let t = writeAbilities(note('nível: 5\ncar: 16\nfor: 10\ndes: 10'), [
+      { name: 'Retomar o fôlego', time: '1 ação bônus', uses: '2', spent: 2, recharge: 'curto', notes: '1d10+@nível' },
+      { name: 'Inspiração de bardo', time: '1 ação bônus', uses: '@car', spent: 1, recharge: 'longo', notes: '' },
+    ]);
+    const a = readAbilities(t);
+    expect(actionKind(a[0]!.time)).toBe('bônus');
+    expect(actionKind('1 reação')).toBe('reação');
+    expect(abilityMax(a[1]!, sheetVars(readSheet(t)))).toBe(3);
+    t = shortRest(t);
+    expect(readAbilities(t).map((x) => x.spent)).toEqual([0, 1]);
+    t = longRest(t);
+    expect(readAbilities(t).map((x) => x.spent)).toEqual([0, 0]);
+  });
+});

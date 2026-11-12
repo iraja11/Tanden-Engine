@@ -13,6 +13,7 @@
   import Gear from './ficha/Gear.svelte';
   import Spells from './ficha/Spells.svelte';
   import Story from './ficha/Story.svelte';
+  import Turn from './ficha/Turn.svelte';
   import type { FichaCtx } from './ficha/ctx';
   import './mesa.css';
 
@@ -33,8 +34,8 @@
   const is5e = $derived(s.system === '5e');
   const playerKey = $derived(Object.keys(fm).find((k) => /^(jogador|jogadora|player)$/i.test(k)) ?? 'jogador');
 
-  type Tab = 'combate' | 'magias' | 'caracteristicas' | 'equipamento' | 'historia';
-  const TABS: Array<[Tab, string]> = [['combate', 'Combate'], ['magias', 'Magias'], ['caracteristicas', 'Características'], ['equipamento', 'Equipamento'], ['historia', 'História']];
+  type Tab = 'turno' | 'combate' | 'magias' | 'caracteristicas' | 'equipamento' | 'historia';
+  const TABS: Array<[Tab, string]> = [['turno', 'Turno'], ['combate', 'Combate'], ['magias', 'Magias'], ['caracteristicas', 'Características'], ['equipamento', 'Equipamento'], ['historia', 'História']];
   const TAB_KEY = 'tanden.ficha.aba';
   let tab = $state<Tab>((() => { try { return (localStorage.getItem(TAB_KEY) as Tab | null) ?? 'combate'; } catch { return 'combate'; } })());
   function pickTab(t: Tab) {
@@ -390,7 +391,9 @@
     </div>
 
     <div class="tabc">
-      {#if tab === 'combate'}
+      {#if tab === 'turno'}
+        <Turn {x} />
+      {:else if tab === 'combate'}
         <Abilities {x} />
         <h3>Armas e truques de dano</h3>
         <Attacks {x} />

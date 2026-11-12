@@ -495,7 +495,8 @@ export function spendHitDie(text: string, die: number, delta = 1): string {
 /** Descanso curto: devolve os espaços de pacto. */
 export function shortRest(text: string): string {
   const c = readCharacter(text);
-  return c.pact ? setProps(text, { [c.keys.pactSpent]: null }) : text;
+  const out = c.pact ? setProps(text, { [c.keys.pactSpent]: null }) : text;
+  return restAbilities(out, 'curto');
 }
 
 /**
@@ -519,7 +520,7 @@ export function longRest(text: string): string {
   // só mexe no que existe (não cria propriedades vazias)
   const props = parseProps(text);
   for (const [k, v] of Object.entries(patch)) if (v === null && !(k in props)) delete patch[k];
-  return setProps(text, patch);
+  return restAbilities(setProps(text, patch), 'longo');
 }
 
 // ---------------------------------------------------------------- testes contra a morte
@@ -632,4 +633,66 @@ export function resolveBonus(hit: string, vars: (name: string) => number | undef
   const terms = expr.match(/[+-]?\d+/g) ?? [];
   const sum = terms.reduce((s, t) => s + Number(t), 0);
   return sum >= 0 ? `+${sum}` : `−${Math.abs(sum)}`;
+}
+
+// ---------------------------------------------------------------- habilidades e economia de ação
+
+export type ActionKind = 'ação' | 'bônus' | 'reação' | 'livre';
+
+/** "1 ação bônus" → bônus; "1 reação" → reação; "1 ação" → ação. */
+export function actionKind(time: string): ActionKind {
+  const t = time.toLowerCase();
+  if (/b[oô]nus|bonus/.test(t)) return 'bônus';
+  if (/rea[cç]/.test(t)) return 'reação';
+  if (/a[cç][aã]o|action/.test(t)) return 'ação';
+  return 'livre';
+}
+
+const ABILITY_COLS = {
+  name: ['habilidade', 'nome', 'name'],
+  time: ['tempo', 'custo', 'ação', 'acao'],
+  uses: ['usos', 'uses', 'máx', 'max'],
+  spent: ['gastos', 'usados', 'spent'],
+  recharge: ['recarga', 'recupera', 'recharge'],
+  notes: ['efeito', 'notas', 'notes'],
+};
+
+export interface Ability {
+  name: string;
+  time: string;
+  /** usos máximos (null = à vontade); aceita @prof, @car... na nota */
+  uses: string;
+  spent: number;
+  recharge: string;
+  notes: string;
+  _i?: number;
+}
+
+export function readAbilities(text: string): Ability[] {
+  return readRecords(text, 'Habilidades', ABILITY_COLS)
+    .filter((r) => r.name.trim())
+    .map((r) => ({ name: r.name.trim(), time: r.time.trim(), uses: r.uses.trim(), spent: Number(/\d+/.exec(r.spent)?.[0] ?? 0), recharge: r.recharge.trim(), notes: r.notes.trim(), _i: r._i }));
+}
+
+export function writeAbilities(text: string, list: Ability[]): string {
+  return writeRecords<keyof typeof ABILITY_COLS>(text, 'Habilidades', ABILITY_COLS, list.map((a) => ({
+    name: a.name, time: a.time, uses: a.uses, spent: a.spent ? String(a.spent) : '', recharge: a.recharge, notes: a.notes,
+    ...(a._i !== undefined ? { _i: a._i } : {}),
+  })));
+}
+
+/** Usos máximos já resolvidos ("@prof" → 3); null quando é à vontade. */
+export function abilityMax(a: Ability, vars: (name: string) => number | undefined): number | null {
+  if (!a.uses) return null;
+  const r = resolveBonus(a.uses, vars);
+  const n = Number(r.replace('−', '-').replace('+', ''));
+  return Number.isFinite(n) ? Math.max(0, n) : null;
+}
+
+/** Zera os usos que voltam nesse descanso (o longo devolve também os do curto). */
+export function restAbilities(text: string, kind: 'curto' | 'longo'): string {
+  const list = readAbilities(text);
+  if (!list.some((a) => a.spent)) return text;
+  const back = (r: string) => (/curt|short/i.test(r) ? true : kind === 'longo' && (/long/i.test(r) || r === ''));
+  return writeAbilities(text, list.map((a) => (a.spent && back(a.recharge) ? { ...a, spent: 0 } : a)));
 }
