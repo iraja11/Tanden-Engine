@@ -1,6 +1,7 @@
 import { asList, asText, parseProps, setProps, type Props, type PropValue } from '../caderno/frontmatter';
 import { getSection, parseTable, sameTitle, setSectionTable } from '../caderno/markdown';
 import { checkRoll } from './dice';
+import { computeAc, parseClasses } from './regras5e';
 
 /*
  * Ficha de jogo: números de RPG em cima de uma ficha comum do world
@@ -78,7 +79,15 @@ const FIELDS = {
   klass: ['classe', 'class'],
   cr: ['nd', 'cr', 'nível de desafio', 'nivel de desafio'],
   system: ['sistema', 'system'],
+  subclass: ['subclasse', 'subclass', 'arquétipo', 'arquetipo'],
+  armor: ['armadura vestida', 'armadura usada', 'armor worn', 'traje'],
+  shield: ['escudo', 'shield'],
 } as const;
+
+export { FIELDS as SHEET_FIELDS };
+
+/** "sim", "x", "true"... */
+export const isYes = (v: PropValue | undefined): boolean => /^\s*(sim|s|x|true|yes|y|1|✓|✔|on)\s*$/i.test(asText(v));
 
 /** chave da propriedade na nota, procurando pelos apelidos */
 export function findPropKey(props: Props, aliases: readonly string[]): string | null {
@@ -119,6 +128,8 @@ export interface Sheet {
   hpMax: number | null;
   hpTemp: number | null;
   ac: number | null;
+  /** CA calculada (armadura vestida + escudo), porque a nota não tem `ca` */
+  acAuto: boolean;
   speed: string;
   prof: number;
   init: number;
@@ -185,6 +196,13 @@ export function readSheet(text: string, fallbackSystem?: string): Sheet {
     const d = splitDamage(r[2] ?? '');
     return { name: r[0] ?? '', hit: (r[1] ?? '').trim(), damage: d.formula, damageType: d.type, notes: r.slice(3).filter(Boolean).join(' · ') };
   }).filter((a) => a.name);
+  const acProp = num('ac');
+  let ac = acProp;
+  if (ac === null && system === '5e' && attrs.length) {
+    const mods = Object.fromEntries(attrs.map((a) => [a.key, a.mod]));
+    const classes = parseClasses(asText(props[key('klass') ?? '']), level, asText(props[key('subclass') ?? '']));
+    ac = computeAc({ mods, armor: asText(props[key('armor') ?? '']), shield: isYes(props[key('shield') ?? '']), classes });
+  }
   const rolls: CustomRoll[] = table(text, 'Rolagens').map((r) => ({ name: r[0] ?? '', formula: (r[1] ?? '').trim() })).filter((r) => r.name && r.formula);
   return {
     system,
@@ -195,7 +213,8 @@ export function readSheet(text: string, fallbackSystem?: string): Sheet {
     hp: num('hp'),
     hpMax: num('hpMax'),
     hpTemp: num('hpTemp'),
-    ac: num('ac'),
+    ac,
+    acAuto: acProp === null && ac !== null,
     speed: asText(props[key('speed') ?? '']),
     prof,
     init,

@@ -6,3 +6,5 @@ export * from './campaign';
 export * from './coins';
 export * from './items';
 export * from './difficulty';
+export * from './regras5e';
+export * from './ficha';
