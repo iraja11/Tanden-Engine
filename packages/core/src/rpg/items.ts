@@ -142,6 +142,8 @@ export interface ItemCard {
   /** alvo da imagem (arquivo do cofre ou endereço) */
   image: string | null;
   description: string;
+  /** cargas: restantes e máximo (varinhas, cajados...) */
+  charges: { left: number; max: number | null } | null;
 }
 
 const ITEM_FIELDS = {
@@ -153,6 +155,7 @@ const ITEM_FIELDS = {
   weight: ['peso', 'weight'],
   attune: ['sintonização', 'sintonizacao', 'sintonia', 'attunement'],
   props: ['propriedades', 'properties'],
+  charges: ['cargas', 'charges'],
 };
 
 /** Imagem da nota: `imagem`, `retrato`, `capa`, `image`... aceita [[arquivo]], ![[arquivo]] ou endereço. */
@@ -205,6 +208,10 @@ export function readItemCard(name: string, text: string): ItemCard {
     properties: pk ? asList(props[pk]).flatMap((x) => x.split(',')).map((x) => x.trim()).filter(Boolean) : [],
     image: imageOf(props),
     description: describe(text),
+    charges: (() => {
+      const m = /^\s*(\d+)\s*(?:\/\s*(\d+))?/.exec(get('charges'));
+      return m ? { left: Number(m[1]), max: m[2] ? Number(m[2]) : null } : null;
+    })(),
   };
 }
 
@@ -223,4 +230,42 @@ imagem:
 ## Descrição
 
 `;
+}
+
+export interface NewItem {
+  name: string;
+  rarity: Rarity;
+  category: string;
+  value: string;
+  weight: string;
+  damage: string;
+  ac: string;
+  attunement: boolean;
+  properties: string;
+  /** "3/7" ou "7" */
+  charges: string;
+  /** caminho do arquivo da imagem no cofre */
+  image: string;
+  description: string;
+  world?: string;
+}
+
+/** Nota completa de um item especial (o Obsidian lê as propriedades normalmente). */
+export function itemNote(it: NewItem): string {
+  const lines = ['---', 'tipo: item'];
+  if (it.world) lines.push(`mundo: ${it.world}`);
+  const add = (k: string, v: string) => { if (v.trim()) lines.push(`${k}: ${/[:#]|^[\[{"'!&*@]/.test(v.trim()) && !/^\[\[.*\]\]$/.test(v.trim()) ? JSON.stringify(v.trim()) : v.trim()}`); };
+  lines.push(`raridade: ${it.rarity}`);
+  add('categoria', it.category);
+  add('valor', it.value);
+  add('peso', it.weight.replace(/\s*kg$/i, ''));
+  add('dano', it.damage);
+  add('ca', it.ac);
+  if (it.attunement) lines.push('sintonização: sim');
+  const props = it.properties.split(',').map((x) => x.trim()).filter(Boolean);
+  if (props.length) lines.push('propriedades:', ...props.map((x) => `  - ${x}`));
+  add('cargas', it.charges);
+  if (it.image.trim()) lines.push(`imagem: "[[${it.image.trim()}]]"`);
+  lines.push('---', `# ${it.name}`, '', '## Descrição', '', it.description.trim(), '');
+  return lines.join('\n');
 }

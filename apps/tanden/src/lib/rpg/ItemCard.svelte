@@ -3,13 +3,15 @@
   import Portrait from './Portrait.svelte';
 
   // Carta de item: moldura pela raridade, brilho que segue o ponteiro, imagem e números.
-  let { name, card, qty = 1, onopen, oncreate }: {
+  let { name, card, qty = 1, onopen, oncreate, onphoto }: {
     name: string;
     /** null: item sem nota (carta simples, com o botão de criar) */
     card: ItemCard | null;
     qty?: number;
     onopen?: () => void;
     oncreate?: () => void;
+    /** escolher ou trocar a foto do item */
+    onphoto?: () => void;
   } = $props();
 
   let el = $state<HTMLElement>();
@@ -70,10 +72,12 @@
         {#if card.ac}<span title="Classe de armadura">🛡 {card.ac}</span>{/if}
         {#if card.value !== null}<span title="Valor">◉ {formatMoney(card.value)}</span>{:else if card.valueText}<span title="Valor">◉ {card.valueText}</span>{/if}
         {#if card.weight !== null}<span title="Peso">⚖ {kg(card.weight)}</span>{/if}
+        {#if card.charges}<span title="Cargas">✦ {card.charges.left}{#if card.charges.max !== null}/{card.charges.max}{/if}</span>{/if}
       </div>
       {#if card.properties.length}<p class="props">{card.properties.join(' · ')}</p>{/if}
       {#if card.description}<p class="desc">{card.description}</p>{/if}
       {#if onopen}<button class="open" onclick={onopen}>Abrir nota</button>{/if}
+      {#if onphoto}<button class="open" onclick={onphoto}>{card.image ? 'Trocar foto' : 'Pôr foto'}</button>{/if}
     {:else}
       <p class="desc dim">Item sem nota. Crie a carta para guardar raridade, valor, imagem e descrição.</p>
       {#if oncreate}<button class="open" onclick={oncreate}>Criar carta</button>{/if}

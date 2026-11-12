@@ -1,12 +1,15 @@
 <script lang="ts">
   import {
     addItem, asText, carryCapacity, changeQty, inventoryWeight, itemLabel, itemTemplate, linkOf, normalizeType, parseProps, readInventory, readItemCard,
-    resolveLink, writeInventory,
+    itemNote, resolveLink, setProps, writeInventory, type NewItem,
     type InventoryItem, type ItemCard as Card,
   } from '@tanden/core';
   import { cadernos } from '../cadernos/cadernos.svelte';
+  import { files } from '../files/files.svelte';
   import { engine } from '../engine.svelte';
   import ItemCard from './ItemCard.svelte';
+  import ItemForge from './ItemForge.svelte';
+  import Portrait from './Portrait.svelte';
 
   // Inventário da ficha (tabela "## Inventário"): lista ou cartas, peso e carga.
   let { path, text, strength = null, compact = false, onOpenNote }: {
@@ -67,6 +70,32 @@
     return normalizeType(asText(props['tipo'] ?? props['type'])) === 'item';
   }
 
+  let forge = $state(false);
+  const world = $derived(/^Mundos\/([^/]+)\//.exec(path)?.[1]);
+
+  /** item especial: cria a nota (com foto) e põe na mochila */
+  function forged(it: NewItem, n: number) {
+    const folder = world ? `Mundos/${world}/Itens` : 'Itens';
+    const created = cadernos.create(folder, it.name, (nm) => itemNote({ ...it, name: nm }));
+    const final = created.split('/').pop()!.replace(/\.md$/, '');
+    save(addItem(items, { name: `[[${final}]]`, link: final, qty: n, weight: null, notes: '' }));
+    forge = false;
+  }
+
+  /** foto de um item que já tem nota */
+  function photo(i: number) {
+    const p = cards[i]?.path;
+    if (!p) return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async () => {
+      const f = input.files?.[0];
+      if (f) { const img = await files.attachFile(f); cadernos.update(p, (t) => setProps(t, { imagem: `[[${img}]]` })); }
+    };
+    input.click();
+  }
+
   /** cria a nota da carta e liga o item a ela */
   function createCard(i: number) {
     const it = items[i];
@@ -104,7 +133,7 @@
       {#each items as it, i (i)}
         {@const c = cards[i]}
         <ItemCard name={itemLabel(it.name)} card={c?.card ?? null} qty={it.qty}
-          onopen={c?.path && onOpenNote ? () => onOpenNote!(c.path!) : undefined} oncreate={() => createCard(i)} />
+          onopen={c?.path && onOpenNote ? () => onOpenNote!(c.path!) : undefined} oncreate={() => createCard(i)} onphoto={c?.path ? () => photo(i) : undefined} />
       {:else}
         <p class="dim small">Mochila vazia.</p>
       {/each}
@@ -115,7 +144,7 @@
         {@const c = cards[i]}
         <li data-rarity={c?.card?.rarity ?? ''}>
           <button class="iname" onclick={() => (open = open === i ? null : i)} aria-expanded={open === i}>
-            <i class="pip" aria-hidden="true"></i>{itemLabel(it.name)}{#if it.notes}<small>{it.notes}</small>{/if}
+            {#if c?.card?.image}<span class="thumb"><Portrait target={c.card.image} name={itemLabel(it.name)} size={30} square /></span>{:else}<i class="pip" aria-hidden="true"></i>{/if}<span class="nm">{itemLabel(it.name)}{#if c?.card?.charges}<em class="ch"> ✦{c.card.charges.left}{#if c.card.charges.max !== null}/{c.card.charges.max}{/if}</em>{/if}{#if c?.card?.attunement}<em class="at" title="Exige sintonização"> ◈</em>{/if}</span>{#if it.notes}<small>{it.notes}</small>{/if}
           </button>
           <span class="kg dim mono">{(it.weight ?? c?.card?.weight) != null ? `${kgText((it.weight ?? c?.card?.weight ?? 0) * it.qty)} kg` : ''}</span>
           <span class="qty">
@@ -127,7 +156,7 @@
         {#if open === i}
           <li class="peek">
             <ItemCard name={itemLabel(it.name)} card={c?.card ?? null} qty={it.qty}
-              onopen={c?.path && onOpenNote ? () => onOpenNote!(c.path!) : undefined} oncreate={() => createCard(i)} />
+              onopen={c?.path && onOpenNote ? () => onOpenNote!(c.path!) : undefined} oncreate={() => createCard(i)} onphoto={c?.path ? () => photo(i) : undefined} />
           </li>
         {/if}
       {:else}
@@ -141,7 +170,9 @@
     <input class="field mono q" bind:value={qty} inputmode="numeric" aria-label="Quantidade" title="Quantidade" />
     <input class="field mono q" bind:value={kg} inputmode="decimal" placeholder="kg" aria-label="Peso (kg)" title="Peso de cada um (kg)" />
     <button class="ghost sm" disabled={!name.trim()}>+ Item</button>
+    <button type="button" class="primary sm" onclick={() => (forge = true)} title="Item especial com foto, raridade, cargas…">✦ Forjar item</button>
   </form>
+  {#if forge}<ItemForge {world} oncreate={forged} onclose={() => (forge = false)} />{/if}
 </div>
 
 <style>
@@ -168,6 +199,11 @@
   .list li.peek { padding: 6px 4px 10px 22px; }
   .list li.peek:hover { background: none; }
   .none { padding: 6px 4px; }
+  .thumb { flex: none; align-self: center; border-radius: 7px; overflow: hidden; box-shadow: 0 0 0 1.5px var(--c); }
+  .nm { white-space: nowrap; }
+  .ch, .at { margin-left: 6px; }
+  .ch { font: normal 11px var(--f-mono); color: var(--ember-soft); }
+  .at { font-style: normal; color: var(--c); }
   .iname { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 7px; border: 0; background: none; padding: 3px 0; text-align: left; font-size: 13.5px; color: var(--ink); }
   .iname small { color: var(--muted); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pip { width: 8px; height: 8px; flex: none; transform: rotate(45deg) translateY(-1px); border-radius: 2px; background: var(--c); box-shadow: 0 0 6px color-mix(in srgb, var(--c) 70%, transparent); }
@@ -176,8 +212,8 @@
   .qty .icon { width: 22px; height: 22px; font-size: 14px; }
   .qty b { min-width: 20px; text-align: center; font-size: 13px; }
   .deck { display: flex; flex-wrap: wrap; gap: 14px; padding: 4px 2px 8px; }
-  .add { display: flex; gap: 6px; }
-  .add .field:first-child { flex: 1; min-width: 0; }
+  .add { display: flex; gap: 6px; flex-wrap: wrap; }
+  .add .field:first-child { flex: 1 1 160px; min-width: 0; }
   .add .q { width: 54px; }
   .dim { color: var(--muted); }
   .small { font-size: 12px; }

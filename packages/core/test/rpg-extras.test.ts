@@ -199,3 +199,14 @@ describe('mundos', () => {
     expect(w!.relations.map((r) => r.target)).toEqual(['Ordem']);
   });
 });
+
+describe('item especial', () => {
+  it('cria a nota e lê de volta como carta', async () => {
+    const { itemNote, readItemCard } = await import('../src/index');
+    const t = itemNote({ name: 'Cajado do Inverno', rarity: 'raro', category: 'Cajado', value: '5000 po', weight: '2', damage: '1d6 concussão',
+      ac: '', attunement: true, properties: 'Versátil, Arcano', charges: '7/10', image: 'Anexos/cajado.png', description: 'Frio que não derrete.' });
+    const c = readItemCard('Cajado do Inverno', t);
+    expect(c).toMatchObject({ rarity: 'raro', category: 'Cajado', weight: 2, attunement: true, properties: ['Versátil', 'Arcano'],
+      charges: { left: 7, max: 10 }, image: 'Anexos/cajado.png', description: 'Frio que não derrete.', value: 500000 });
+  });
+});
