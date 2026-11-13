@@ -64,6 +64,18 @@ export const REFERENCE: RefSection[] = [
     ],
   },
   {
+    title: 'Financeiro',
+    items: [
+      { ex: 'pgto(1%; 12; 1000)', note: 'parcela (taxa; períodos; valor presente); sai negativa: é o que você paga' },
+      { ex: 'vf(0,8%; 120; -500)', note: 'valor futuro de 120 aportes de 500' },
+      { ex: 'vp(1%; 24; -300)', note: 'valor presente de 24 parcelas de 300' },
+      { ex: 'nper(1%; -500; 10000)', note: 'quantas parcelas de 500 pagam 10 mil' },
+      { ex: 'taxa(12; -900; 10000)', note: 'taxa por período de um financiamento' },
+      { ex: 'vpl(10%; [-1000, 300, 400, 500])', note: 'VPL; o 1º fluxo é o de hoje' },
+      { ex: 'tir(-1000; 300; 400; 500)', note: 'taxa interna de retorno' },
+    ],
+  },
+  {
     title: 'Matrizes e complexos',
     items: [
       { ex: 'A = [1, 2; 3, 4]', note: ', separa colunas e ; separa linhas' },

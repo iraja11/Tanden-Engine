@@ -6,3 +6,4 @@ export { integrateSymbolic } from './symbolic';
 export { CalcSheet, translateError, type CalcResult, type CalcKind } from './sheet';
 export { parsePlot, plotFn, plotFn2, sampleFx, sampleParam, sampleSurface, is3D, type PlotSpec, type PlotSeries, type Fn2 } from './plot';
 export { analyzeNote, isCalcNote, type NoteCalc, type PlotBlock } from './note';
+export { QuickCalc, type AngleMode, type QuickEntry } from './quick';

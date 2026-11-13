@@ -2,6 +2,7 @@ import type { MathNode } from 'mathjs';
 import { formatValue, nodeTex, nodeText, valueTex } from './format';
 import { localize, preprocess, splitLabel, stripComment } from './lang';
 import { math } from './math';
+import './finance-sheet';
 import { expandSymbolic, freeSymbols, withCtx, type Ctx, type Def } from './symbolic';
 
 /*

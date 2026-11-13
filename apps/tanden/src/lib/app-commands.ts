@@ -16,6 +16,7 @@ import { vida } from './vida/vida.svelte';
 import { saude } from './saude/saude.svelte';
 import { flashcards } from './flashcards/flashcards.svelte';
 import { agenda } from './agenda/agenda.svelte';
+import { calcPrefs, type FinTool } from './calc/calc.svelte';
 
 /*
  * Os comandos do app inteiro: a paleta (Ctrl+P) lista todos, e qualquer um
@@ -65,6 +66,20 @@ export function registerAppCommands(a: AppActions): () => void {
         a.go('biblioteca');
       },
     },
+
+    // cálculo
+    { id: 'calc.calculadora', label: 'Calculadora científica', keys: 'calcular conta somatorio integral derivada', run: () => { calcPrefs.set({ mode: 'calculadora' }); a.go('calculo'); } },
+    { id: 'calc.folhas', label: 'Folhas de cálculo', keys: 'calcular grafico funcao', run: () => { calcPrefs.set({ mode: 'folhas' }); a.go('calculo'); } },
+    ...([
+      ['investir', 'Simular investimento (juros compostos)', 'aporte rendimento cdb tesouro poupanca'],
+      ['financiar', 'Simular financiamento (Price e SAC)', 'emprestimo parcela casa carro amortizacao'],
+      ['hp', 'Valor do dinheiro (HP-12C)', 'pgto vp vf juros'],
+      ['fluxo', 'VPL e TIR', 'fluxo de caixa investimento payback'],
+      ['taxas', 'Converter taxas de juros', 'equivalente cdi real inflacao mensal anual'],
+      ['porcento', 'Calcular porcentagem', 'desconto aumento variacao'],
+    ] as [FinTool, string, string][]).map(([fin, label, keys]): Command => ({
+      id: `calc.fin.${fin}`, label, keys: `financeira financas dinheiro ${keys}`, run: () => { calcPrefs.set({ mode: 'financas', fin }); a.go('calculo'); },
+    })),
 
     // agenda
     { id: 'agenda.novo', label: 'Novo evento na agenda', keys: 'calendario compromisso reuniao marcar', run: () => { a.go('agenda'); agenda.create(); } },
