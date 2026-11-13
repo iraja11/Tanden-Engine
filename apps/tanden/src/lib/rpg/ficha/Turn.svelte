@@ -22,6 +22,8 @@
     timer = setTimeout(() => (msg = ''), 3500);
   }
 
+  /** "1d8+@for" → "1d8+3" para mostrar */
+  const shownDamage = (f: string) => f.replace(/@([\p{L}_]+)/gu, (m, n: string) => String(vars(n) ?? m)).replace(/\+-/g, '−').replace(/\+0(?!\d)/g, '');
   const RES: Record<Exclude<ActionKind, 'livre'>, 'action' | 'bonus' | 'reaction'> = { 'ação': 'action', 'bônus': 'bonus', 'reação': 'reaction' };
   const LABEL: Record<ActionKind, string> = { 'ação': 'Ação', 'bônus': 'Ação bônus', 'reação': 'Reação', 'livre': 'Livre' };
   const used = (k: ActionKind) => k !== 'livre' && st[RES[k]];
@@ -49,7 +51,7 @@
       const d = splitDamage(a.damage);
       const hit = attackFormula({ name: a.name, hit: a.hit, damage: d.formula, damageType: d.type, notes: a.notes });
       out.push({
-        id: `a${i}`, kind: 'ataque', cost: 'ação', name: a.name, sub: `${resolveBonus(a.hit, vars) || '—'} para acertar · ${d.formula.replace(/@/g, '')} ${d.type}`, notes: a.notes,
+        id: `a${i}`, kind: 'ataque', cost: 'ação', name: a.name, sub: `${resolveBonus(a.hit, vars) || '—'} para acertar · ${shownDamage(d.formula)} ${d.type}`, notes: a.notes,
         run: () => { if (spend('ação', a.name) && hit) x.rollF(hit, `${a.name}: acerto`, true); },
         extra: d.formula ? [{ label: 'Dano', run: () => x.rollF(d.formula, `${a.name}: dano`) }, { label: '×2', title: 'Crítico', run: () => x.rollF(d.formula.replace(/(\d*)d(\d+)/gi, (_m, n: string, f: string) => `${Number(n || 1) * 2}d${f}`), `${a.name}: crítico`) }] : [],
       });

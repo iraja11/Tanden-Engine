@@ -1,13 +1,16 @@
 <script lang="ts">
   import { formatMoney, type ItemCard } from '@tanden/core';
+  import ItemIcon from './ItemIcon.svelte';
   import Portrait from './Portrait.svelte';
 
   // Carta de item: moldura pela raridade, brilho que segue o ponteiro, imagem e números.
-  let { name, card, qty = 1, onopen, oncreate, onphoto }: {
+  let { name, card, qty = 1, badge = '', onopen, oncreate, onphoto }: {
     name: string;
     /** null: item sem nota (carta simples, com o botão de criar) */
     card: ItemCard | null;
     qty?: number;
+    /** selo no canto da arte ("Em uso", "Sintonizado") */
+    badge?: string;
     onopen?: () => void;
     oncreate?: () => void;
     /** escolher ou trocar a foto do item */
@@ -44,23 +47,10 @@
       {#if card?.image}
         <Portrait target={card.image} {name} square />
       {:else}
-        <svg viewBox="0 0 64 64" aria-hidden="true">
-          {#if /arma|espada|weapon|machad|adaga|arco|lan[cç]a/i.test(card?.category ?? name)}
-            <path d="M46 8h10v10L28 46l-4-4L46 8ZM22 40l6 6-6 6-3-1-5 5-4-4 5-5-1-3 6-6Z" />
-          {:else if /armadura|escudo|armor|shield/i.test(card?.category ?? name)}
-            <path d="M32 6 52 13v15c0 14-9 24-20 30C21 52 12 42 12 28V13Z" />
-          {:else if /po[cç][aã]o|potion|elixir|frasco/i.test(card?.category ?? name)}
-            <path d="M26 6h12v4h-2v10l12 16c4 8-2 22-16 22S12 44 16 36l12-16V10h-2Z" />
-          {:else if /anel|ring|amuleto|colar/i.test(card?.category ?? name)}
-            <path d="M32 18a16 16 0 1 0 .01 0ZM32 24a10 10 0 1 1-.01 0ZM26 6h12l-6 10Z" />
-          {:else if /pergaminho|scroll|livro|book|tomo/i.test(card?.category ?? name)}
-            <path d="M14 10h32a6 6 0 0 1 6 6v38H20a6 6 0 0 1-6-6ZM20 20h26M20 28h26M20 36h18" />
-          {:else}
-            <path d="M14 22h36l-4 32H18ZM22 22a10 10 0 0 1 20 0M26 34h12" />
-          {/if}
-        </svg>
+        <span class="icon"><ItemIcon hint={`${card?.category ?? ''} ${name}`} size={56} /></span>
       {/if}
       <span class="gem" title={rarity} aria-hidden="true"></span>
+      {#if badge}<span class="badge">{badge}</span>{/if}
     </div>
     <div class="type">
       <span>{card?.category || 'item'}</span>
@@ -72,12 +62,15 @@
         {#if card.ac}<span title="Classe de armadura">🛡 {card.ac}</span>{/if}
         {#if card.value !== null}<span title="Valor">◉ {formatMoney(card.value)}</span>{:else if card.valueText}<span title="Valor">◉ {card.valueText}</span>{/if}
         {#if card.weight !== null}<span title="Peso">⚖ {kg(card.weight)}</span>{/if}
+        {#if card.heal}<span title="Cura ao usar">♥ {card.heal}</span>{/if}
         {#if card.charges}<span title="Cargas">✦ {card.charges.left}{#if card.charges.max !== null}/{card.charges.max}{/if}</span>{/if}
       </div>
       {#if card.properties.length}<p class="props">{card.properties.join(' · ')}</p>{/if}
       {#if card.description}<p class="desc">{card.description}</p>{/if}
       {#if onopen}<button class="open" onclick={onopen}>Abrir nota</button>{/if}
       {#if onphoto}<button class="open" onclick={onphoto}>{card.image ? 'Trocar foto' : 'Pôr foto'}</button>{/if}
+      {#if !card.description && !card.category && oncreate}<p class="desc dim">Item comum. Crie a carta para dar foto, raridade e descrição.</p>{/if}
+      {#if oncreate && !onopen}<button class="open" onclick={oncreate}>Criar carta</button>{/if}
     {:else}
       <p class="desc dim">Item sem nota. Crie a carta para guardar raridade, valor, imagem e descrição.</p>
       {#if oncreate}<button class="open" onclick={oncreate}>Criar carta</button>{/if}
@@ -104,8 +97,9 @@
   .art { position: relative; height: 112px; border-radius: 8px; overflow: hidden; display: grid; place-items: center;
     background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--c) 30%, var(--surface-2)), var(--void) 85%);
     border: 1px solid color-mix(in srgb, var(--c) 45%, var(--line)); }
-  .art svg { width: 54px; height: 54px; fill: color-mix(in srgb, var(--c) 30%, transparent); stroke: var(--c); stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round;
-    filter: drop-shadow(0 0 10px color-mix(in srgb, var(--c) 60%, transparent)); }
+  .art .icon { color: var(--c); display: grid; filter: drop-shadow(0 0 10px color-mix(in srgb, var(--c) 60%, transparent)); }
+  .badge { position: absolute; left: 7px; top: 7px; z-index: 1; font: 700 9px var(--f-display); letter-spacing: .12em; text-transform: uppercase;
+    padding: 3px 7px; border-radius: 999px; color: var(--on-ember); background: var(--ember); box-shadow: 0 2px 10px -2px var(--ember); }
   .art :global(.portrait) { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 0; }
   .gem { position: absolute; right: 7px; bottom: 7px; width: 11px; height: 11px; transform: rotate(45deg); background: var(--c); border-radius: 2px;
     box-shadow: 0 0 8px var(--c); border: 1px solid rgba(255, 255, 255, .5); }

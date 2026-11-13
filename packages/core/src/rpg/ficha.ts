@@ -66,13 +66,13 @@ export type SheetTextKey = (typeof SHEET_TEXTS)[number]['key'];
 
 export const SPELLS = 'Magias';
 const SPELL_COLS = {
-  level: ['nível', 'nivel', 'nv', 'círculo', 'circulo', 'level'],
-  name: ['nome', 'magia', 'name'],
-  time: ['tempo', 'tempo de conjuração', 'conjuração', 'casting time'],
-  range: ['alcance', 'range'],
-  marks: ['c/r/m', 'crm', 'marcas', 'componentes'],
-  prepared: ['prep.', 'prep', 'preparada', 'preparado', 'prepared'],
-  notes: ['notas', 'efeito', 'notes'],
+  level: ['Nível', 'nivel', 'nv', 'círculo', 'circulo', 'level'],
+  name: ['Nome', 'magia', 'name'],
+  time: ['Tempo', 'tempo de conjuração', 'conjuração', 'casting time'],
+  range: ['Alcance', 'range'],
+  marks: ['C/R/M', 'crm', 'marcas', 'componentes'],
+  prepared: ['Prep.', 'prep', 'preparada', 'preparado', 'prepared'],
+  notes: ['Notas', 'efeito', 'notes'],
 };
 
 export interface Spell {
@@ -594,10 +594,10 @@ export function toggleInList(text: string, field: CharField, item: string): stri
 // ---------------------------------------------------------------- ataques
 
 const ATTACK_COLS = {
-  name: ['ataque', 'nome', 'arma', 'name'],
-  hit: ['acerto', 'bônus', 'bonus', 'atk', 'acerto/cd'],
-  damage: ['dano', 'damage', 'dano e tipo'],
-  notes: ['notas', 'propriedades', 'notes'],
+  name: ['Ataque', 'nome', 'arma', 'name'],
+  hit: ['Acerto', 'bônus', 'bonus', 'atk', 'acerto/cd'],
+  damage: ['Dano', 'damage', 'dano e tipo'],
+  notes: ['Notas', 'propriedades', 'notes'],
 };
 
 export interface AttackRow {
@@ -649,12 +649,12 @@ export function actionKind(time: string): ActionKind {
 }
 
 const ABILITY_COLS = {
-  name: ['habilidade', 'nome', 'name'],
-  time: ['tempo', 'custo', 'ação', 'acao'],
-  uses: ['usos', 'uses', 'máx', 'max'],
-  spent: ['gastos', 'usados', 'spent'],
-  recharge: ['recarga', 'recupera', 'recharge'],
-  notes: ['efeito', 'notas', 'notes'],
+  name: ['Habilidade', 'nome', 'name'],
+  time: ['Tempo', 'custo', 'ação', 'acao'],
+  uses: ['Usos', 'uses', 'máx', 'max'],
+  spent: ['Gastos', 'usados', 'spent'],
+  recharge: ['Recarga', 'recupera', 'recharge'],
+  notes: ['Efeito', 'notas', 'notes'],
 };
 
 export interface Ability {
