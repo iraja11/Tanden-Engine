@@ -1,5 +1,5 @@
 import { asList, asText, bodyOf, parseProps, type Props } from '../caderno/frontmatter';
-import { getSection, linkTarget, readRecords, sameTitle, writeRecords, type Rec } from '../caderno/markdown';
+import { getSection, linkTarget, parseTable, readRecords, sameTitle, writeRecords, type Rec } from '../caderno/markdown';
 import { parseMoney } from './coins';
 import { findPropKey } from './sheet';
 
@@ -34,16 +34,22 @@ export interface InventoryItem {
   /** peso de uma unidade, em kg (null se não informado) */
   weight: number | null;
   notes: string;
+  /** em uso: arma na mão, armadura vestida, escudo empunhado (coluna Estado) */
+  equipped: boolean;
   _i?: number;
 }
 
-const COLS = {
+const BASE_COLS = {
   name: ['Item', 'Nome', 'Objeto'],
   qty: ['Qtd', 'Qtd.', 'Quantidade', 'Qty'],
   weight: ['Peso', 'Peso (kg)', 'Weight'],
   notes: ['Notas', 'Obs', 'Observações', 'Notes'],
 };
+const COLS = { ...BASE_COLS, state: ['Estado', 'Equipado', 'State'] };
 type Col = keyof typeof COLS;
+
+/** "equipado", "sim", "x", "em uso"... */
+const isEquipped = (s: string): boolean => /^\s*(equipad[oa]|equipped|em uso|sim|x|✓|✔|e)\s*$/i.test(s);
 
 export const INVENTORY = 'Inventário';
 
@@ -74,6 +80,7 @@ export function readInventory(text: string): InventoryItem[] {
     qty: num(r.qty) ?? 1,
     weight: num(r.weight),
     notes: r.notes.trim(),
+    equipped: isEquipped(r.state),
     _i: r._i,
   }));
 }
@@ -84,15 +91,20 @@ export function writeInventory(text: string, items: InventoryItem[]): string {
     qty: String(it.qty),
     weight: it.weight === null ? '' : fmtNum(it.weight),
     notes: it.notes,
+    state: it.equipped ? 'equipado' : '',
     ...(it._i !== undefined ? { _i: it._i } : {}),
   }));
+  // a coluna Estado só entra na tabela quando alguém equipa algo (ou se ela já existe)
+  const sec = getSection(text, INVENTORY);
+  const hasState = !!sec && !!parseTable(sec)?.header.some((h) => COLS.state.some((a) => sameTitle(a, h)));
+  if (!hasState && !items.some((x) => x.equipped)) return writeRecords<keyof typeof BASE_COLS>(text, INVENTORY, BASE_COLS, recs);
   return writeRecords(text, INVENTORY, COLS, recs);
 }
 
 /** Acrescenta (ou soma na quantidade, se já existe com o mesmo nome). */
-export function addItem(items: InventoryItem[], it: Omit<InventoryItem, '_i'>): InventoryItem[] {
+export function addItem(items: InventoryItem[], it: Omit<InventoryItem, '_i' | 'equipped'> & { equipped?: boolean }): InventoryItem[] {
   const i = items.findIndex((x) => sameTitle(itemLabel(x.name), itemLabel(it.name)));
-  if (i < 0) return [...items, it];
+  if (i < 0) return [...items, { ...it, equipped: it.equipped ?? false }];
   return items.map((x, j) => (j === i ? { ...x, qty: x.qty + it.qty } : x));
 }
 
@@ -142,6 +154,10 @@ export interface ItemCard {
   /** alvo da imagem (arquivo do cofre ou endereço) */
   image: string | null;
   description: string;
+  /** cargas: restantes e máximo (varinhas, cajados...) */
+  charges: { left: number; max: number | null } | null;
+  /** cura ao usar (poções): "2d4+2" */
+  heal: string;
 }
 
 const ITEM_FIELDS = {
@@ -153,6 +169,8 @@ const ITEM_FIELDS = {
   weight: ['peso', 'weight'],
   attune: ['sintonização', 'sintonizacao', 'sintonia', 'attunement'],
   props: ['propriedades', 'properties'],
+  charges: ['cargas', 'charges'],
+  heal: ['cura', 'heal', 'healing'],
 };
 
 /** Imagem da nota: `imagem`, `retrato`, `capa`, `image`... aceita [[arquivo]], ![[arquivo]] ou endereço. */
@@ -205,6 +223,11 @@ export function readItemCard(name: string, text: string): ItemCard {
     properties: pk ? asList(props[pk]).flatMap((x) => x.split(',')).map((x) => x.trim()).filter(Boolean) : [],
     image: imageOf(props),
     description: describe(text),
+    charges: (() => {
+      const m = /^\s*(\d+)\s*(?:\/\s*(\d+))?/.exec(get('charges'));
+      return m ? { left: Number(m[1]), max: m[2] ? Number(m[2]) : null } : null;
+    })(),
+    heal: get('heal'),
   };
 }
 
@@ -223,4 +246,45 @@ imagem:
 ## Descrição
 
 `;
+}
+
+export interface NewItem {
+  name: string;
+  rarity: Rarity;
+  category: string;
+  value: string;
+  weight: string;
+  damage: string;
+  ac: string;
+  attunement: boolean;
+  properties: string;
+  /** "3/7" ou "7" */
+  charges: string;
+  /** cura ao usar: "2d4+2" */
+  heal?: string;
+  /** caminho do arquivo da imagem no cofre */
+  image: string;
+  description: string;
+  world?: string;
+}
+
+/** Nota completa de um item especial (o Obsidian lê as propriedades normalmente). */
+export function itemNote(it: NewItem): string {
+  const lines = ['---', 'tipo: item'];
+  if (it.world) lines.push(`mundo: ${it.world}`);
+  const add = (k: string, v: string) => { if (v.trim()) lines.push(`${k}: ${/[:#]|^[\[{"'!&*@]/.test(v.trim()) && !/^\[\[.*\]\]$/.test(v.trim()) ? JSON.stringify(v.trim()) : v.trim()}`); };
+  lines.push(`raridade: ${it.rarity}`);
+  add('categoria', it.category);
+  add('valor', it.value);
+  add('peso', it.weight.replace(/\s*kg$/i, ''));
+  add('dano', it.damage);
+  add('ca', it.ac);
+  if (it.attunement) lines.push('sintonização: sim');
+  const props = it.properties.split(',').map((x) => x.trim()).filter(Boolean);
+  if (props.length) lines.push('propriedades:', ...props.map((x) => `  - ${x}`));
+  add('cargas', it.charges);
+  add('cura', it.heal ?? '');
+  if (it.image.trim()) lines.push(`imagem: "[[${it.image.trim()}]]"`);
+  lines.push('---', `# ${it.name}`, '', '## Descrição', '', it.description.trim(), '');
+  return lines.join('\n');
 }
