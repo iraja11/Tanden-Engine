@@ -9,8 +9,9 @@ Arquivos:
 | Arquivo | O que tem |
 |---|---|
 | `apps/tanden/src/styles.css` | Tokens (cores do tema Núcleo e as escalas). |
-| `apps/tanden/src/lib/theme.svelte.ts` | Reescreve as **cores** conforme o tema escolhido. |
+| `apps/tanden/src/lib/theme.svelte.ts` | Reescreve as **cores** conforme o tema e marca o `<html>` com o estilo e as peças de forma (`data-skin`, `data-corners`…). |
 | `apps/tanden/src/ui.css` | Componentes base globais, com prefixo `t-`. |
+| `apps/tanden/src/skins.css` | Os estilos (Aero, Terminal, Papel) e as peças de forma: cantos, bordas, sombras, textura, papel de parede, vidro. |
 | `apps/tanden/src/lib/ui/Icon.svelte` | Ícones de traço (24×24, `currentColor`). |
 
 ---
@@ -58,6 +59,27 @@ um botão `t-btn` já tem alvo de dedo no celular sem CSS extra.
 Rótulo de seção: `.t-eyebrow` (10.5px, caixa alta, espaçado, `--muted`).
 
 ---
+
+### Estilos e peças de forma (`skins.css`)
+
+Além das cores, o tema marca o `<html>` com atributos que o `skins.css` desenha:
+
+| Atributo | Valores |
+|---|---|
+| `data-skin` | `tanden`, `aero`, `terminal`, `papel` |
+| `data-corners` | `redondos`, `retos` (zera todo `border-radius`), `mao` (contorno torto nos `t-*` e diálogos) |
+| `data-borders` | `finas`, `grossas` (toda borda existente vira 2px) |
+| `data-shadows` | `suaves`, `nenhuma` (zera `--shadow` e `--elev-*`), `solidas` (sombra dura deslocada) |
+| `data-texture` | `nenhuma`, `crt`, `grao`, `pauta`, `quadriculado` (camada por cima de tudo, sem pegar clique) |
+| `data-wall` | `liso`, `aurora`, `imagem` (o véu `--wall-veil` cobre o fundo) |
+| `data-glass`, `data-glow` | `on` / `off` |
+| `data-fit` | presente quando a letra tem olho pequeno (VT323, à mão, máquina): iguala a altura das minúsculas |
+
+Para a tela nova seguir os estilos de graça, use os componentes `t-*` e os
+tokens. Regras de estilo começam em `:root[data-skin='x']` para vencer o CSS
+escopado das telas, e a casca é mirada como `.shell > .rail/.side/.main/.status`.
+Diálogos com `role="dialog"` (menos `.back`, que é o véu de tela cheia) ganham
+a moldura do estilo.
 
 ## 2. Componentes base (`ui.css`)
 

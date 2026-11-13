@@ -294,7 +294,17 @@ Arquivos grandes sobem para o Drive em partes, e o sync só relê um arquivo qua
 
 O botão de engrenagem no pé da barra lateral (ou **Ctrl+,**) abre *Aparência e sons*. Tudo vale na hora e fica salvo por aparelho.
 
-- **Temas:** Núcleo, Seth, Satsui, Hadou, Jade (escuros), Papel e Gelo (claros). Dá para trocar só o fundo ou escolher qualquer cor de destaque; no tema claro, o destaque escurece sozinho até ficar legível. Com suporte do sistema, o tema novo se espalha em círculo a partir do clique.
+- **Estilos:** mudam a cara inteira do app, não só a cor.
+  - *Tanden* — o original: escuro, macio, com brilho.
+  - *Aero* — PC dos anos 2000: aurora azul de papel de parede, barra lateral e barra de tarefas de vidro, a área de trabalho como janela branca, botões envernizados, seleção azul do Explorer e diálogos com moldura de vidro.
+  - *Terminal* — fósforo verde (ou âmbar) com brilho, letra VT323, linhas de tubo CRT com a faixa que desce, nada arredondado, botões `[ ENTRE COLCHETES ]` em vídeo inverso, títulos como prompt `>` e a barra de estado do vim.
+  - *Papel* — caderno: folha solta com sombra de recorte, bloco pautado com margem vermelha, títulos à mão (Caveat), contornos tortos de caneta, campos como linha de preencher, marca-texto, fita adesiva nos diálogos e avisos em post-it.
+- **Peças avulsas:** escolher um estilo ajusta tudo de uma vez; depois cada peça muda sozinha (o painel avisa e oferece *desfazer ajustes*):
+  - *Cores:* paletas prontas (Núcleo, Seth, Satsui, Hadou, Jade, Fósforo, Âmbar, Areia, Gelo, Vista, Caneta), o fundo, qualquer cor de destaque e o fundo **Livre**, com as 7 cores do fundo escolhidas à mão. No tema claro, o destaque escurece sozinho até ficar legível.
+  - *Forma:* cantos (redondos, retos, à mão), bordas (finas, grossas), sombras (suaves, nenhuma, sólidas), brilho e vidro (painéis translúcidos e desfocados).
+  - *Fundo da tela:* textura por cima de tudo (tubo CRT, grão, pauta, quadriculado), papel de parede (liso, aurora ou uma **imagem sua**, reduzida para caber no aparelho) e o véu, que cobre a imagem com a cor de fundo para o texto continuar legível.
+  - *Texto:* letra do texto e letra dos títulos, separadas (Manrope, Sistema, Segoe, Serifada, Mono, Chakra, VT323, Máquina, À mão), e o tamanho da interface.
+- Com suporte do sistema, a troca de tema se espalha em círculo a partir do clique.
 - **O símbolo tanden** só se mexe com motivo: parado e alinhado é "tudo em dia"; gira enquanto há trabalho (mais rápido quando a IA pensa) e desacelera como motor até assentar; dá uma volta quando algo de outro aparelho é fundido; o anel acende quando um dado chega e fica vermelho quando o sync falha. Processos de menos de 150 ms não o movem.
 - **Abertura:** as duas metades se encaixam quando o app liga, o símbolo gira enquanto o cofre abre de verdade e depois voa para a barra lateral.
 - **Movimento:** Completo, Reduzido (transições curtas, giro lento) ou Parado (o estado aparece só em cor).
@@ -365,8 +375,8 @@ Tela **Grafo**: cada nota é um nó e cada `[[link]]` uma ligação, como no Obs
 
 ## Personalizar (Ctrl+,)
 
-- **Aparência**: tema, destaque, letra do texto (Manrope, Sistema, Serifada, Mono, Chakra) e tamanho da interface (Ctrl+= / Ctrl+- / Ctrl+0).
+- **Aparência**: estilo (Tanden, Aero, Terminal, Papel), cores, forma, fundo da tela, letras do texto e dos títulos e tamanho da interface (Ctrl+= / Ctrl+- / Ctrl+0). Veja *Aparência, movimento e sons*.
 - **Atalhos**: todo comando da paleta pode ganhar um ou mais atalhos. Clique no **+**, aperte as teclas e pronto; um atalho repetido sai do comando antigo. Fica salvo por aparelho.
 - **Snippets CSS**: arquivos `.css` em `Snippets/` (vão junto no sync) ou em `.obsidian/snippets/`. Cada aparelho liga os que quiser, e o editor embutido mostra o resultado enquanto você digita. Um snippet pode trocar qualquer variável do tema (`--ember`, `--void`, `--f-body`…).
 - **Modo foco** (Ctrl+Shift+Enter): esconde as barras; Esc volta.
-- Comandos extras na paleta: nota aleatória, próximo tema, claro/escuro, ligar/desligar sons, rolar d20 e 2d6, cara ou coroa, roleta, sorteio, bola 8, e os da Mesa de RPG (rolar fórmula, combate, fichas, tabelas, nova sessão).
+- Comandos extras na paleta: nota aleatória, próximo tema, próximo estilo, *Estilo: Aero/Terminal/Papel/Tanden*, claro/escuro, ligar/desligar sons, rolar d20 e 2d6, cara ou coroa, roleta, sorteio, bola 8, e os da Mesa de RPG (rolar fórmula, combate, fichas, tabelas, nova sessão).

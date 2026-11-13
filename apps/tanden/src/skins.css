@@ -1,0 +1,386 @@
+/* Estilos e peças de forma do Tanden.
+   O theme.svelte.ts marca o <html> com data-skin, data-corners, data-borders,
+   data-shadows, data-texture, data-wall, data-glass e data-glow; aqui cada marca
+   vira desenho. Os seletores começam em :root[data-…] para vencer o CSS escopado
+   das telas (o Svelte só soma uma classe a cada regra).
+   A casca do app é mirada como .shell > .rail/.side/.main/.status porque esses
+   nomes também existem dentro de outras telas. */
+
+:root {
+  /* contornos de caneta: pequeno para botões, grande para painéis */
+  --hand-sm: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  --hand-lg: 14px 5px 18px 4px / 5px 16px 4px 14px;
+  --marker: color-mix(in srgb, var(--ember) 28%, transparent);
+}
+
+/* ═══ letras de olho pequeno (VT323, à mão, máquina) ═══════════════
+   Iguala a altura das minúsculas entre as letras, para a VT323 não sair
+   minúscula nem a letra à mão gigante. O !important passa por cima do
+   atalho `font:` das telas, que zera esta propriedade. */
+:root[data-fit] *, :root[data-fit] *::before, :root[data-fit] *::after { font-size-adjust: .52 !important; }
+
+/* ═══ cantos ═══════════════════════════════════════════════════════ */
+:root[data-corners='retos'] { --r-sm: 0px; --r-md: 0px; --r-lg: 0px; --r-xl: 0px; --r-pill: 0px; }
+:root[data-corners='retos'] *, :root[data-corners='retos'] *::before, :root[data-corners='retos'] *::after { border-radius: 0 !important; }
+:root[data-corners='mao'] :is(.t-btn, .t-chip, .t-seg, .t-seg > button, .t-row, .t-badge),
+:root[data-corners='mao'] .shell > .side :is(.new, .find, .stabs) { border-radius: var(--hand-sm) !important; }
+:root[data-corners='mao'] :is(.t-card, .t-sheet, .t-input, .t-select, [role='dialog']:not(.back), .toast, .update) { border-radius: var(--hand-lg) !important; }
+
+/* ═══ bordas ═══════════════════════════════════════════════════════
+   Só engrossa o que já tem borda: quem não tem fica com estilo "none". */
+:root[data-borders='grossas'] *:not(svg *) { border-width: 2px !important; }
+
+/* ═══ sombras ══════════════════════════════════════════════════════
+   "Nenhuma" apaga só as sombras de profundidade; anéis de seleção ficam. */
+:root[data-shadows='nenhuma'] { --shadow: transparent; --elev-1: none; --elev-2: none; --elev-3: none; }
+:root[data-shadows='solidas'] {
+  --shadow: transparent;
+  --hard: color-mix(in srgb, var(--ink) 82%, transparent);
+  --elev-1: none; --elev-2: 4px 4px 0 var(--hard); --elev-3: 6px 6px 0 var(--hard);
+}
+:root[data-shadows='solidas'] .t-btn:not(.t-btn--quiet) { box-shadow: 2px 2px 0 var(--hard);
+  transition: translate var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background var(--dur) var(--ease); }
+:root[data-shadows='solidas'] .t-btn:not(.t-btn--quiet):hover:not(:disabled) { translate: -1px -1px; box-shadow: 3px 3px 0 var(--hard); }
+:root[data-shadows='solidas'] .t-btn:not(.t-btn--quiet):active:not(:disabled) { translate: 2px 2px; box-shadow: 0 0 0 var(--hard); transform: none; }
+:root[data-shadows='solidas'] .t-card { box-shadow: 4px 4px 0 var(--hard); }
+:root[data-shadows='solidas'] :is(.t-sheet, [role='dialog']:not(.back), .toast) { box-shadow: 6px 6px 0 var(--hard) !important; }
+
+/* ═══ papel de parede ══════════════════════════════════════════════ */
+:root[data-wall='aurora'] body {
+  background:
+    radial-gradient(70% 22% at 55% 42%, rgba(255, 255, 255, .22), transparent 70%),
+    radial-gradient(110% 70% at 8% -5%, color-mix(in srgb, var(--ember) 70%, #ffffff 15%), transparent 60%),
+    radial-gradient(80% 60% at 100% 105%, color-mix(in srgb, var(--ember) 45%, #0a6b5a), transparent 65%),
+    linear-gradient(160deg, color-mix(in srgb, var(--ember) 40%, #062a5c), color-mix(in srgb, var(--ember) 22%, #0a2f63) 55%, #021029);
+  background-attachment: fixed;
+}
+:root[data-wall='imagem'] body { background: var(--void) var(--wall-img) center / cover no-repeat fixed; }
+/* o véu cobre a imagem com a cor de fundo para o texto continuar legível */
+:root:not([data-wall='liso']) body::before {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: var(--void); opacity: var(--wall-veil);
+}
+/* a lista lateral deixa o fundo aparecer */
+:root:not([data-wall='liso']) .shell > .side { background: color-mix(in srgb, var(--surface) 80%, transparent); }
+
+/* ═══ vidro ════════════════════════════════════════════════════════ */
+:root[data-glass='on'] .shell > :is(.side, .rail, .status),
+:root[data-glass='on'] :is(.t-sheet, .t-card, .toast, [role='dialog']:not(.back)) {
+  backdrop-filter: blur(18px) saturate(1.5); -webkit-backdrop-filter: blur(18px) saturate(1.5);
+}
+:root[data-glass='on'] :is(.t-sheet, .toast, [role='dialog']:not(.back)) { background-color: color-mix(in srgb, var(--surface) 74%, transparent) !important; }
+:root[data-glass='on'] .shell > .side { background: color-mix(in srgb, var(--surface) 62%, transparent); }
+:root[data-glass='on'] .shell > :is(.rail, .status) { background: color-mix(in srgb, var(--surface) 30%, transparent); }
+
+/* ═══ texturas (por cima de tudo, sem pegar clique) ═══════════════ */
+:root:not([data-texture='nenhuma'])::after {
+  content: ''; position: fixed; inset: 0; z-index: 2147483000; pointer-events: none;
+}
+:root[data-texture='crt']::after {
+  background:
+    radial-gradient(ellipse at center, transparent 58%, rgba(0, 0, 0, .5) 100%),
+    repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0, 0, 0, .26) 2px 3px);
+  animation: crt-flicker 6s steps(1) infinite;
+}
+:root[data-texture='crt'][data-theme='light']::after {
+  background:
+    radial-gradient(ellipse at center, transparent 62%, rgba(0, 0, 0, .18) 100%),
+    repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0, 0, 0, .07) 2px 3px);
+}
+/* a faixa clara que desce devagar, como num monitor de tubo */
+:root[data-texture='crt'] body::after {
+  content: ''; position: fixed; left: 0; right: 0; top: -30vh; height: 30vh; z-index: 2147482999; pointer-events: none;
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--ink) 5%, transparent), transparent);
+  animation: crt-roll 9s linear infinite;
+}
+:root[data-texture='crt'][data-motion='reduzido'] body::after { display: none; }
+@keyframes crt-roll { to { transform: translateY(160vh); } }
+@keyframes crt-flicker { 0%, 100% { opacity: 1; } 47% { opacity: .92; } 48% { opacity: 1; } 81% { opacity: .96; } }
+
+:root[data-texture='grao']::after {
+  opacity: .28; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .2 0 0 0 0 .16 0 0 0 0 .1 0 0 0 .7 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+:root[data-texture='grao'][data-theme='dark']::after { mix-blend-mode: screen; opacity: .12; filter: invert(1); }
+:root[data-texture='pauta']::after {
+  background: repeating-linear-gradient(to bottom, transparent 0 27px, color-mix(in srgb, #4a7fc4 30%, transparent) 27px 28px);
+}
+:root[data-texture='quadriculado']::after {
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 23px, color-mix(in srgb, var(--muted) 22%, transparent) 23px 24px),
+    repeating-linear-gradient(to right, transparent 0 23px, color-mix(in srgb, var(--muted) 22%, transparent) 23px 24px);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ESTILO AERO — PC dos anos 2000 (vidro, verniz, aurora)
+   ══════════════════════════════════════════════════════════════════ */
+:root[data-skin='aero'] {
+  --aero-gloss: linear-gradient(to bottom, #f2f2f2 0%, #ebebeb 49%, #dddddd 50%, #cfcfcf 100%);
+  --aero-hover: linear-gradient(to bottom, #eaf6fd 0%, #d9f0fc 49%, #bee6fd 50%, #a7d9f5 100%);
+  --aero-press: linear-gradient(to bottom, #e5f4fc 0%, #c4e5f6 30%, #98d1ef 50%, #68b3db 100%);
+  --aero-pick: linear-gradient(to bottom, #ebf4fd, #cfe4fa);
+  --aero-pick-line: #84acdd;
+  --aero-title: #1e3287;
+}
+:root[data-skin='aero'][data-theme='dark'] {
+  --aero-gloss: linear-gradient(to bottom, #4a5568 0%, #3a4352 49%, #2c3340 50%, #252b36 100%);
+  --aero-hover: linear-gradient(to bottom, #4f7bb0 0%, #3d68a0 49%, #2c5690 50%, #3a6aa6 100%);
+  --aero-press: linear-gradient(to bottom, #2c5690, #24497d 50%, #1d3d6b);
+  --aero-pick: linear-gradient(to bottom, rgba(90, 150, 230, .35), rgba(60, 120, 210, .25));
+  --aero-pick-line: #5a8fd6;
+  --aero-title: #9cc3ff;
+}
+:root[data-skin='aero'] body { -webkit-font-smoothing: antialiased; }
+:root[data-skin='aero'] ::selection { background: #3399ff; color: #fff; }
+:root[data-skin='aero'] :focus-visible { outline: 1px dotted var(--ink); outline-offset: 1px; }
+
+/* moldura de vidro: barra lateral e barra de tarefas */
+:root[data-skin='aero'] .shell > .rail {
+  background: linear-gradient(to bottom, rgba(255, 255, 255, .5), rgba(255, 255, 255, .18) 38%, rgba(255, 255, 255, .1));
+  backdrop-filter: blur(16px) saturate(1.6); -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  border-right: 1px solid rgba(255, 255, 255, .55); box-shadow: inset -1px 0 0 rgba(0, 0, 0, .28), inset 1px 1px 0 rgba(255, 255, 255, .4);
+}
+:root[data-skin='aero'] .shell > .rail ul button, :root[data-skin='aero'] .shell > .rail :is(.gear, .menu) {
+  color: #0d1a30; text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600;
+  text-shadow: 0 0 10px #fff, 0 0 5px #fff, 0 0 2px #fff;
+}
+:root[data-skin='aero'][data-theme='dark'] .shell > .rail ul button,
+:root[data-skin='aero'][data-theme='dark'] .shell > .rail :is(.gear, .menu) { color: #eaf3ff; text-shadow: 0 0 8px rgba(0, 20, 60, .9), 0 1px 2px #000; }
+:root[data-skin='aero'] .shell > .rail ul button.on { color: #002a6e; }
+:root[data-skin='aero'][data-theme='dark'] .shell > .rail ul button.on { color: #fff; }
+/* o marcador vira o botão aceso da barra de tarefas */
+:root[data-skin='aero'] .shell > .rail .mark {
+  border-radius: 4px; border: 1px solid rgba(30, 80, 150, .6);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, .8), rgba(255, 255, 255, .4) 49%, rgba(180, 215, 255, .45) 50%, rgba(140, 195, 255, .6));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .7), 0 0 12px color-mix(in srgb, var(--ember) 70%, transparent);
+}
+:root[data-skin='aero'] .shell > .rail .gear.on { background: var(--aero-hover); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .6); border-radius: 4px; }
+
+:root[data-skin='aero'] .shell > .status {
+  background: linear-gradient(to bottom, rgba(24, 44, 78, .62), rgba(8, 18, 38, .82));
+  backdrop-filter: blur(14px) saturate(1.5); -webkit-backdrop-filter: blur(14px) saturate(1.5);
+  border-top: 1px solid rgba(255, 255, 255, .35); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18);
+  color: #dce8f8; font-family: var(--f-body); font-size: 11.5px;
+}
+:root[data-skin='aero'] .shell > .status .drive { color: #bfe0ff; }
+:root[data-skin='aero'] .shell > .status .drive.on { color: #9ef0c0; }
+
+/* painel de navegação, como no Explorer */
+:root[data-skin='aero'] .shell > .side {
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--surface) 92%, transparent), color-mix(in srgb, var(--surface-2) 92%, transparent));
+  border-right: 1px solid rgba(0, 0, 0, .35); box-shadow: inset -1px 0 0 rgba(255, 255, 255, .6);
+}
+:root[data-skin='aero'] .shell > .side .favs button:hover { background: linear-gradient(to bottom, #fafbfd, #ebf3fd); box-shadow: inset 0 0 0 1px #b8d6fb; border-radius: 3px; }
+:root[data-skin='aero'] .shell > .side .favs button.on { background: var(--aero-pick); box-shadow: inset 0 0 0 1px var(--aero-pick-line); border-radius: 3px; }
+:root[data-skin='aero'][data-theme='dark'] .shell > .side .favs button:hover { background: rgba(255, 255, 255, .06); }
+
+/* a área de trabalho vira uma janela branca sobre a aurora */
+:root[data-skin='aero'] .shell > .main {
+  margin: 8px 8px 6px 0; background: var(--surface); border: 1px solid rgba(0, 0, 0, .5); border-radius: 6px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .55), 0 6px 24px rgba(0, 20, 60, .45); overflow: hidden;
+}
+:root[data-skin='aero'] .shell.focus > .main { margin: 8px; }
+
+/* títulos: azul "instrução principal", sem caixa alta */
+:root[data-skin='aero'] :is(.t-eyebrow, .t-sheet > h2),
+:root[data-skin='aero'] .shell > .side :is(h2, .fav-h) {
+  text-transform: none; letter-spacing: 0; color: var(--aero-title); font-weight: 400; font-size: 13px;
+}
+
+/* botões envernizados do Windows 7 */
+:root[data-skin='aero'] .t-btn {
+  background: var(--aero-gloss); border: 1px solid #707070; border-radius: 3px; color: #000; font-weight: 400;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .7); transition: background-color var(--dur), border-color var(--dur), box-shadow var(--dur);
+}
+:root[data-skin='aero'][data-theme='dark'] .t-btn { color: #f0f4fa; border-color: #1a1f28; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); }
+:root[data-skin='aero'] .t-btn:hover:not(:disabled) {
+  background: var(--aero-hover); border-color: #3c7fb1; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .7), 0 0 6px rgba(60, 140, 220, .5);
+}
+:root[data-skin='aero'] .t-btn:active:not(:disabled) { background: var(--aero-press); border-color: #2c628b; box-shadow: inset 0 1px 3px rgba(0, 0, 0, .35); transform: none; }
+:root[data-skin='aero'] .t-btn--primary {
+  background: var(--aero-hover); border-color: #3c7fb1; color: #000;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .7), 0 0 0 1px color-mix(in srgb, var(--ember) 45%, transparent);
+}
+:root[data-skin='aero'][data-theme='dark'] .t-btn--primary { color: #fff; }
+:root[data-skin='aero'] .t-btn--quiet { background: none; border-color: transparent; box-shadow: none; color: var(--ink); }
+:root[data-skin='aero'] .t-btn--quiet:hover:not(:disabled) { background: linear-gradient(to bottom, #fafbfd, #ebf3fd); border-color: #b8d6fb; box-shadow: none; }
+:root[data-skin='aero'] .t-btn--on { background: var(--aero-press); border-color: #2c628b; color: #000; }
+
+:root[data-skin='aero'] :is(.t-input, .t-select), :root[data-skin='aero'] .shell > .side .find {
+  background: var(--surface); border: 1px solid #abadb3; border-top-color: #8a8c91; border-radius: 2px; color: var(--ink);
+}
+:root[data-skin='aero'] :is(.t-input, .t-select):focus, :root[data-skin='aero'] .shell > .side .find:focus { border-color: #3d7bad; box-shadow: 0 0 0 1px rgba(61, 123, 173, .18); }
+:root[data-skin='aero'] .t-select { background: var(--aero-gloss); }
+
+:root[data-skin='aero'] .t-seg, :root[data-skin='aero'] .shell > .side .stabs { background: var(--aero-gloss); border: 1px solid #8e8f8f; border-radius: 3px; padding: 1px; }
+:root[data-skin='aero'] .t-seg > button, :root[data-skin='aero'] .shell > .side .stabs button { color: #1b1b1b; border-radius: 2px; text-transform: none; letter-spacing: 0; }
+:root[data-skin='aero'] .t-seg > button.on, :root[data-skin='aero'] .shell > .side .stabs button.on { background: var(--aero-press); color: #000; box-shadow: inset 0 1px 2px rgba(0, 0, 0, .3); }
+:root[data-skin='aero'] .t-chip { border-radius: 3px; }
+:root[data-skin='aero'] .t-chip.on, :root[data-skin='aero'] .t-row.on { background: var(--aero-pick); border-color: var(--aero-pick-line); }
+:root[data-skin='aero'] .t-row { border-radius: 3px; }
+:root[data-skin='aero'] .t-row:hover { background: linear-gradient(to bottom, #fafbfd, #ebf3fd); border-color: #b8d6fb; }
+:root[data-skin='aero'][data-theme='dark'] .t-row:hover { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .15); }
+:root[data-skin='aero'] .t-card { border-radius: 4px; border-color: rgba(0, 0, 0, .22); background: linear-gradient(to bottom, var(--surface), var(--surface-2)); }
+
+/* janelas: moldura grossa de vidro azulado em volta do conteúdo */
+:root[data-skin='aero'] :is(.t-sheet, [role='dialog']:not(.back)) {
+  border: 7px solid transparent !important; border-radius: 8px !important;
+  background: linear-gradient(var(--surface), var(--surface)) padding-box,
+    linear-gradient(to bottom, rgba(190, 215, 245, .95), rgba(120, 165, 220, .9) 30%, rgba(150, 190, 235, .9)) border-box !important;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .55), inset 0 0 0 1px rgba(0, 0, 0, .3), 0 14px 44px rgba(0, 10, 40, .5) !important;
+}
+:root[data-skin='aero'][data-theme='dark'] :is(.t-sheet, [role='dialog']:not(.back)) {
+  background: linear-gradient(var(--surface), var(--surface)) padding-box,
+    linear-gradient(to bottom, rgba(70, 100, 150, .95), rgba(30, 55, 100, .95)) border-box !important;
+}
+/* balão de aviso */
+:root[data-skin='aero'] .toast { background: linear-gradient(to bottom, #ffffff, #e4e5f0); color: #000; border: 1px solid #767676; border-radius: 4px; }
+:root[data-skin='aero'] .update { background: #ffffe1; border-color: #c9c28a; color: #000; box-shadow: none; border-radius: 3px; }
+
+/* barras de rolagem do Windows 7 */
+:root[data-skin='aero'] ::-webkit-scrollbar { width: 16px; height: 16px; background: #f0f0f0; }
+:root[data-skin='aero'] ::-webkit-scrollbar-thumb {
+  background: linear-gradient(to right, #f4f4f4, #dcdcdc); border: 1px solid #979797; border-radius: 3px; background-clip: border-box;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .8);
+}
+:root[data-skin='aero'] ::-webkit-scrollbar-thumb:hover { background: linear-gradient(to right, #e3f4fc, #b8e2f8); border-color: #3c7fb1; }
+:root[data-skin='aero'][data-theme='dark'] ::-webkit-scrollbar { background: #1c222c; }
+:root[data-skin='aero'][data-theme='dark'] ::-webkit-scrollbar-thumb { background: linear-gradient(to right, #4a5568, #353d4b); border-color: #12161d; box-shadow: none; }
+
+/* ══════════════════════════════════════════════════════════════════
+   ESTILO TERMINAL — fósforo, monoespaçado, nada arredondado
+   ══════════════════════════════════════════════════════════════════ */
+:root[data-skin='terminal'] { --f-mono: var(--f-body); }
+:root[data-skin='terminal'][data-glow='on'] body { text-shadow: 0 0 5px var(--phosphor), 0 0 1px var(--phosphor); }
+:root[data-skin='terminal'] * { caret-color: var(--ink); }
+:root[data-skin='terminal'] ::selection { background: var(--ink); color: var(--void); text-shadow: none; }
+:root[data-skin='terminal'] :focus-visible { outline: 1px dashed var(--ink); outline-offset: 2px; }
+:root[data-skin='terminal'] :is(input, textarea, [contenteditable]) { caret-shape: block; }
+
+:root[data-skin='terminal'] .shell > .rail { border-right: 3px double var(--line); }
+:root[data-skin='terminal'] .shell > .side { border-right: 3px double var(--line); background: var(--void); }
+:root[data-skin='terminal'] .shell > .rail ul button { text-transform: uppercase; letter-spacing: 0; font-size: 13px; }
+/* o marcador vira o cursor em bloco: o item ativo sai em vídeo inverso */
+:root[data-skin='terminal'] .shell > .rail .mark { background: var(--ink); box-shadow: none; border-radius: 0; }
+:root[data-skin='terminal'] .shell > .rail ul button.on { color: var(--void); text-shadow: none; }
+:root[data-skin='terminal'] .shell > .rail .gear.on { background: var(--ink); color: var(--void); transform: none; }
+
+/* barra de estado como a do vim */
+:root[data-skin='terminal'] .shell > .status { background: var(--ink); color: var(--void); border-top: 0; text-shadow: none; font-size: 15px; padding-block: 2px; }
+:root[data-skin='terminal'] .shell > .status :is(.drive, .drive.on, .drive.warn) { color: var(--void); }
+:root[data-skin='terminal'] .shell > .status .dot { background: var(--void); }
+:root[data-skin='terminal'] .shell > .status::before { content: '-- NORMAL --'; font-weight: 600; margin-right: 6px; }
+
+/* títulos como prompt */
+:root[data-skin='terminal'] :is(.t-eyebrow, .t-sheet > h2),
+:root[data-skin='terminal'] .shell > .side :is(h2, .fav-h) { text-transform: uppercase; letter-spacing: .08em; color: var(--silver); font-size: 15px; }
+:root[data-skin='terminal'] :is(.t-eyebrow, .t-sheet > h2)::before,
+:root[data-skin='terminal'] .shell > .side :is(h2, .fav-h)::before { content: '> '; color: var(--ember); }
+:root[data-skin='terminal'] .shell > .side h2::after { content: '_'; margin-left: 2px; color: var(--ember); animation: term-blink 1.06s steps(1) infinite; }
+@keyframes term-blink { 50% { opacity: 0; } }
+
+/* botões entre colchetes, acesos em vídeo inverso */
+:root[data-skin='terminal'] .t-btn { background: transparent; border: 1px solid var(--line); color: var(--ink); text-transform: uppercase; letter-spacing: .05em; font-size: 15px; font-weight: 400; gap: 4px; }
+:root[data-skin='terminal'] .t-btn:not(.t-btn--icon)::before { content: '['; color: var(--muted); }
+:root[data-skin='terminal'] .t-btn:not(.t-btn--icon)::after { content: ']'; color: var(--muted); }
+:root[data-skin='terminal'] .t-btn:hover:not(:disabled), :root[data-skin='terminal'] .t-btn--on { background: var(--ink); color: var(--void); border-color: var(--ink); text-shadow: none; }
+:root[data-skin='terminal'] .t-btn:hover:not(:disabled)::before, :root[data-skin='terminal'] .t-btn:hover:not(:disabled)::after { color: inherit; }
+:root[data-skin='terminal'] .t-btn--primary { background: var(--ember); color: var(--void); border-color: var(--ember); text-shadow: none; }
+:root[data-skin='terminal'] .t-btn--primary::before, :root[data-skin='terminal'] .t-btn--primary::after { color: inherit; }
+:root[data-skin='terminal'] .t-btn:active:not(:disabled) { transform: none; opacity: .8; }
+:root[data-skin='terminal'] .t-btn--quiet { border-color: transparent; }
+
+:root[data-skin='terminal'] :is(.t-input, .t-select), :root[data-skin='terminal'] .shell > .side .find {
+  background: transparent; border: 1px dashed var(--line); color: var(--ink); font-size: 15px;
+}
+:root[data-skin='terminal'] :is(.t-input, .t-select):focus, :root[data-skin='terminal'] .shell > .side .find:focus { border-style: solid; border-color: var(--ink); }
+:root[data-skin='terminal'] .t-input::placeholder { color: var(--muted); }
+
+:root[data-skin='terminal'] :is(.t-seg > button.on, .t-chip.on, .t-row.on), :root[data-skin='terminal'] .shell > .side :is(.stabs button.on, .favs button.on) {
+  background: var(--ink); color: var(--void); border-color: var(--ink); text-shadow: none; box-shadow: none;
+}
+:root[data-skin='terminal'] :is(.t-row.on, .t-chip.on) :is(small, svg) { color: var(--void); }
+:root[data-skin='terminal'] .t-row:hover:not(.on), :root[data-skin='terminal'] .shell > .side .favs button:hover:not(.on) { background: color-mix(in srgb, var(--ink) 14%, transparent); }
+:root[data-skin='terminal'] .t-chip > i { border-radius: 0; }
+
+/* caixas em linha dupla, como janelas de DOS */
+:root[data-skin='terminal'] :is(.t-sheet, [role='dialog']:not(.back)) { border: 3px double var(--ink) !important; background: var(--void) !important; box-shadow: 0 0 0 1px var(--void), 0 0 30px -6px var(--phosphor) !important; }
+:root[data-skin='terminal'] .t-card { border-style: dashed; background: transparent; }
+:root[data-skin='terminal'] .toast { background: var(--void); border: 1px solid var(--ink); }
+:root[data-skin='terminal'] .update { background: var(--void); border: 1px dashed var(--ember); box-shadow: none; }
+:root[data-skin='terminal'] .t-badge { background: var(--crit); color: var(--void); }
+
+:root[data-skin='terminal'] ::-webkit-scrollbar { width: 12px; height: 12px; background: repeating-linear-gradient(45deg, transparent 0 2px, color-mix(in srgb, var(--line) 60%, transparent) 2px 3px); }
+:root[data-skin='terminal'] ::-webkit-scrollbar-thumb { background: var(--line); border: 0; border-radius: 0; }
+:root[data-skin='terminal'] ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+:root[data-skin='terminal'] * { scrollbar-color: var(--line) transparent; }
+
+/* ══════════════════════════════════════════════════════════════════
+   ESTILO PAPEL — caderno: tinta, marca-texto e traço à mão
+   ══════════════════════════════════════════════════════════════════ */
+:root[data-skin='papel'] { --marker: #fde76a; --f-mono: "Courier Prime", "Courier New", ui-monospace, monospace; }
+:root[data-skin='papel'][data-theme='dark'] { --marker: color-mix(in srgb, var(--ember) 35%, transparent); }
+:root[data-skin='papel'] ::selection { background: var(--marker); color: var(--ink); }
+:root[data-skin='papel'] :focus-visible { outline: 2px dashed var(--ember); outline-offset: 3px; }
+
+/* a área de trabalho é uma folha solta em cima da mesa */
+:root[data-skin='papel'] .shell > .main {
+  margin: 12px 14px 8px 2px; background: var(--surface); border: 2px solid var(--line); border-radius: var(--hand-lg);
+  box-shadow: 5px 6px 0 color-mix(in srgb, var(--ink) 80%, transparent); overflow: hidden;
+}
+:root[data-skin='papel'] .shell.focus > .main { margin: 12px; }
+/* a lista lateral é um bloco pautado com margem vermelha */
+:root[data-skin='papel'] .shell > .side {
+  border-right: 2px solid var(--line);
+  background:
+    linear-gradient(to right, transparent 10px, rgba(214, 90, 90, .55) 10px 11px, transparent 11px 13px, rgba(214, 90, 90, .55) 13px 14px, transparent 14px),
+    repeating-linear-gradient(to bottom, transparent 0 27px, color-mix(in srgb, #4a7fc4 22%, transparent) 27px 28px),
+    var(--surface);
+}
+:root[data-skin='papel'] .shell > .rail { border-right: 0; }
+:root[data-skin='papel'] .shell > .rail ul button { font-family: var(--f-display); text-transform: none; letter-spacing: 0; font-size: 15px; font-weight: 600; }
+/* o marcador vira um risco de marca-texto, meio torto */
+:root[data-skin='papel'] .shell > .rail .mark { background: var(--marker); box-shadow: none; border-radius: var(--hand-sm); rotate: -2deg; }
+:root[data-skin='papel'] .shell > .rail ul button.on { color: var(--ink); }
+:root[data-skin='papel'] .shell > .status { border-top: 2px dashed var(--line); }
+
+:root[data-skin='papel'] :is(.t-eyebrow, .t-sheet > h2),
+:root[data-skin='papel'] .shell > .side :is(h2, .fav-h) {
+  font-family: var(--f-display); text-transform: none; letter-spacing: 0; font-size: 16px; color: var(--silver);
+  text-decoration: underline wavy color-mix(in srgb, var(--ember) 65%, transparent); text-decoration-thickness: 1px; text-underline-offset: 4px;
+}
+
+:root[data-skin='papel'] .t-btn { background: var(--surface); border: 2px solid var(--line); color: var(--ink); font-family: var(--f-display); font-size: 15px; }
+:root[data-skin='papel'] .t-btn--primary { background: var(--ember); color: var(--on-ember); border-color: var(--line); }
+:root[data-skin='papel'] .t-btn--quiet { background: none; border-color: transparent; }
+:root[data-skin='papel'] .t-btn--on { background: var(--marker); }
+/* campos viram linha de preencher */
+:root[data-skin='papel'] :is(.t-input, .t-select), :root[data-skin='papel'] .shell > .side .find {
+  background: transparent; border: 0; border-bottom: 2px solid var(--line); border-radius: 0 !important;
+}
+:root[data-skin='papel'] :is(.t-input, .t-select):focus, :root[data-skin='papel'] .shell > .side .find:focus { border-bottom-color: var(--ember); }
+:root[data-skin='papel'] :is(.t-chip.on, .t-row.on, .t-seg > button.on), :root[data-skin='papel'] .shell > .side :is(.stabs button.on, .favs button.on) {
+  background: var(--marker); color: var(--ink); border-color: var(--line);
+}
+:root[data-skin='papel'] .t-card { border: 2px solid var(--line); background: var(--surface); }
+:root[data-skin='papel'] .t-card:nth-child(3n + 1) { rotate: -.35deg; }
+:root[data-skin='papel'] .t-card:nth-child(3n + 2) { rotate: .3deg; }
+:root[data-skin='papel'] :is(.t-sheet, [role='dialog']:not(.back)) { border: 2px solid var(--line) !important; background: var(--surface) !important; }
+/* fita adesiva segurando a folha */
+:root[data-skin='papel'] .t-sheet::after {
+  content: ''; position: absolute; top: 0; left: 50%; width: 96px; height: 20px; translate: -50% -4px; rotate: -3deg; pointer-events: none;
+  background: color-mix(in srgb, #efe0a2 75%, transparent); box-shadow: 0 1px 2px rgba(0, 0, 0, .15);
+}
+:root[data-skin='papel'] .t-sheet { position: relative; }
+/* avisos viram post-it */
+:root[data-skin='papel'] .toast { background: #fff2a0; color: #2b2615; border: 0; border-radius: 2px; rotate: -1deg; box-shadow: 3px 4px 0 rgba(0, 0, 0, .2) !important; }
+:root[data-skin='papel'] .update { background: #fff2a0; color: #2b2615; border: 0; rotate: -.4deg; box-shadow: 3px 4px 0 rgba(0, 0, 0, .18); }
+:root[data-skin='papel'] .t-badge { border-radius: 50% !important; background: var(--crit); }
+
+:root[data-skin='papel'] ::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--ink) 45%, transparent); border-radius: var(--hand-sm); border: 3px solid transparent; background-clip: padding-box; }
+
+/* no celular a barra vai para o topo: a "janela" e a "folha" ganham margem igual dos dois lados */
+@media (max-width: 720px) {
+  :root[data-skin='aero'] .shell > .main { margin: 6px; }
+  :root[data-skin='papel'] .shell > .main { margin: 8px 10px 8px 8px; }
+}

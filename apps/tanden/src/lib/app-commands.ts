@@ -11,7 +11,7 @@ import { mesa } from './rpg/mesa.svelte';
 import { sorte } from './sorte/sorte.svelte';
 import { snippets } from './snippets.svelte';
 import { sound } from './sound.svelte';
-import { theme } from './theme.svelte';
+import { SKINS, theme } from './theme.svelte';
 import { vida } from './vida/vida.svelte';
 import { saude } from './saude/saude.svelte';
 import { flashcards } from './flashcards/flashcards.svelte';
@@ -169,6 +169,8 @@ export function registerAppCommands(a: AppActions): () => void {
     { id: 'app.zoom-normal', label: 'Interface em 100%', keys: 'zoom normal', hotkeys: ['Ctrl+0'], run: () => theme.zoomBy(0) },
     { id: 'tema.claro-escuro', label: 'Alternar tema claro / escuro', keys: 'dark light noite dia', run: () => theme.toggleDark() },
     { id: 'tema.proximo', label: 'Próximo tema', keys: 'cores trocar preset', run: () => theme.nextPreset() },
+    { id: 'tema.estilo-proximo', label: 'Próximo estilo', keys: 'tema skin visual aparencia', run: () => theme.nextSkin() },
+    ...SKINS.map((s) => ({ id: `tema.estilo-${s.id}`, label: `Estilo: ${s.label}`, keys: `tema skin visual ${s.hint}`, run: () => theme.useSkin(s.id, { x: innerWidth / 2, y: innerHeight / 2 }) })),
     { id: 'som.alternar', label: 'Ligar / desligar sons', keys: 'mudo silencio audio', run: () => { sound.set({ on: !sound.on }); files.say(sound.on ? 'Sons ligados.' : 'Sons desligados.'); } },
 
     // brinquedos

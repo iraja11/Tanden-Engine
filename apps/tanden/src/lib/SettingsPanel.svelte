@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { BASES, FONTS, PRESETS, ZOOM, theme, type Motion } from './theme.svelte';
+  import { BASES, BORDERS, COLOR_KEYS, CORNERS, FONTS, FREE, PRESETS, SHADOWS, SKINS, TEXTURES, VEIL, WALLS, ZOOM, theme, type Motion } from './theme.svelte';
   import Hotkeys from './settings/Hotkeys.svelte';
   import SnippetsPane from './settings/SnippetsPane.svelte';
   import { CATEGORIES, PACKS, sound, type Pack } from './sound.svelte';
@@ -21,6 +21,24 @@
     { id: 'parado', label: 'Parado', hint: 'nada se mexe; o estado aparece só em cor' },
   ];
   const presetBase = (id: string) => BASES.find((b) => b.id === id)!;
+
+  // cores livres abertas mesmo antes de mexer numa
+  let free = $state(false);
+  let wallInput = $state<HTMLInputElement>();
+  let wallMsg = $state('');
+  async function pickWall(e: Event) {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    try {
+      const kept = await theme.setWallpaper(file);
+      wallMsg = kept ? '' : 'A imagem é grande demais para guardar neste aparelho: vale só até fechar o app.';
+      sound.play('complete');
+    } catch {
+      wallMsg = 'Não consegui abrir essa imagem.';
+    }
+  }
 
   function pick(fn: () => void) {
     fn();
@@ -53,7 +71,20 @@
   {:else}
 
   <section>
-    <h4>Tema</h4>
+    <h4>Estilo {#if theme.tweaked}<button class="link mini" onclick={() => pick(() => theme.resetSkin())}>desfazer ajustes</button>{/if}</h4>
+    <div class="skins">
+      {#each SKINS as s (s.id)}
+        <button class="skin" class:on={theme.skin === s.id} data-k={s.id} title={s.hint} onclick={(e) => pick(() => theme.useSkin(s.id, at(e)))}>
+          <span class="mini" aria-hidden="true"><i class="bar"></i><i class="win"><b></b><b></b><b></b></i></span>
+          <strong>{s.label}</strong>
+          <small>{s.hint}</small>
+        </button>
+      {/each}
+    </div>
+  </section>
+
+  <section>
+    <h4>Cores</h4>
     <div class="presets">
       {#each PRESETS as p (p.id)}
         {@const b = presetBase(p.base)}
@@ -65,7 +96,7 @@
       {/each}
     </div>
 
-    <div class="row">
+    <div class="row top">
       <span class="lbl">Fundo</span>
       <div class="seg">
         {#each BASES as b (b.id)}
@@ -74,6 +105,9 @@
             <span class="dot"></span>{b.label}
           </button>
         {/each}
+        <button class:on={theme.base === FREE} onclick={() => pick(() => (free = !free))} title="montar as cores à mão">
+          <span class="dot rainbow"></span>Livre
+        </button>
       </div>
     </div>
 
@@ -87,22 +121,116 @@
       </div>
     </div>
 
+    {#if free || theme.base === FREE}
+      <div class="colors">
+        {#each COLOR_KEYS as c (c.id)}
+          <label class="sw">
+            <input type="color" value={theme.current[c.id]} aria-label={c.label}
+              oninput={(e) => theme.setColor(c.id, e.currentTarget.value)} />
+            <span>{c.label}</span>
+          </label>
+        {/each}
+      </div>
+      <p class="hint">Mexer numa cor parte do fundo atual e vira o fundo <b>Livre</b>.</p>
+    {/if}
+  </section>
+
+  <section>
+    <h4>Forma</h4>
+    <div class="row">
+      <span class="lbl">Cantos</span>
+      <div class="seg">
+        {#each CORNERS as c (c.id)}
+          <button class:on={theme.corners === c.id} title={c.hint} onclick={() => pick(() => theme.set({ corners: c.id }))}>{c.label}</button>
+        {/each}
+      </div>
+    </div>
+    <div class="row">
+      <span class="lbl">Bordas</span>
+      <div class="seg">
+        {#each BORDERS as c (c.id)}
+          <button class:on={theme.borders === c.id} onclick={() => pick(() => theme.set({ borders: c.id }))}>{c.label}</button>
+        {/each}
+      </div>
+    </div>
+    <div class="row">
+      <span class="lbl">Sombras</span>
+      <div class="seg">
+        {#each SHADOWS as c (c.id)}
+          <button class:on={theme.shadows === c.id} title={c.hint} onclick={() => pick(() => theme.set({ shadows: c.id }))}>{c.label}</button>
+        {/each}
+      </div>
+    </div>
     <div class="row">
       <span class="lbl">Brilho</span>
       <label class="switch">
         <input type="checkbox" checked={theme.glow} onchange={(e) => pick(() => theme.set({ glow: e.currentTarget.checked }))} />
-        <span>halo de energia nos destaques</span>
+        <span>halo nos destaques {#if theme.skin === 'terminal'}e no fósforo{/if}</span>
+      </label>
+    </div>
+    <div class="row">
+      <span class="lbl">Vidro</span>
+      <label class="switch">
+        <input type="checkbox" checked={theme.glass} onchange={(e) => pick(() => theme.set({ glass: e.currentTarget.checked }))} />
+        <span>painéis translúcidos e desfocados</span>
       </label>
     </div>
   </section>
 
   <section>
-    <h4>Texto</h4>
+    <h4>Fundo da tela</h4>
     <div class="row">
+      <span class="lbl">Textura</span>
+      <div class="seg">
+        {#each TEXTURES as c (c.id)}
+          <button class:on={theme.texture === c.id} onclick={() => pick(() => theme.set({ texture: c.id }))}>{c.label}</button>
+        {/each}
+      </div>
+    </div>
+    <div class="row">
+      <span class="lbl">Parede</span>
+      <div class="seg">
+        {#each WALLS as c (c.id)}
+          <button class:on={theme.wall === c.id}
+            onclick={() => pick(() => (c.id === 'imagem' && !theme.wallImage ? wallInput?.click() : theme.set({ wall: c.id })))}>{c.label}</button>
+        {/each}
+      </div>
+    </div>
+    {#if theme.wall === 'imagem' && theme.wallImage}
+      <div class="row">
+        <span class="lbl"></span>
+        <span class="thumb" style:background-image="url({theme.wallImage})"></span>
+        <button class="small" onclick={() => wallInput?.click()}>Trocar</button>
+        <button class="small" onclick={() => pick(() => theme.clearWallpaper())}>Tirar</button>
+      </div>
+    {/if}
+    {#if theme.wall !== 'liso'}
+      <div class="row">
+        <span class="lbl">Véu</span>
+        <input class="range" type="range" min={VEIL.min} max={VEIL.max} step="0.05" value={theme.veil} aria-label="Quanto o fundo cobre a imagem"
+          oninput={(e) => theme.set({ veil: +e.currentTarget.value })} />
+        <code class="pct">{Math.round(theme.veil * 100)}%</code>
+      </div>
+    {/if}
+    {#if wallMsg}<p class="hint">{wallMsg}</p>{/if}
+    <input bind:this={wallInput} type="file" accept="image/*" hidden onchange={pickWall} />
+  </section>
+
+  <section>
+    <h4>Texto</h4>
+    <div class="row top">
       <span class="lbl">Letra</span>
       <div class="seg">
         {#each FONTS as f (f.id)}
           <button class:on={theme.font === f.id} style:font-family={f.css} onclick={() => pick(() => theme.set({ font: f.id }))}>{f.label}</button>
+        {/each}
+      </div>
+    </div>
+    <div class="row top">
+      <span class="lbl">Títulos</span>
+      <div class="seg">
+        {#each FONTS as f (f.id)}
+          <button class:on={theme.display === f.id} style:font-family={f.css} onclick={() => pick(() => theme.set({ display: f.id }))}>{f.label}</button>
         {/each}
       </div>
     </div>
@@ -172,7 +300,7 @@
 </div>
 
 <style>
-  .panel { position: absolute; left: 88px; bottom: 40px; z-index: 20; width: min(400px, calc(100vw - 24px)); max-height: calc(100% - 60px);
+  .panel { position: absolute; left: 88px; bottom: 40px; z-index: 20; width: min(440px, calc(100vw - 24px)); max-height: calc(100% - 60px);
     overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px 12px;
     box-shadow: 0 24px 60px -20px var(--shadow), 0 0 0 1px var(--ember-glow); display: grid; gap: 16px; transform-origin: bottom left; }
   header { display: flex; justify-content: space-between; align-items: center; }
@@ -203,6 +331,63 @@
   .chip i:nth-child(3) { background: var(--pa); flex: .6; }
 
   .row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .row.top { align-items: flex-start; }
+  .row.top .lbl { padding-top: 6px; }
+
+  /* estilos: cada cartão é uma janelinha desenhada no jeito do estilo, com cores fixas */
+  .skins { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%), 1fr)); gap: 8px; }
+  .skin { display: grid; grid-template-columns: 64px 1fr; grid-template-rows: auto 1fr; column-gap: 10px; row-gap: 2px; align-items: start;
+    padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); color: var(--ink); text-align: left;
+    transition: border-color var(--dur), transform var(--dur) var(--spring); }
+  .skin:hover { border-color: var(--muted); }
+  .skin:active { transform: scale(.97); }
+  .skin.on { border-color: var(--ember); box-shadow: 0 0 0 1px var(--ember), 0 0 18px -6px var(--ember-glow); }
+  .skin strong { font: 600 13px/1.2 var(--f-display); }
+  .skin small { grid-column: 2; font-size: 11px; line-height: 1.3; color: var(--muted); }
+  .mini { grid-row: span 2; position: relative; width: 64px; height: 48px; overflow: hidden; display: flex; }
+  .mini i { display: block; font-style: normal; }
+  .mini .bar { width: 12px; }
+  .mini .win { flex: 1; display: grid; align-content: start; gap: 4px; padding: 6px 5px; }
+  .mini .win b { display: block; height: 4px; }
+  .mini .win b:nth-child(2) { width: 70%; }
+  .mini .win b:nth-child(3) { width: 45%; height: 7px; margin-top: 2px; }
+
+  .skin[data-k='tanden'] .mini { background: #0c0c0e; border-radius: 8px; border: 1px solid #2b2a31; }
+  .skin[data-k='tanden'] .bar { border-right: 1px solid #2b2a31; background: linear-gradient(#ff8a3d 0 0) 3px 8px / 6px 6px no-repeat; }
+  .skin[data-k='tanden'] .win b { background: #2b2a31; border-radius: 3px; }
+  .skin[data-k='tanden'] .win b:nth-child(3) { background: #ff8a3d; box-shadow: 0 0 8px #ff8a3d88; border-radius: 4px; }
+
+  .skin[data-k='aero'] .mini { border-radius: 5px; padding: 3px; gap: 3px; border: 1px solid #1a3d6e;
+    background: radial-gradient(80% 60% at 20% 0%, #7cc4ff, transparent 60%), linear-gradient(160deg, #1d5fae, #0a2f63); }
+  .skin[data-k='aero'] .bar { width: 9px; border-radius: 2px; background: linear-gradient(rgba(255,255,255,.55), rgba(255,255,255,.15)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.5); }
+  .skin[data-k='aero'] .win { background: #fff; border-radius: 3px; border: 1px solid #00000088; padding: 4px; }
+  .skin[data-k='aero'] .win b { background: #c9d6e6; border-radius: 1px; }
+  .skin[data-k='aero'] .win b:nth-child(3) { border: 1px solid #3c7fb1; border-radius: 2px; height: 8px;
+    background: linear-gradient(#eaf6fd 0 49%, #bee6fd 50% 100%); }
+
+  .skin[data-k='terminal'] .mini { background: #020803; border: 3px double #6dff8f; }
+  .skin[data-k='terminal'] .mini::after { content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(transparent 0 2px, #0006 2px 3px); }
+  .skin[data-k='terminal'] .bar { width: 8px; border-right: 1px solid #14522a; }
+  .skin[data-k='terminal'] .win b { background: #6dff8f; box-shadow: 0 0 4px #6dff8f; height: 3px; }
+  .skin[data-k='terminal'] .win b:nth-child(3) { width: 5px; height: 7px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .skin[data-k='papel'] .mini { background: #e9e2d0; padding: 4px 6px 6px 3px; }
+  .skin[data-k='papel'] .bar { width: 8px; background: linear-gradient(#fde76a 0 0) 0 6px / 8px 5px no-repeat; }
+  .skin[data-k='papel'] .win { background: #fffdf7 repeating-linear-gradient(transparent 0 6px, #4a7fc433 6px 7px); border: 1.5px solid #3b352c;
+    border-radius: 9px 3px 11px 2px / 3px 10px 2px 9px; box-shadow: 2px 2px 0 #3b352c; }
+  .skin[data-k='papel'] .win b { background: #23201a; height: 2px; border-radius: 2px; }
+  .skin[data-k='papel'] .win b:nth-child(3) { background: #2546b0; height: 6px; border-radius: 30px 5px 25px 5px / 5px 25px 5px 30px; }
+
+  .colors { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
+  .sw { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; }
+  .sw input { flex: none; width: 28px; height: 22px; border: 1px solid var(--line); border-radius: 6px; background: none; padding: 1px; cursor: pointer; }
+  .dot.rainbow { background: conic-gradient(#ff5e5e, #ffd25e, #5eff8a, #5ec8ff, #b45eff, #ff5e5e); box-shadow: none; }
+  .thumb { width: 64px; height: 36px; border-radius: 6px; border: 1px solid var(--line); background: center / cover no-repeat; flex: none; }
+  .small { border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); border-radius: 8px; padding: 4px 10px; font-size: 12px; }
+  .small:hover { border-color: var(--ember); }
+  .link.mini { margin-left: auto; font: 11px var(--f-body); letter-spacing: 0; text-transform: none; }
   .lbl { flex: none; width: 66px; font: 11px var(--f-mono); color: var(--muted); }
   .seg { display: flex; flex-wrap: wrap; gap: 4px; }
   .seg.wide button { flex: 1; }

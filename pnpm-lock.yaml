@@ -31,13 +31,25 @@ importers:
       '@codemirror/view':
         specifier: 6.43.14
         version: 6.43.14
+      '@fontsource/caveat':
+        specifier: 5.3.0
+        version: 5.3.0
       '@fontsource/chakra-petch':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/courier-prime':
         specifier: 5.3.0
         version: 5.3.0
       '@fontsource/jetbrains-mono':
         specifier: 5.3.0
         version: 5.3.0
       '@fontsource/manrope':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/open-sans':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/vt323':
         specifier: 5.3.0
         version: 5.3.0
       '@lezer/highlight':
@@ -190,14 +202,26 @@ packages:
   '@codemirror/view@6.43.14':
     resolution: {integrity: sha512-hC45YnmJNR1rz42OF57BLoQNFMV12/13drnvibDsR2quNDmldcb4WvYVV81hFQg56i9lcqQMEDqilhX2QDcGQQ==}
 
+  '@fontsource/caveat@5.3.0':
+    resolution: {integrity: sha512-eHTfzQxFSW9ABERRLNruHoNJmKed2J7pqTUc5lp4a4POMgXGKpxmWj3d9Hz10kmAg6iuTTLe6UagbA4bnsmfQw==}
+
   '@fontsource/chakra-petch@5.3.0':
     resolution: {integrity: sha512-QZvbM/q2R6n1pg2x+TJPftZmBNS+ADU37L4Z4L/6UJIz+JZ/SRaEf8usPFRiP7Ht28sIideMu/Bm1SnGlSrwNw==}
+
+  '@fontsource/courier-prime@5.3.0':
+    resolution: {integrity: sha512-KIi1k4VG1Wv+/CGpb1AUpLkUuOAQA6zmvthqxOZGN0AV8BEgQgbK7qAtquv14zsBJAY1bb5BHIEbWVFLgENh0w==}
 
   '@fontsource/jetbrains-mono@5.3.0':
     resolution: {integrity: sha512-fqDfB5I9f1p1TV486aUgB9t8zP84P0O1FtQR5Ol9vjwPy+S+EIGlVYm1cvj2W5shcZMTg2nZFdVMoH5wFu8a1A==}
 
   '@fontsource/manrope@5.3.0':
     resolution: {integrity: sha512-obJ1Dv3+uCA6HlHgW8u4BGYxJR9In2HW7gjJhlflEvkrj1X1iSEwu0fToL+JYGC/FEKFfIz1sBuPduvcL2gIAA==}
+
+  '@fontsource/open-sans@5.3.0':
+    resolution: {integrity: sha512-V1bdMlGNyZrJwzrdusshMOw2YR0aqYDL7kOo9dkxUEKl8dFv66A9HLckOOXl572sG/7ohhDQrCrTFGSn9LZcSw==}
+
+  '@fontsource/vt323@5.3.0':
+    resolution: {integrity: sha512-3w33Rg/0+R1587HQfz4t7Q7e0GGeCqr3wmzIwqdGInUnrGEwMA5eX39GP4Z9wpTQnwfhVOhYuxuRwRUeIcicbw==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -1231,11 +1255,19 @@ snapshots:
       style-mod: 4.1.4
       w3c-keyname: 2.2.8
 
+  '@fontsource/caveat@5.3.0': {}
+
   '@fontsource/chakra-petch@5.3.0': {}
+
+  '@fontsource/courier-prime@5.3.0': {}
 
   '@fontsource/jetbrains-mono@5.3.0': {}
 
   '@fontsource/manrope@5.3.0': {}
+
+  '@fontsource/open-sans@5.3.0': {}
+
+  '@fontsource/vt323@5.3.0': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:

@@ -305,7 +305,7 @@ interface; a lógica de domínio vem de `@tanden/core`.
 | `agenda/` | Agenda: mês, semana, dia e lista; eventos do cofre, Google Agenda e tarefas com prazo. |
 | `plugins/` | Registro, aprovação e a janela (`<iframe sandbox>`) dos plugins. |
 | `settings/` | Atalhos e snippets. |
-| `theme.svelte.ts`, `sound.svelte.ts`, `feel.svelte.ts`, `motion.ts`, `Orb.svelte`, `Splash.svelte`, `Veins.svelte` | Aparência, sons, gestos do símbolo e as veias/pulsos. |
+| `theme.svelte.ts`, `sound.svelte.ts`, `feel.svelte.ts`, `motion.ts`, `Orb.svelte`, `Splash.svelte`, `Veins.svelte` | Aparência (cores, estilos e peças de forma, desenhados em `src/skins.css`), sons, gestos do símbolo e as veias/pulsos. |
 | `commands.svelte.ts`, `app-commands.ts`, `embeds.ts`, `platform.ts` | Paleta/comandos, embeds, detecção de plataforma. |
 | `storage-tauri.ts`, `storage-browser.ts` | `Storage` do app (Tauri e web). |
 | `google.svelte.ts`, `ollama.svelte.ts`, `updater.svelte.ts`, `reminders.svelte.ts`, `snippets.svelte.ts` | Integrações e serviços do app. |
