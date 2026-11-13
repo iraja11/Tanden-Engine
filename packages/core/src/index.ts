@@ -61,3 +61,4 @@ export * from './saude';
 export * from './agenda';
 export * from './flashcards';
 export * from './sorte';
+export * from './financas';

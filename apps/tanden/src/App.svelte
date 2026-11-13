@@ -425,7 +425,7 @@
           <SheetsView />
         {:else if view === 'calculo' && engine.ready}
           <!-- o cálculo (mathjs, KaTeX) carrega só quando a aba abre -->
-          {#await import('./lib/calc/CalcView.svelte') then m}
+          {#await import('./lib/calc/CalcTab.svelte') then m}
             <m.default onOpenNote={(p: string) => { engine.open(p); go('notas'); }} />
           {/await}
         {:else if view === 'saude' && engine.ready}
