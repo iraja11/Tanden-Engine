@@ -1,3 +1,5 @@
+import { buildAtlas, type Atlas } from './clima';
+
 /*
  * Terreno gerado pela semente: relevo, umidade, lagos e rios.
  *
@@ -26,6 +28,8 @@ export interface Terrain {
   seed: number;
   w: number;
   h: number;
+  /** quanto mundo cabe no mapa (1 = um continente) */
+  escala?: number;
   /** altura 0..1 por célula (linha a linha), já com o leito dos rios escavado */
   height: Float32Array;
   /** umidade 0..1 por célula */
@@ -42,6 +46,14 @@ export interface Terrain {
   shore: Float32Array;
   /** rios em trechos de largura parecida, da nascente para a foz */
   rivers: RiverSeg[];
+  /** placas tectônicas (só no relevo por placas) */
+  plates?: Plate[];
+  /** placa de cada célula */
+  plate?: Uint8Array;
+  /** choque (+) ou separação (−) de placas perto da borda, por célula */
+  stress?: Float32Array;
+  /** clima, biomas, rochas, recursos e acidentes (ver `clima.ts`) */
+  atlas?: Atlas;
 }
 
 export interface TerrainOpts {
@@ -49,6 +61,16 @@ export interface TerrainOpts {
   sea?: number;
   /** densidade de rios: 0 (nenhum) a 3 (muitos); padrão 1 */
   rivers?: number;
+  /** relevo por placas tectônicas (mapas novos); sem isso, o relevo antigo da mesma semente */
+  plates?: boolean;
+  /** faixa de clima do mapa (latitude de cima e de baixo); padrão temperado */
+  clima?: string;
+  /** graus a somar na temperatura do mundo inteiro (−15 a +15) */
+  calor?: number;
+  /** quanto mundo cabe no mapa: 1 = um continente, 2 = vários, 3 = quase um planeta */
+  escala?: number;
+  /** natureza do plano: material, infernal, feérico, umbral, astral, subterrâneo */
+  natureza?: string;
 }
 
 const clamp = (n: number, a: number, b: number) => Math.min(b, Math.max(a, n));
@@ -113,17 +135,119 @@ function ridged(x: number, y: number, seed: number, oct: number): number {
   return s / norm;
 }
 
+/** Altitude (m) pela ordem da célula entre as de terra (0 = mais baixa, 1 = o pico). */
+const HYPSO: Array<[number, number]> = [[0, 2], [0.3, 140], [0.5, 380], [0.7, 780], [0.85, 1350], [0.93, 2050], [0.98, 3000], [1, 4900]];
+function hypso(r: number): number {
+  for (let i = 1; i < HYPSO.length; i++) {
+    const [x1, y1] = HYPSO[i]!;
+    const [x0, y0] = HYPSO[i - 1]!;
+    if (r <= x1) return y0 + ((y1 - y0) * (r - x0)) / (x1 - x0);
+  }
+  return 5300;
+}
+
 const smooth = (a: number, b: number, t: number) => {
   const x = clamp((t - a) / (b - a), 0, 1);
   return x * x * (3 - 2 * x);
 };
 
+// ------------------------------------------------------------------ placas tectônicas
+
+/** Uma placa: centro (x em largura·aspect, y de 0 a 1), deriva e se é oceânica. */
+export interface Plate {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  oceanic: boolean;
+}
+
+/** Placas de uma semente: 9 a 14, as do meio do mapa continentais. */
+export function makePlates(seed: number, aspect: number, escala = 1): Plate[] {
+  // mapas maiores mostram mais mundo: mais placas, na mesma densidade
+  const k = Math.max(0.5, escala);
+  const n = Math.min(110, Math.round((9 + Math.floor(hash(1, 2, seed) * 6)) * k * k));
+  const out: Plate[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = hash(i, 17, seed) * Math.PI * 2;
+    const sp = 0.35 + hash(i, 23, seed) * 0.65;
+    out.push({ x: (0.04 + hash(i, 11, seed) * 0.92) * aspect * k, y: (0.04 + hash(i, 13, seed) * 0.92) * k, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, oceanic: hash(i, 19, seed) < 0.5 });
+  }
+  // pelo menos duas continentais perto do centro (senão o mapa vira só mar)
+  const byCenter = [...out].sort((p, q) => Math.hypot(p.x - (aspect * k) / 2, p.y - k / 2) - Math.hypot(q.x - (aspect * k) / 2, q.y - k / 2));
+  for (let i = 0; i < Math.max(2, Math.round(2 * k)); i++) byCenter[i]!.oceanic = false;
+  return out;
+}
+
+/** O que a tectônica diz de um ponto: placa, distância à borda e choque (+) ou separação (−). */
+interface PlateSample {
+  plate: number;
+  /** distância até a borda mais perto, em fração da altura do mapa */
+  edge: number;
+  /** convergência com a vizinha (−2..2) */
+  conv: number;
+  other: number;
+}
+
+function plateAt(plates: Plate[], x: number, y: number): PlateSample {
+  let i = 0;
+  let j = 1;
+  let di = Infinity;
+  let dj = Infinity;
+  for (let k = 0; k < plates.length; k++) {
+    const p = plates[k]!;
+    const d = (p.x - x) ** 2 + (p.y - y) ** 2;
+    if (d < di) {
+      j = i;
+      dj = di;
+      i = k;
+      di = d;
+    } else if (d < dj) {
+      j = k;
+      dj = d;
+    }
+  }
+  const a = plates[i]!;
+  const b = plates[j]!;
+  const len = Math.max(1e-6, Math.hypot(b.x - a.x, b.y - a.y));
+  // distância até a mediatriz entre as duas (a borda de Voronoi)
+  const edge = (dj - di) / (2 * len);
+  const conv = ((a.vx - b.vx) * (b.x - a.x) + (a.vy - b.vy) * (b.y - a.y)) / len;
+  return { plate: i, edge, conv, other: j };
+}
+
+/**
+ * Relevo da tectônica num ponto já torcido: a base de cada placa (continente
+ * alto, oceano baixo) e o que acontece na borda: cordilheira onde as placas
+ * se chocam, arco de ilhas entre oceânicas, fossa do lado que afunda, vale
+ * de rifte onde se separam.
+ */
+function plateRelief(s: PlateSample, plates: Plate[], ridge: number): number {
+  const A = plates[s.plate]!;
+  const B = plates[s.other]!;
+  const base = (p: Plate) => (p.oceanic ? -0.2 : 0.16);
+  const near = 1 - smooth(0, 0.2, s.edge);
+  let h = base(A) + (base(B) - base(A)) * 0.5 * near;
+  const f = Math.exp(-((s.edge / 0.045) ** 2));
+  const g = Math.exp(-((s.edge / 0.11) ** 2));
+  const c = s.conv;
+  if (c > 0) {
+    if (!A.oceanic && !B.oceanic) h += c * 0.3 * (0.45 * f + 0.55 * g) * (0.55 + ridge * 0.9);
+    else if (!A.oceanic && B.oceanic) h += c * 0.26 * g * (0.5 + ridge * 0.9);
+    else if (A.oceanic && !B.oceanic) h -= c * 0.12 * f;
+    else h += c * 0.2 * f * (0.3 + ridge * 1.2);
+  } else if (!A.oceanic && !B.oceanic) h += c * 0.1 * f;
+  else h -= c * 0.04 * f;
+  return h;
+}
+
 /**
  * Altura "crua" num ponto (u, v de 0 a 1), antes de achar o nível do mar.
  * `aspect` = largura / altura do mapa (o ruído não estica).
  */
-function rawHeight(u: number, v: number, seed: number, aspect: number): number {
-  const S = 2.6;
+function rawHeight(u: number, v: number, seed: number, aspect: number, plates?: Plate[], out?: PlateSample[], k = 1): number {
+  if (plates) return rawHeightPlates(u, v, seed, aspect, plates, out, k);
+  const S = 2.6 * k;
   const X = u * aspect * S;
   const Y = v * S;
   // o espaço é torcido por outro ruído: costas e vales menos "redondos"
@@ -139,7 +263,29 @@ function rawHeight(u: number, v: number, seed: number, aspect: number): number {
   const nx = (u - 0.5) * 2 + qx * 0.5;
   const ny = (v - 0.5) * 2 + qy * 0.5;
   const d = Math.min(1.4, Math.pow(Math.pow(Math.abs(nx), 3) + Math.pow(Math.abs(ny), 3), 1 / 3));
-  return base * 0.9 + ridge * zone * 0.42 - d * d * 0.62;
+  return base * 0.9 + ridge * zone * 0.42 - (d * d * 0.62) / Math.pow(k, 1.3);
+}
+
+/** Relevo com placas: os continentes seguem as placas e as cordilheiras, as bordas. */
+function rawHeightPlates(u: number, v: number, seed: number, aspect: number, plates: Plate[], out?: PlateSample[], k = 1): number {
+  const S = 2.6 * k;
+  const X = u * aspect * S;
+  const Y = v * S;
+  const qx = fbm(X + 5.2, Y + 1.3, seed + 11, 4) - 0.5;
+  const qy = fbm(X + 1.7, Y + 9.2, seed + 23, 4) - 0.5;
+  const wx = X + qx * 1.5;
+  const wy = Y + qy * 1.5;
+  const base = fbm(wx, wy, seed, 6);
+  const ridge = ridged(wx * 1.4 + 3, wy * 1.4 + 8, seed + 53, 5);
+  // bordas das placas tortas (e não retas de Voronoi)
+  const px = u * aspect * k + (fbm(X * 0.9 + 9, Y * 0.9 + 4, seed + 61, 5) - 0.5) * 0.34;
+  const py = v * k + (fbm(X * 0.9 + 2, Y * 0.9 + 12, seed + 67, 5) - 0.5) * 0.34;
+  const s = plateAt(plates, px, py);
+  if (out) out[0] = s;
+  const nx = (u - 0.5) * 2 + qx * 0.5;
+  const ny = (v - 0.5) * 2 + qy * 0.5;
+  const d = Math.min(1.4, Math.pow(Math.pow(Math.abs(nx), 3) + Math.pow(Math.abs(ny), 3), 1 / 3));
+  return base * 0.62 + plateRelief(s, plates, ridge) + ridge * 0.06 - (d * d * 0.42) / Math.pow(k, 1.3);
 }
 
 /** Detalhe fino (−1..1) para desenhar perto: costas recortadas e textura do chão. */
@@ -199,7 +345,7 @@ const DD = [1, 1, 1, 1, Math.SQRT2, Math.SQRT2, Math.SQRT2, Math.SQRT2];
 const cache = new Map<string, Terrain>();
 
 export function generateTerrain(seed: number, w = 720, h = 480, opts: TerrainOpts = {}): Terrain {
-  const key = `${seed}:${w}:${h}:${opts.sea ?? ''}:${opts.rivers ?? ''}`;
+  const key = `${seed}:${w}:${h}:${opts.sea ?? ''}:${opts.rivers ?? ''}:${opts.plates ? 1 : 0}:${opts.clima ?? ''}:${opts.calor ?? ''}:${opts.escala ?? 1}:${opts.natureza ?? ''}`;
   const hit = cache.get(key);
   if (hit) return hit;
   const t = build(seed, w, h, opts);
@@ -213,12 +359,22 @@ function build(seed: number, w: number, h: number, opts: TerrainOpts): Terrain {
   const aspect = w / h;
   const raw = new Float32Array(N);
   const moisture = new Float32Array(N);
+  const k = clamp(opts.escala ?? 1, 0.5, 4);
+  const plates = opts.plates ? makePlates(seed, aspect, k) : undefined;
+  const plate = plates ? new Uint8Array(N) : undefined;
+  const stress = plates ? new Float32Array(N) : undefined;
+  const ps: PlateSample[] = [];
   for (let y = 0; y < h; y++) {
     const v = (y + 0.5) / h;
     for (let x = 0; x < w; x++) {
       const u = (x + 0.5) / w;
-      raw[y * w + x] = rawHeight(u, v, seed, aspect);
-      moisture[y * w + x] = fbm(u * aspect * 3.2 + 31, v * 3.2 + 17, seed + 71, 5);
+      const i = y * w + x;
+      raw[i] = rawHeight(u, v, seed, aspect, plates, ps, k);
+      if (plate && stress && ps[0]) {
+        plate[i] = ps[0].plate;
+        stress[i] = ps[0].conv * Math.exp(-((ps[0].edge / 0.07) ** 2));
+      }
+      moisture[i] = fbm(u * aspect * 3.2 * k + 31, v * 3.2 * k + 17, seed + 71, 5);
     }
   }
 
@@ -234,6 +390,18 @@ function build(seed: number, w: number, h: number, opts: TerrainOpts): Terrain {
     height[i] = r < qs
       ? SEA * Math.pow((r - lo) / Math.max(1e-6, qs - lo), 1.4)
       : SEA + (1 - SEA) * Math.pow((r - qs) / Math.max(1e-6, hi - qs), 1.5);
+  }
+  // com placas, a terra segue uma curva de altitudes como a da Terra: muita
+  // planície, alguma serra e poucos picos (pela ordem das alturas, não pelo valor)
+  if (plates) {
+    const land: number[] = [];
+    for (let i = 0; i < N; i++) if (raw[i]! >= qs) land.push(i);
+    land.sort((a, b) => raw[a]! - raw[b]!);
+    const L = land.length;
+    for (let k = 0; k < L; k++) {
+      const m = hypso(k / Math.max(1, L - 1));
+      height[land[k]!] = SEA + (1 - SEA) * Math.pow(m / 5600, 0.8);
+    }
   }
 
   // mar "de verdade" é o que toca a borda; bacias abaixo do nível do mar no interior viram lago
@@ -368,7 +536,10 @@ function build(seed: number, w: number, h: number, opts: TerrainOpts): Terrain {
   blur(shore, w, h, 3);
   for (let i = 0; i < N; i++) shore[i] = Math.min(1, shore[i]! * 2.5);
 
-  return { seed, w, h, height, moisture, sea: SEA, lake, flow, riverMin, shore, rivers: traceRivers(w, h, height, lake, flow, down, riverMin) };
+  const t: Terrain = { seed, w, h, height, moisture, sea: SEA, lake, flow, riverMin, shore, rivers: traceRivers(w, h, height, lake, flow, down, riverMin), plates, plate, stress };
+  t.escala = k;
+  t.atlas = buildAtlas(t, { clima: opts.clima, calor: opts.calor, natureza: opts.natureza }, down);
+  return t;
 }
 
 /** Média numa caixa (2r+1)², em duas passadas. */

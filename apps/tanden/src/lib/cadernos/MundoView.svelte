@@ -1,7 +1,7 @@
 <script lang="ts">
   import {
     DEEP_QUESTIONS, ENTITY_TYPES, FIELD_HINTS, allTypes, worldYear, RESERVED, asList, backlinks, bodyOf, entityFolder, entityTemplate, getSection, linkTarget,
-    normalizeType, parseProps, readMarkers, renameProp, reviewWorld, rollTraits, setProp, setProps, setSection, timeline, typeInfo, withBody,
+    NON_CARD_TYPES, normalizeType, parseProps, readMarkers, renameProp, reviewWorld, rollTraits, setProp, setProps, setSection, timeline, typeInfo, withBody,
     worldTemplate, type Entity, type PropValue,
   } from '@tanden/core';
   import { hasSheet, imageOf, readItemCard } from '@tanden/core';
@@ -23,22 +23,35 @@
   import Ring from './mundo/Ring.svelte';
   import SimView from './mundo/SimView.svelte';
   import RegrasView from './mundo/RegrasView.svelte';
+  import ElementosView from './mundo/ElementosView.svelte';
+  import EscritaView from './mundo/EscritaView.svelte';
+  import EspecieCard from './mundo/EspecieCard.svelte';
+  import GuiaView from './mundo/GuiaView.svelte';
+  import IdiomaCard from './mundo/IdiomaCard.svelte';
+  import SeresView from './mundo/SeresView.svelte';
+  import SistemasView from './mundo/SistemasView.svelte';
   import { printCards } from './mundo/print';
   import Icon, { type IconName } from '../ui/Icon.svelte';
 
   let { onOpenNote }: { onOpenNote: (path: string) => void } = $props();
 
-  type Tab = 'fichas' | 'mapas' | 'tempo' | 'grafo' | 'conflitos' | 'sim' | 'ideias' | 'regras';
-  // Abas em três grupos: explorar o que existe, ver o mundo se mexer, e ferramentas.
+  type Tab = 'fichas' | 'mapas' | 'tempo' | 'grafo' | 'elementos' | 'seres' | 'sistemas' | 'escrita' | 'conflitos' | 'sim' | 'guia' | 'ideias' | 'regras';
+  // Abas em grupos: explorar o que existe, construir (elementos, seres, sistemas,
+  // escrita), ver o mundo se mexer, e a oficina (guia, ideias, regras).
   // No celular, as quatro de "explorar" ficam na barra de baixo e o resto em "Mais".
-  type TabDef = { id: Tab; label: string; icon: IconName; group: 'explorar' | 'dinamica' | 'oficina'; desc: string };
+  type TabDef = { id: Tab; label: string; icon: IconName; group: 'explorar' | 'construir' | 'dinamica' | 'oficina'; desc: string };
   const TABS: TabDef[] = [
     { id: 'fichas', label: 'Fichas', icon: 'fichas', group: 'explorar', desc: 'Personagens, lugares, facções e o resto' },
     { id: 'mapas', label: 'Mapas', icon: 'mapas', group: 'explorar', desc: 'Continentes, marcadores e territórios' },
     { id: 'tempo', label: 'Tempo', icon: 'tempo', group: 'explorar', desc: 'Tudo o que tem data, em ordem' },
     { id: 'grafo', label: 'Ligações', icon: 'grafo', group: 'explorar', desc: 'Quem se liga a quem' },
+    { id: 'elementos', label: 'Elementos', icon: 'elementos', group: 'construir', desc: 'A tabela de tudo o que um mundo pode ter, e o que falta no seu' },
+    { id: 'seres', label: 'Seres', icon: 'seres', group: 'construir', desc: 'Espécies e criaturas: galeria, escala, comparação e teia alimentar' },
+    { id: 'sistemas', label: 'Sistemas', icon: 'sistemas', group: 'construir', desc: 'Idiomas, fé, magia, livros, feitos, profecias e planos' },
+    { id: 'escrita', label: 'Escrita', icon: 'escrita', group: 'construir', desc: 'Histórias, cenas por estrutura, elenco e manuscrito' },
     { id: 'conflitos', label: 'Conflitos', icon: 'conflitos', group: 'dinamica', desc: 'Guerras, rivalidades e alianças' },
     { id: 'sim', label: 'Simulação', icon: 'sim', group: 'dinamica', desc: 'Vidas mês a mês ou facções ano a ano' },
+    { id: 'guia', label: 'Guia', icon: 'guia', group: 'oficina', desc: 'O que fazer agora, checklists e dicas' },
     { id: 'ideias', label: 'Ideias', icon: 'ideias', group: 'oficina', desc: 'Revisão, contradições e geradores' },
     { id: 'regras', label: 'Regras', icon: 'regras', group: 'oficina', desc: 'Mecânicas e campos calculados' },
   ];
@@ -49,6 +62,9 @@
   /** folha aberta no celular: trocar de mundo ou as abas de "Mais" */
   let sheet = $state<null | 'mundos' | 'mais'>(null);
   function goTab(t: Tab) { tab = t; sheet = null; entityPath = null; }
+  /** foco ao pular para elementos ou escrita a partir de outra aba */
+  let elFocus = $state<string | null>(null);
+  let writeFocus = $state<string | null>(null);
   let worldName = $state<string | null>(null);
   let tab = $state<Tab>('fichas');
   let entityPath = $state<string | null>(null);
@@ -83,12 +99,12 @@
   const shown = $derived.by(() => {
     const q = norm(query.trim());
     const list = (world?.entities ?? []).filter((e) =>
-      e.type !== 'mapa' && (!typeFilter || e.type === typeFilter) && (!q || norm(`${e.name} ${e.aliases.join(' ')} ${e.summary}`).includes(q)));
+      !NON_CARD_TYPES.has(e.type) && (!typeFilter || e.type === typeFilter) && (!q || norm(`${e.name} ${e.aliases.join(' ')} ${e.summary}`).includes(q)));
     return order === 'vazias' ? [...list].sort((a, b) => a.score - b.score) : list;
   });
 
   const spans = $derived(world ? timeline(world).filter((s) => !typeFilter || s.type === typeFilter) : []);
-  const graphNodes = $derived((world?.entities ?? []).filter((e) => e.type !== 'mapa' && (!typeFilter || e.type === typeFilter)).map((e) => ({ id: e.path, label: e.name, type: e.type })));
+  const graphNodes = $derived((world?.entities ?? []).filter((e) => e.type !== 'mapa' && e.type !== 'cena' && (!typeFilter || e.type === typeFilter)).map((e) => ({ id: e.path, label: e.name, type: e.type })));
   const graphEdges = $derived.by(() => {
     const ids = new Set(graphNodes.map((n) => n.id));
     return (world?.relations ?? []).filter((r) => r.to && ids.has(r.from) && ids.has(r.to)).map((r) => ({ from: r.from, to: r.to!, label: r.label }));
@@ -96,7 +112,7 @@
 
   // saúde do mundo: média de completude e o que a revisão encontrou
   const health = $derived.by(() => {
-    const list = (world?.entities ?? []).filter((e) => e.type !== 'mapa');
+    const list = (world?.entities ?? []).filter((e) => !NON_CARD_TYPES.has(e.type));
     return list.length ? list.reduce((s, e) => s + e.score, 0) / list.length : 0;
   });
   const problems = $derived(world ? reviewWorld(world).filter((i) => i.level !== 'ideia').length : 0);
@@ -147,6 +163,23 @@
       return;
     }
     tab = 'fichas';
+    openEntity(path);
+  }
+
+  /** Cria a ficha na hora (sem o diálogo), já com propriedades e seções para responder. */
+  function createWith(name: string, type: string, extra: { props?: Record<string, string>; sections?: string[] } = {}) {
+    if (!world || !name.trim()) return;
+    const t = normalizeType(type) || 'personagem';
+    const path = cadernos.create(entityFolder(world, t), name.trim(), (n) => {
+      let txt = entityTemplate(n, world.name, t);
+      const props = Object.fromEntries(Object.entries(extra.props ?? {}).filter(([, v]) => v !== ''));
+      if (Object.keys(props).length) txt = setProps(txt, props);
+      for (const sec of extra.sections ?? []) if (getSection(txt, sec) === null) txt = setSection(txt, sec, '');
+      return txt;
+    });
+    fresh = path;
+    setTimeout(() => { if (fresh === path) fresh = null; }, 2400);
+    sound.play('complete');
     openEntity(path);
   }
 
@@ -469,6 +502,19 @@
         {/key}
       {/if}
 
+      {#if entity.type === 'especie' || entity.type === 'criatura'}
+        {#key entity.path}<EspecieCard {entity} {fm} {world} />{/key}
+      {/if}
+      {#if entity.type === 'idioma'}
+        {#key entity.path}<IdiomaCard {entity} {fm} {text} oncreate={(n, t) => createWith(n, t)} />{/key}
+      {/if}
+      {#if entity.type === 'historia' || entity.type === 'cena'}
+        <div class="game t-card writehint">
+          <p class="dim small">{entity.type === 'historia' ? 'As cenas desta história, a estrutura, o elenco e o manuscrito ficam na aba Escrita.' : 'Esta cena também aparece no quadro da história, com objetivo, conflito e desfecho.'}</p>
+          <button class="t-btn t-btn--sm t-btn--primary" onclick={() => { writeFocus = entity!.path; entityPath = null; tab = 'escrita'; }}><Icon name="escrita" size={15} />Abrir na Escrita</button>
+        </div>
+      {/if}
+
       {#if entity.type === 'item'}
         <div class="game t-card">
           <h3 class="t-eyebrow">Carta</h3>
@@ -513,10 +559,10 @@
         {/each}
       </div>
 
-      {#if FILTERED.includes(tab) && typeCounts.some((t) => t.type !== 'mapa')}
+      {#if FILTERED.includes(tab) && typeCounts.some((t) => !NON_CARD_TYPES.has(t.type))}
         <div class="filters t-scroll-x" role="group" aria-label="Filtrar por tipo">
-          <button class="t-chip" class:on={!typeFilter} onclick={() => (typeFilter = null)}>Todas<small>{world.entities.filter((e) => e.type !== 'mapa').length}</small></button>
-          {#each typeCounts.filter((t) => t.type !== 'mapa') as t (t.type)}
+          <button class="t-chip" class:on={!typeFilter} onclick={() => (typeFilter = null)}>Todas<small>{world.entities.filter((e) => !NON_CARD_TYPES.has(e.type)).length}</small></button>
+          {#each typeCounts.filter((t) => !NON_CARD_TYPES.has(t.type)) as t (t.type)}
             <button class="t-chip" class:on={typeFilter === t.type} style:--c={typeColor(t.type)} onclick={() => (typeFilter = typeFilter === t.type ? null : t.type)}>
               <i></i>{typeInfo(t.type).plural}<small>{t.n}</small>
             </button>
@@ -606,6 +652,17 @@
         {:else}
           <p class="dim pad">Sem fichas para ligar ainda.</p>
         {/if}
+      {:else if tab === 'elementos'}
+        <ElementosView {world} {byPath} onopen={openEntity} oncreate={createWith} focus={elFocus} />
+      {:else if tab === 'seres'}
+        <SeresView {world} onopen={openEntity} oncreate={createWith} />
+      {:else if tab === 'sistemas'}
+        <SistemasView {world} {byPath} onopen={openEntity} oncreate={createWith} />
+      {:else if tab === 'escrita'}
+        <EscritaView {world} {byPath} onopen={openEntity} {onOpenNote} focus={writeFocus} />
+      {:else if tab === 'guia'}
+        <GuiaView {world} onopen={openEntity} ongo={(t) => { if (TABS.some((x) => x.id === t)) goTab(t as Tab); }}
+          oncreate={(n, t) => startEntity(n, t)} onelement={(id) => { elFocus = id; goTab('elementos'); }} />
       {:else if tab === 'conflitos'}
         <ConflitosView {world} {byPath} onopen={openEntity} onnew={() => startEntity('', 'conflito')} />
       {:else if tab === 'sim'}
@@ -832,6 +889,8 @@
   .lbl { font: 11px var(--f-mono); color: var(--ember-soft); }
 
   .game { margin-bottom: var(--sp-3); }
+  .writehint { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
+  .writehint p { margin: 0; }
   .text { flex: 1 0 auto; min-height: 300px; display: flex; flex-direction: column; border-top: 1px solid var(--line); margin: 0 calc(var(--gutter) * -1); }
   .text :global(.editor) { flex: 1; }
 

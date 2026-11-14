@@ -53,7 +53,16 @@ function guessType(label: string): string {
   if (/espécie|especie|raça|raca/.test(l)) return 'especie';
   if (/cultura|povo/.test(l)) return 'cultura';
   if (/item|arma|artefato/.test(l)) return 'item';
-  if (/magia|conceito|idioma|religi/.test(l)) return 'conceito';
+  if (/idioma|l[íi]ngua|dialeto|fala/.test(l)) return 'idioma';
+  if (/deus|deusa|divindade|pante[ãa]o|patron|culto/.test(l)) return 'divindade';
+  if (/^hist[óo]ria$|^conto$/.test(l)) return 'historia';
+  if (/religi|^f[ée]$|igreja|credo/.test(l)) return 'religiao';
+  if (/livro|texto|tomo|grim[óo]rio|escritura|cr[ôo]nica/.test(l)) return 'livro';
+  if (/magia|feiti/.test(l)) return 'magia';
+  if (/profecia|press[áa]gio/.test(l)) return 'profecia';
+  if (/^plano|dimens|^reino dos/.test(l)) return 'plano';
+  if (/feito|fa[çc]anha|proeza/.test(l)) return 'feito';
+  if (/conceito/.test(l)) return 'conceito';
   return 'personagem';
 }
 

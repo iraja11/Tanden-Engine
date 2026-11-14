@@ -23,6 +23,11 @@
     exportar: '<path d="M12 15V3.5M7.5 8 12 3.5 16.5 8"/><path d="M4.5 14v4.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V14"/>',
     fechar: '<path d="M6 6l12 12M18 6 6 18"/>',
     alerta: '<path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17v.3"/>',
+    elementos: '<rect x="3.5" y="3.5" width="7" height="7" rx="1.3"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.3"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.3"/><path d="M17 14.5v5M14.5 17h5"/>',
+    escrita: '<path d="M15 5.5l3.5 3.5M4.5 19.5l1.2-4.7L16.3 4.2a2.1 2.1 0 0 1 3 3L8.7 17.8z"/><path d="M13 20h7"/>',
+    seres: '<circle cx="6.5" cy="9.5" r="1.8"/><circle cx="12" cy="6" r="1.8"/><circle cx="17.5" cy="9.5" r="1.8"/><path d="M12 12c-3 0-5.5 3-5.5 5.2 0 1.6 1.3 2.3 2.7 2.3 1.1 0 1.8-.6 2.8-.6s1.7.6 2.8.6c1.4 0 2.7-.7 2.7-2.3C17.5 15 15 12 12 12z"/>',
+    sistemas: '<path d="M4.5 5.5h15v10h-8l-4 3.5v-3.5h-3z"/><path d="M8 9h8M8 12h5"/>',
+    guia: '<circle cx="12" cy="12" r="8.5"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>',
   } as const;
   export type IconName = keyof typeof PATHS;
 </script>

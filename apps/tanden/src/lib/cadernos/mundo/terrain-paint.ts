@@ -1,4 +1,4 @@
-import { generateTerrain, pintarTerreno, type Biome, type Regiao, type Terrain, type TerrainOpts } from '@tanden/core';
+import { generateTerrain, pintarTerreno, type Biome, type PinturaOpts, type Regiao, type Terrain, type TerrainOpts } from '@tanden/core';
 import type { PedidoTerreno } from './terrain.worker';
 
 // Terreno do mapa: gerado e pintado num worker (sem travar a tela), com
@@ -46,7 +46,7 @@ function pedir(q: SemId<PedidoTerreno>): Promise<Resposta> {
   const id = ++seq;
   const local = (): Resposta => {
     const t = generateTerrain(q.seed, q.w, q.h, q.opts);
-    return q.kind === 'terreno' ? { id, terrain: t } : { id, px: pintarTerreno(t, q.outW, q.outH, q.region) };
+    return q.kind === 'terreno' ? { id, terrain: t } : { id, px: pintarTerreno(t, q.outW, q.outH, q.region, q.paint) };
   };
   if (!w) return new Promise((ok) => setTimeout(() => ok(local()), 0));
   return new Promise((ok) => {
@@ -57,12 +57,15 @@ function pedir(q: SemId<PedidoTerreno>): Promise<Resposta> {
 
 export const GRADE = { w: 720, h: 480 };
 
-export async function carregarTerreno(seed: number, opts: TerrainOpts): Promise<Terrain> {
-  return (await pedir({ kind: 'terreno', seed, ...GRADE, opts })).terrain!;
+/** Grade do terreno: a padrão, ou a do tamanho do mapa (mapas maiores têm mais células). */
+export type Grade = { w: number; h: number };
+
+export async function carregarTerreno(seed: number, opts: TerrainOpts, grade: Grade = GRADE): Promise<Terrain> {
+  return (await pedir({ kind: 'terreno', seed, w: grade.w, h: grade.h, opts })).terrain!;
 }
 
-export async function pintar(seed: number, opts: TerrainOpts, outW: number, outH: number, region?: Regiao): Promise<Uint8ClampedArray> {
-  return (await pedir({ kind: 'pintar', seed, ...GRADE, opts, outW, outH, region })).px!;
+export async function pintar(seed: number, opts: TerrainOpts, outW: number, outH: number, region?: Regiao, paint?: PinturaOpts, grade: Grade = GRADE): Promise<Uint8ClampedArray> {
+  return (await pedir({ kind: 'pintar', seed, w: grade.w, h: grade.h, opts, outW, outH, region, paint })).px!;
 }
 
 export function porNoCanvas(canvas: HTMLCanvasElement, px: Uint8ClampedArray, w: number, h: number): void {

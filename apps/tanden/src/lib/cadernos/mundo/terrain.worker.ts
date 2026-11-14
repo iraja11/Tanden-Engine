@@ -1,11 +1,11 @@
-import { generateTerrain, pintarTerreno, type Regiao, type TerrainOpts } from '@tanden/core';
+import { generateTerrain, pintarTerreno, type PinturaOpts, type Regiao, type TerrainOpts } from '@tanden/core';
 
 // Gera e pinta o terreno fora da linha principal (centenas de ms por mapa).
 // Mesma semente, mesmo resultado: o worker só faz a conta, quem decide é a tela.
 
 export type PedidoTerreno =
   | { id: number; kind: 'terreno'; seed: number; w: number; h: number; opts: TerrainOpts }
-  | { id: number; kind: 'pintar'; seed: number; w: number; h: number; opts: TerrainOpts; outW: number; outH: number; region?: Regiao };
+  | { id: number; kind: 'pintar'; seed: number; w: number; h: number; opts: TerrainOpts; outW: number; outH: number; region?: Regiao; paint?: PinturaOpts };
 
 const scope = globalThis as unknown as {
   onmessage: ((e: MessageEvent<PedidoTerreno>) => void) | null;
@@ -20,7 +20,7 @@ scope.onmessage = (e) => {
       scope.postMessage({ id: q.id, terrain: t });
       return;
     }
-    const px = pintarTerreno(t, q.outW, q.outH, q.region);
+    const px = pintarTerreno(t, q.outW, q.outH, q.region, q.paint);
     scope.postMessage({ id: q.id, px }, [px.buffer]);
   } catch (err) {
     scope.postMessage({ id: q.id, error: String(err) });

@@ -68,7 +68,31 @@ export const ENTITY_TYPES: EntityType[] = [
   { id: 'criatura', label: 'Criatura', plural: 'Criaturas', fields: ['nd', 'habitat', 'pv', 'pv máx', 'ca'], sections: ['Descrição', 'Ecologia', 'Táticas'],
     extras: ['expectativa de vida', 'maioridade', 'gestação', 'frequência', 'traços', 'dieta', 'fraqueza', 'comportamento'] },
   { id: 'mapa', label: 'Mapa', plural: 'Mapas', fields: ['escala', 'unidade'], sections: ['Marcadores'] },
+  { id: 'divindade', label: 'Divindade', plural: 'Divindades', fields: ['domínios', 'panteão', 'símbolo', 'culto'], sections: ['Aparência', 'Mitos', 'Culto', 'Relação com os mortais'],
+    extras: ['alinhamento', 'pai', 'mãe', 'cônjuge', 'aliados', 'inimigos', 'sacerdotes', 'festas', 'tabus', 'oferendas', 'morada', 'status'] },
+  { id: 'idioma', label: 'Idioma', plural: 'Idiomas', fields: ['falado por', 'som', 'semente'], sections: ['Sons', 'Gramática', 'Dicionário', 'Frases'],
+    extras: ['consoantes', 'vogais', 'sílabas', 'escrita', 'origem', 'parente de', 'status'] },
+  { id: 'historia', label: 'História', plural: 'Histórias', fields: ['gênero', 'estrutura', 'ponto de vista', 'meta', 'status'], sections: ['Premissa', 'Sinopse', 'Temas', 'Notas'],
+    extras: ['tom', 'público', 'protagonista', 'antagonista', 'prazo'] },
+  { id: 'cena', label: 'Cena', plural: 'Cenas', fields: ['história', 'ordem', 'batida', 'pov', 'local', 'status'], sections: [],
+    extras: ['data', 'capítulo', 'objetivo', 'conflito', 'desfecho', 'personagens', 'humor'] },
+  { id: 'religiao', label: 'Religião', plural: 'Religiões', fields: ['divindades', 'fundador', 'fundação', 'sede', 'textos sagrados', 'seguidores'],
+    sections: ['Crenças', 'Ritos e práticas', 'Clero e organização', 'Além da vida', 'Heresias e cismas'],
+    extras: ['símbolo', 'mandamentos', 'festas', 'tabus', 'lugares sagrados', 'idioma sagrado', 'cisma de', 'aliados', 'inimigos', 'líder', 'ordens', 'status'] },
+  { id: 'feito', label: 'Feito', plural: 'Feitos', fields: ['autor', 'data', 'local', 'categoria', 'testemunhas'], sections: ['O feito', 'Como é contado', 'Consequências'],
+    extras: ['reconhecimento', 'recompensa', 'título ganho', 'item', 'vítimas', 'versão oficial', 'verdade', 'canção', 'rival'] },
+  { id: 'livro', label: 'Livro', plural: 'Livros', fields: ['autor', 'data', 'idioma', 'gênero', 'local'], sections: ['Resumo', 'Trechos', 'História do livro'],
+    extras: ['cópias', 'raridade', 'proibido', 'dono', 'escrita', 'páginas', 'religião', 'magia', 'citado por', 'tradução de', 'estado'] },
+  { id: 'magia', label: 'Magia', plural: 'Magias', fields: ['fonte', 'custo', 'quem usa', 'dureza', 'escolas'], sections: ['Como funciona', 'Custo e limites', 'Quem pode usar', 'O que a sociedade acha', 'Quando dá errado'],
+    extras: ['aprendizado', 'componentes', 'efeitos', 'proibida', 'origem', 'praticantes', 'contra', 'livros', 'sinais'] },
+  { id: 'profecia', label: 'Profecia', plural: 'Profecias', fields: ['profeta', 'data', 'sobre', 'status'], sections: ['Texto da profecia', 'Interpretações', 'O que realmente significa'],
+    extras: ['cumprida em', 'quem acredita', 'quem teme', 'quem tenta impedir', 'idioma', 'livro', 'condição', 'escolhido'] },
+  { id: 'plano', label: 'Plano', plural: 'Planos', fields: ['natureza', 'acesso', 'governante', 'habitantes'], sections: ['Descrição', 'Leis do plano', 'Como chegar', 'Perigos'],
+    extras: ['tempo', 'clima', 'ligado a', 'portais', 'gravidade', 'magia', 'morte', 'parte de', 'divindades', 'mortos'] },
 ];
+
+/** Tipos que não aparecem como cartões nem no grafo: têm aba própria (mapas, escrita). */
+export const NON_CARD_TYPES = new Set(['mapa', 'historia', 'cena']);
 
 /** Dica do que escrever em cada campo (aparece no campo vazio). */
 export const FIELD_HINTS: Record<string, string> = {
@@ -81,6 +105,11 @@ export const FIELD_HINTS: Record<string, string> = {
   fim: 'ano', local: '[[Lugar]]', envolvidos: '[[Personagem]], [[Facção]]', lados: '[[Facção A]], [[Facção B]]',
   'início': 'ano', intensidade: '1 a 5', causa: 'o estopim', dono: '[[Personagem]]', habitat: '[[Lugar]] ou bioma',
   'expectativa de vida': 'anos, ex.: 80', 'região': '[[Lugar]]', idioma: '[[Idioma]]', 'religião': '[[Fé]]', valores: 'honra, liberdade…',
+  divindades: '[[Deus]], [[Deusa]]', fundador: '[[Personagem]]', 'textos sagrados': '[[Livro]]', seguidores: '[[Cultura]], [[Facção]] ou quantos',
+  autor: '[[Personagem]]', testemunhas: '[[Personagem]], [[Outro]]', categoria: 'heroico, vergonhoso, proeza, descoberta…', 'gênero': 'crônica, tratado, poesia, grimório, escritura, romance, lei…',
+  fonte: 'de onde vem: deuses, sangue, estrelas, palavras…', custo: 'o que se paga para usar', 'quem usa': '[[Facção]], quem nasce com o dom…', dureza: 'rígida (regras claras) ou macia (mistério)',
+  escolas: 'fogo, ilusão, cura…', profeta: '[[Personagem]]', sobre: '[[Personagem]], [[Lugar]] ou acontecimento', natureza: 'material, infernal, feérico, umbral, astral, subterrâneo',
+  acesso: 'portais, sonhos, morte, rituais…', habitantes: '[[Espécie]], [[Criatura]]',
   escala: 'largura do mapa, ex.: 1200', unidade: 'km, léguas, dias…', vencedor: '[[Lado]]', controle: '[[Facção]] que manda aqui',
 };
 
@@ -109,6 +138,15 @@ export const DEEP_QUESTIONS: Record<string, string[]> = {
   cultura: ['Como se cumprimentam e como se insultam?', 'O que se come numa festa, e numa despedida?', 'Como tratam os mortos?', 'Que história toda criança aprende?'],
   conceito: ['Quem pode usar isso, e quem é proibido?', 'Qual o custo de usar?', 'O que acontece quando dá errado?', 'Quem descobriu, e quem esconde a verdade?'],
   criatura: ['Por que ataca: fome, território, ordem de alguém?', 'Como os moradores se protegem dela?', 'Que parte dela vale ouro?', 'Ela pensa?'],
+  divindade: ['O que essa divindade quer dos mortais?', 'Que preço cobra por um milagre?', 'Quem a traiu, entre os deuses?', 'Como ela aparece para quem a vê?', 'O que acontece se for esquecida?'],
+  idioma: ['Como soa para quem não entende?', 'Que palavra dessa língua não tem tradução?', 'Quem fala, e quem é proibido de falar?', 'Que palavra ela tomou emprestada de outra língua?'],
+  religiao: ['O que esta fé promete, e o que exige em troca?', 'Quem ganha poder com ela?', 'Qual o pecado mais grave, e qual o perdão mais barato?', 'Como os fiéis comuns a praticam, longe dos templos?', 'Qual heresia ameaça rachar a igreja?', 'O que ela diz sobre os outros povos?'],
+  feito: ['Quem conta esse feito, e o que muda na versão de cada um?', 'O que realmente aconteceu, e quem sabe?', 'O que o feito custou a quem o fez?', 'Que canção, estátua ou feriado lembra disso?', 'Quem saiu perdendo?'],
+  livro: ['Quem escreveu, e o que queria provar?', 'Quantas cópias existem, e onde?', 'O que o livro esconde nas entrelinhas?', 'Quem quer que ele seja queimado?', 'Que trecho todo mundo conhece de cor?'],
+  magia: ['De onde vem esse poder, e alguém sabe de verdade?', 'O que a magia não consegue fazer de jeito nenhum?', 'Quanto custa, e quem paga quando dá errado?', 'Como se aprende, e quem é proibido de aprender?', 'Como a magia mudou a guerra, a medicina e o comércio?', 'Como se percebe que alguém está usando magia?'],
+  profecia: ['Quem ouviu a profecia primeiro, e de quem?', 'Quantas interpretações existem, e quem defende cada uma?', 'Quem tenta fazê-la acontecer, e quem tenta impedir?', 'E se ela for falsa, ou mal traduzida?', 'O que acontece quando se cumpre?'],
+  plano: ['Como se chega lá, e como se volta?', 'Que leis da natureza são diferentes lá?', 'Quem manda nesse plano?', 'O que acontece com quem morre lá?', 'O que de lá vaza para o mundo comum?'],
+  historia: ['O que o protagonista quer, e o que ele precisa?', 'Qual é a pior coisa que pode acontecer com ele?', 'Como a história termina, numa frase?', 'Por que essa história só acontece neste mundo?'],
 };
 
 const TYPE_ALIASES: Record<string, string> = {
@@ -119,7 +157,17 @@ const TYPE_ALIASES: Record<string, string> = {
   itens: 'item', objeto: 'item', artefato: 'item',
   espécie: 'especie', especies: 'especie', espécies: 'especie', raça: 'especie', raca: 'especie', species: 'especie',
   criaturas: 'criatura', monstro: 'criatura', monstros: 'criatura', monster: 'criatura', creature: 'criatura', besta: 'criatura', inimigo: 'criatura',
-  conceitos: 'conceito', magia: 'conceito', sistema: 'conceito', religião: 'conceito', idioma: 'conceito',
+  conceitos: 'conceito', sistema: 'conceito',
+  religião: 'religiao', religiões: 'religiao', religioes: 'religiao', religion: 'religiao', fé: 'religiao', fe: 'religiao', igreja: 'religiao', crença: 'religiao', credo: 'religiao', seita: 'religiao', culto: 'religiao',
+  feitos: 'feito', façanha: 'feito', facanha: 'feito', proeza: 'feito', conquista: 'feito', deed: 'feito', achievement: 'feito',
+  livros: 'livro', book: 'livro', tomo: 'livro', grimório: 'livro', grimorio: 'livro', escritura: 'livro', crônica: 'livro', cronica: 'livro', texto: 'livro', pergaminho: 'livro',
+  magias: 'magia', 'sistema de magia': 'magia', feitiço: 'magia', feitico: 'magia', magic: 'magia', arcano: 'magia', poder: 'magia',
+  profecias: 'profecia', prophecy: 'profecia', presságio: 'profecia', pressagio: 'profecia', oráculo: 'profecia', visão: 'profecia',
+  planos: 'plano', plane: 'plano', dimensão: 'plano', dimensao: 'plano', realm: 'plano', 'outro mundo': 'plano',
+  idiomas: 'idioma', língua: 'idioma', lingua: 'idioma', línguas: 'idioma', language: 'idioma', dialeto: 'idioma',
+  deus: 'divindade', deusa: 'divindade', deuses: 'divindade', divindades: 'divindade', god: 'divindade', deity: 'divindade', entidade: 'divindade',
+  história: 'historia', histórias: 'historia', historias: 'historia', story: 'historia', conto: 'historia', romance: 'historia', novela: 'historia',
+  cenas: 'cena', scene: 'cena', capítulo: 'cena', capitulo: 'cena',
   conflitos: 'conflito', guerra: 'conflito', guerras: 'conflito', rivalidade: 'conflito', conflict: 'conflito', war: 'conflito',
   culturas: 'cultura', povo: 'cultura', povos: 'cultura', culture: 'cultura', tradição: 'cultura',
   mapas: 'mapa', map: 'mapa',
@@ -452,6 +500,9 @@ mundo: ${world}
 escala: 1000
 unidade: km
 semente: ${seed}
+tectônica: sim
+clima: temperado
+estilo: pergaminho
 ---
 # ${name}
 
