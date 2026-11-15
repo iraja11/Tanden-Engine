@@ -1,6 +1,7 @@
 <script lang="ts">
   import { cadernos } from '../cadernos/cadernos.svelte';
   import CombatTracker from './CombatTracker.svelte';
+  import CompendioPanel from './regras/CompendioPanel.svelte';
   import DiceTray from './DiceTray.svelte';
   import { mesa, type MesaTab } from './mesa.svelte';
   import PartyPanel from './PartyPanel.svelte';
@@ -17,7 +18,7 @@
   let world = $state('');
   let system = $state('5e');
 
-  const TABS: Array<[MesaTab, string]> = [['dados', 'Dados'], ['combate', 'Combate'], ['fichas', 'Personagens'], ['tabelas', 'Tabelas'], ['sessoes', 'Sessões']];
+  const TABS: Array<[MesaTab, string]> = [['dados', 'Dados'], ['combate', 'Combate'], ['fichas', 'Personagens'], ['regras', 'Regras'], ['tabelas', 'Tabelas'], ['sessoes', 'Sessões']];
 
   function pick(t: MesaTab) {
     mesa.tab = t;
@@ -71,6 +72,8 @@
         <CombatTracker {onOpenNote} />
       {:else if mesa.tab === 'tabelas'}
         <TablesPanel {onOpenNote} />
+      {:else if mesa.tab === 'regras'}
+        <CompendioPanel />
       {:else if !camp}
         <div class="empty-state">
           <p>Uma campanha junta as sessões, os encontros e as fichas de jogo. Ligada a um mundo dos <b>Mundos</b>, os personagens e criaturas de lá entram na mesa.</p>

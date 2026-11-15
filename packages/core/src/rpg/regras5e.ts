@@ -32,6 +32,7 @@ export interface ClassInfo {
 }
 
 export const CLASSES: ClassInfo[] = [
+  { key: 'artifice', name: 'Artífice', aliases: ['artifice', 'artificer', 'artifície'], die: 8, saves: ['con', 'int'], armor: ['leve', 'média', 'escudos'], weapons: ['simples'], caster: 'meio', ability: 'int' },
   { key: 'barbaro', name: 'Bárbaro', aliases: ['barbaro', 'bárbara', 'barbara', 'barbarian'], die: 12, saves: ['for', 'con'], armor: ['leve', 'média', 'escudos'], weapons: ['simples', 'marciais'], caster: 'nenhum', ability: null, unarmored: 'con' },
   { key: 'bardo', name: 'Bardo', aliases: ['barda', 'bard'], die: 8, saves: ['des', 'car'], armor: ['leve'], weapons: ['simples'], caster: 'completo', ability: 'car' },
   { key: 'bruxo', name: 'Bruxo', aliases: ['bruxa', 'warlock'], die: 8, saves: ['sab', 'car'], armor: ['leve'], weapons: ['simples'], caster: 'pacto', ability: 'car' },
@@ -128,21 +129,27 @@ const FULL_SLOTS: number[][] = [
   [4, 3, 3, 3, 2, 1, 1, 1, 1], [4, 3, 3, 3, 3, 1, 1, 1, 1], [4, 3, 3, 3, 3, 2, 1, 1, 1], [4, 3, 3, 3, 3, 2, 2, 1, 1],
 ];
 
-/** Nível de conjurador (regra de multiclasse de 2024: meio arredonda para cima, terço para baixo). */
-export function casterLevel(cs: ClassLevel[]): number {
+/**
+ * Nível de conjurador. 2024: meio conjurador arredonda para cima já no 1º
+ * nível. 2014: o Paladino e o Patrulheiro só conjuram a partir do 2º nível
+ * e, na multiclasse, arredondam para baixo (o Artífice sempre para cima).
+ * Terço de conjurador: a partir do 3º nível; na multiclasse, para baixo.
+ */
+export function casterLevel(cs: ClassLevel[], edition: '2014' | '2024' = '2024'): number {
   const casters = cs.filter((c) => c.caster === 'completo' || c.caster === 'meio' || c.caster === 'terço');
+  const old = (c: ClassLevel) => edition === '2014' && c.info?.key !== 'artifice';
   if (casters.length === 1) {
     const c = casters[0]!;
     if (c.caster === 'completo') return c.level;
-    if (c.caster === 'meio') return Math.ceil(c.level / 2);
+    if (c.caster === 'meio') return old(c) && c.level < 2 ? 0 : Math.ceil(c.level / 2);
     return c.level >= 3 ? Math.ceil(c.level / 3) : 0;
   }
-  return casters.reduce((s, c) => s + (c.caster === 'completo' ? c.level : c.caster === 'meio' ? Math.ceil(c.level / 2) : Math.floor(c.level / 3)), 0);
+  return casters.reduce((s, c) => s + (c.caster === 'completo' ? c.level : c.caster === 'meio' ? (old(c) ? Math.floor(c.level / 2) : Math.ceil(c.level / 2)) : Math.floor(c.level / 3)), 0);
 }
 
 /** Espaços por círculo (índice 0 = 1º círculo), sem a magia de pacto. */
-export function spellSlots(cs: ClassLevel[]): number[] {
-  const l = Math.min(20, casterLevel(cs));
+export function spellSlots(cs: ClassLevel[], edition: '2014' | '2024' = '2024'): number[] {
+  const l = Math.min(20, casterLevel(cs, edition));
   return l > 0 ? [...FULL_SLOTS[l - 1]!] : [];
 }
 

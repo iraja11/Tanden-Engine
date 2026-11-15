@@ -52,3 +52,23 @@
 
 .rpg .empty-state { max-width: 560px; margin: 6vh auto 0; text-align: center; }
 .rpg .empty-state p { color: var(--muted); margin-bottom: 18px; }
+
+/* texto das regras vindo do compêndio (5etools) */
+.rpg .rules { font-size: 13.5px; line-height: 1.55; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
+.rpg .rules p { margin: 0 0 .6em; }
+.rpg .rules p:last-child { margin-bottom: 0; }
+.rpg .rules ul { margin: 0 0 .6em; padding-left: 1.2em; }
+.rpg .rules li { margin: .15em 0; }
+.rpg .rules .ename { font-style: italic; }
+.rpg .rules h6 { margin: .8em 0 .3em; font: 600 12px var(--f-display); letter-spacing: .06em; color: var(--ink); }
+.rpg .rules .esec { margin: .4em 0 .6em; }
+.rpg .rules aside.inset { margin: .6em 0; padding: 8px 12px; border-left: 3px solid var(--ember); background: color-mix(in srgb, var(--ember) 6%, var(--void)); border-radius: 0 10px 10px 0; }
+.rpg .rules blockquote { margin: .5em 0; padding-left: 12px; border-left: 2px solid var(--line); color: var(--silver); font-style: italic; }
+.rpg .rules .formula { text-align: center; font-size: 12.5px; color: var(--silver); }
+.rpg .rules .ctable { overflow-x: auto; margin: .4em 0 .8em; }
+.rpg .rules table { border-collapse: collapse; font-size: 12.5px; min-width: 60%; }
+.rpg .rules caption { text-align: left; font: 600 11px var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding-bottom: 4px; }
+.rpg .rules th, .rpg .rules td { padding: 3px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.rpg .rules th { font-weight: 600; color: var(--silver); }
+.rpg a.cref { color: var(--ember-soft); text-decoration: underline dotted color-mix(in srgb, var(--ember) 60%, transparent); cursor: pointer; }
+.rpg a.cref:hover { color: var(--ember); }

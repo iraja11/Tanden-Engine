@@ -26,6 +26,7 @@
   import { cadernos } from './lib/cadernos/cadernos.svelte';
   import MesaView from './lib/rpg/MesaView.svelte';
   import { mesa } from './lib/rpg/mesa.svelte';
+  import RulesDrawer from './lib/rpg/regras/RulesDrawer.svelte';
   import SorteView from './lib/sorte/SorteView.svelte';
   import { sorte } from './lib/sorte/sorte.svelte';
   import SlidesView from './lib/slides/SlidesView.svelte';
@@ -540,6 +541,8 @@
 {#if ask.current}
   {#key ask.current}<AskDialog req={ask.current} />{/key}
 {/if}
+
+<RulesDrawer />
 
 {#if splash}
   <Splash ready={engine.ready} {error} target={orbWrap} ondone={() => (splash = false)} />

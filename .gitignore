@@ -3,3 +3,6 @@ dist/
 target/
 *.log
 .DS_Store
+
+# compêndio de D&D 5e gerado do 5etools (texto dos livros: só local)
+apps/tanden/public/compendio/

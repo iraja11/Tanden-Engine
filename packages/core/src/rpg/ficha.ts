@@ -50,6 +50,10 @@ const CHAR = {
   slots: ['espaços de magia', 'espacos de magia', 'spell slots'],
   slotsSpent: ['espaços gastos', 'espacos gastos', 'spell slots spent'],
   pactSpent: ['pacto gastos', 'espaços de pacto gastos', 'espacos de pacto gastos'],
+  edition: ['edição', 'edicao', 'regras', 'edition'],
+  featList: ['talentos', 'feats'],
+  classOptions: ['opções de classe', 'opcoes de classe', 'invocações', 'invocacoes', 'class options'],
+  lineage: ['linhagem', 'lineage', 'herança', 'heranca'],
 } as const;
 
 export type CharField = keyof typeof CHAR | 'subclass' | 'armor' | 'shield' | 'klass' | 'level' | 'speed' | 'hp' | 'hpMax' | 'hpTemp' | 'saves';
@@ -113,6 +117,14 @@ export interface Casting {
 
 export interface Character {
   sheet: Sheet;
+  /** regras da ficha: 2024 (padrão) ou 2014 */
+  edition: '2014' | '2024';
+  /** talentos (nomes, como no compêndio) */
+  featList: string[];
+  /** invocações, manobras, metamagias, estilos de luta (2014)... */
+  classOptions: string[];
+  /** linhagem / herança escolhida na espécie */
+  lineage: string;
   pronouns: string;
   species: string;
   background: string;
@@ -295,7 +307,8 @@ export function readCharacter(text: string, fallbackSystem?: string): Character 
     : null;
 
   // espaços
-  const auto = spellSlots(classes);
+  const edition: '2014' | '2024' = /2014|cl[aá]ss|legacy|antig/i.test(txt('edition')) && !/2024/.test(txt('edition')) ? '2014' : '2024';
+  const auto = spellSlots(classes, edition);
   const over = parseSlotMap(get('slots'));
   const used = parseSlotMap(get('slotsSpent'));
   const slots: SlotState[] = [];
@@ -313,6 +326,10 @@ export function readCharacter(text: string, fallbackSystem?: string): Character 
 
   return {
     sheet,
+    edition,
+    featList: listOf(get('featList')),
+    classOptions: listOf(get('classOptions')),
+    lineage: txt('lineage'),
     pronouns: txt('pronouns'),
     species,
     background: txt('background').replace(/^\[\[|\]\]$/g, ''),

@@ -1,5 +1,10 @@
 <script lang="ts">
-  import { ATTRS, readSpells, signed, slotFor, useSlot, writeSpells, type Spell } from '@tanden/core';
+  import {
+    ATTRS, SCHOOL_PT, addSpells, classLevelInfo, modsOf, readSpells, scoresOf, signed, slotFor, summaryOf, useSlot, writeSpells,
+    type CompBase, type CSpell, type Spell,
+  } from '@tanden/core';
+  import { compendio } from '../compendio.svelte';
+  import PickList from '../regras/PickList.svelte';
   import type { FichaCtx } from './ctx';
 
   // Conjuração: atributo, CD, ataque, espaços por círculo e a lista de magias.
@@ -59,6 +64,49 @@
     x.update((t) => useSlot(t, { kind, level }, target - spent));
   }
   const auto = $derived(c.classes.find((v) => v.ability)?.ability ?? null);
+
+  // ---------------------------------------------------------------- compêndio
+  $effect(() => { if (c.casting || spells.length) void compendio.load(); });
+  const comp = $derived(compendio.comp);
+  const ed = $derived(c.edition);
+  const inComp = (n: string) => !!comp?.spellFor(n, ed);
+  /** limites de truques e magias de cada classe conjuradora */
+  const limits = $derived.by(() => {
+    if (!comp) return [];
+    const mods = modsOf(scoresOf(c));
+    return c.classes.flatMap((cl, i) => {
+      const cls = comp.classFor(cl.name, ed);
+      if (!cls) return [];
+      const sub = i === 0 ? comp.subclassFor(cls, c.subclass, ed) : null;
+      const info = classLevelInfo(cls, sub, cl.level, mods);
+      if (info.cantrips === null && info.spells === null) return [];
+      return [{ cls: cls.name, label: cl.info?.name ?? cl.name, cantrips: info.cantrips, spells: info.spells, mode: info.spellsMode, max: info.maxSpellLevel }];
+    });
+  });
+  const nCantrips = $derived(spells.filter((v) => v.level === 0).length);
+  const nPrepared = $derived(spells.filter((v) => v.level > 0 && v.prepared).length);
+  const maxCantrips = $derived(limits.reduce((n, l) => n + (l.cantrips ?? 0), 0));
+  const maxSpells = $derived(limits.reduce((n, l) => n + (l.spells ?? 0), 0));
+  let picking = $state(false);
+  let everything = $state(false);
+  let chosen = $state<string[]>([]);
+  const maxLevel = $derived(Math.max(0, ...limits.map((l) => l.max), ...c.slots.map((v) => v.level), c.pact?.level ?? 0));
+  const pool = $derived.by(() => {
+    if (!comp || !picking) return [];
+    const have = new Set(spells.map((v) => v.name.toLowerCase()));
+    const list = everything || !limits.length ? comp.spells(ed).filter((v) => v.level <= Math.max(maxLevel, 0)) : limits.flatMap((l) => comp.classSpells(l.cls, ed, l.max));
+    const seen = new Set<string>();
+    return list.filter((v) => !have.has(v.name.toLowerCase()) && !seen.has(v.name) && (seen.add(v.name), true)).sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+  });
+  const spellSub = (v: CompBase) => `${SCHOOL_PT[(v as CSpell).school] ?? ''}${(v as CSpell).ritual ? ' · ritual' : ''} — ${summaryOf(v.entries, 100)}`;
+  function addPicked() {
+    if (!comp) return;
+    const list = chosen.map((n) => comp.spellFor(n, ed)).filter((v): v is CSpell => !!v);
+    x.update((t) => addSpells(t, list));
+    flash(`${list.length} magia(s) na ficha`);
+    chosen = [];
+    picking = false;
+  }
 </script>
 
 <div class="sp">
@@ -111,7 +159,10 @@
   {/if}
 
   <div class="listhead">
-    <h4>Truques e magias preparadas</h4>
+    <h4>Truques e magias preparadas
+      {#if limits.length}<span class="lim" title={limits.map((l) => `${l.label}: ${l.cantrips ?? 0} truques, ${l.spells ?? 0} magias ${l.mode ?? ''}`).join(' · ')}>
+        · truques <b class:over={nCantrips > maxCantrips}>{nCantrips}/{maxCantrips}</b> · {limits[0]?.mode ?? 'preparadas'} <b class:over={nPrepared > maxSpells}>{nPrepared}/{maxSpells}</b></span>{/if}
+    </h4>
     <span class="seg" role="radiogroup" aria-label="Filtro">
       <button role="radio" aria-checked={filter === 'todas'} class:on={filter === 'todas'} onclick={() => (filter = 'todas')}>Todas</button>
       <button role="radio" aria-checked={filter === 'preparadas'} class:on={filter === 'preparadas'} onclick={() => (filter = 'preparadas')}>Preparadas</button>
@@ -132,7 +183,11 @@
               {#if s.level > 0}
                 <button class="pip" class:on={s.prepared} onclick={() => togglePrep(i)} aria-label={s.prepared ? 'Preparada' : 'Não preparada'} title={s.prepared ? 'Preparada (clique para tirar)' : 'Preparar'}></button>
               {:else}<span class="pip fixed" title="Truque: sempre pronto"></span>{/if}
-              <button class="sname" onclick={() => { adding = false; editing = i; draft = { ...s }; }} title="Editar">{s.name}</button>
+              {#if inComp(s.name)}
+                <button class="sname" onclick={() => compendio.open(`spell|${s.name}|`, ed)} title="Ver a magia">{s.name}</button>
+              {:else}
+                <button class="sname" onclick={() => { adding = false; editing = i; draft = { ...s }; }} title="Editar">{s.name}</button>
+              {/if}
               <span class="meta">
                 {#if s.time}<span>{s.time}</span>{/if}
                 {#if s.range}<span>{s.range}</span>{/if}
@@ -140,7 +195,10 @@
               <span class="crm">
                 <i class:on={s.concentration} title="Concentração">C</i><i class:on={s.ritual} title="Ritual">R</i><i class:on={s.material} title="Componente material">M</i>
               </span>
-              <button class="ghost sm castb" onclick={() => cast(s)} title={s.level ? 'Conjurar (gasta o menor espaço livre)' : 'Truque'}>Conjurar</button>
+              <span class="sacts">
+                <button class="icon ed" onclick={() => { adding = false; editing = i; draft = { ...s }; }} title="Editar" aria-label={`Editar ${s.name}`}>✎</button>
+                <button class="ghost sm castb" onclick={() => cast(s)} title={s.level ? 'Conjurar (gasta o menor espaço livre)' : 'Truque'}>Conjurar</button>
+              </span>
               {#if s.notes}<span class="snotes dim">{s.notes}</span>{/if}
             </div>
           {/if}
@@ -150,7 +208,27 @@
   {/each}
   {#if !spells.length && !adding}<p class="dim small">Nenhuma magia ainda. Elas ficam na tabela <code>## Magias</code> da nota.</p>{/if}
   {#if adding}{@render form()}{/if}
-  {#if !adding && editing === null}<button class="ghost sm addsp" onclick={() => { adding = true; draft = blank(); }}>+ Magia</button>{/if}
+  {#if !adding && editing === null && !picking}
+    <div class="addrow">
+      {#if compendio.status !== 'missing'}<button class="primary sm" onclick={() => { picking = true; void compendio.load(); }}>+ Do livro</button>{/if}
+      <button class="ghost sm" onclick={() => { adding = true; draft = blank(); }}>+ Magia à mão</button>
+    </div>
+  {/if}
+  {#if picking}
+    <section class="picker">
+      <header>
+        <h4>Magias {everything ? 'de todas as listas' : `da lista de ${limits.map((l) => l.label).join(' e ') || 'magias'}`}{maxLevel ? ` · até ${maxLevel}º círculo` : ''}</h4>
+        <label class="small"><input type="checkbox" bind:checked={everything} /> todas</label>
+      </header>
+      {#if comp}
+        <PickList items={pool} kind="spell" selected={chosen} {ed} onchange={(v) => (chosen = v)} sub={spellSub} group={(v) => ((v as CSpell).level ? `${(v as CSpell).level}º círculo` : 'Truques')} />
+      {:else}<p class="dim small">Abrindo o compêndio…</p>{/if}
+      <div class="fa">
+        <button class="ghost sm" onclick={() => { picking = false; chosen = []; }}>Cancelar</button>
+        <button class="primary sm" disabled={!chosen.length} onclick={addPicked}>Adicionar {chosen.length || ''}</button>
+      </div>
+    </section>
+  {/if}
 </div>
 
 {#snippet form()}
@@ -178,7 +256,13 @@
 
 <style>
   .sp { display: grid; gap: 14px; }
-  .addsp { justify-self: start; }
+  .addrow { display: flex; gap: 8px; flex-wrap: wrap; }
+  .lim { font: 500 11px var(--f-mono); letter-spacing: 0; text-transform: none; color: var(--silver); }
+  .lim b.over { color: var(--crit); }
+  .sacts { display: inline-flex; gap: 2px; align-items: center; }
+  .icon.ed { width: 24px; height: 24px; font-size: 13px; }
+  .picker { display: grid; gap: 8px; border: 1px solid var(--ember); border-radius: 12px; padding: 10px; background: var(--surface); }
+  .picker header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   .lbl { font: 600 9.5px var(--f-display); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
   h4 { margin: 0; font: 600 10.5px var(--f-display); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
   h5 { margin: 4px 0 2px; font: 600 10px var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--ember-soft); }

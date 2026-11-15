@@ -1,6 +1,6 @@
 <script lang="ts">
   import {
-    CLASSES, CONDITIONS, SPECIES, addSheet, applyHp, deathSave, hasSheet, hpGain, imageOf, initFormula, levelUp, longRest, noteName,
+    CLASSES, CONDITIONS, SPECIES, addSheet, applyHp, conditionRef, hpPerLevelBonus, deathSave, hasSheet, imageOf, initFormula, longRest, noteName,
     parseProps, readCharacter, setDeath, setProps, shortRest, signed, spendHitDie, systemOf, toggleInList, type PropValue,
   } from '@tanden/core';
   import { cadernos } from '../cadernos/cadernos.svelte';
@@ -14,6 +14,9 @@
   import Spells from './ficha/Spells.svelte';
   import Story from './ficha/Story.svelte';
   import Turn from './ficha/Turn.svelte';
+  import LevelUp from './ficha/LevelUp.svelte';
+  import CriarPersonagem from './regras/CriarPersonagem.svelte';
+  import { compendio } from './compendio.svelte';
   import type { FichaCtx } from './ficha/ctx';
   import './mesa.css';
 
@@ -123,40 +126,11 @@
   }
 
   let lvDialog = $state(false);
-  let lvClass = $state('');
-  let lvNew = $state('');
-  function openLevelUp() {
-    lvClass = c.classes[0]?.name ?? '';
-    lvNew = '';
-    lvDialog = true;
-  }
-  const lvTarget = $derived(lvClass === '__nova' ? lvNew : lvClass);
-  const lvDie = $derived(
-    CLASSES.find((k) => k.name === lvTarget)?.die ?? c.classes.find((k) => k.name === lvTarget)?.info?.die ?? c.hitDice[0]?.die ?? 8,
-  );
+  let wizard = $state(false);
   const conMod = $derived(s.attrs.find((a) => a.key === 'con')?.mod ?? 0);
-  function doLevelUp(rolled: boolean) {
-    let r: number | undefined;
-    if (rolled) {
-      const res = rollF(`1d${lvDie}`, `PV do nível ${c.level + 1}`);
-      if (typeof res === 'string' || !res[0]) return;
-      r = res[0].total;
-    }
-    const before = { prof: s.prof, slots: c.slots.map((v) => v.total).join('/') };
-    let out = { level: c.level, gain: 0, klass: '', text };
-    update((t) => {
-      out = levelUp(t, { klass: lvTarget || undefined, roll: r });
-      return out.text;
-    });
-    lvDialog = false;
-    const after = readCharacter(out.text, mesa.campaign?.system);
-    const extras = [
-      `+${out.gain} PV`,
-      after.sheet.prof !== before.prof ? `proficiência ${signed(after.sheet.prof)}` : '',
-      after.slots.map((v) => v.total).join('/') !== before.slots ? 'novos espaços de magia' : '',
-      [4, 8, 12, 16, 19].includes(out.level) ? 'ganha um Talento (ou +2 em atributos)' : '',
-    ].filter(Boolean);
-    flash(`Nível ${out.level}${out.klass ? ` · ${out.klass}` : ''}! ${extras.join(' · ')}`);
+  const hpAvg = $derived(c.hpMaxAuto === null ? null : c.hpMaxAuto + hpPerLevelBonus(c) * c.level);
+  function openLevelUp() {
+    lvDialog = true;
   }
 
   // ---------------------------------------------------------------- dados de vida, morte, descansos
@@ -245,6 +219,12 @@
     </header>
 
     {#if notice}<p class="notice" role="status">{notice}</p>{/if}
+    {#if is5e && !c.classes.length}
+      <div class="wizcall">
+        <span><b>Ficha em branco.</b> <span class="dim">O assistente monta tudo pelo livro: classe, espécie, antecedente, atributos, magias e equipamento.</span></span>
+        <button class="primary sm" onclick={() => (wizard = true)}>✦ Criar com o assistente</button>
+      </div>
+    {/if}
 
     <!-- vitais -->
     <div class="vitals">
@@ -279,8 +259,8 @@
           {:else}
             <button class="mid" onclick={() => startEdit(s.keys.hpMax, s.hpMax)} title={s.hpMax === null && c.hpMaxAuto !== null ? 'Calculado pela classe e Constituição' : 'Editar PV máximo'}>{maxHp ?? '—'}</button>
           {/if}
-          {#if is5e && c.hpMaxAuto !== null && s.hpMax !== null && s.hpMax !== c.hpMaxAuto}
-            <button class="sugg" onclick={() => write({ [s.keys.hpMax]: String(c.hpMaxAuto) })} title="PV máximo pela média do dado de vida + Con por nível">média: {c.hpMaxAuto}</button>
+          {#if is5e && hpAvg !== null && s.hpMax !== null && s.hpMax !== hpAvg}
+            <button class="sugg" onclick={() => write({ [s.keys.hpMax]: String(hpAvg) })} title="PV máximo pela média do dado de vida + Con por nível (com Tough, Robustez Anã e Resiliência Dracônica)">média: {hpAvg}</button>
           {/if}
         </div>
         {#if pctHp !== null}<div class="hpbar"><i style:width="{pctHp * 100}%" class:mid={pctHp <= 0.5} class:low={pctHp <= 0.25}></i></div>{/if}
@@ -359,7 +339,7 @@
     <div class="toolbar">
       <div class="conds">
         {#each c.conditions as k (k)}
-          <span class="tag">{k}<button onclick={() => update((t) => toggleInList(t, 'conditions', k))} aria-label={`Tirar ${k}`}>×</button></span>
+          <span class="tag"><button class="tlink" onclick={() => compendio.open(conditionRef(k), c.edition)} title="Ver a regra">{k}</button><button onclick={() => update((t) => toggleInList(t, 'conditions', k))} aria-label={`Tirar ${k}`}>×</button></span>
         {/each}
         <select class="field condsel" bind:value={condPick} onchange={() => { if (condPick) update((t) => toggleInList(t, 'conditions', condPick)); condPick = ''; }} aria-label="Adicionar condição">
           <option value="">+ Condição</option>
@@ -415,32 +395,10 @@
   {/if}
 
   {#if lvDialog}
-    <div class="scrim" role="presentation" onclick={(e) => { if (e.target === e.currentTarget) lvDialog = false; }}>
-      <div class="dialog" role="dialog" aria-modal="true" aria-label="Subir de nível">
-        <h2>Subir para o nível {c.level + 1}</h2>
-        <label>Em qual classe
-          <select class="field" bind:value={lvClass}>
-            {#each c.classes as k (k.name)}<option value={k.name}>{k.info?.name ?? k.name} ({k.level} → {k.level + 1})</option>{/each}
-            {#if !c.classes.length}<option value="">Sem classe</option>{/if}
-            <option value="__nova">Outra classe (multiclasse)…</option>
-          </select>
-        </label>
-        {#if lvClass === '__nova'}
-          <label>Nova classe
-            <select class="field" bind:value={lvNew}>
-              <option value="">Escolha…</option>
-              {#each CLASSES.filter((k) => !c.classes.some((v) => v.info?.key === k.key)) as k (k.key)}<option value={k.name}>{k.name} (d{k.die})</option>{/each}
-            </select>
-          </label>
-        {/if}
-        <p class="dim small">Pontos de vida: d{lvDie} + Con ({signed(conMod)}). Proficiência, espaços de magia e dados de vida se ajustam sozinhos.</p>
-        <div class="formacts">
-          <button class="ghost" onclick={() => (lvDialog = false)}>Cancelar</button>
-          <button class="ghost" disabled={lvClass === '__nova' && !lvNew} onclick={() => doLevelUp(true)}>Rolar d{lvDie}</button>
-          <button class="primary" disabled={lvClass === '__nova' && !lvNew} onclick={() => doLevelUp(false)}>Média (+{hpGain(lvDie, conMod)} PV)</button>
-        </div>
-      </div>
-    </div>
+    <LevelUp {x} onclose={() => (lvDialog = false)} ondone={(m) => { lvDialog = false; flash(m); }} />
+  {/if}
+  {#if wizard}
+    <CriarPersonagem askName={false} initialPlayer={s.player === 'jogador' ? '' : s.player} onapply={(_n, apply) => { update(apply); wizard = false; flash('Ficha pronta! Confira as abas Características e Magias.'); }} oncancel={() => (wizard = false)} />
   {/if}
 </div>
 
@@ -476,6 +434,9 @@
   .xpf input { width: 84px; padding: 3px 6px; font-size: 12px; text-align: center; }
   .up { animation: glow 2.4s var(--ease) infinite; }
   @keyframes glow { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--ember) 22%, transparent); } }
+  .wizcall { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border-radius: 12px;
+    border: 1px dashed color-mix(in srgb, var(--ember) 60%, var(--line)); background: color-mix(in srgb, var(--ember) 6%, var(--surface)); font-size: 13px; }
+  .tag .tlink { font-size: 11.5px !important; opacity: 1 !important; text-decoration: underline dotted; }
   .notice { margin: 0; padding: 8px 12px; border-radius: 10px; font-size: 13px; background: color-mix(in srgb, var(--ember) 12%, transparent);
     border: 1px solid color-mix(in srgb, var(--ember) 40%, transparent); }
 

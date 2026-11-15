@@ -14,6 +14,6 @@ export interface FichaCtx {
   /** d20 + bônus, com vantagem e exaustão */
   rollD20: (bonus: number, label: string) => void;
   /** fórmula qualquer; `d20` aplica vantagem e exaustão */
-  rollF: (f: string, label: string, d20?: boolean) => void;
+  rollF: (f: string, label: string, d20?: boolean) => unknown;
   onOpenNote?: (p: string) => void;
 }

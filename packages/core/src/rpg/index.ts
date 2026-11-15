@@ -10,3 +10,4 @@ export * from './regras5e';
 export * from './ficha';
 export * from './catalogo';
 export * from './mochila';
+export * from './compendio';

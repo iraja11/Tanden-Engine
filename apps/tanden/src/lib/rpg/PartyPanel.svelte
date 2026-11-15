@@ -5,6 +5,7 @@
   import { mesa } from './mesa.svelte';
   import Portrait from './Portrait.svelte';
   import SheetPanel from './SheetPanel.svelte';
+  import CriarPersonagem from './regras/CriarPersonagem.svelte';
 
   let { campaign, onOpenNote }: { campaign: Campaign; onOpenNote: (path: string) => void } = $props();
 
@@ -29,6 +30,37 @@
     void cadernos.rev;
     return (world?.entities ?? []).filter((e) => (e.type === 'personagem' || e.type === 'criatura') && !hasSheet(e.props));
   });
+
+  let wizard = $state(false);
+
+  /** caminho da ficha nova (ou a que já existe) com o modelo do mundo/campanha */
+  function makeNote(kindOf: 'pc' | 'npc' | 'criatura', nameOf: string, extra?: (t: string) => string): string {
+    const sys = systemOf(campaign.system);
+    const type = kindOf === 'criatura' ? 'criatura' : 'personagem';
+    const folder = world ? entityFolder(world, type) : `${campaign.folder}/${kindOf === 'criatura' ? 'Criaturas' : 'Personagens'}`;
+    return cadernos.create(folder, nameOf, (n) => {
+      let t = world ? entityTemplate(n, world.name, type) : `---\ntipo: ${type}\ncampanha: "[[${campaign.name}]]"\n---\n# ${n}\n\n`;
+      t = addSheet(t, sys);
+      if (kindOf === 'pc') t = setProps(t, { jogador: player.trim() || 'jogador' });
+      return extra ? extra(t) : t;
+    });
+  }
+
+  function fromWizard(nameOf: string, apply: (t: string) => string) {
+    let path: string;
+    if (existing) {
+      path = existing;
+      cadernos.update(path, (t) => apply(addSheet(t, systemOf(campaign.system))));
+    } else {
+      path = makeNote('pc', nameOf || 'Personagem', apply);
+    }
+    mesa.rebuild();
+    selected = path;
+    wizard = false;
+    dialog = false;
+    newName = '';
+    existing = '';
+  }
 
   function create() {
     const sys = systemOf(campaign.system);
@@ -120,14 +152,27 @@
             <label>Jogador<input class="field" bind:value={player} placeholder="quem joga" /></label>
           {/if}
           <p class="dim small">{world ? `Fica em ${entityFolder(world, kind === 'criatura' ? 'criatura' : 'personagem')}/, ligada ao mundo ${world.name}.` : `Fica em ${campaign.folder}/.`} Os números começam padrão; clique neles para editar.</p>
-          <div class="formacts"><button type="button" class="ghost" onclick={() => (dialog = false)}>Cancelar</button><button class="primary" disabled={!existing && !newName.trim()}>Criar</button></div>
+          {#if kind === 'pc' && systemOf(campaign.system) === '5e'}
+            <button type="button" class="wizbtn" onclick={() => (wizard = true)}>
+              <b>✦ Criar com o assistente de D&amp;D 5e</b>
+              <span class="dim small">Classe, espécie, antecedente, atributos, magias e equipamento passo a passo; a ficha sai pronta para jogar.</span>
+            </button>
+          {/if}
+          <div class="formacts"><button type="button" class="ghost" onclick={() => (dialog = false)}>Cancelar</button><button class="primary" disabled={!existing && !newName.trim()}>Criar em branco</button></div>
         </form>
       </div>
     </div>
   {/if}
 </div>
 
+{#if wizard}
+  <CriarPersonagem initialName={existing ? '' : newName} askName={!existing} initialPlayer={player} onapply={fromWizard} oncancel={() => (wizard = false)} />
+{/if}
+
 <style>
+  .wizbtn { display: grid; gap: 2px; text-align: left; border: 1px solid color-mix(in srgb, var(--ember) 50%, var(--line)); border-radius: 12px; padding: 10px 12px;
+    background: color-mix(in srgb, var(--ember) 8%, var(--surface)); color: var(--ink); }
+  .wizbtn:hover { border-color: var(--ember); }
   .party { display: grid; gap: 14px; align-content: start; }
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
   .card { text-align: left; display: grid; gap: 4px; align-content: start; border: 1px solid var(--line); background: var(--surface); border-radius: 13px;

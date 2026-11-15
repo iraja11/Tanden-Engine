@@ -15,7 +15,7 @@ import { sound } from '../sound.svelte';
  * aparelho.
  */
 
-export type MesaTab = 'dados' | 'combate' | 'fichas' | 'tabelas' | 'sessoes';
+export type MesaTab = 'dados' | 'combate' | 'fichas' | 'regras' | 'tabelas' | 'sessoes';
 
 export interface LogEntry {
   id: number;
