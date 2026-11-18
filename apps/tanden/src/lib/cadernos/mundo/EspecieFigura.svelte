@@ -1,172 +1,210 @@
-<script lang="ts">
-  import type { SpeciesFigure } from '@tanden/core';
+<script lang="ts" module>
+  import { speciesDrawing, speciesFigure } from '@tanden/core';
 
-  // Silhueta da espécie desenhada a partir das propriedades (plano do corpo,
-  // altura, cores, traços). Com `compare`, um humano de 1,75 m ao lado dá a escala.
-  let { fig, compare = false, size = 160, label = '' }: { fig: SpeciesFigure; compare?: boolean; size?: number; label?: string } = $props();
-
-  // Cada plano: limites em x (unidades locais, altura total = 100), cabeça e linha das costas.
-  type Plan = { x0: number; x1: number; head: { x: number; y: number; r: number }; back: Array<[number, number]>; ground: boolean };
-  const PLANS: Record<SpeciesFigure['plano'], Plan> = {
-    bipede: { x0: -22, x1: 22, head: { x: 0, y: 12, r: 10 }, back: [[-9, 26], [-11, 40], [-10, 54]], ground: true },
-    quadrupede: { x0: -60, x1: 66, head: { x: 50, y: 22, r: 12 }, back: [[-30, 30], [-10, 28], [10, 29], [28, 30]], ground: true },
-    centauroide: { x0: -36, x1: 48, head: { x: -20, y: 11, r: 8 }, back: [[0, 50], [18, 50], [34, 52]], ground: true },
-    hexapode: { x0: -54, x1: 40, head: { x: 26, y: 55, r: 9 }, back: [[-40, 46], [-24, 44], [-8, 47], [6, 47]], ground: true },
-    serpentino: { x0: -52, x1: 50, head: { x: 36, y: 20, r: 9 }, back: [[-30, 83], [-6, 80], [22, 74], [30, 52]], ground: true },
-    alado: { x0: -60, x1: 60, head: { x: 20, y: 30, r: 9 }, back: [[-12, 42], [0, 41]], ground: true },
-    aquatico: { x0: -68, x1: 54, head: { x: 34, y: 46, r: 12 }, back: [[-20, 30], [0, 28], [18, 31]], ground: false },
-    radial: { x0: -38, x1: 38, head: { x: 0, y: 30, r: 26 }, back: [[-20, 10], [0, 6], [20, 10]], ground: false },
-    amorfo: { x0: -44, x1: 44, head: { x: 6, y: 42, r: 14 }, back: [[-26, 34], [0, 26], [24, 34]], ground: true },
-  };
-
-  const HUMAN = 1.75;
-  const plan = $derived(PLANS[fig.plano]);
-  const winged = $derived(fig.asas && fig.plano !== 'alado');
-  const lx0 = $derived(plan.x0 - (winged ? 26 : 0));
-  const lx1 = $derived(plan.x1 + (winged ? 26 : 0));
-  // escala: 92 unidades de tela para a maior altura em cena
-  const maxH = $derived(compare ? Math.max(fig.altura, HUMAN) : fig.altura);
-  const unit = $derived(92 / maxH);
-  const s = $derived((fig.altura * unit) / 100);
-  const humanW = $derived(compare ? 0.5 * HUMAN * unit + 8 : 0);
-  const width = $derived(Math.max(40, humanW + (lx1 - lx0) * s + 8));
-  const cx = $derived(humanW + 4 - lx0 * s);
-  const top = $derived(96 - fig.altura * unit);
-  const hs = $derived(HUMAN * unit / 100);
-  const uid = $derived(`f${Math.round(fig.altura * 100)}${fig.plano}${fig.cor.slice(1)}`);
-  const mark = (m: number) => (m >= 10 ? Math.round(m) : m >= 1 ? m.toFixed(1).replace('.', ',') : m.toFixed(2).replace('.', ','));
-  const shade = $derived(`color-mix(in srgb, ${fig.cor} 70%, #000)`);
+  // Referências de escala: uma pessoa e, para os bichos miúdos, uma maçã.
+  const PESSOA = speciesDrawing(speciesFigure({ corpo: 'bípede', altura: '1,75', cabeça: 'humana', orelhas: 'humanas', extremidades: 'mãos' }));
+  const PESSOA_D = PESSOA.camadas.flat().filter((s) => s.linha === undefined && s.contorno).map((s) => s.d);
+  let nextId = 0;
 </script>
 
-<svg class="fig" viewBox="0 0 {width} 100" width={size * (width / 100)} height={size} role="img" aria-label={label || 'Silhueta da espécie'} style:max-width="100%">
+<script lang="ts">
+  import type { SpeciesFigure, SpeciesPaint, SpeciesShape } from '@tanden/core';
+
+  // Retrato da espécie, desenhado pelo núcleo a partir da ficha. Aqui só se
+  // pinta: cada camada ganha um contorno único, a cor, a textura do revestimento
+  // e o padrão. Com `compare`, uma referência ao lado mostra o tamanho real.
+  let { fig, compare = false, size = 160, label = '' }: { fig: SpeciesFigure; compare?: boolean; size?: number; label?: string } = $props();
+
+  const uid = `esp${++nextId}`;
+  const draw = $derived(speciesDrawing(fig));
+  const box = $derived(draw.box);
+
+  // ------------------------------------------------ enquadramento
+  /** metros por unidade do desenho */
+  const mPerUnit = $derived(fig.altura / box.h);
+  const tiny = $derived(fig.altura < 0.3);
+  const refM = $derived(tiny ? 0.08 : 1.75);
+  const refH = $derived(refM / mPerUnit);
+  const refW = $derived(tiny ? refH : refH * (PESSOA.box.w / PESSOA.box.h));
+  const groundY = $derived(box.y + box.h);
+  const lift = $derived(draw.flutua && compare ? box.h * 0.06 : 0);
+  const gap = $derived(Math.max(box.w, refW) * 0.12);
+
+  const view = $derived.by(() => {
+    if (!compare) {
+      const pad = Math.max(box.w, box.h) * 0.05;
+      return { x: box.x - pad, y: box.y - pad, w: box.w + pad * 2, h: box.h + pad * 2 };
+    }
+    const tall = Math.max(box.h + lift, refH);
+    const padY = tall * 0.13;
+    const padX = Math.max(box.w + refW, tall) * 0.05;
+    return { x: box.x - gap - refW - padX, y: groundY - tall - padY, w: box.w + gap + refW + padX * 2, h: tall + padY + tall * 0.03 };
+  });
+  const stroke = $derived((view.h / size) * 1.5);
+  const fs = $derived(view.h * 0.05);
+  const refX = $derived(box.x - gap - refW);
+  const mark = (m: number) => (m >= 10 ? String(Math.round(m)) : m >= 1 ? m.toFixed(1).replace('.', ',') : m >= 0.1 ? m.toFixed(2).replace('.', ',') : m.toFixed(3).replace('.', ','));
+  const titulo = $derived(fig.medida < 1 ? `${Math.round(fig.medida * 100)} cm` : `${mark(fig.medida)} m`);
+
+  // ------------------------------------------------ tintas
+  const paint = (p: SpeciesPaint) => (p === 'base' ? `url(#${uid}-g)` : draw.cores.paints[p]);
+  const hasAura = $derived(fig.marcas.includes('aura'));
+  const glowColor = $derived(draw.cores.paints.luz);
+
+  const skin = (l: SpeciesShape[]) => l.filter((s) => s.pele && s.linha === undefined);
+  const texId = $derived(fig.textura ? `${uid}-t` : '');
+  const patId = $derived(fig.padrao && fig.padrao !== 'ventre claro' && fig.padrao !== 'mascara' && fig.padrao !== 'sela' ? `${uid}-p` : '');
+  const ink = $derived(draw.cores.contorno);
+  const accent = $derived(fig.cor2);
+  const shine = $derived(draw.cores.paints.luz);
+</script>
+
+<svg class="fig" viewBox="{view.x} {view.y} {view.w} {view.h}" width={size * (view.w / view.h)} height={size} role="img" aria-label={label || 'Retrato da espécie'} style:max-width="100%">
   <defs>
-    <linearGradient id="{uid}-g" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color={fig.cor} />
-      <stop offset="1" stop-color={shade} />
+    <linearGradient id="{uid}-g" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1={box.y} y2={box.y + box.h}>
+      <stop offset="0" stop-color={draw.cores.claro} />
+      <stop offset=".5" stop-color={draw.cores.base} />
+      <stop offset="1" stop-color={draw.cores.sombra} />
     </linearGradient>
-    {#if fig.brilho}
-      <filter id="{uid}-glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+    {#if hasAura}
+      <radialGradient id="{uid}-a"><stop offset=".35" stop-color={glowColor} stop-opacity=".42" /><stop offset="1" stop-color={glowColor} stop-opacity="0" /></radialGradient>
     {/if}
+
+    <!-- textura do revestimento -->
+    {#if fig.textura === 'escamas'}
+      <pattern id={texId} width="7" height="6" patternUnits="userSpaceOnUse">
+        <path d="M0 0a3.5 3.5 0 0 0 7 0M-3.5 3a3.5 3.5 0 0 0 7 0M3.5 3a3.5 3.5 0 0 0 7 0" fill="none" stroke={ink} stroke-width=".55" opacity=".5" />
+      </pattern>
+    {:else if fig.textura === 'pelo'}
+      <pattern id={texId} width="8" height="8" patternUnits="userSpaceOnUse">
+        <path d="M1 1l-1.5 3.5M5 0l-1.5 3.5M3 4.5l-1.5 3.5M7 4l-1.5 3.5" fill="none" stroke={ink} stroke-width=".55" stroke-linecap="round" opacity=".42" />
+      </pattern>
+    {:else if fig.textura === 'penas'}
+      <pattern id={texId} width="10" height="9" patternUnits="userSpaceOnUse">
+        <path d="M0 0q5 8 10 0M-5 4.5q5 8 10 0M5 4.5q5 8 10 0" fill="none" stroke={ink} stroke-width=".6" opacity=".45" />
+      </pattern>
+    {:else if fig.textura === 'placas'}
+      <pattern id={texId} width="17" height="15" patternUnits="userSpaceOnUse">
+        <path d="M4 0L0 7.5L4 15M4 0H13L17 7.5L13 15H4M0 7.5H-4M17 7.5h4" fill="none" stroke={ink} stroke-width=".8" opacity=".5" />
+      </pattern>
+    {:else if fig.textura === 'facetas'}
+      <pattern id={texId} width="22" height="22" patternUnits="userSpaceOnUse">
+        <path d="M0 0L11 7L22 0M11 7L6 22M11 7L22 15L6 22M0 12L6 22M0 12L11 7" fill="none" stroke="#fff" stroke-width=".6" opacity=".4" />
+        <path d="M11 7L22 15L22 0Z" fill="#fff" opacity=".1" />
+      </pattern>
+    {:else if fig.textura === 'rachaduras'}
+      <pattern id={texId} width="34" height="30" patternUnits="userSpaceOnUse">
+        <path d="M3 0l5 8l-3 7l8 6l-2 9M8 8l11-3l6 8l9-2M13 21l10-1l4 10M25 13l-2 7" fill="none" stroke={fig.revestimento.includes('lava') ? '#f08a2c' : ink} stroke-width={fig.revestimento.includes('lava') ? 1.3 : .8} opacity=".75" />
+      </pattern>
+    {:else if fig.textura === 'casca'}
+      <pattern id={texId} width="9" height="26" patternUnits="userSpaceOnUse">
+        <path d="M2 0q2 6 0 13t0 13M6.5 0q-2 7 0 13t0 13" fill="none" stroke={ink} stroke-width=".8" opacity=".55" />
+      </pattern>
+    {:else if fig.textura === 'musgo'}
+      <pattern id={texId} width="12" height="12" patternUnits="userSpaceOnUse">
+        <circle cx="3" cy="3" r="2" fill="#7c9a4a" opacity=".55" /><circle cx="9" cy="8" r="2.6" fill="#5f7f3a" opacity=".5" /><circle cx="2" cy="10" r="1.2" fill="#93ae58" opacity=".5" />
+      </pattern>
+    {:else if fig.textura === 'metal'}
+      <pattern id={texId} width="30" height="16" patternUnits="userSpaceOnUse">
+        <path d="M0 0H30M0 8H30" stroke={ink} stroke-width=".5" opacity=".5" /><circle cx="5" cy="4" r=".8" fill={ink} opacity=".6" /><circle cx="25" cy="12" r=".8" fill={ink} opacity=".6" />
+        <path d="M0 3H30" stroke="#fff" stroke-width="1" opacity=".16" />
+      </pattern>
+    {:else if fig.textura === 'bolhas'}
+      <pattern id={texId} width="24" height="24" patternUnits="userSpaceOnUse">
+        <circle cx="6" cy="7" r="2.6" fill="#fff" opacity=".16" /><circle cx="18" cy="16" r="1.7" fill="#fff" opacity=".2" /><circle cx="17" cy="4" r="1" fill="#fff" opacity=".22" />
+      </pattern>
+    {:else if fig.textura === 'couro'}
+      <pattern id={texId} width="12" height="10" patternUnits="userSpaceOnUse">
+        <path d="M0 3q3 2 6 0t6 0M0 8q3-2 6 0t6 0" fill="none" stroke={ink} stroke-width=".45" opacity=".4" />
+      </pattern>
+    {/if}
+
+    <!-- padrão da pelagem -->
+    {#if fig.padrao === 'listras'}
+      <pattern id={patId} width="14" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(12)"><path d="M3 0q3 10 0 20h4q3-10 0-20Z" fill={accent} opacity=".85" /></pattern>
+    {:else if fig.padrao === 'manchas'}
+      <pattern id={patId} width="30" height="26" patternUnits="userSpaceOnUse"><path d="M4 6q5-5 10 0t-2 8q-8 1-8-8ZM20 16q5-3 8 1t-3 7q-7-1-5-8Z" fill={accent} opacity=".85" /></pattern>
+    {:else if fig.padrao === 'pintas'}
+      <pattern id={patId} width="13" height="13" patternUnits="userSpaceOnUse"><circle cx="3.5" cy="3.5" r="1.8" fill={accent} opacity=".9" /><circle cx="10" cy="9.5" r="1.4" fill={accent} opacity=".9" /></pattern>
+    {:else if fig.padrao === 'rosetas'}
+      <pattern id={patId} width="20" height="18" patternUnits="userSpaceOnUse"><circle cx="6" cy="6" r="3.6" fill="none" stroke={accent} stroke-width="1.7" stroke-dasharray="4 1.4" /><circle cx="16" cy="14" r="3" fill="none" stroke={accent} stroke-width="1.5" stroke-dasharray="3.4 1.3" /></pattern>
+    {:else if fig.padrao === 'aneis'}
+      <pattern id={patId} width="20" height="10" patternUnits="userSpaceOnUse"><rect width="8" height="10" fill={accent} opacity=".9" /></pattern>
+    {:else if fig.padrao === 'runas'}
+      <pattern id={patId} width="30" height="30" patternUnits="userSpaceOnUse"><path d="M6 5v11l5-5l-5-3M20 14l5 5l-5 5v-10M9 22h7l-3.5 6Z" fill="none" stroke={shine} stroke-width="1.1" stroke-linejoin="round" /></pattern>
+    {:else if fig.padrao === 'veios brilhantes'}
+      <pattern id={patId} width="40" height="36" patternUnits="userSpaceOnUse"><path d="M0 8q10 3 15 12t25 6M15 20q6-8 12-20M15 20q-3 8-1 16" fill="none" stroke={shine} stroke-width="1.1" /></pattern>
+    {:else if fig.padrao === 'constelacoes'}
+      <pattern id={patId} width="38" height="34" patternUnits="userSpaceOnUse"><path d="M6 8L15 14L26 8L31 20M15 14L12 26" fill="none" stroke={shine} stroke-width=".45" opacity=".7" /><g fill={shine}><circle cx="6" cy="8" r="1.1" /><circle cx="15" cy="14" r="1.4" /><circle cx="26" cy="8" r="1" /><circle cx="31" cy="20" r="1.2" /><circle cx="12" cy="26" r="1" /></g></pattern>
+    {:else if fig.padrao === 'iridescente'}
+      <linearGradient id={patId} gradientUnits="userSpaceOnUse" x1={box.x} y1={box.y} x2={box.x + box.w} y2={box.y + box.h}>
+        <stop offset="0" stop-color="#ff5fa2" stop-opacity=".42" /><stop offset=".33" stop-color="#5fd0ff" stop-opacity=".42" /><stop offset=".66" stop-color="#7dff9c" stop-opacity=".38" /><stop offset="1" stop-color="#c58bff" stop-opacity=".42" />
+      </linearGradient>
+    {/if}
+
+    {#each draw.camadas as l, i (i)}
+      {@const pele = skin(l)}
+      {#if pele.length}
+        <clipPath id="{uid}-c{i}">{#each pele as s, j (j)}<path d={s.d} />{/each}</clipPath>
+      {/if}
+    {/each}
   </defs>
-  <line x1="0" x2={width} y1="96" y2="96" class="ground" />
+
   {#if compare}
-    <!-- humano de referência -->
-    <g transform="translate({4 + 0.25 * HUMAN * unit} {96 - HUMAN * unit}) scale({hs})" class="human">
-      <circle cx="0" cy="11" r="9" />
-      <rect x="-12" y="22" width="24" height="36" rx="9" />
-      <rect x="-11" y="52" width="9" height="48" rx="4" />
-      <rect x="2" y="52" width="9" height="48" rx="4" />
-      <rect x="-19" y="24" width="7" height="32" rx="3.5" />
-      <rect x="12" y="24" width="7" height="32" rx="3.5" />
+    <line x1={view.x} x2={view.x + view.w} y1={groundY} y2={groundY} class="ground" stroke-width={stroke * .7} />
+    <g class="ref">
+      {#if tiny}
+        <circle cx={refX + refW / 2} cy={groundY - refH * .45} r={refH * .45} />
+        <path d="M{refX + refW / 2} {groundY - refH * .85}q{refH * .05} {-refH * .15} {refH * .18} {-refH * .15}" fill="none" stroke-width={refH * .06} />
+      {:else}
+        <g transform="translate({refX - PESSOA.box.x * (refH / PESSOA.box.h)} {groundY - refH}) scale({refH / PESSOA.box.h}) translate(0 {-PESSOA.box.y})">
+          {#each PESSOA_D as d, i (i)}<path {d} />{/each}
+        </g>
+      {/if}
+      <text x={refX + refW / 2} y={groundY - refH - fs * .4} font-size={fs} text-anchor="middle">{tiny ? '8 cm' : '1,75 m'}</text>
     </g>
-    <text x={4 + 0.25 * HUMAN * unit} y={96 - HUMAN * unit - 2} class="lbl" text-anchor="middle">1,75 m</text>
+    <text x={box.x + box.w / 2} y={groundY - Math.max(box.h + lift, 0) - fs * .4} font-size={fs * 1.1} text-anchor="middle" class="size">{titulo}{fig.eixo === 'comprimento' ? ' de comprimento' : ''}</text>
   {/if}
 
-  <g transform="translate({cx} {top}) scale({s})" fill="url(#{uid}-g)" stroke={fig.cor2} stroke-width={1.6 / Math.max(s, 0.05) * 0.6} stroke-linejoin="round" filter={fig.brilho ? `url(#${uid}-glow)` : undefined}>
-    {#if winged}
-      <path d="M-8 30 L-48 10 L-40 34 L-50 44 L-10 46 Z M8 30 L48 10 L40 34 L50 44 L10 46 Z" fill={fig.cor2} opacity=".75" />
+  <g transform="translate(0 {-lift})" class:translucido={fig.translucido} style:filter={fig.brilho ? `drop-shadow(0 0 ${size / 34}px ${glowColor})` : undefined}>
+    {#if hasAura}
+      <ellipse cx={box.x + box.w / 2} cy={box.y + box.h / 2} rx={box.w * .72} ry={box.h * .68} fill="url(#{uid}-a)" />
     {/if}
-    {#if fig.cauda && (fig.plano === 'bipede' || fig.plano === 'amorfo')}
-      <path d="M-4 54 Q-30 70 -34 94 Q-24 78 4 60 Z" />
-    {/if}
-
-    {#if fig.plano === 'bipede'}
-      <rect x="-12" y="22" width="24" height="36" rx="9" />
-      <rect x="-11" y="52" width="9" height="48" rx="4" />
-      <rect x="2" y="52" width="9" height="48" rx="4" />
-      <rect x="-19" y="24" width="7" height="32" rx="3.5" />
-      <rect x="12" y="24" width="7" height="32" rx="3.5" />
-    {:else if fig.plano === 'quadrupede'}
-      <path d="M-46 64 Q-48 40 -30 33 Q0 26 30 31 Q46 34 44 58 Q20 66 -46 64 Z" />
-      <path d="M30 34 Q40 18 48 14 L58 26 Q48 32 42 46 Z" />
-      <rect x="-42" y="56" width="10" height="44" rx="4" /><rect x="-26" y="58" width="10" height="42" rx="4" />
-      <rect x="22" y="56" width="10" height="44" rx="4" /><rect x="34" y="54" width="10" height="46" rx="4" />
-      {#if fig.cauda}<path d="M-46 40 Q-62 46 -58 70 Q-54 52 -44 48 Z" />{/if}
-    {:else if fig.plano === 'centauroide'}
-      <path d="M-14 72 Q-16 50 4 48 Q30 46 40 52 Q46 62 40 74 Q14 80 -14 72 Z" />
-      <rect x="-28" y="20" width="16" height="44" rx="7" />
-      <rect x="-12" y="68" width="8" height="32" rx="3.5" /><rect x="0" y="70" width="8" height="30" rx="3.5" />
-      <rect x="26" y="68" width="8" height="32" rx="3.5" /><rect x="36" y="66" width="8" height="34" rx="3.5" />
-      <rect x="-34" y="22" width="6" height="28" rx="3" />
-      {#if fig.cauda}<path d="M40 56 Q56 60 50 84 Q46 66 38 62 Z" />{/if}
-    {:else if fig.plano === 'hexapode'}
-      <g fill="none" stroke={fig.cor2} stroke-width="3" stroke-linecap="round">
-        <path d="M-14 62 L-26 76 L-34 100" /><path d="M0 64 L-4 80 L-8 100" /><path d="M10 62 L18 80 L24 100" />
-        <path d="M-10 62 L-16 80 L-18 100" /><path d="M4 64 L8 82 L10 100" /><path d="M14 60 L28 74 L36 100" />
-      </g>
-      <ellipse cx="-30" cy="58" rx="24" ry="14" />
-      <circle cx="4" cy="58" r="11" />
-    {:else if fig.plano === 'serpentino'}
-      <path d="M-50 94 C-30 100 -20 80 -2 88 S 30 100 34 72 S 24 36 36 24" fill="none" stroke="url(#{uid}-g)" stroke-width="13" stroke-linecap="round" />
-      <path d="M-50 94 C-30 100 -20 80 -2 88 S 30 100 34 72 S 24 36 36 24" fill="none" stroke={fig.cor2} stroke-width="1.5" stroke-dasharray="3 5" opacity=".6" />
-    {:else if fig.plano === 'alado'}
-      <path d="M-6 44 L-56 12 L-48 38 L-58 50 L-8 56 Z" fill={fig.cor2} opacity=".8" />
-      <ellipse cx="0" cy="54" rx="22" ry="14" />
-      <path d="M-18 56 L-44 66 L-20 62 Z" />
-      <path d="M12 46 Q18 34 20 30 L26 34 Q22 44 18 52 Z" />
-      <path d="M6 44 L56 12 L48 38 L58 50 L8 56 Z" fill={fig.cor2} opacity=".9" />
-      <g fill="none" stroke={fig.cor2} stroke-width="2.6" stroke-linecap="round"><path d="M-4 66 L-6 100 M6 66 L8 100" /></g>
-    {:else if fig.plano === 'aquatico'}
-      <path d="M-46 46 L-68 26 L-62 48 L-68 70 Z" />
-      <ellipse cx="0" cy="48" rx="50" ry="22" />
-      <path d="M-10 28 Q4 10 16 28 Z" />
-      <path d="M0 62 Q6 76 16 66 Z" fill={fig.cor2} />
-    {:else if fig.plano === 'radial'}
-      <g fill="none" stroke="url(#{uid}-g)" stroke-width="4" stroke-linecap="round">
-        {#each [-28, -18, -8, 2, 12, 22, 30] as x, i (i)}<path d="M{x} 40 q{i % 2 ? 6 : -6} 18 0 30 q{i % 2 ? -5 : 5} 14 {i % 2 ? 2 : -2} 26" />{/each}
-      </g>
-      <path d="M-36 42 Q-36 4 0 4 Q36 4 36 42 Q18 48 0 44 Q-18 48 -36 42 Z" />
-    {:else}
-      <path d="M-40 100 Q-46 70 -26 58 Q-30 30 -4 28 Q24 22 30 48 Q46 62 40 100 Z" />
-    {/if}
-
-    {#if fig.espinhos}
-      {#each plan.back as [x, y], i (i)}<path d="M{x - 4} {y + 2} L{x} {y - 10} L{x + 4} {y + 2} Z" fill={fig.cor2} />{/each}
-    {/if}
-    {#if fig.juba}<circle cx={plan.head.x} cy={plan.head.y + 2} r={plan.head.r * 1.5} fill={fig.cor2} />{/if}
-    {#if fig.orelhas}
-      <path d="M{plan.head.x - plan.head.r * 0.6} {plan.head.y - plan.head.r * 0.4} L{plan.head.x - plan.head.r * 1.8} {plan.head.y - plan.head.r * 1.6} L{plan.head.x - plan.head.r * 0.1} {plan.head.y - plan.head.r * 0.9} Z" />
-      <path d="M{plan.head.x + plan.head.r * 0.6} {plan.head.y - plan.head.r * 0.4} L{plan.head.x + plan.head.r * 1.8} {plan.head.y - plan.head.r * 1.6} L{plan.head.x + plan.head.r * 0.1} {plan.head.y - plan.head.r * 0.9} Z" />
-    {/if}
-    {#if fig.plano !== 'radial' && fig.plano !== 'serpentino'}
-      <circle cx={plan.head.x} cy={plan.head.y} r={plan.head.r} />
-    {:else if fig.plano === 'serpentino'}
-      <ellipse cx={plan.head.x + 2} cy={plan.head.y} rx={plan.head.r * 1.2} ry={plan.head.r * 0.8} />
-    {/if}
-    {#if fig.chifres}
-      <g fill={fig.cor2} stroke="none">
-        <path d="M{plan.head.x - plan.head.r * 0.5} {plan.head.y - plan.head.r * 0.7} q{-plan.head.r * 0.9} {-plan.head.r * 0.6} {-plan.head.r * 0.5} {-plan.head.r * 1.8} q{plan.head.r * 0.1} {plan.head.r * 0.9} {plan.head.r * 0.9} {plan.head.r * 1.4} Z" />
-        <path d="M{plan.head.x + plan.head.r * 0.5} {plan.head.y - plan.head.r * 0.7} q{plan.head.r * 0.9} {-plan.head.r * 0.6} {plan.head.r * 0.5} {-plan.head.r * 1.8} q{-plan.head.r * 0.1} {plan.head.r * 0.9} {-plan.head.r * 0.9} {plan.head.r * 1.4} Z" />
-      </g>
-    {/if}
-    {#if fig.antenas}
-      <g fill="none" stroke={fig.cor2} stroke-width="2" stroke-linecap="round">
-        <path d="M{plan.head.x - 2} {plan.head.y - plan.head.r} q-6 -12 -2 -20" /><path d="M{plan.head.x + 2} {plan.head.y - plan.head.r} q8 -10 6 -20" />
-      </g>
-    {/if}
-    {#if fig.tentaculos && fig.plano !== 'radial'}
-      <g fill="none" stroke={fig.cor2} stroke-width="2.4" stroke-linecap="round">
-        <path d="M{plan.head.x - 3} {plan.head.y + plan.head.r * 0.8} q-3 8 1 14" /><path d="M{plan.head.x} {plan.head.y + plan.head.r} q0 8 -2 15" /><path d="M{plan.head.x + 3} {plan.head.y + plan.head.r * 0.8} q4 7 0 14" />
-      </g>
-    {/if}
-    {#if fig.olhos}
-      <g fill="#fff8e0" stroke="none" class="eyes">
-        {#each Array.from({ length: fig.olhos }, (_, i) => i) as i (i)}
-          {@const n = fig.olhos}
-          {@const dx = (i - (n - 1) / 2) * plan.head.r * (n > 2 ? 0.42 : 0.7)}
-          {@const dy = n > 2 && i % 2 ? -plan.head.r * 0.35 : -plan.head.r * 0.05}
-          <circle cx={plan.head.x + dx} cy={plan.head.y + dy} r={plan.head.r * 0.17} />
+    {#each draw.camadas as l, i (i)}
+      {@const pele = skin(l)}
+      <g>
+        <!-- contorno único: todas as peças da camada se fundem numa silhueta só -->
+        {#each l as s, j (j)}
+          {#if s.contorno}
+            <path d={s.d} fill={s.linha === undefined ? ink : 'none'} stroke={ink} stroke-width={s.linha === undefined ? stroke * 2 : s.linha + stroke * 2} stroke-linejoin="round" stroke-linecap="round" opacity={s.opacidade} />
+          {/if}
         {/each}
+        {#each l as s, j (j)}
+          {#if s.linha !== undefined}
+            <path d={s.d} fill="none" stroke={paint(s.paint)} stroke-width={s.linha} stroke-linecap="round" stroke-linejoin="round" opacity={s.opacidade} />
+          {:else if !s.preso}
+            <path d={s.d} fill={paint(s.paint)} opacity={s.opacidade} />
+          {/if}
+        {/each}
+        {#if pele.length}
+          <g clip-path="url(#{uid}-c{i})">
+            {#each l as s, j (j)}
+              {#if s.preso}<path d={s.d} fill={paint(s.paint)} opacity={s.opacidade} />{/if}
+            {/each}
+            {#if patId}<rect x={box.x} y={box.y} width={box.w} height={box.h} fill="url(#{patId})" />{/if}
+            {#if texId}<rect x={box.x} y={box.y} width={box.w} height={box.h} fill="url(#{texId})" />{/if}
+          </g>
+        {/if}
       </g>
-    {/if}
+    {/each}
   </g>
-  <text x={cx + ((lx0 + lx1) / 2) * s} y={Math.max(7, top - 2)} class="lbl strong" text-anchor="middle">{mark(fig.altura)} m</text>
 </svg>
 
 <style>
   .fig { display: block; overflow: visible; }
-  .ground { stroke: var(--line); stroke-width: .6; }
-  .human { fill: color-mix(in srgb, var(--muted) 22%, transparent); stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 3 2; }
-  .lbl { font: 5px var(--f-mono); fill: var(--muted); }
-  .lbl.strong { fill: var(--ink); }
+  .ground { stroke: var(--line); }
+  .ref { fill: color-mix(in srgb, var(--muted) 34%, transparent); stroke: color-mix(in srgb, var(--muted) 34%, transparent); }
+  .ref text { fill: var(--muted); stroke: none; font-family: var(--f-mono); }
+  .size { fill: var(--ink); font-family: var(--f-mono); }
+  .translucido { opacity: .84; }
 </style>
