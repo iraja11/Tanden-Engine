@@ -1,13 +1,14 @@
 <script lang="ts">
-  import { asList, imageOf, typeInfo, RESERVED, type Entity } from '@tanden/core';
+  import { asList, imageOf, infoRaridade, typeInfo, RESERVED, type Entity, type Profundidade } from '@tanden/core';
   import Portrait from '../../rpg/Portrait.svelte';
   import { typeColor, typeGlyph } from '../tipos';
+  import SeloRaridade from './jornada/SeloRaridade.svelte';
   import Ring from './Ring.svelte';
 
   // Carta de uma ficha do mundo. Na frente: retrato, tipo, campos-chave e a
   // primeira frase. Clicar vira a carta: no verso, as ligações. Inclina e
   // brilha seguindo o ponteiro, como as cartas de item da mesa.
-  let { entity, byPath, onopen }: { entity: Entity; byPath: Map<string, Entity>; onopen: (path: string) => void } = $props();
+  let { entity, byPath, onopen, prof }: { entity: Entity; byPath: Map<string, Entity>; onopen: (path: string) => void; prof?: Profundidade } = $props();
 
   let el = $state<HTMLElement>();
   let flipped = $state(false);
@@ -59,7 +60,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="slot" bind:this={el} onpointermove={tilt} onpointerleave={rest} style:--c={typeColor(entity.type)}>
+<div class="slot {prof?.raridade ?? ''}" bind:this={el} onpointermove={tilt} onpointerleave={rest} style:--c={typeColor(entity.type)} style:--rar={prof ? infoRaridade(prof.raridade).cor : undefined}>
   <div class="card" class:flipped>
     <!-- frente -->
     <div class="face front" role="button" tabindex="0" onclick={() => (flipped = true)}
@@ -67,6 +68,7 @@
       aria-label={`${entity.name}: virar a carta`}>
       <header>
         <b title={entity.name}>{entity.name}</b>
+        {#if prof}<SeloRaridade p={prof} compacto />{/if}
         <Ring value={entity.score} size={18} />
       </header>
       <div class="art">
@@ -97,6 +99,7 @@
     </div>
   </div>
   <i class="shine" aria-hidden="true"></i>
+  {#if prof?.raridade === 'epica' || prof?.raridade === 'lendaria'}<i class="foil" aria-hidden="true"></i>{/if}
 </div>
 
 <style>
@@ -138,5 +141,13 @@
   .shine { position: absolute; inset: 0; border-radius: 16px; pointer-events: none; opacity: 0; mix-blend-mode: soft-light; transition: opacity .25s;
     background: radial-gradient(circle at var(--mx, 50%) var(--my, 30%), rgba(255, 255, 255, .5), transparent 45%); }
   .slot:hover .shine { opacity: 1; }
+  /* raridade: a borda ganha a cor, e as fichas mais profundas brilham como carta especial */
+  .rara .face, .epica .face, .lendaria .face { border-color: color-mix(in srgb, var(--rar) 70%, var(--line)); }
+  .epica .face { box-shadow: 0 12px 30px -18px var(--shadow, #000), 0 0 18px -8px var(--rar); }
+  .lendaria .face { box-shadow: 0 12px 30px -18px var(--shadow, #000), 0 0 26px -6px var(--rar), inset 0 0 0 1px color-mix(in srgb, var(--rar) 40%, transparent); }
+  .foil { position: absolute; inset: 0; border-radius: 16px; pointer-events: none; mix-blend-mode: color-dodge; opacity: .16;
+    background: linear-gradient(115deg, transparent 20%, #ff7ad9 35%, #7af0ff 48%, #fff27a 60%, transparent 76%); background-size: 240% 240%; background-position: var(--mx, 30%) var(--my, 30%); transition: opacity .25s; }
+  .lendaria .foil { opacity: .28; }
+  .slot:hover .foil { opacity: .42; }
   @media (prefers-reduced-motion: reduce) { .card, .slot { transition: none; } }
 </style>

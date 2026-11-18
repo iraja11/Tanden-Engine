@@ -1,8 +1,8 @@
 <script lang="ts">
   import {
-    DEEP_QUESTIONS, ENTITY_TYPES, FIELD_HINTS, allTypes, worldYear, RESERVED, asList, backlinks, bodyOf, entityFolder, entityTemplate, getSection, linkTarget,
-    NON_CARD_TYPES, normalizeType, parseProps, readMarkers, renameProp, reviewWorld, rollTraits, setProp, setProps, setSection, timeline, typeInfo, withBody,
-    worldTemplate, type Entity, type PropValue,
+    DEEP_QUESTIONS, ENTITY_TYPES, FIELD_HINTS, GENEROS, allTypes, worldYear, RESERVED, asList, backlinks, bodyOf, entityFolder, entityTemplate, getSection, linkTarget,
+    NON_CARD_TYPES, normalizeType, parseProps, profundidades, readMarkers, renameProp, reviewWorld, rollTraits, rotuloEntrevista, sceneTemplate, setProp, setProps, setSection, storyIndex, storyTemplate, timeline, typeInfo, withBody,
+    worldTemplate, type AcaoMissao, type Entity, type PropValue,
   } from '@tanden/core';
   import { hasSheet, imageOf, readItemCard } from '@tanden/core';
   import ItemCard from '../rpg/ItemCard.svelte';
@@ -31,6 +31,13 @@
   import SeresView from './mundo/SeresView.svelte';
   import SistemasView from './mundo/SistemasView.svelte';
   import { printCards } from './mundo/print';
+  import BarraEscrita from './mundo/jornada/BarraEscrita.svelte';
+  import Celebracoes from './mundo/jornada/Celebracoes.svelte';
+  import CronicaPainel from './mundo/jornada/CronicaPainel.svelte';
+  import Entrevista from './mundo/jornada/Entrevista.svelte';
+  import PulsoMundo from './mundo/jornada/PulsoMundo.svelte';
+  import SeloRaridade from './mundo/jornada/SeloRaridade.svelte';
+  import { jornada } from './mundo/jornada/jornada.svelte';
   import Icon, { type IconName } from '../ui/Icon.svelte';
 
   let { onOpenNote }: { onOpenNote: (path: string) => void } = $props();
@@ -79,6 +86,16 @@
   let mapFocus = $state<{ map: string; target?: string } | null>(null);
   /** ficha recém-criada: brilha um instante no cartão */
   let fresh = $state<string | null>(null);
+  /** gênero escolhido ao criar um mundo */
+  let newGenre = $state('Livre');
+  /** painel lateral com eras, conquistas e constância */
+  let cronica = $state(false);
+  let cronicaAba = $state<'mundo' | 'conquistas' | 'constancia'>('mundo');
+  function abrirCronica(a: 'mundo' | 'conquistas' | 'constancia') { cronicaAba = a; cronica = true; }
+  /** entrevista aberta na ficha */
+  let entrevistando = $state(false);
+
+  $effect(() => { jornada.start(); });
 
   const worlds = $derived(cadernos.worlds);
   const world = $derived(worlds.find((w) => w.name === worldName) ?? worlds[0] ?? null);
@@ -116,6 +133,8 @@
     return list.length ? list.reduce((s, e) => s + e.score, 0) / list.length : 0;
   });
   const problems = $derived(world ? reviewWorld(world).filter((i) => i.level !== 'ideia').length : 0);
+  // raridade de cada ficha: mede o quanto ela foi aprofundada
+  const prof = $derived(world ? profundidades(world) : new Map());
 
   $effect(() => { if (entityPath && world && !world.entities.some((e) => e.path === entityPath)) entityPath = null; });
 
@@ -131,13 +150,60 @@
     }
     entityPath = path;
     editingKey = null;
+    entrevistando = false;
+  }
+
+  /** Atalho de uma missão do dia. */
+  function acaoMissao(a: AcaoMissao) {
+    if (a.tipo === 'abrir') openEntity(a.path);
+    else if (a.tipo === 'aba') { if (TABS.some((t) => t.id === a.aba)) goTab(a.aba as Tab); }
+    else if (a.tipo === 'criar') startEntity(a.nome ?? '', a.ficha);
+    else if (a.tipo === 'entrevista') { openEntity(a.path); entrevistando = true; }
+    else {
+      // sprint: volta ao último texto escrito, ou à ficha que mais precisa de palavras
+      const fichas = (world?.entities ?? []).filter((e) => !NON_CARD_TYPES.has(e.type));
+      const alvo = jornada.ultimoTexto && byPath.has(jornada.ultimoTexto) && !NON_CARD_TYPES.has(byPath.get(jornada.ultimoTexto)!.type)
+        ? jornada.ultimoTexto : [...fichas].sort((x, y) => x.words - y.words)[0]?.path;
+      if (!alvo) { startEntity(); return; }
+      openEntity(alvo);
+      jornada.querSprint = true;
+    }
+  }
+
+  /** O oráculo virou cena: entra na primeira história do mundo, ou inaugura uma para não perder a leitura. */
+  function cenaDoOraculo(titulo: string, texto: string) {
+    if (!world) return;
+    const nomeMundo = world.name;
+    const h = storyIndex(world)[0];
+    let pasta: string;
+    let historia: string;
+    let ordem = 1;
+    if (h) {
+      pasta = h.folder;
+      historia = h.name;
+      ordem = Math.max(0, ...h.scenes.map((c) => (c.order === 9999 ? 0 : c.order))) + 1;
+    } else {
+      const nova = cadernos.create(entityFolder(world, 'historia'), 'Primeiras cenas', (n) => storyTemplate(n, nomeMundo, { estrutura: 'tres-atos', genero: '', meta: 80000, premissa: '' }));
+      historia = nova.split('/').pop()!.replace(/\.md$/, '');
+      pasta = `${nova.slice(0, nova.lastIndexOf('/'))}/${historia}`;
+    }
+    const path = cadernos.create(pasta, titulo, (n) => `${sceneTemplate(n, nomeMundo, historia, ordem)}${texto}\n`);
+    writeFocus = path;
+    goTab('escrita');
+  }
+
+  function eventoDoOraculo(titulo: string, texto: string) {
+    if (!world) return;
+    const nomeMundo = world.name;
+    const path = cadernos.create(entityFolder(world, 'evento'), titulo, (n) => setSection(entityTemplate(n, nomeMundo, 'evento'), 'O que aconteceu', texto));
+    openEntity(path);
   }
 
   // ------------------------------------------------ criar
   function createWorld() {
     const name = newName.trim();
     if (!name) return;
-    const path = cadernos.create(`Mundos/${name}`, name, (n) => worldTemplate(n));
+    const path = cadernos.create(`Mundos/${name}`, name, (n) => setProp(worldTemplate(n), 'gênero', newGenre));
     worldName = path.split('/').pop()!.replace(/\.md$/, '');
     dialog = null;
     entityPath = null;
@@ -211,6 +277,7 @@
     if (!entity) return;
     body = b;
     cadernos.typed(entity.path, withBody(cadernos.read(entity.path), b));
+    if (world) jornada.escreveu(world.name, entity.path, b);
   }
 
   // editor completo (menu /, [[links]] com sugestões, prévia ao vivo) nas fichas;
@@ -390,6 +457,7 @@
               <span class="kind" style:--c={typeColor(entity.type)}><i class="dot"></i>{typeInfo(entity.type).label}</span>
               <h1>{entity.name}</h1>
             </div>
+            {#if prof.get(entity.path)}<SeloRaridade p={prof.get(entity.path)!} />{/if}
             <span class="score" title={`${Math.round(entity.score * 100)}% preenchida: resumo, imagem, campos, seções e ligações`}><Ring value={entity.score} size={30} /><small>{Math.round(entity.score * 100)}%</small></span>
           </div>
           {#if onMaps.length}
@@ -398,6 +466,7 @@
           <div class="acts">
             {#each ruleActions as a (a)}<button class="t-btn t-btn--sm rule" onclick={() => runRule(a)} title="Ação das regras do mundo">▶ {a}</button>{/each}
             {#if entity.type === 'personagem'}<button class="t-btn t-btn--sm die" onclick={rollPersonality} title="Sorteia motivação, medo, segredo e maneirismo (só os vazios)">🎲 Personalidade</button>{/if}
+            {#if !NON_CARD_TYPES.has(entity.type)}<button class="t-btn t-btn--sm t-btn--primary" class:t-btn--on={entrevistando} onclick={() => (entrevistando = !entrevistando)} title="Uma pergunta por vez: as respostas vão direto para a ficha">❝ {rotuloEntrevista(entity.type).botao}</button>{/if}
             {#if questions.length}<button class="t-btn t-btn--sm" class:t-btn--on={showQuestions} onclick={() => (showQuestions = !showQuestions)} title="Perguntas para aprofundar a ficha">✎ Aprofundar</button>{/if}
             <select class="t-select t-btn--sm" value={entity.type} onchange={(e) => setType((e.currentTarget as HTMLSelectElement).value)} aria-label="Tipo">
               {#each types as t (t.id)}<option value={t.id}>{t.label}</option>{/each}
@@ -407,6 +476,10 @@
           </div>
         </header>
       {/key}
+
+      {#if entrevistando}
+        {#key entity.path}<Entrevista {world} {entity} onclose={() => (entrevistando = false)} />{/key}
+      {/if}
 
       {#if showQuestions}
         <div class="questions" in:rise={{ y: -6 }}>
@@ -523,7 +596,8 @@
         </div>
       {/if}
 
-      <div class="text">
+      <div class="escrita-barra"><BarraEscrita mundo={world.name} path={entity.path} corpo={body} /></div>
+      <div class="text" class:sumindo={!!jornada.sprint?.sumir} style:--sumir={jornada.sprint?.sumir ?? 0}>
         <Editor value={body} docKey={entityKey} onchange={typedBody} rich {host} focusMode={notes.focus} />
       </div>
     {:else}
@@ -537,11 +611,8 @@
           <p class="sub">
             <span>{world.entities.length} fichas</span><span>{world.relations.filter((r) => r.to).length} ligações</span><span>{timeline(world).length} datas</span>
           </p>
-          <div class="health" title="Média de preenchimento das fichas">
-            <span class="hbar"><i style:width="{Math.round(health * 100)}%"></i></span>
-            <small>{Math.round(health * 100)}% vivo</small>
-            {#if problems}<button class="warn" onclick={() => goTab('ideias')}><Icon name="alerta" size={13} />{problems} {problems === 1 ? 'contradição' : 'contradições'}</button>{/if}
-          </div>
+          <PulsoMundo {world} vivo={health} onabrir={abrirCronica} onmissoes={() => goTab('guia')} />
+          {#if problems}<div class="health"><button class="warn" onclick={() => goTab('ideias')}><Icon name="alerta" size={13} />{problems} {problems === 1 ? 'contradição' : 'contradições'}</button></div>{/if}
         </div>
         <div class="acts">
           {#if world.path}<button class="t-btn" onclick={() => onOpenNote(world.path!)}><Icon name="nota" size={16} />Nota do mundo</button>{/if}
@@ -589,7 +660,7 @@
             {#if look === 'cartas'}
               <div class="deck">
                 {#each shown as e, i (e.path)}
-                  <div class:fresh={fresh === e.path} in:rise={{ delay: Math.min(i, 24) * 30, y: 14 }}><FichaCarta entity={e} {byPath} onopen={openEntity} /></div>
+                  <div class:fresh={fresh === e.path} in:rise={{ delay: Math.min(i, 24) * 30, y: 14 }}><FichaCarta entity={e} {byPath} onopen={openEntity} prof={prof.get(e.path)} /></div>
                 {/each}
               </div>
             {:else}
@@ -601,7 +672,7 @@
                     <span class="kind"><span class="g">{typeGlyph(e.type)}</span> {typeInfo(e.type).label}</span>
                     <b>{e.name}</b>
                     {#if e.summary}<span class="sum">{e.summary}</span>{/if}
-                    <span class="cnt"><Ring value={e.score} size={14} />{Math.round(e.score * 100)}%{#if e.relations.some((r) => r.to)} · {e.relations.filter((r) => r.to).length} ligações{/if}</span>
+                    <span class="cnt"><Ring value={e.score} size={14} />{Math.round(e.score * 100)}%{#if e.relations.some((r) => r.to)} · {e.relations.filter((r) => r.to).length} ligações{/if}{#if prof.get(e.path) && prof.get(e.path).raridade !== 'comum'}<SeloRaridade p={prof.get(e.path)} />{/if}</span>
                   </button>
                 {/each}
               </div>
@@ -662,13 +733,13 @@
         <EscritaView {world} {byPath} onopen={openEntity} {onOpenNote} focus={writeFocus} />
       {:else if tab === 'guia'}
         <GuiaView {world} onopen={openEntity} ongo={(t) => { if (TABS.some((x) => x.id === t)) goTab(t as Tab); }}
-          oncreate={(n, t) => startEntity(n, t)} onelement={(id) => { elFocus = id; goTab('elementos'); }} />
+          oncreate={(n, t) => startEntity(n, t)} onelement={(id) => { elFocus = id; goTab('elementos'); }} onacao={acaoMissao} />
       {:else if tab === 'conflitos'}
         <ConflitosView {world} {byPath} onopen={openEntity} onnew={() => startEntity('', 'conflito')} />
       {:else if tab === 'sim'}
         <SimView {world} {byPath} onopen={openEntity} {onOpenNote} onregras={() => (tab = 'regras')} />
       {:else if tab === 'ideias'}
-        <IdeiasView {world} {byPath} onopen={openEntity} oncreate={(n, t) => startEntity(n, t)} />
+        <IdeiasView {world} {byPath} onopen={openEntity} oncreate={(n, t) => startEntity(n, t)} oncena={cenaDoOraculo} onevento={eventoDoOraculo} />
       {:else if tab === 'regras'}
         <RegrasView {world} {byPath} onopen={openEntity} {onOpenNote} />
       {/if}
@@ -731,6 +802,12 @@
           <form onsubmit={(e) => { e.preventDefault(); createWorld(); }}>
             <!-- svelte-ignore a11y_autofocus -->
             <label><span class="t-eyebrow">Nome</span><input class="t-input" bind:value={newName} placeholder="Aerth" autofocus /></label>
+            <span class="t-eyebrow">Gênero</span>
+            <div class="types" role="radiogroup" aria-label="Gênero">
+              {#each GENEROS as g (g.id)}
+                <button type="button" role="radio" aria-checked={newGenre === g.label} class="t-chip" class:on={newGenre === g.label} style:--c={g.cores.luz} title={g.desc} onclick={() => (newGenre = g.label)}><span class="g">{g.glifo}</span>{g.label}</button>
+              {/each}
+            </div>
             <div class="t-actions"><button type="button" class="t-btn" onclick={() => (dialog = null)}>Cancelar</button><button class="t-btn t-btn--primary" disabled={!newName.trim()}>Criar</button></div>
           </form>
         {:else}
@@ -749,6 +826,9 @@
       </div>
     </div>
   {/if}
+
+  {#if cronica && world}<CronicaPainel {world} bind:aba={cronicaAba} onclose={() => (cronica = false)} />{/if}
+  <Celebracoes onconquistas={() => abrirCronica('conquistas')} />
 
   {#if cadernos.message}<div class="toast" role="status">{cadernos.message}</div>{/if}
 </div>
@@ -788,9 +868,6 @@
   code { font: 12px var(--f-mono); color: var(--ember-soft); }
 
   .health { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
-  .hbar { width: 140px; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
-  .hbar i { display: block; height: 100%; background: linear-gradient(90deg, var(--ember), var(--ok)); border-radius: 3px; transition: width .8s var(--ease); }
-  .health small { font: 11px var(--f-mono); color: var(--muted); }
   .warn { display: inline-flex; align-items: center; gap: 5px; border: 0; background: color-mix(in srgb, var(--crit) 14%, transparent); color: var(--crit);
     border-radius: var(--r-pill); padding: 2px 10px; font-size: 11.5px; }
 
@@ -828,7 +905,7 @@
   .kind { display: inline-flex; align-items: center; gap: 6px; font: 600 10px var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--c); }
   .card b, .peek b { font: 600 16px var(--f-display); }
   .sum { color: var(--muted); font-size: var(--fs-sm); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .cnt { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font: 11px var(--f-mono); }
+  .cnt { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 5px; color: var(--muted); font: 11px var(--f-mono); }
   .g { font-size: 11px; }
   .deck { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); gap: var(--sp-4); padding: 4px 2px 40px; }
   .fresh { animation: fresh 2.2s ease-out; border-radius: 16px; }
@@ -858,7 +935,8 @@
   .qs button:hover:not(:disabled) { border-color: var(--ember); }
   .qs button.done { color: var(--ok); opacity: .7; }
 
-  .sheet { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: var(--sp-3); margin-bottom: var(--sp-3); }
+  /* as colunas dependem do espaço do painel, não da janela: com as barras abertas ele fica estreito */
+  .sheet { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-3); }
   .props h3, .links h3, .game h3 { margin: var(--sp-3) 0 var(--sp-2); }
   .props h3:first-child, .links h3:first-child, .game h3:first-child { margin-top: var(--sp-1); }
   .prop { display: grid; grid-template-columns: 120px minmax(0, 1fr) 28px; align-items: center; gap: var(--sp-2); min-height: 36px; padding: 3px 0;
@@ -893,6 +971,8 @@
   .writehint p { margin: 0; }
   .text { flex: 1 0 auto; min-height: 300px; display: flex; flex-direction: column; border-top: 1px solid var(--line); margin: 0 calc(var(--gutter) * -1); }
   .text :global(.editor) { flex: 1; }
+  .sumindo { opacity: calc(1 - var(--sumir)); filter: blur(calc(var(--sumir) * 7px)); transition: opacity .25s linear, filter .25s linear; }
+  .escrita-barra { margin-top: var(--sp-1); }
 
   /* ── linha do tempo ── */
   .timeline { list-style: none; margin: 0; padding: 0 0 40px; position: relative; }

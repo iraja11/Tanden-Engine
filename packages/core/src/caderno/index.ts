@@ -16,3 +16,4 @@ export * from './simulacao';
 export * from './regras';
 export * from './vidas';
 export * from './terreno-pintura';
+export * from './jornada';

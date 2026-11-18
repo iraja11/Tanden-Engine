@@ -11,6 +11,8 @@
   import { sound } from '../../sound.svelte';
   import { cadernos } from '../cadernos.svelte';
   import { typeColor } from '../tipos';
+  import BarraEscrita from './jornada/BarraEscrita.svelte';
+  import { jornada } from './jornada/jornada.svelte';
 
   // Escrita: histórias com estrutura (três atos, jornada...), cenas num quadro
   // por batida, editor de cena com objetivo/conflito/desfecho, quem aparece
@@ -83,6 +85,7 @@
     if (!scene) return;
     sBody = b;
     cadernos.typed(scene.path, withBody(cadernos.read(scene.path), b));
+    jornada.escreveu(world.name, scene.path, b);
   }
   const host: EditorHost = {
     ...notes.host,
@@ -263,7 +266,8 @@
               {@const b = s.sheet.beats.find((x) => x.nome === sc.beat)}
               {#if b}<p class="beatdesc"><b>{b.nome}:</b> {b.desc}</p>{/if}
             {/if}
-            <div class="text">
+            <BarraEscrita mundo={world.name} path={sc.path} corpo={sBody} />
+            <div class="text" class:sumindo={!!jornada.sprint?.sumir} style:--sumir={jornada.sprint?.sumir ?? 0}>
               {#key sc.path}<Editor value={sBody} docKey={sc.path} onchange={typed} rich {host} focusMode={notes.focus} />{/key}
             </div>
             <small class="dim wc">{fmt(liveWords)} palavras nesta cena</small>
@@ -336,7 +340,7 @@
 </div>
 
 <style>
-  .esc { display: grid; gap: var(--sp-3); padding-bottom: 40px; }
+  .esc { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); padding-bottom: 40px; container-type: inline-size; }
   h3 { margin: 0; font: 600 10.5px var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
   .stories { display: flex; gap: 6px; flex-wrap: wrap; }
   .st { display: grid; gap: 1px; text-align: left; padding: 8px 14px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface); color: var(--ink); min-width: 160px; }
@@ -380,9 +384,9 @@
   .sc.on { border-color: var(--ember); box-shadow: 0 0 0 1px var(--ember); }
   .add { border: 1px dashed var(--line); border-radius: var(--r-sm); background: none; color: var(--muted); padding: 5px; font-size: 12px; }
   .add:hover { color: var(--ink); border-color: var(--ember); }
-  .editor { display: grid; gap: 8px; position: sticky; top: 8px; }
+  .editor { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; position: sticky; top: 8px; }
   .editor header { display: flex; gap: 6px; align-items: center; }
-  .editor .title { flex: 1; font: 600 16px var(--f-display); }
+  .editor .title { flex: 1; min-width: 0; font: 600 16px var(--f-display); }
   .status { flex-wrap: wrap; }
   .status button { text-transform: capitalize; }
   .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr)); gap: 6px; }
@@ -392,6 +396,7 @@
   .beatdesc { margin: 0; font-size: 12.5px; color: var(--muted); padding: 6px 10px; border-left: 2px solid var(--ember); background: var(--surface-2); border-radius: 0 var(--r-sm) var(--r-sm) 0; }
   .text { min-height: 280px; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; display: flex; flex-direction: column; }
   .text :global(> *) { flex: 1; }
+  .sumindo { opacity: calc(1 - var(--sumir)); filter: blur(calc(var(--sumir) * 7px)); transition: opacity .25s linear, filter .25s linear; }
   .wc { font: 11.5px var(--f-mono); justify-self: end; }
   .ideas header { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
   .ideas ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
@@ -414,8 +419,10 @@
   .dim { color: var(--muted); }
   .small { font-size: 12px; margin: 0; }
   .pad { padding: 12px 0; }
-  @media (max-width: 900px) {
-    .work.with { grid-template-columns: 1fr; }
+  /* pouco espaço: o quadro sobe e o editor de cena ocupa a largura toda */
+  @container (max-width: 760px) {
+    .editor { position: static; }
+    .work.with { grid-template-columns: minmax(0, 1fr); }
     .work.with .board { max-height: none; flex-direction: row; overflow-x: auto; }
     .work.with .col { flex: 0 0 210px; }
     .editor { position: static; }

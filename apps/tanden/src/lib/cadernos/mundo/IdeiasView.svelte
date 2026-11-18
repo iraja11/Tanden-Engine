@@ -5,16 +5,19 @@
   } from '@tanden/core';
   import { rise } from '../../motion';
   import { typeColor } from '../tipos';
+  import Oraculo from './jornada/Oraculo.svelte';
   import LinkText from './LinkText.svelte';
 
   // Sugestões para o mundo: o que está contraditório ou solto (revisão), e
   // geradores para destravar: ganchos com as fichas reais, nomes no estilo
   // do mundo, personalidades.
-  let { world, byPath, onopen, oncreate }: {
+  let { world, byPath, onopen, oncreate, oncena, onevento }: {
     world: World;
     byPath: Map<string, Entity>;
     onopen: (path: string) => void;
     oncreate: (name: string, type: string) => void;
+    oncena: (titulo: string, texto: string) => void;
+    onevento: (titulo: string, texto: string) => void;
   } = $props();
 
   const issues = $derived(reviewWorld(world));
@@ -56,6 +59,8 @@
 </script>
 
 <div class="ideias">
+  <Oraculo {world} {onopen} {oncena} {onevento} />
+
   <section class="review">
     <header>
       <h3>Revisão do mundo</h3>

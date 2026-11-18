@@ -1,4 +1,4 @@
-import { AnnotationStore, BoardStore, LibraryStore, DriveRemote, EventBus, Replicator, SheetStore, Vault, fullSync, type Storage, type TandenEvent } from '@tanden/core';
+import { AnnotationStore, BoardStore, JornadaStore, LibraryStore, DriveRemote, EventBus, Replicator, SheetStore, Vault, fullSync, type Storage, type TandenEvent } from '@tanden/core';
 import { listen } from '@tauri-apps/api/event';
 import { google } from './google.svelte';
 import { BrowserStorage } from './storage-browser';
@@ -49,6 +49,8 @@ class Engine {
   annots!: AnnotationStore;
   /** biblioteca de PDFs: status, estantes, posição, marcadores */
   library!: LibraryStore;
+  /** progresso da escrita nos mundos: palavras por dia, sprints, missões e conquistas */
+  jornada!: JornadaStore;
   storage!: Storage;
   private replicator: Replicator | null = null;
   /** última falha ao falar com o Drive; o app segue funcionando offline */
@@ -96,6 +98,7 @@ class Engine {
     this.sheets = new SheetStore(storage, this.vault.deviceId, this.bus);
     this.annots = new AnnotationStore(storage, this.vault.deviceId, this.bus);
     this.library = new LibraryStore(storage, this.vault.deviceId, this.bus);
+    this.jornada = new JornadaStore(storage, this.vault.deviceId);
     await google.refresh();
     this.connectDrive();
     this.bus.on('*', (e) => this.onEvent(e));
@@ -104,6 +107,7 @@ class Engine {
     await this.sheets.sync();
     await this.annots.sync();
     await this.library.sync();
+    await this.jornada.sync();
     if (this.vault.list().length === 0) {
       this.vault.create('Bem-vinda.md', WELCOME);
       await this.vault.sync();
@@ -298,10 +302,11 @@ class Engine {
       await this.sheets.sync();
       await this.annots.sync();
       await this.library.sync();
+      await this.jornada.sync();
       return;
     }
     try {
-      await fullSync(this.vault, this.replicator, [this.boards, this.sheets, this.annots, this.library]);
+      await fullSync(this.vault, this.replicator, [this.boards, this.sheets, this.annots, this.library, this.jornada]);
       this.driveError = '';
     } catch (e) {
       // sem internet ou token vencido: o cofre local continua íntegro
@@ -311,6 +316,7 @@ class Engine {
       await this.sheets.sync();
       await this.annots.sync();
       await this.library.sync();
+      await this.jornada.sync();
     }
   }
 }

@@ -80,6 +80,16 @@ Os dois cadernos são notas `.md` comuns com propriedades no topo, então o Obsi
 - **Regras.** Blocos ` ```regras ` nas notas do mundo dão comportamento a ele: tipos novos de ficha, grupos por característica, campos calculados, botões de ação nas fichas, eventos em cadeia e interações entre personagens (cada um se atrai por outro conforme uma expressão, e algo acontece com certa chance), com textos sorteados de bancos (`tipo: tabela`). Rodam nas duas simulações (a de facções passa a funcionar só com regras) e nos botões; também declaram traços, profissões e gostos novos para a simulação de vidas. A aba Regras mostra erros, tem um console e um **construtor de mecânicas** (monta interações, acontecimentos e reações por partes e escreve o código) com receitas prontas. Referência completa em [regras.md](regras.md).
 - **Territórios.** No mapa, **Territórios** pinta a região de cada facção (pelos donos dos lugares hoje ou depois da última simulação), com as fronteiras.
 - **Imprimir cartas.** Em **Cartas**, o botão de impressora imprime as fichas filtradas como cartas de baralho (63×88 mm, 9 por folha A4).
+- **Gênero do mundo.** Quinze gêneros (fantasia medieval, alta fantasia, romantasy, cozy fantasy, super-heróis contemporâneos, horror cósmico, weird fiction, cyberpunk, ficção científica, ópera espacial, pós-apocalipse, steampunk, histórico, contemporâneo realista ou livre) mudam as cores, o nome das eras, a moeda de progresso e os textos do oráculo. O gênero fica na nota do mundo, em `gênero: Horror cósmico`.
+- **Pulso e eras.** O cabeçalho mostra o planeta do mundo, que ganha detalhes a cada uma das sete eras, com nível, sequência, missões e conquistas. O progresso vem do que existe no mundo e do que você escreveu. A **Crônica** (clique no pulso) reúne as eras, as conquistas e a constância.
+- **Raridade das fichas.** Cada ficha tem uma raridade (comum, incomum, rara, épica ou lendária) calculada pelo preenchimento, pelas palavras e pelas ligações. Ela aparece como selo na lista e como moldura nas cartas.
+- **Barra de escrita.** Acima do texto das fichas e das cenas ficam a meta do dia (100 palavras, ajustável), a sequência e as palavras da sessão. Só conta texto novo: colar mais de 150 palavras de uma vez ou reescrever o que já existia não soma. Sete dias seguidos dão um escudo contra um dia perdido (até três). Os avisos esperam você parar de digitar.
+- **Sprints.** Escolha duração e meta de palavras. No modo **Escreva ou Desapareça**, o texto esmaece se você parar por muito tempo, mas é só visual: nada é apagado e o texto volta inteiro no fim.
+- **Oráculo** (aba Ideias). As cartas combinam as suas fichas com o clima do gênero em gancho, reviravolta, complicação e detalhe, e viram cena ou evento num clique. **Pergunte ao destino** responde sim ou não com um d100, conforme a chance escolhida.
+- **Entrevista.** Na ficha, **Entrevistar** faz uma pergunta por vez, e a resposta vai direto para a nota, na propriedade ou seção certa.
+- **Missões de hoje** (aba Guia). Três missões por dia, escolhidas pelo que o mundo precisa, com um botão que leva direto à ação.
+- **Conquistas.** São 409, épicas e bem-humoradas, com cinco raridades e várias secretas.
+- **IA opcional.** Tudo funciona sem IA. No app instalado, com o Ollama ligado, o oráculo e a entrevista ganham botões para improvisar.
 
 ## Mesa de RPG
 

@@ -1,20 +1,22 @@
 <script lang="ts">
   import {
     CHECKLISTS, DICAS, elementCoverage, proximosPassos, readChecks, toggleCheck,
-    type PassoGuia, type World,
+    type AcaoMissao, type PassoGuia, type World,
   } from '@tanden/core';
   import { rise } from '../../motion';
   import { sound } from '../../sound.svelte';
   import { cadernos } from '../cadernos.svelte';
+  import MissoesHoje from './jornada/MissoesHoje.svelte';
 
   // Guia de construção: o que fazer agora (calculado do mundo), checklists por
   // tema (guardados na nota do mundo como tarefas do markdown) e dicas de ofício.
-  let { world, onopen, ongo, oncreate, onelement }: {
+  let { world, onopen, ongo, oncreate, onelement, onacao }: {
     world: World;
     onopen: (path: string) => void;
     ongo: (tab: string) => void;
     oncreate: (name: string, type: string) => void;
     onelement: (id: string) => void;
+    onacao: (a: AcaoMissao) => void;
   } = $props();
 
   const passos = $derived(proximosPassos(world, elementCoverage(world), 8));
@@ -46,6 +48,8 @@
 </script>
 
 <div class="guia">
+  <MissoesHoje {world} {onacao} />
+
   <section class="passos">
     <h3>O que fazer agora</h3>
     {#if passos.length}

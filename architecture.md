@@ -127,7 +127,7 @@ Domínios em subpastas (cada um exporta por um `index.ts`):
 
 | Pasta | Domínio |
 |---|---|
-| `caderno/` | Cadernos de jogos de luta e de world building (frontmatter, `luta`, `mundo`) e as ferramentas do mundo: `conflitos` (tensões e alianças), `mapa` (marcadores, distância, estruturas dos lugares, rotas), `terreno` (relevo por semente, lagos e rios por hidrologia, estradas por A*) e `terreno-pintura` (pixels do terreno em qualquer resolução; a tela pinta num Web Worker), `simulacao` (facções ao longo dos anos), `revisao` (contradições), `gerador` (nomes, traços, ganchos), `regras/` (a linguagem dos blocos ```regras: `parse.ts` lê, `run.ts` interpreta, sem `eval`; ver [docs/regras.md](docs/regras.md)) e `vidas/` (simulação de pessoas mês a mês: `catalogo` de traços/profissões/gostos, `genetica`, `motor` com o mês, influências, decisões e a ponte com as regras, `interacoes`, `combate`, `elenco` (ficha ⇄ pessoa, figurantes), `salvar` (nota `tipo: simulação` com elenco + intervenções, refeita por replay determinístico) e `mecanicas` (construtor: interações, tramas, traços, atributos, espécies, profissões; e receitas); ver [docs/vidas.md](docs/vidas.md)). |
+| `caderno/` | Cadernos de jogos de luta e de world building (frontmatter, `luta`, `mundo`) e as ferramentas do mundo: `conflitos` (tensões e alianças), `mapa` (marcadores, distância, estruturas dos lugares, rotas), `terreno` (relevo por semente, lagos e rios por hidrologia, estradas por A*) e `terreno-pintura` (pixels do terreno em qualquer resolução; a tela pinta num Web Worker), `simulacao` (facções ao longo dos anos), `revisao` (contradições), `gerador` (nomes, traços, ganchos), `jornada/` (gamificação da escrita: `generos`, `progresso` de níveis, eras e raridades, `registro` por aparelho com sequência e contador de palavras, `missoes`, `oraculo`, `entrevista` e `conquistas`), `regras/` (a linguagem dos blocos ```regras: `parse.ts` lê, `run.ts` interpreta, sem `eval`; ver [docs/regras.md](docs/regras.md)) e `vidas/` (simulação de pessoas mês a mês: `catalogo` de traços/profissões/gostos, `genetica`, `motor` com o mês, influências, decisões e a ponte com as regras, `interacoes`, `combate`, `elenco` (ficha ⇄ pessoa, figurantes), `salvar` (nota `tipo: simulação` com elenco + intervenções, refeita por replay determinístico) e `mecanicas` (construtor: interações, tramas, traços, atributos, espécies, profissões; e receitas); ver [docs/vidas.md](docs/vidas.md)). |
 | `calc/` | Cálculo: linguagem, numérico, simbólico, gráficos, formatação, folhas. |
 | `sheet/` | Planilhas `.xlsx`/`.ods`/`.csv`: fórmula, funções, valores, workbook, store. |
 | `slides/` | Apresentações: deck, modelo, aparência, exportação `.pptx`/`.odp`/PDF. |
@@ -168,6 +168,7 @@ não mudaram. Implementações: `MemoryStorage` (testes), `NodeFsStorage` (dev/t
 .tanden/sheet/<planilha>/...             o mesmo, para planilhas
 .tanden/annot/<pdf>/<aparelho>.bin       anotações de PDF
 .tanden/library/<aparelho>.bin           biblioteca de PDFs (status, posição, marcadores)
+.tanden/jornada/<aparelho>.json          progresso de escrita nos Mundos (somado entre aparelhos na leitura)
 .tanden/local/<aparelho>/versoes/        histórico de versões (só neste aparelho)
 .trash/                                  cópias de notas apagadas (lixeira do Obsidian)
 ```
