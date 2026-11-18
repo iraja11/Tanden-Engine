@@ -2,6 +2,7 @@
   import { desktop } from './platform';
   import { engine } from './engine.svelte';
   import { ollama } from './ollama.svelte';
+  import { anima } from './anima/anima.svelte';
   import Terminal from './Terminal.svelte';
 
   // Painel de IA. No PC: Claude Code e Gemini CLI rodando na pasta do cofre
@@ -20,6 +21,9 @@
   let opened = $state<Tab[]>([]);
   let draft = $state('');
   let log: HTMLElement | undefined = $state();
+
+  // a Ânima repara em com quem você está falando
+  $effect(() => { anima.trocouIA(tab); });
 
   $effect(() => {
     if (tab !== 'ollama' && !opened.includes(tab)) opened = [...opened, tab];

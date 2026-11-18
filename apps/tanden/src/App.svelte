@@ -65,6 +65,8 @@
   import { back } from './lib/back';
   import { ask } from './lib/ask.svelte';
   import AskDialog from './lib/AskDialog.svelte';
+  import Anima from './lib/anima/Anima.svelte';
+  import { anima } from './lib/anima/anima.svelte';
 
   let host = $state<HTMLElement>();
   let orbWrap = $state<HTMLElement>();
@@ -161,6 +163,14 @@
   $effect(() => { if (files.goto) view = files.goto.view; });
   // clicar num aviso de lembrete abre a tela de lembretes
   $effect(() => { if (reminders.openRequests) view = 'lembretes'; });
+  // a Ânima só acorda com o comando secreto das configurações; depois, vê cada tela
+  $effect(() => { if (engine.ready && anima.acordada) untrack(() => anima.start()); });
+  $effect(() => {
+    const v = view;
+    if (!anima.acordada) return;
+    const label = railItems.find((m) => m.id === v)?.label ?? v;
+    untrack(() => anima.viu(v.startsWith('plugin:') ? 'plugins' : v, label));
+  });
   // aviso de água/pausa tocado, ou o cartão de saúde do Hoje
   $effect(() => { if (saude.openRequests) untrack(() => go('saude')); });
   // cartões do Hoje e comandos da paleta
@@ -334,7 +344,7 @@
 </script>
 
 <div class="shell" class:focus bind:this={host}>
-  <Veins {host} orb={orbWrap} targets={{ notes: notesEl, editor: editorEl, status: statusEl }}
+  <Veins {host} orb={orbWrap} targets={{ notes: notesEl, editor: editorEl, status: statusEl }} avoid={[railList]}
     flowing={engine.busy} pulses={engine.pulses} />
 
   <nav class="rail">
@@ -560,6 +570,8 @@
 {#if ask.current}
   {#key ask.current}<AskDialog req={ask.current} />{/key}
 {/if}
+
+{#if anima.acordada && engine.ready && !splash && !slides.presenting}<Anima />{/if}
 
 <RulesDrawer />
 

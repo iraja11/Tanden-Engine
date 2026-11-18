@@ -2,6 +2,8 @@
   import Icon, { type IconName } from '../ui/Icon.svelte';
   import ModuleTabs from '../ui/ModuleTabs.svelte';
   import AjustesSheet from './AjustesSheet.svelte';
+  import Avisos from './Avisos.svelte';
+  import ConquistasTab from './ConquistasTab.svelte';
   import BibliotecaTab from './BibliotecaTab.svelte';
   import Player from './Player.svelte';
   import ProgramasTab from './ProgramasTab.svelte';
@@ -10,12 +12,13 @@
   import { exercicios as ex } from './exercicios.svelte';
 
   // Tela Exercícios: treinos guiados para fazer em casa.
-  type Tab = 'treinar' | 'biblioteca' | 'programas' | 'progresso';
+  type Tab = 'treinar' | 'biblioteca' | 'programas' | 'progresso' | 'conquistas';
   const TABS: Array<{ id: Tab; label: string; icon: IconName }> = [
     { id: 'treinar', label: 'Treinar', icon: 'halter' },
     { id: 'biblioteca', label: 'Exercícios', icon: 'lista' },
     { id: 'programas', label: 'Programas', icon: 'calendario' },
     { id: 'progresso', label: 'Progresso', icon: 'grafico' },
+    { id: 'conquistas', label: 'Conquistas', icon: 'faisca' },
   ];
   const tab = $derived(ex.tab as Tab);
   let settings = $state(false);
@@ -36,9 +39,11 @@
     {#if tab === 'treinar'}<TreinarTab />
     {:else if tab === 'biblioteca'}<BibliotecaTab />
     {:else if tab === 'programas'}<ProgramasTab />
+    {:else if tab === 'conquistas'}<ConquistasTab />
     {:else}<ProgressoTab />{/if}
   </div>
   <ModuleTabs tabs={TABS} value={tab} onchange={(t) => (ex.tab = t)} place="dock" label="Seções dos exercícios" />
+  <Avisos onopen={() => (ex.tab = 'conquistas')} />
   {#if settings}<AjustesSheet onclose={() => (settings = false)} />{/if}
 </section>
 

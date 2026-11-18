@@ -1,8 +1,8 @@
 import {
-  DEFAULT_MOVE_SETTINGS, MOVE_LOG_DIR, MOVE_NOTE, activeStreak, activityKcal, activityLine, appendActivity, buildRoutine, homeProgramById, moveLogPath, parseActivityLog,
+  DEFAULT_MOVE_SETTINGS, MOVE_LOG_DIR, MOVE_NOTE, STREAK_MILESTONES, activeStreak, activityCalendar, activityKcal, activityLine, appendActivity, buildRoutine, homeProgramById, moveLogPath, parseActivityLog,
   parseMoveSettings, programDone, programLength, programRoutine, removeActivity, routineKcal, routineSeconds, suggestWorkout, toActiveDays, today, weekSummary, weeksHistory,
-  writeMoveSettings,
-  type ActiveDay, type ActivityLog, type HomeProgram, type MoveSettings, type Routine, type RoutineFocus,
+  moveBadges, nextBadge, streakInfo, writeMoveSettings,
+  type ActiveDay, type ActivityLog, type BadgeState, type MoveBadge, type HomeProgram, type MoveSettings, type Routine, type RoutineFocus,
 } from '@tanden/core';
 import { alimentacao } from '../alimentacao/alimentacao.svelte';
 import { engine } from '../engine.svelte';
@@ -26,7 +26,17 @@ export interface WorkoutSession {
   worked: number;
 }
 
+/** O que a tela de exercícios conta para quem quiser ouvir (a Ânima, por exemplo). */
+export type MoveNews =
+  | { kind: 'treino'; minutes: number; effort: number | null; streak: number }
+  | { kind: 'conquista'; badge: MoveBadge }
+  | { kind: 'marco'; days: number };
+
+/** Aviso que aparece por cima da tela. */
+export type MoveNotice = { id: number; badge: MoveBadge } | { id: number; days: number };
+
 const SESSION_KEY = 'tanden.exercicios.emAndamento';
+const SEEN_KEY = 'tanden.exercicios.conquistasVistas';
 const RECENT_KEY = 'tanden.exercicios.recentes';
 
 function load<T>(key: string): T | null {
@@ -57,8 +67,13 @@ class Exercicios {
   tab = $state('treinar');
   openRequests = $state(0);
 
+  /** conquistas e marcos recém-obtidos */
+  notices = $state<MoveNotice[]>([]);
+
   private started = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
+  private listeners = new Set<(n: MoveNews) => void>();
+  private noticeSeq = 0;
 
   readonly day = $derived(today(new Date(this.now)));
   readonly bodyKg = $derived(alimentacao.profile.weightKg ?? 70);
@@ -70,6 +85,11 @@ class Exercicios {
   readonly week = $derived(weekSummary(this.activeDays, this.day));
   readonly history = $derived(weeksHistory(this.activeDays, this.day, 8));
   readonly streak = $derived(activeStreak(this.activeDays, this.day));
+  readonly streaks = $derived(streakInfo(this.activeDays, this.day, this.settings.weekGoal));
+  readonly calendar = $derived(activityCalendar(this.activeDays, this.day, 15));
+  readonly badges = $derived<BadgeState[]>(moveBadges({ logs: this.logs, active: this.activeDays, weekGoal: this.settings.weekGoal }));
+  readonly badgesDone = $derived(this.badges.filter((b) => b.done).length);
+  readonly nextBadge = $derived(nextBadge(this.badges));
   readonly idea = $derived(suggestWorkout(this.logs, this.settings, this.day));
   readonly program = $derived(this.settings.program ? homeProgramById(this.settings.program) ?? null : null);
 
@@ -105,6 +125,55 @@ class Exercicios {
       if (p.startsWith(`${MOVE_LOG_DIR}/`)) logs.push(...parseActivityLog(engine.vault.read(p)));
     }
     this.logs = logs.sort((a, b) => a.day.localeCompare(b.day) || a.time.localeCompare(b.time));
+    this.checkBadges();
+  }
+
+  /** Escuta treinos, conquistas e marcos. Devolve como parar. */
+  on(fn: (n: MoveNews) => void): () => void {
+    this.listeners.add(fn);
+    return () => this.listeners.delete(fn);
+  }
+
+  private tell(n: MoveNews): void {
+    for (const fn of this.listeners) {
+      try {
+        fn(n);
+      } catch (e) {
+        console.error('[tanden] ouvinte dos exercícios falhou', e);
+      }
+    }
+  }
+
+  private notice(n: Omit<MoveNotice, 'id'>): void {
+    const id = ++this.noticeSeq;
+    this.notices = [...this.notices, { id, ...n } as MoveNotice].slice(-3);
+    setTimeout(() => this.dismiss(id), 8000);
+  }
+
+  dismiss(id: number): void {
+    this.notices = this.notices.filter((n) => n.id !== id);
+  }
+
+  /**
+   * Avisa o que foi obtido desde a última vez neste aparelho. Na primeira vez,
+   * o que já estava obtido entra calado (não é novidade).
+   */
+  private checkBadges(): void {
+    const done = this.badges.filter((b) => b.done).map((b) => b.badge);
+    const seen = load<string[]>(SEEN_KEY);
+    if (seen === null) {
+      keep(SEEN_KEY, done.map((b) => b.id));
+      return;
+    }
+    const known = new Set(seen);
+    const fresh = done.filter((b) => !known.has(b.id));
+    if (!fresh.length) return;
+    keep(SEEN_KEY, [...known, ...fresh.map((b) => b.id)]);
+    for (const b of fresh.slice(0, 3)) {
+      this.notice({ badge: b });
+      this.tell({ kind: 'conquista', badge: b });
+    }
+    sound.play('complete');
   }
 
   private write(path: string, text: string): void {
@@ -170,6 +239,18 @@ class Exercicios {
     vida.markHabit(['exercicio', 'exercício', 'treino'], this.day);
     this.discard();
     sound.play('complete');
+    this.afterActivity(minutes, effort);
+  }
+
+  /** Depois de anotar: conta a sequência e comemora os marcos. */
+  private afterActivity(minutes: number, effort: number | null): void {
+    const n = this.streaks.current;
+    this.tell({ kind: 'treino', minutes, effort, streak: n });
+    const firstToday = this.activeDays.filter((a) => a.day === this.day).length === 1;
+    if (firstToday && STREAK_MILESTONES.includes(n)) {
+      this.notice({ days: n });
+      this.tell({ kind: 'marco', days: n });
+    }
   }
 
   discard(): void {
@@ -201,6 +282,7 @@ class Exercicios {
     this.write(path, appendActivity(this.read(path), line, at));
     vida.markHabit(['exercicio', 'exercício', 'treino'], this.day);
     sound.play('complete');
+    this.afterActivity(minutes, null);
   }
 
   remove(log: ActivityLog): void {

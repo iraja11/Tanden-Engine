@@ -194,6 +194,87 @@ export const HOME_MOVES: HomeMove[] = [
   M('s-punhos', 'Girar os punhos', 'sentado', 1, 'sentado', 1.5, ['Entrelace os dedos e gire os punhos.', 'Depois estenda os braços e puxe os dedos para trás.'] ),
   M('s-peito', 'Abrir o peito sentado', 'sentado', 1, 'sentado', 1.8, ['Entrelace as mãos atrás das costas.', 'Abra o peito e olhe levemente para cima.'] ),
   M('s-tornozelo', 'Círculos com os tornozelos', 'sentado', 1, 'sentado', 1.5, ['Levante um pé do chão.', 'Faça círculos nos dois sentidos.'], { sides: true }),
+
+  // ---------------------------------------------------------------- mais movimentos
+
+  // pernas
+  M('agachamento-isometrico', 'Agachamento isométrico', 'pernas', 1, 'agachar', 4.5, ['Desça até a metade do agachamento.', 'Segure parado, respirando, com o peso nos calcanhares.'], { avoid: ['joelho'], tip: 'Quanto mais baixo, mais difícil: ache a sua altura.' }),
+  M('afundo-frente', 'Afundo para a frente', 'pernas', 2, 'afundo', 5.5, ['Dê um passo longo à frente e desça os dois joelhos.', 'Empurre o chão com o pé da frente para voltar.'], { sides: true, avoid: ['joelho'], easier: 'afundo-tras' }),
+  M('afundo-pausa', 'Afundo com pausa', 'pernas', 2, 'afundo', 5.5, ['Desça no afundo e segure 2 segundos embaixo.', 'Suba devagar, sem soltar o corpo.'], { sides: true, avoid: ['joelho'], easier: 'afundo-tras' }),
+  M('agachamento-cossaco', 'Agachamento cossaco', 'pernas', 3, 'afundo', 6, ['Pés bem afastados. Desça para um lado, a outra perna estica com a ponta do pé para cima.', 'Passe pelo centro e desça para o outro lado.'], { avoid: ['joelho'], tip: 'Desça só até onde o quadril deixar.', easier: 'afundo-lateral' }),
+  M('pistol-porta', 'Agachamento de uma perna segurando na porta', 'pernas', 3, 'agachar', 6.5, ['Segure o batente ou a maçaneta de uma porta firme.', 'Estique uma perna à frente e desça com a outra, usando as mãos só para ajudar.'], { props: ['parede'], sides: true, avoid: ['joelho'], easier: 'agachamento-unilateral' }),
+  M('tibial-parede', 'Ponta do pé encostado na parede', 'pernas', 1, 'panturrilha', 2.5, ['Encoste as costas na parede, pés um passo à frente.', 'Levante as pontas dos pés e desça devagar.'], { props: ['parede'], tip: 'Fortalece a canela e ajuda quem corre.' }),
+  M('subida-degrau-lateral', 'Subida lateral no degrau', 'pernas', 2, 'marcha', 6, ['De lado para o degrau, suba com a perna de perto.', 'Desça devagar e repita do mesmo lado.'], { props: ['degrau'], sides: true, avoid: ['joelho'] }),
+
+  // glúteos
+  M('ponte-pausa', 'Ponte com pausa', 'gluteos', 1, 'ponte', 3.8, ['Suba o quadril na ponte e segure 3 segundos lá em cima.', 'Desça devagar e repita.'], { easier: 'ponte', harder: 'ponte-marcha' }),
+  M('ponte-marcha', 'Ponte com marcha', 'gluteos', 2, 'ponte', 4.2, ['Suba o quadril na ponte.', 'Tire um pé do chão de cada vez, sem deixar o quadril cair.'], { easier: 'ponte-pausa' }),
+  M('ponte-borboleta', 'Ponte borboleta', 'gluteos', 1, 'ponte', 3.5, ['Deitado, junte as solas dos pés e deixe os joelhos abertos.', 'Suba o quadril apertando os glúteos e desça.'] ),
+  M('abducao-em-pe', 'Abdução de perna em pé', 'gluteos', 1, 'em-pe', 3, ['Segure na parede e fique em uma perna só.', 'Leve a outra perna para o lado, sem inclinar o tronco, e volte.'], { props: ['parede'], sides: true }),
+
+  // peito
+  M('flexao-sofa', 'Flexão com as mãos no sofá', 'peito', 1, 'flexao-parede', 3.5, ['Mãos na beira do sofá, corpo reto.', 'Desça o peito até o sofá e empurre.'], { props: ['sofa'], avoid: ['punho'], easier: 'flexao-parede', harder: 'flexao-joelhos' }),
+  M('flexao-negativa', 'Flexão negativa', 'peito', 2, 'flexao', 4.5, ['Em posição de flexão, desça bem devagar, contando 4 segundos.', 'Apoie os joelhos para subir e comece de novo.'], { avoid: ['punho'], tip: 'É o melhor caminho para a primeira flexão completa.', easier: 'flexao-joelhos', harder: 'flexao' }),
+  M('flexao-pausa', 'Flexão com pausa embaixo', 'peito', 2, 'flexao', 5, ['Desça na flexão e segure 2 segundos perto do chão.', 'Empurre com força.'], { avoid: ['punho'], easier: 'flexao-negativa' }),
+  M('flexao-aberta', 'Flexão aberta', 'peito', 2, 'flexao', 5, ['Mãos mais afastadas que os ombros.', 'Desça o peito com os cotovelos para fora e empurre.'], { avoid: ['punho', 'ombro'], easier: 'flexao-joelhos' }),
+  M('aperto-palmas', 'Aperto de palmas', 'peito', 1, 'em-pe', 2.3, ['Junte as palmas na frente do peito, cotovelos abertos.', 'Aperte uma mão contra a outra com força por alguns segundos e solte.'], { tip: 'Isométrico: zero barulho, dá para fazer em qualquer lugar.' }),
+
+  // costas
+  M('w-bracos', 'W de bruços', 'costas', 1, 'superman', 2.8, ['De bruços, cotovelos dobrados formando um W.', 'Tire os braços do chão juntando as escápulas e desça.'] ),
+  M('nadador', 'Nadador de bruços', 'costas', 2, 'superman', 3.5, ['De bruços, braços e pernas fora do chão.', 'Alterne braço e perna opostos como quem nada.'], { avoid: ['lombar'], easier: 'superman' }),
+  M('remada-toalha', 'Remada sentada com toalha', 'costas', 1, 'remada', 3, ['Sente com as pernas esticadas e a toalha passando pela sola dos pés.', 'Puxe as pontas até a barriga, juntando as escápulas, e resista na volta.'], { props: ['toalha'] }),
+  M('remada-serrote', 'Remada serrote com mochila', 'costas', 1, 'remada', 4, ['Apoie uma mão e um joelho no sofá.', 'Puxe a mochila com a outra mão até a cintura e desça devagar.'], { props: ['mochila', 'sofa'], sides: true }),
+  M('prancha-invertida', 'Prancha invertida', 'costas', 2, 'ponte', 3.5, ['Sente com as pernas esticadas e as mãos atrás do quadril.', 'Suba o quadril até o corpo ficar reto e segure.'], { avoid: ['punho', 'ombro'] }),
+
+  // ombros e braços
+  M('elevacao-frontal', 'Elevação frontal com garrafas', 'ombros', 1, 'elevar', 3.3, ['Garrafas à frente das coxas.', 'Suba os braços esticados até a altura dos ombros e desça devagar.'], { props: ['garrafas'], avoid: ['ombro'] }),
+  M('prancha-pike', 'Prancha que vira V invertido', 'ombros', 2, 'prancha', 4.5, ['Em prancha alta, empurre o chão e suba o quadril.', 'Volte para a prancha devagar.'], { avoid: ['punho', 'ombro'], harder: 'flexao-pike' }),
+  M('rosca-martelo', 'Rosca martelo com garrafas', 'bracos', 1, 'rosca', 3.3, ['Garrafas com as palmas viradas para o corpo.', 'Dobre os cotovelos sem mexer os ombros e desça devagar.'], { props: ['garrafas'] }),
+  M('triceps-coice', 'Tríceps coice com garrafa', 'bracos', 1, 'remada', 3.3, ['Incline o tronco com a coluna reta e o cotovelo colado ao corpo.', 'Estique o braço para trás e volte.'], { props: ['garrafas'], sides: true, avoid: ['lombar'] }),
+  M('mergulho-chao', 'Mergulho no chão', 'bracos', 1, 'mergulho', 3.5, ['Sente com os joelhos dobrados e as mãos atrás, dedos para a frente.', 'Tire o quadril do chão e dobre e estique os cotovelos.'], { avoid: ['ombro', 'punho'], harder: 'mergulho-cadeira' }),
+
+  // abdômen
+  M('prancha-lateral-joelho', 'Prancha lateral com joelho no chão', 'core', 1, 'prancha-lateral', 2.8, ['Deite de lado apoiado no antebraço, joelhos dobrados.', 'Suba o quadril e segure, corpo reto do joelho à cabeça.'], { sides: true, harder: 'prancha-lateral' }),
+  M('prancha-perna', 'Prancha tirando a perna', 'core', 2, 'prancha', 3.8, ['Em prancha, tire um pé do chão por 2 segundos.', 'Troque sem balançar o quadril.'], { easier: 'prancha' }),
+  M('urso', 'Urso parado', 'core', 2, 'quatro-apoios', 4, ['De quatro, tire os joelhos dois dedos do chão.', 'Segure com as costas retas e respire.'], { avoid: ['punho'], tip: 'Parece fácil por cinco segundos.' }),
+  M('toque-calcanhar', 'Toque no calcanhar', 'core', 1, 'abdominal', 3, ['Deitado com joelhos dobrados, ombros um pouco fora do chão.', 'Incline de lado para tocar um calcanhar e depois o outro.'] ),
+  M('abdominal-reverso', 'Abdominal reverso', 'core', 2, 'deitado-pernas', 3.8, ['Deitado, joelhos dobrados no alto.', 'Puxe os joelhos para o peito tirando o quadril do chão e desça devagar.'], { avoid: ['lombar'] }),
+  M('tesoura', 'Tesoura', 'core', 2, 'deitado-pernas', 3.8, ['Deitado, mãos sob o quadril, pernas um pouco fora do chão.', 'Cruze as pernas por cima e por baixo, sem parar.'], { avoid: ['lombar'] }),
+  M('escalador-cruzado', 'Escalador cruzado lento', 'core', 2, 'escalador', 5, ['Em prancha alta, leve o joelho em direção ao cotovelo oposto.', 'Volte e troque, sem pressa.'], { avoid: ['punho'] }),
+
+  // cardio sem impacto
+  M('chute-frontal', 'Chute frontal alternado', 'cardio', 1, 'marcha', 4.5, ['Suba o joelho e estique a perna num chute à frente.', 'Volte e troque, braços em guarda.'] ),
+  M('joelho-cotovelo', 'Joelho no cotovelo em pé', 'cardio', 1, 'marcha', 4, ['Mãos atrás da cabeça.', 'Leve o joelho ao cotovelo oposto e alterne.'] ),
+  M('boxe-esquiva', 'Boxe com esquiva', 'cardio', 2, 'boxe', 6, ['Dois socos rápidos à frente.', 'Agache de lado como quem desvia de um golpe e repita.'], { avoid: ['joelho'] }),
+  M('corda-sem-salto', 'Corda imaginária sem salto', 'cardio', 1, 'panturrilha', 4, ['Gire os punhos como se pulasse corda.', 'Suba e desça os calcanhares no ritmo, sem tirar a ponta do pé do chão.'] ),
+  M('marcha-rapida', 'Marcha acelerada com braços', 'cardio', 2, 'marcha', 5.5, ['Marche rápido no lugar.', 'Empurre os braços para o alto a cada passo.'], { avoid: ['ombro'], easier: 'marcha-parada' }),
+
+  // cardio com impacto
+  M('corda', 'Corda imaginária', 'cardio', 2, 'panturrilha', 8.5, ['Pule baixinho na ponta dos pés girando os punhos.', 'Pouse macio, joelhos soltos.'], { noisy: true, easier: 'corda-sem-salto' }),
+  M('patinador', 'Patinador', 'cardio', 3, 'afundo', 8, ['Salte de lado de um pé para o outro.', 'Cruze a perna de trás e pouse macio.'], { noisy: true, avoid: ['joelho'], easier: 'patinador-lento' }),
+  M('salto-estrela', 'Salto estrela', 'cardio', 3, 'polichinelo', 9, ['Agache um pouco e salte abrindo braços e pernas em X.', 'Pouse com os pés juntos e já prepare o próximo.'], { noisy: true, avoid: ['joelho'], easier: 'polichinelo' }),
+  M('corrida-joelho-alto', 'Corrida com joelhos altos', 'cardio', 3, 'marcha', 9, ['Corra no lugar subindo os joelhos até o quadril.', 'Braços rápidos, tronco alto.'], { noisy: true, avoid: ['joelho'], easier: 'joelho-alto' }),
+
+  // mobilidade
+  M('quadril-90-90', 'Quadril 90/90', 'mobilidade', 1, 'sentado', 2.5, ['Sente com as duas pernas dobradas a 90 graus, uma à frente e outra ao lado.', 'Gire os joelhos para o outro lado sem usar as mãos, se der.'] ),
+  M('rotacao-toracica', 'Rotação torácica em quatro apoios', 'mobilidade', 1, 'quatro-apoios', 2.5, ['De quatro, mão atrás da cabeça.', 'Gire o cotovelo para o teto, acompanhando com o olhar, e volte.'], { sides: true, avoid: ['punho'] }),
+  M('alcance-diagonal', 'Alcance diagonal', 'mobilidade', 1, 'torcao', 3, ['Mãos juntas acima de um ombro.', 'Desça em diagonal até o joelho oposto, girando o tronco.'], { sides: true }),
+  M('maior-do-mundo', 'O maior alongamento do mundo', 'mobilidade', 2, 'afundo', 3.5, ['Dê um passo longo à frente e apoie as mãos no chão.', 'Leve o cotovelo ao pé da frente e gire o braço para o teto.'], { sides: true, avoid: ['joelho'] }),
+
+  // alongamento
+  M('along-flexor', 'Alongar a frente do quadril', 'alongamento', 1, 'afundo', 2, ['Ajoelhe com uma perna à frente.', 'Empurre o quadril à frente apertando o glúteo de trás.'], { sides: true, avoid: ['joelho'], tip: 'Ótimo para quem passa o dia sentado.' }),
+  M('along-pombo', 'Pombo', 'alongamento', 2, 'crianca', 2, ['Leve uma perna dobrada à frente e estique a outra para trás.', 'Incline o tronco sobre a perna da frente e respire.'], { sides: true, avoid: ['joelho'] }),
+  M('along-lateral', 'Inclinação lateral em pé', 'alongamento', 1, 'em-pe', 2, ['Suba um braço por cima da cabeça.', 'Incline o tronco para o lado oposto, sem girar.'], { sides: true }),
+  M('along-posterior-toalha', 'Alongar posteriores com toalha', 'alongamento', 1, 'deitado-pernas', 2, ['Deite e passe a toalha pela sola de um pé.', 'Suba a perna esticada até sentir atrás da coxa.'], { props: ['toalha'], sides: true }),
+  M('along-antebraco', 'Alongar os antebraços', 'alongamento', 1, 'em-pe', 1.8, ['Estique o braço com a palma para cima e puxe os dedos para baixo.', 'Depois vire a palma para baixo e repita.'], { sides: true, tip: 'Para quem digita o dia inteiro.' }),
+  M('along-bebe-feliz', 'Bebê feliz', 'alongamento', 1, 'deitado-pernas', 2, ['Deitado, segure a parte de fora dos pés com os joelhos abertos.', 'Balance devagar de um lado para o outro.'] ),
+
+  // na cadeira
+  M('s-panturrilha', 'Panturrilha sentado', 'sentado', 1, 'sentado', 1.8, ['Pés no chão, sentado na ponta da cadeira.', 'Suba os calcanhares o máximo que der e desça.'], { props: ['cadeira'] }),
+  M('s-joelhos-peito', 'Joelhos ao peito sentado', 'sentado', 1, 'sentado', 2.5, ['Segure a beira do assento e incline levemente para trás.', 'Puxe os joelhos para o peito e desça sem encostar os pés.'], { props: ['cadeira'] }),
+  M('s-gluteo', 'Glúteo figura 4 sentado', 'sentado', 1, 'sentado', 1.5, ['Cruze o tornozelo sobre o joelho oposto.', 'Incline o tronco à frente com a coluna reta.'], { props: ['cadeira'], sides: true }),
+  M('s-respiracao', 'Respiração quadrada', 'sentado', 1, 'sentado', 1.3, ['Inspire em 4 tempos, segure 4.', 'Solte em 4 e fique vazio por 4.'], { tip: 'Baixa o nervoso de verdade.' }),
+  M('s-olhos', 'Descanso dos olhos', 'sentado', 1, 'sentado', 1.2, ['Olhe para algo a uns 6 metros de distância.', 'Pisque devagar algumas vezes e relaxe a testa.'], { tip: 'A regra 20-20-20: a cada 20 minutos, 20 segundos olhando longe.' }),
 ];
 
 const byId = new Map(HOME_MOVES.map((m) => [m.id, m]));

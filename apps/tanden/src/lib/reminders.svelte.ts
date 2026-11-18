@@ -11,6 +11,7 @@ import {
   rescheduleIn,
   CATCH_UP_MS,
   isCareNotificationId,
+  isAnimaNotificationId,
   type Reminder,
   type Repeat,
 } from '@tanden/core';
@@ -159,6 +160,8 @@ class ReminderCenter {
       const id = a.notification?.id;
       // água e pausa são da tela Saúde, que ouve as próprias ações
       if (id !== undefined && isCareNotificationId(id)) return;
+      // as mensagens da Ânima só abrem o app
+      if (id !== undefined && isAnimaNotificationId(id)) return;
       const r = this.items.find((x) => notificationId(x) === id);
       if (a.actionId === 'feito' && r) this.complete(r);
       else if (a.actionId === 'adiar' && r) this.snooze(r, Date.now() + SNOOZE_MS);
