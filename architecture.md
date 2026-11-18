@@ -127,7 +127,7 @@ Domínios em subpastas (cada um exporta por um `index.ts`):
 
 | Pasta | Domínio |
 |---|---|
-| `caderno/` | Cadernos de jogos de luta e de world building (frontmatter, `luta`, `mundo`) e as ferramentas do mundo: `conflitos` (tensões e alianças), `mapa` (marcadores, distância, estruturas dos lugares, rotas), `terreno` (relevo por semente, lagos e rios por hidrologia, estradas por A*) e `terreno-pintura` (pixels do terreno em qualquer resolução; a tela pinta num Web Worker), `simulacao` (facções ao longo dos anos), `revisao` (contradições), `gerador` (nomes, traços, ganchos), `jornada/` (gamificação da escrita: `generos`, `progresso` de níveis, eras e raridades, `registro` por aparelho com sequência e contador de palavras, `missoes`, `oraculo`, `entrevista` e `conquistas`), `regras/` (a linguagem dos blocos ```regras: `parse.ts` lê, `run.ts` interpreta, sem `eval`; ver [docs/regras.md](docs/regras.md)) e `vidas/` (simulação de pessoas mês a mês: `catalogo` de traços/profissões/gostos, `genetica`, `motor` com o mês, influências, decisões e a ponte com as regras, `interacoes`, `combate`, `elenco` (ficha ⇄ pessoa, figurantes), `salvar` (nota `tipo: simulação` com elenco + intervenções, refeita por replay determinístico) e `mecanicas` (construtor: interações, tramas, traços, atributos, espécies, profissões; e receitas); ver [docs/vidas.md](docs/vidas.md)). |
+| `caderno/` | Cadernos de jogos de luta e de world building (frontmatter, `luta`, `mundo`) e as ferramentas do mundo: `conflitos` (tensões e alianças), `mapa` (marcadores, distância, estruturas dos lugares, rotas), `terreno` (relevo por semente, lagos e rios por hidrologia, estradas por A*) e `terreno-pintura` (pixels do terreno em qualquer resolução; a tela pinta num Web Worker), `especie/` (construtor de espécies: `catalogo` de campos e opções, `moldes`, `sorteio`, `notas` de biologia e o retrato em `figura`, `desenho`, `partes` e `pena`), `simulacao` (facções ao longo dos anos), `revisao` (contradições), `gerador` (nomes, traços, ganchos), `jornada/` (gamificação da escrita: `generos`, `progresso` de níveis, eras e raridades, `registro` por aparelho com sequência e contador de palavras, `missoes`, `oraculo`, `entrevista` e `conquistas`), `regras/` (a linguagem dos blocos ```regras: `parse.ts` lê, `run.ts` interpreta, sem `eval`; ver [docs/regras.md](docs/regras.md)) e `vidas/` (simulação de pessoas mês a mês: `catalogo` de traços/profissões/gostos, `genetica`, `motor` com o mês, influências, decisões e a ponte com as regras, `interacoes`, `combate`, `elenco` (ficha ⇄ pessoa, figurantes), `salvar` (nota `tipo: simulação` com elenco + intervenções, refeita por replay determinístico) e `mecanicas` (construtor: interações, tramas, traços, atributos, espécies, profissões; e receitas); ver [docs/vidas.md](docs/vidas.md)). |
 | `calc/` | Cálculo: linguagem, numérico, simbólico, gráficos, formatação, folhas. |
 | `sheet/` | Planilhas `.xlsx`/`.ods`/`.csv`: fórmula, funções, valores, workbook, store. |
 | `slides/` | Apresentações: deck, modelo, aparência, exportação `.pptx`/`.odp`/PDF. |
@@ -136,6 +136,8 @@ Domínios em subpastas (cada um exporta por um `index.ts`):
 | `convert/` | Conversões de arquivo (docx, odt, odp, pptx, epub, HTML⇄Markdown, texto de PDF, `dom`, `xml-lite`). |
 | `rpg/` | Mesa de RPG: dados, fichas, combate, tabelas de rolagem, campanhas. |
 | `saude/` | Saúde: água/pausas, biblioteca de exercícios, planner/treino. |
+| `alimentacao/` | Alimentação: tabela de alimentos, receitas, diário, metas, cardápio, compras e sugestões. |
+| `exercicios/` | Exercícios em casa: biblioteca, treinos guiados por tempo, programas e registro. |
 | `vida/` | Tela Hoje: tarefas, projetos, hábitos, metas, diário, revisão semanal. |
 | `plugins/` | Plugins: manifesto/permissões, host que confere chamadas, SDK injetado. |
 
@@ -302,6 +304,8 @@ interface; a lógica de domínio vem de `@tanden/core`.
 | `rpg/` | Mesa (`MesaView`, bandeja de dados, combate, fichas, sessões, tabelas). |
 | `vida/` | Tela Hoje. |
 | `saude/` | Saúde (água, pausas, treino). |
+| `alimentacao/` | Alimentação (diário, cardápio, compras, sugestões). |
+| `exercicios/` | Exercícios em casa (treinos guiados, programas, registro). |
 | `flashcards/` | Flashcards (baralhos e estudo). |
 | `agenda/` | Agenda: mês, semana, dia e lista; eventos do cofre, Google Agenda e tarefas com prazo. |
 | `plugins/` | Registro, aprovação e a janela (`<iframe sandbox>`) dos plugins. |

@@ -48,7 +48,6 @@
     {#if tab === 'modelos'}
       <div class="page">
         <h1>Modelos</h1>
-        <p class="sub">Notas em <code>Modelos/</code>, a mesma pasta do plugin Templates do Obsidian. Use <code>{'{{title}}'}</code>, <code>{'{{date}}'}</code>, <code>{'{{time}}'}</code> e <code>{'{{date:DD/MM/YYYY}}'}</code>. Na barra de notas, o menu do <b>+</b> cria páginas com eles.</p>
         <h3>Páginas</h3>
         <div class="tgrid">
           {#each pageTemplates as t (t.path ?? t.name)}
@@ -150,7 +149,6 @@
   .titlebar { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
   h1 { margin: 0; font: 600 28px/1.15 var(--f-display); letter-spacing: .01em; }
   h3 { margin: 22px 0 10px; font: 600 10.5px var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-  .sub { color: var(--muted); max-width: 720px; margin: 6px 0 0; }
   code { font: 12px var(--f-mono); color: var(--ember-soft); }
   .small { font-size: 11px; }
   .empty { max-width: 560px; margin: 10vh auto 0; text-align: center; padding: 0 20px; }

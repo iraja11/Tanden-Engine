@@ -14,6 +14,8 @@ import { sound } from './sound.svelte';
 import { SKINS, theme } from './theme.svelte';
 import { vida } from './vida/vida.svelte';
 import { saude } from './saude/saude.svelte';
+import { alimentacao } from './alimentacao/alimentacao.svelte';
+import { exercicios } from './exercicios/exercicios.svelte';
 import { flashcards } from './flashcards/flashcards.svelte';
 import { agenda } from './agenda/agenda.svelte';
 import { calcPrefs, type FinTool } from './calc/calc.svelte';
@@ -32,7 +34,7 @@ export interface AppActions {
 }
 
 const MODULES: [string, string][] = [
-  ['hoje', 'Hoje'], ['notas', 'Notas'], ['bancos', 'Bancos'], ['grafo', 'Grafo'], ['ia', 'IA'], ['lembretes', 'Lembretes'], ['saude', 'Saúde'], ['quadros', 'Quadros'], ['agenda', 'Agenda'],
+  ['hoje', 'Hoje'], ['notas', 'Notas'], ['bancos', 'Bancos'], ['grafo', 'Grafo'], ['ia', 'IA'], ['lembretes', 'Lembretes'], ['saude', 'Saúde'], ['alimentacao', 'Alimentação'], ['exercicios', 'Exercícios'], ['quadros', 'Quadros'], ['agenda', 'Agenda'],
   ['planilhas', 'Planilhas'], ['calculo', 'Cálculo'], ['flashcards', 'Flashcards'], ['slides', 'Slides'], ['mundos', 'Mundos'], ['mesa', 'Mesa (RPG)'], ['sorte', 'Sorte'], ['luta', 'Luta'], ['biblioteca', 'Biblioteca'], ['arquivos', 'Arquivos'], ['plugins', 'Plugins'],
 ];
 
@@ -127,6 +129,18 @@ export function registerAppCommands(a: AppActions): () => void {
     { id: 'saude.agua', label: 'Registrar um copo d\'água', keys: 'agua beber copo hidratar saude', run: () => saude.drink() },
     { id: 'saude.pausa', label: 'Registrar pausa (levantei)', keys: 'levantar alongar pausa saude', run: () => saude.stood() },
     { id: 'saude.treino', label: 'Treino de hoje', keys: 'exercicio academia malhar treino saude', run: () => a.go('saude') },
+
+    // alimentação
+    { id: 'alimentacao.diario', label: 'Diário alimentar de hoje', keys: 'comida refeicao calorias nutricao registrar comi', run: () => { alimentacao.cursor = alimentacao.day; alimentacao.tab = 'diario'; a.go('alimentacao'); } },
+    { id: 'alimentacao.cardapio', label: 'Cardápio da semana', keys: 'comida planejar refeicoes menu nutricao', run: () => { alimentacao.tab = 'cardapio'; a.go('alimentacao'); } },
+    { id: 'alimentacao.compras', label: 'Lista de compras da semana', keys: 'mercado feira comida ingredientes', run: () => { alimentacao.tab = 'compras'; a.go('alimentacao'); } },
+    { id: 'alimentacao.sugestoes', label: 'O que comer agora', keys: 'sugestao receita comida fome ideia nutricao', run: () => { alimentacao.tab = 'sugestoes'; a.go('alimentacao'); } },
+
+    // exercícios em casa
+    { id: 'exercicios.treinar', label: 'Treinar em casa', keys: 'exercicio malhar treino casa guiado alongar', run: () => { exercicios.tab = 'treinar'; a.go('exercicios'); } },
+    { id: 'exercicios.sugestao', label: 'Começar o treino sugerido de hoje', keys: 'exercicio malhar treino casa agora', run: () => { exercicios.tab = 'treinar'; a.go('exercicios'); exercicios.begin(exercicios.build(exercicios.idea.focus, exercicios.idea.minutes)); } },
+    { id: 'exercicios.pausa', label: 'Pausa ativa de 5 minutos na cadeira', keys: 'alongar levantar escritorio exercicio', run: () => { a.go('exercicios'); exercicios.begin(exercicios.build('pausa', 5)); } },
+    { id: 'exercicios.progresso', label: 'Progresso dos exercícios', keys: 'treino minutos semana meta historico', run: () => { exercicios.tab = 'progresso'; a.go('exercicios'); } },
 
     // vida (Hoje)
     { id: 'vida.tarefa', label: 'Nova tarefa', keys: 'todo tarefa capturar hoje', run: () => { a.go('hoje'); setTimeout(() => (document.querySelector('.hoje .quick input') as HTMLInputElement | null)?.focus(), 120); } },

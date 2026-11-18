@@ -28,6 +28,21 @@
     seres: '<circle cx="6.5" cy="9.5" r="1.8"/><circle cx="12" cy="6" r="1.8"/><circle cx="17.5" cy="9.5" r="1.8"/><path d="M12 12c-3 0-5.5 3-5.5 5.2 0 1.6 1.3 2.3 2.7 2.3 1.1 0 1.8-.6 2.8-.6s1.7.6 2.8.6c1.4 0 2.7-.7 2.7-2.3C17.5 15 15 12 12 12z"/>',
     sistemas: '<path d="M4.5 5.5h15v10h-8l-4 3.5v-3.5h-3z"/><path d="M8 9h8M8 12h5"/>',
     guia: '<circle cx="12" cy="12" r="8.5"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>',
+    prato: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/>',
+    carrinho: '<path d="M3.5 4.5h2.2l2.2 11h10l2-8H6.6"/><circle cx="9.5" cy="19" r="1.4"/><circle cx="16.5" cy="19" r="1.4"/>',
+    faisca: '<path d="M12 3.5l1.9 5.6 5.6 1.9-5.6 1.9L12 18.5l-1.9-5.6L4.5 11l5.6-1.9z"/><path d="M19 16.5v3.5M17.2 18.2h3.6"/>',
+    perfil: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1-4 4-6 7.5-6s6.5 2 7.5 6"/>',
+    calendario: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+    halter: '<path d="M8 12h8M5.5 8v8M8 6.5v11M16 6.5v11M18.5 8v8M3 10.5v3M21 10.5v3"/>',
+    tocar: '<path d="M7.5 4.5v15l12-7.5z"/>',
+    pausar: '<path d="M8.5 5v14M15.5 5v14"/>',
+    seguir: '<path d="M5.5 5v14l10-7zM18.5 5v14"/>',
+    recuar: '<path d="M18.5 5v14l-10-7zM5.5 5v14"/>',
+    certo: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+    lixo: '<path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10 11v5.5M14 11v5.5"/>',
+    trocar: '<path d="M19.5 9A8 8 0 0 0 5.8 6.5L4 8.5M4.5 15a8 8 0 0 0 13.7 2.5l1.8-2"/><path d="M4 4v4.5h4.5M20 20v-4.5h-4.5"/>',
+    ajustes: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
+    grafico: '<path d="M4 20.5h16M7 17v-5M12 17V6M17 17v-8"/>',
   } as const;
   export type IconName = keyof typeof PATHS;
 </script>

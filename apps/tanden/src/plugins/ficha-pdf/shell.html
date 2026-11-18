@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ficha em PDF</title>
+<script type="application/tanden+json">
+{
+  "id": "ficha-pdf",
+  "nome": "Ficha em PDF",
+  "versao": "1.0.0",
+  "api": 1,
+  "autor": "Tanden",
+  "icone": "F",
+  "descricao": "Exporta as fichas de personagem (D&D 5e) do cofre num PDF bonito e fácil de ler, com retrato, atributos, perícias, ataques, magias e inventário.",
+  "tela": true,
+  "fundo": false,
+  "permissoes": ["notas:ler", "eventos"]
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&display=swap">
+<style>
+/*FONTS*/
+/*CSS*/
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <h1>Ficha <b>PDF</b></h1>
+    <select id="pick" aria-label="Personagem"></select>
+    <div class="swatches" id="accents" aria-label="Cor da ficha"></div>
+    <span class="spacer"></span>
+    <span class="count" id="count"></span>
+    <button class="ghost" id="opennote" title="Abrir a nota da ficha">Abrir nota</button>
+    <button class="ghost" id="nophoto" hidden title="Tirar o retrato desta ficha">Tirar retrato</button>
+    <button class="ghost" id="photo" title="Escolher uma imagem para o retrato">Retrato</button>
+    <input type="file" id="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+    <button class="primary" id="pdf"><span class="spin"></span>Baixar PDF</button>
+  </header>
+  <div class="status" id="status" hidden></div>
+  <div class="empty" id="empty" hidden>
+    <h2>Nenhuma ficha encontrada</h2>
+    <p>O plugin procura notas com números de ficha nas propriedades: <code>pv</code>, <code>ca</code> ou os atributos (<code>for</code>, <code>des</code>, <code>con</code>…). Notas com <code>tipo: personagem</code> aparecem primeiro.</p>
+    <p>Crie uma ficha na <b>Mesa</b> ou acrescente as propriedades a uma nota.</p>
+  </div>
+  <main class="stage" id="stage">
+    <div class="frame" id="frame"><div class="sheet-root" id="pages"></div></div>
+  </main>
+</div>
+<script>
+/*JS*/
+</script>
+</body>
+</html>

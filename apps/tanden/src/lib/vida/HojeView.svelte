@@ -118,14 +118,12 @@
       aria-label="Nova tarefa" autocomplete="off" enterkeyhint="done" />
     <button disabled={!preview} aria-label="Adicionar">+</button>
   </form>
-  <p class="preview">
-    {#if preview}
+  {#if preview}
+    <p class="preview">
       {preview.reminder ? '⏰ Lembrete' : '☑ Tarefa'}: {preview.title}{#if preview.due} · {dayLabel(preview.due, day)}{/if}{#if preview.time} {preview.time}{/if}{#if preview.priority >= 3} · prioridade {preview.priority === 4 ? 'máxima' : 'alta'}{/if}
       · vai para {preview.reminder ? 'Lembretes' : snap.dbs.tarefas ? name(snap.dbs.tarefas.note) : 'Caixa de entrada'}
-    {:else}
-      Data e hora em português; "!" no fim é prioridade alta. Com hora, vira lembrete com aviso. Atalho: N.
-    {/if}
-  </p>
+    </p>
+  {/if}
 
   <nav class="acts">
     <button onclick={() => onOpenNote(vida.openDaily())}>✎ Nota do dia</button>
@@ -354,12 +352,12 @@
   .stats .hot b { color: var(--ember); }
   .stats .late { border-color: color-mix(in srgb, var(--crit) 50%, var(--line)); }
   .stats .late b { color: var(--crit); }
-  .quick { display: flex; gap: 8px; }
+  .quick { display: flex; gap: 8px; margin-bottom: 10px; }
   .quick input { flex: 1; min-width: 0; padding: 11px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 15px var(--f-body); outline: none; transition: border-color .2s, box-shadow .2s; }
   .quick input:focus { border-color: var(--ember); box-shadow: 0 0 0 3px var(--ember-glow); }
   .quick button { width: 44px; border-radius: 12px; border: 0; background: var(--ember); color: var(--on-ember); font-size: 22px; font-weight: 600; }
   .quick button:disabled { background: var(--surface-2); color: var(--muted); }
-  .preview { margin: 8px 2px 10px; min-height: 1.3em; font: 12px var(--f-mono); color: var(--ember-soft); }
+  .preview { margin: 0 2px 10px; font: 12px var(--f-mono); color: var(--ember-soft); }
   .acts { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
   .acts button, .wide { border: 1px solid var(--line); background: var(--surface); color: var(--silver); border-radius: 10px; padding: 6px 12px; font-size: 13px; transition: border-color var(--dur), color var(--dur); }
   .acts button:hover, .wide:hover { border-color: var(--ember); color: var(--ember); }

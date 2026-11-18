@@ -44,6 +44,10 @@
   import HojeView from './lib/vida/HojeView.svelte';
   import SaudeView from './lib/saude/SaudeView.svelte';
   import { saude } from './lib/saude/saude.svelte';
+  import AlimentacaoView from './lib/alimentacao/AlimentacaoView.svelte';
+  import { alimentacao } from './lib/alimentacao/alimentacao.svelte';
+  import ExerciciosView from './lib/exercicios/ExerciciosView.svelte';
+  import { exercicios } from './lib/exercicios/exercicios.svelte';
   import FlashcardsView from './lib/flashcards/FlashcardsView.svelte';
   import AgendaView from './lib/agenda/AgendaView.svelte';
   import { agenda } from './lib/agenda/agenda.svelte';
@@ -79,7 +83,7 @@
   /** marcador que desliza até o módulo ativo na barra */
   let mark = $state<{ x: number; y: number; w: number; h: number } | null>(null);
   let error = $state('');
-  type View = 'hoje' | 'notas' | 'bancos' | 'grafo' | 'ia' | 'lembretes' | 'saude' | 'quadros' | 'agenda' | 'planilhas' | 'calculo' | 'flashcards' | 'biblioteca' | 'arquivos' | 'luta' | 'mundos' | 'mesa' | 'sorte' | 'slides' | 'plugins' | `plugin:${string}`;
+  type View = 'hoje' | 'notas' | 'bancos' | 'grafo' | 'ia' | 'lembretes' | 'saude' | 'alimentacao' | 'exercicios' | 'quadros' | 'agenda' | 'planilhas' | 'calculo' | 'flashcards' | 'biblioteca' | 'arquivos' | 'luta' | 'mundos' | 'mesa' | 'sorte' | 'slides' | 'plugins' | `plugin:${string}`;
   // o app abre no painel do dia; as notas ficam a um clique (ou na gaveta)
   let view = $state<View>('hoje');
   /** id do plugin cuja tela está aberta */
@@ -95,6 +99,8 @@
     { id: 'ia', label: 'IA', ready: true },
     { id: 'lembretes', label: 'Lembretes', ready: true },
     { id: 'saude', label: 'Saúde', ready: true },
+    { id: 'alimentacao', label: 'Nutrição', ready: true },
+    { id: 'exercicios', label: 'Treinos', ready: true },
     { id: 'quadros', label: 'Quadros', ready: true },
     { id: 'agenda', label: 'Agenda', ready: true },
     { id: 'planilhas', label: 'Planilhas', ready: true },
@@ -119,6 +125,8 @@
   $effect(() => { if (engine.ready) void reminders.start(); });
   // depois dos lembretes, que registram os botões dos avisos de água e pausa
   $effect(() => { if (engine.ready) void saude.start(); });
+  $effect(() => { if (engine.ready) alimentacao.start(); });
+  $effect(() => { if (engine.ready) exercicios.start(); });
   $effect(() => { if (engine.ready) sheets.start(); });
   $effect(() => { if (engine.ready) cadernos.start(); });
   $effect(() => { if (engine.ready) mesa.start(); });
@@ -155,6 +163,9 @@
   $effect(() => { if (reminders.openRequests) view = 'lembretes'; });
   // aviso de água/pausa tocado, ou o cartão de saúde do Hoje
   $effect(() => { if (saude.openRequests) untrack(() => go('saude')); });
+  // cartões do Hoje e comandos da paleta
+  $effect(() => { if (alimentacao.openRequests) untrack(() => go('alimentacao')); });
+  $effect(() => { if (exercicios.openRequests) untrack(() => go('exercicios')); });
 
   function placeMark() {
     const b = railBtns[view];
@@ -165,7 +176,11 @@
     placeMark();
     // no celular a barra rola de lado: traz o módulo aberto para a vista
     const b = railBtns[view];
-    if (b && railList && railList.scrollWidth > railList.clientWidth) {
+    if (b && railList && railList.scrollHeight > railList.clientHeight + 1) {
+      // no computador, em janela baixa, a lista rola na vertical
+      const top = b.offsetTop - (railList.clientHeight - b.offsetHeight) / 2;
+      railList.scrollTo({ top, behavior: 'smooth' });
+    } else if (b && railList && railList.scrollWidth > railList.clientWidth) {
       const left = b.offsetLeft - (railList.clientWidth - b.offsetWidth) / 2;
       railList.scrollTo({ left, behavior: 'smooth' });
     }
@@ -431,6 +446,10 @@
           {/await}
         {:else if view === 'saude' && engine.ready}
           <SaudeView onOpenNote={openNote} />
+        {:else if view === 'alimentacao' && engine.ready}
+          <AlimentacaoView onOpenNote={openNote} />
+        {:else if view === 'exercicios' && engine.ready}
+          <ExerciciosView />
         {:else if view === 'flashcards' && engine.ready}
           <FlashcardsView onOpenNote={openNote} />
         {:else if view === 'agenda' && engine.ready}
@@ -559,7 +578,9 @@
 
   .rail { grid-area: rail; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 16px 0;
     border-right: 1px solid var(--line); }
-  .rail ul { position: relative; list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  /* em janela baixa a lista rola e a engrenagem continua à vista */
+  .rail ul { position: relative; list-style: none; margin: 0; padding: 6px 0 0; display: grid; gap: 4px; flex: 0 1 auto; min-height: 0; overflow: hidden auto; scrollbar-width: none; }
+  .rail ul::-webkit-scrollbar { display: none; }
   .rail ul button { width: 64px; border: 0; background: none; padding: 8px 0; border-radius: 10px;
     font: 500 10.5px/1 var(--f-display); letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
     transition: color var(--dur) var(--ease), transform var(--dur) var(--spring); }
@@ -570,7 +591,7 @@
     background: color-mix(in srgb, var(--ember) 11%, transparent); box-shadow: inset 2px 0 0 var(--ember), 0 0 18px -8px var(--ember-glow);
     transition: transform var(--dur-slow) var(--spring), width var(--dur-slow) var(--spring), height var(--dur-slow) var(--spring); }
   .orb-wrap.hide { visibility: hidden; }
-  .gear { margin-top: auto; width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 10px;
+  .gear { flex: none; margin-top: auto; width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 10px;
     background: none; color: var(--muted); transition: color var(--dur), background var(--dur), transform var(--dur-slow) var(--spring); }
   .gear svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
   .gear:hover { color: var(--ink); background: var(--surface-2); }

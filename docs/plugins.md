@@ -100,7 +100,7 @@ Itens de feed: `{ id, titulo, link, resumo, data, autor, imagem }`. O `resumo` �
 
 ## Onde ficam
 
-- Embutidos: vêm com o app (`apps/tanden/src/plugins/`). O primeiro é o **Notícias**.
+- Embutidos: vêm com o app (`apps/tanden/src/plugins/`): o **Notícias** e o **Ficha em PDF**. Este último é escrito em TypeScript em `src/plugins/ficha-pdf/` (usa as regras de 5e do núcleo) e empacotado num HTML só com `node scripts/plugin-ficha-pdf.mjs` (passe a pasta do cofre para instalar nele também: `node scripts/plugin-ficha-pdf.mjs ~/Tanden`).
 - Instalados: `Plugins/<id>.html` no cofre, sincronizados com os outros aparelhos, desligados lá até você permitir.
 - Dados (`tanden.dados`): no aparelho.
 

@@ -226,13 +226,11 @@
     <input bind:this={quickEl} bind:value={quick} placeholder="sexta das 14h às 15h dentista @ clínica · toda segunda 7h academia" aria-label="Novo evento rápido" autocomplete="off" enterkeyhint="done" />
     <button disabled={!preview} aria-label="Adicionar">+</button>
   </form>
-  <p class="preview">
-    {#if preview}
+  {#if preview}
+    <p class="preview">
       📅 {preview.title} · {dayHead(preview.date)}{preview.start ? ` ${preview.start}–${preview.end}` : ' · dia inteiro'}{preview.repeat ? ' · repete' : ''}{preview.location ? ` · ${preview.location}` : ''}
-    {:else}
-      Escreva o evento em português; "@" marca o local. Atalhos: N escreve, E abre o formulário, T volta para hoje.
-    {/if}
-  </p>
+    </p>
+  {/if}
 
   <div class="sources">
     {#each sources as s (s.id)}
@@ -241,11 +239,9 @@
       </button>
     {/each}
     {#if google.available}
-      {#if !google.status.signed_in}
-        <span class="gmsg">Conecte o Google (barra de baixo) para ver o Google Agenda aqui.</span>
-      {:else if agenda.needsConsent}
+      {#if google.status.signed_in && agenda.needsConsent}
         <span class="gmsg warn">Falta liberar a agenda na conta Google. <button class="link" onclick={() => agenda.connect()} disabled={google.busy}>{google.busy ? 'esperando o navegador…' : 'Entrar de novo'}</button></span>
-      {:else}
+      {:else if google.status.signed_in}
         <button class="link sm" onclick={() => agenda.refresh(from, to, true)} title="Ler o Google Agenda de novo">↻ atualizar</button>
       {/if}
     {/if}
@@ -373,12 +369,12 @@
   .modes button { border: 0; background: none; color: var(--muted); border-radius: 8px; padding: 5px 11px; font-size: 13px; }
   .modes button.on { background: var(--surface-2); color: var(--ink); font-weight: 600; }
   .pri { border: 0; border-radius: 10px; padding: 8px 14px; background: var(--ember); color: var(--on-ember); font-weight: 700; }
-  .quick { display: flex; gap: 8px; }
+  .quick { display: flex; gap: 8px; margin-bottom: 8px; }
   .quick input { flex: 1; min-width: 0; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 14.5px var(--f-body); outline: none; transition: border-color .2s, box-shadow .2s; }
   .quick input:focus { border-color: var(--ember); box-shadow: 0 0 0 3px var(--ember-glow); }
   .quick button { width: 42px; border-radius: 12px; border: 0; background: var(--ember); color: var(--on-ember); font-size: 22px; font-weight: 600; }
   .quick button:disabled { background: var(--surface-2); color: var(--muted); }
-  .preview { margin: 7px 2px 8px; min-height: 1.3em; font: 12px var(--f-mono); color: var(--ember-soft); }
+  .preview { margin: 0 2px 8px; font: 12px var(--f-mono); color: var(--ember-soft); }
   .sources { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
   .src { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--silver); border-radius: 99px; padding: 4px 10px; font-size: 12px; }
   .src i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }

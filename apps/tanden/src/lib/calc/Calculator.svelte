@@ -148,12 +148,6 @@
 <div class="calc-q" class:sci={calcPrefs.sci}>
   <section class="screen">
     <div class="log" bind:this={logEl}>
-      {#if !quick.log.length}
-        <div class="hello">
-          <p>Digite uma conta ou use o teclado. <kbd>Enter</kbd> calcula, <kbd>↑</kbd> volta nas anteriores.</p>
-          <p>Vale tudo das folhas: <code>12,5% * 300</code>, <code>100 km/h em m/s</code>, <code>r = 3</code> e depois <code>pi * r^2</code>.</p>
-        </div>
-      {/if}
       {#each quick.log as l, i (i)}
         <div class="entry" class:error={l.error}>
           <button class="expr" onclick={() => (quick.input = l.expr)} title="Editar esta conta">{l.expr}</button>
@@ -218,10 +212,6 @@
   .calc-q { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(min(380px, 100%), 440px); }
   .screen { min-width: 0; min-height: 0; display: flex; flex-direction: column; border-right: 1px solid var(--line); }
   .log { flex: 1; min-height: 0; overflow-y: auto; padding: var(--sp-6) var(--gutter) var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-3); }
-  .hello { margin: auto 0 0; color: var(--muted); font-size: var(--fs-sm); line-height: 1.6; }
-  .hello p { margin: 0 0 6px; }
-  kbd { font: 11px var(--f-mono); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; background: var(--surface-2); }
-  code { font: 12px var(--f-mono); color: var(--ember-soft); }
   .entry { display: grid; justify-items: end; gap: 2px; }
   .entry:first-child { margin-top: auto; }
   .entry button { border: 0; background: none; padding: 2px 6px; border-radius: var(--r-sm); text-align: right; max-width: 100%;

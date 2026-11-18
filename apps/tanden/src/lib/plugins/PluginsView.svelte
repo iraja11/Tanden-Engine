@@ -59,7 +59,6 @@
 <section class="plg">
   <header>
     <h2>Plugins <span>{plugins.active.length}/{plugins.list.length}</span></h2>
-    <p>Cada plugin roda isolado e só faz o que você permitir, em cada aparelho. Artefatos do Claude (páginas HTML) também viram plugins.</p>
     <div class="actions">
       <button class="primary" onclick={() => fileInput?.click()}>Instalar arquivo .html</button>
       <button onclick={() => { pasting = !pasting; error = ''; }} class:on={pasting}>Colar artefato</button>
@@ -132,7 +131,6 @@
   .plg { height: 100%; overflow-y: auto; max-width: 820px; width: 100%; margin: 0 auto; padding: 18px 24px 32px; }
   header h2 { margin: 0 0 8px; font: 600 11.5px/1 var(--f-display); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
   header h2 span { color: var(--ember); font-family: var(--f-mono); letter-spacing: 0; margin-left: 6px; }
-  header p { margin: 0 0 14px; color: var(--muted); font-size: 13px; }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; }
   button { border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); border-radius: 10px; padding: 7px 12px; font: 500 13px var(--f-body);
     transition: border-color var(--dur), color var(--dur), background var(--dur); }

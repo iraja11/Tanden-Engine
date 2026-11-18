@@ -171,7 +171,6 @@
   <section class="body">
     {#if calcPrefs.fin === 'investir'}
       <h2>Investimento</h2>
-      <p class="lead">Quanto o dinheiro rende com juros compostos e aportes todo mês. O IR segue a tabela regressiva da renda fixa, cada aporte pelo prazo dele.</p>
       <div class="form">
         <NumField label="Valor inicial" prefix="R$" bind:value={inv.initial} />
         <NumField label="Aporte mensal" prefix="R$" bind:value={inv.monthly} hint="no fim de cada mês" />
@@ -223,7 +222,6 @@
 
     {:else if calcPrefs.fin === 'financiar'}
       <h2>Financiamento</h2>
-      <p class="lead">Price tem parcela fixa; SAC começa mais alta e vai caindo, e no total paga menos juros.</p>
       <div class="form">
         <NumField label="Valor do bem" prefix="R$" bind:value={fin.value} />
         <NumField label="Entrada" prefix="R$" bind:value={fin.down} />
@@ -281,7 +279,7 @@
 
     {:else if calcPrefs.fin === 'hp'}
       <h2>Valor do dinheiro</h2>
-      <p class="lead">Preencha quatro valores e toque em <b>Calcular</b> no que falta, como na HP-12C. Sinais: dinheiro que <b>entra</b> é positivo, o que <b>sai</b> é negativo (pegar R$ 1.000 emprestado: VP = 1000, a parcela sai negativa).</p>
+      <p class="note">Dinheiro que entra é positivo; o que sai, negativo.</p>
       <div class="hp">
         {#each HP_FIELDS as f (f.key)}
           <div class="hp-row" class:solved={hpMsg?.key === f.key && !hpMsg.error}>
@@ -299,7 +297,6 @@
 
     {:else if calcPrefs.fin === 'fluxo'}
       <h2>VPL e TIR</h2>
-      <p class="lead">Um valor por período, começando pelo momento zero (o investimento, negativo). Valores em branco contam como zero.</p>
       <div class="form narrow">
         <NumField label="Taxa de desconto" suffix="% por período" bind:value={flow.rate} hint="o custo do dinheiro (TMA)" />
       </div>
@@ -416,7 +413,6 @@
   .body > .t-seg { width: auto; align-self: flex-start; }
   h2 { margin: 0; font: 600 var(--fs-xl) var(--f-display); }
   h3 { margin: 0; font: 600 var(--fs-sm) var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--silver); }
-  .lead { margin: -8px 0 0; color: var(--muted); font-size: var(--fs-sm); line-height: 1.55; }
   .form { display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); }
   .form.narrow { max-width: 320px; }
   .pair { display: flex; align-items: end; gap: 6px; min-width: 0; }

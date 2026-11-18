@@ -16,6 +16,8 @@ import { desktop } from '../platform';
 import { isTauri } from '../storage-tauri';
 import { THEME_VARS, theme } from '../theme.svelte';
 import noticiasHtml from '../../plugins/noticias.html?raw';
+// gerado por scripts/plugin-ficha-pdf.mjs a partir de src/plugins/ficha-pdf/
+import fichaPdfHtml from '../../plugins/ficha-pdf.html?raw';
 
 /*
  * Plugins: páginas HTML que rodam isoladas e falam com o app pela API do
@@ -46,7 +48,7 @@ interface Grant {
   on: boolean;
 }
 
-const BUILTIN = [noticiasHtml];
+const BUILTIN = [noticiasHtml, fichaPdfHtml];
 
 function load<T>(key: string, fallback: T): T {
   try {
