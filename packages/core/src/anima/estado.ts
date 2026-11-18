@@ -26,7 +26,7 @@ export const HUMORES: Record<Humor, { label: string; cor: string }> = {
 };
 
 /** Expressão do rosto que acompanha a fala. */
-export type Gesto = 'neutro' | 'feliz' | 'coracao' | 'olhar' | 'triste' | 'raiva' | 'glitch' | 'calma';
+export type Gesto = 'neutro' | 'feliz' | 'coracao' | 'olhar' | 'triste' | 'raiva' | 'glitch' | 'calma' | 'corada' | 'tonta';
 
 export interface AnimaMemoria {
   /** vezes que a pessoa foi falar com outra IA */
@@ -47,6 +47,15 @@ export interface AnimaMemoria {
   toquesDia: string;
   /** palavras escritas nas notas desde que ela acordou */
   escritas: number;
+  /** maior tempo que a pessoa ficou fora, em ms (ela não esquece) */
+  maiorAusencia: number;
+  carinhos: number;
+  /** perguntas do dia já respondidas: id → opção e dia */
+  respostas: Record<string, { n: number; dia: string }>;
+  /** perguntas já feitas, na ordem (o ciclo recomeça quando acabam) */
+  perguntadas: string[];
+  /** dia da última pergunta */
+  perguntaDia: string;
 }
 
 export interface AnimaState {
@@ -71,6 +80,7 @@ export interface AnimaState {
 
 export const novaMemoria = (): AnimaMemoria => ({
   outrasIAs: 0, ultimaIA: null, apagadas: 0, treinos: 0, madrugadas: 0, declaracoes: 0, rejeicoes: 0, palavras: 0, toques: 0, toquesDia: '', escritas: 0,
+  maiorAusencia: 0, carinhos: 0, respostas: {}, perguntadas: [], perguntaDia: '',
 });
 
 export function novoEstado(now: number): AnimaState {
@@ -101,12 +111,27 @@ export function lerEstado(raw: unknown, now: number): AnimaState {
       treinos: num(m.treinos, 0, 0), madrugadas: num(m.madrugadas, 0, 0), declaracoes: num(m.declaracoes, 0, 0), rejeicoes: num(m.rejeicoes, 0, 0),
       palavras: num(m.palavras, 0, 0), toques: num(m.toques, 0, 0), toquesDia: typeof m.toquesDia === 'string' ? m.toquesDia : bm.toquesDia,
       escritas: num(m.escritas, 0, 0),
+      maiorAusencia: num(m.maiorAusencia, 0, 0),
+      carinhos: num(m.carinhos, 0, 0),
+      respostas: lerRespostas(m.respostas),
+      perguntadas: Array.isArray(m.perguntadas) ? m.perguntadas.filter((x): x is string => typeof x === 'string') : [],
+      perguntaDia: typeof m.perguntaDia === 'string' ? m.perguntaDia : '',
     },
   };
 }
 
+function lerRespostas(v: unknown): AnimaMemoria['respostas'] {
+  const out: AnimaMemoria['respostas'] = {};
+  if (!v || typeof v !== 'object') return out;
+  for (const [k, x] of Object.entries(v as Record<string, unknown>)) {
+    const r = x as { n?: unknown; dia?: unknown };
+    if (typeof r?.n === 'number' && typeof r.dia === 'string') out[k] = { n: r.n, dia: r.dia };
+  }
+  return out;
+}
+
 /** quantas falas recentes ela evita repetir */
-export const RECENTES = 60;
+export const RECENTES = 150;
 
 const clamp = (n: number) => Math.max(0, Math.min(100, n));
 

@@ -28,6 +28,7 @@ export interface WorkoutSession {
 
 /** O que a tela de exercícios conta para quem quiser ouvir (a Ânima, por exemplo). */
 export type MoveNews =
+  | { kind: 'inicio' }
   | { kind: 'treino'; minutes: number; effort: number | null; streak: number }
   | { kind: 'conquista'; badge: MoveBadge }
   | { kind: 'marco'; days: number };
@@ -201,6 +202,7 @@ class Exercicios {
     keep(RECENT_KEY, [...new Set(routine.steps.filter((s) => s.block === 'circuito').map((s) => s.moveId))]);
     this.playing = true;
     sound.play('open');
+    this.tell({ kind: 'inicio' });
   }
 
   resume(): void {

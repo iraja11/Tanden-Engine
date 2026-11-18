@@ -69,15 +69,15 @@
   }
   function submitSecret(e: SubmitEvent) {
     e.preventDefault();
-    const c = anima.comando(secretText);
+    const r = anima.comando(secretText);
     secretText = '';
-    if (!c) {
+    if (!r) {
       shake = true;
       sound.play('error');
       setTimeout(() => (shake = false), 420);
       return;
     }
-    secretMsg = c === 'acordar' ? 'e̷l̴a̵ ̶a̷c̸o̵r̷d̶o̴u̵.' : c === 'dormir' ? 'zzz…' : 'memória apagada.';
+    secretMsg = r.aviso;
     setTimeout(() => { secret = false; secretMsg = ''; }, 1800);
   }
 
@@ -359,6 +359,14 @@
           <span>silêncio entre 23h e 8h</span>
         </label>
       </div>
+      <div class="row">
+        <span class="lbl">Passeios</span>
+        <label class="switch">
+          <input type="checkbox" checked={anima.prefs.passeia} onchange={(e) => pick(() => anima.set({ passeia: e.currentTarget.checked }))} />
+          <span>muda de lugar na tela sozinha</span>
+        </label>
+      </div>
+      <p class="hint">Toque: cutuca. Esfregar: carinho. Arrastar e soltar com força: joga. Soltar na borda: esconde. Toque longo ou duplo clique: conversa.</p>
       <div class="row">
         <span class="lbl"></span>
         <button class="small" onclick={() => anima.dormir()}>Pôr para dormir</button>

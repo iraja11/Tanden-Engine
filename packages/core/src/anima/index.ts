@@ -1,3 +1,3 @@
 export * from './estado';
-export * from './falas';
+export * from './cofre';
 export * from './motor';

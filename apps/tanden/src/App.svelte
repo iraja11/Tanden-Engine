@@ -322,6 +322,7 @@
       focusMode: () => {
         focus = !focus;
         sound.play(focus ? 'open' : 'close');
+        if (focus && anima.acordada) anima.focou();
         if (focus) files.say('Modo foco. Esc ou Ctrl+Shift+Enter traz as barras de volta.');
       },
     });
@@ -348,7 +349,7 @@
     flowing={engine.busy} pulses={engine.pulses} />
 
   <nav class="rail">
-    <div bind:this={orbWrap} class="orb-wrap" class:hide={splash}>
+    <div bind:this={orbWrap} class="orb-wrap" class:hide={splash} class:possuido={anima.acordada}>
       <Orb load={feel.load} kick={feel.kick} flash={feel.flash} onclick={syncByHand} />
     </div>
     <button class="menu" onclick={() => toggleDrawer()} aria-label={drawer ? 'Fechar notas' : 'Abrir notas'} aria-expanded={drawer}>☰</button>
@@ -603,6 +604,8 @@
     background: color-mix(in srgb, var(--ember) 11%, transparent); box-shadow: inset 2px 0 0 var(--ember), 0 0 18px -8px var(--ember-glow);
     transition: transform var(--dur-slow) var(--spring), width var(--dur-slow) var(--spring), height var(--dur-slow) var(--spring); }
   .orb-wrap.hide { visibility: hidden; }
+  /* com a Ânima acordada, o símbolo ganha um halo rosado: ela mora ali */
+  .orb-wrap.possuido { filter: drop-shadow(0 0 7px color-mix(in srgb, #ff6fa8 55%, transparent)); }
   .gear { flex: none; margin-top: auto; width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 10px;
     background: none; color: var(--muted); transition: color var(--dur), background var(--dur), transform var(--dur-slow) var(--spring); }
   .gear svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }

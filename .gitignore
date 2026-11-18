@@ -6,3 +6,6 @@ target/
 
 # compêndio de D&D 5e gerado do 5etools (texto dos livros: só local)
 apps/tanden/public/compendio/
+
+# falas da Ânima abertas para edição (o que vai para o git é o falas.dat.ts encriptado)
+packages/core/src/anima/falas.txt
