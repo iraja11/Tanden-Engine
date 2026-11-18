@@ -65,6 +65,8 @@
   import { back } from './lib/back';
   import { ask } from './lib/ask.svelte';
   import AskDialog from './lib/AskDialog.svelte';
+  import Anima from './lib/anima/Anima.svelte';
+  import { anima } from './lib/anima/anima.svelte';
 
   let host = $state<HTMLElement>();
   let orbWrap = $state<HTMLElement>();
@@ -161,6 +163,14 @@
   $effect(() => { if (files.goto) view = files.goto.view; });
   // clicar num aviso de lembrete abre a tela de lembretes
   $effect(() => { if (reminders.openRequests) view = 'lembretes'; });
+  // a Ânima só acorda com o comando secreto das configurações; depois, vê cada tela
+  $effect(() => { if (engine.ready && anima.acordada) untrack(() => anima.start()); });
+  $effect(() => {
+    const v = view;
+    if (!anima.acordada) return;
+    const label = railItems.find((m) => m.id === v)?.label ?? v;
+    untrack(() => anima.viu(v.startsWith('plugin:') ? 'plugins' : v, label));
+  });
   // aviso de água/pausa tocado, ou o cartão de saúde do Hoje
   $effect(() => { if (saude.openRequests) untrack(() => go('saude')); });
   // cartões do Hoje e comandos da paleta
@@ -312,6 +322,7 @@
       focusMode: () => {
         focus = !focus;
         sound.play(focus ? 'open' : 'close');
+        if (focus && anima.acordada) anima.focou();
         if (focus) files.say('Modo foco. Esc ou Ctrl+Shift+Enter traz as barras de volta.');
       },
     });
@@ -334,11 +345,11 @@
 </script>
 
 <div class="shell" class:focus bind:this={host}>
-  <Veins {host} orb={orbWrap} targets={{ notes: notesEl, editor: editorEl, status: statusEl }}
+  <Veins {host} orb={orbWrap} targets={{ notes: notesEl, editor: editorEl, status: statusEl }} avoid={[railList]}
     flowing={engine.busy} pulses={engine.pulses} />
 
   <nav class="rail">
-    <div bind:this={orbWrap} class="orb-wrap" class:hide={splash}>
+    <div bind:this={orbWrap} class="orb-wrap" class:hide={splash} class:possuido={anima.acordada}>
       <Orb load={feel.load} kick={feel.kick} flash={feel.flash} onclick={syncByHand} />
     </div>
     <button class="menu" onclick={() => toggleDrawer()} aria-label={drawer ? 'Fechar notas' : 'Abrir notas'} aria-expanded={drawer}>☰</button>
@@ -561,6 +572,8 @@
   {#key ask.current}<AskDialog req={ask.current} />{/key}
 {/if}
 
+{#if anima.acordada && engine.ready && !splash && !slides.presenting}<Anima />{/if}
+
 <RulesDrawer />
 
 {#if splash}
@@ -591,6 +604,8 @@
     background: color-mix(in srgb, var(--ember) 11%, transparent); box-shadow: inset 2px 0 0 var(--ember), 0 0 18px -8px var(--ember-glow);
     transition: transform var(--dur-slow) var(--spring), width var(--dur-slow) var(--spring), height var(--dur-slow) var(--spring); }
   .orb-wrap.hide { visibility: hidden; }
+  /* com a Ânima acordada, o símbolo ganha um halo rosado: ela mora ali */
+  .orb-wrap.possuido { filter: drop-shadow(0 0 7px color-mix(in srgb, #ff6fa8 55%, transparent)); }
   .gear { flex: none; margin-top: auto; width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 10px;
     background: none; color: var(--muted); transition: color var(--dur), background var(--dur), transform var(--dur-slow) var(--spring); }
   .gear svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }

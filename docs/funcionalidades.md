@@ -391,10 +391,12 @@ A aba **Treinos** guia treinos por tempo usando o peso do corpo e o que já exis
 
 - **Treinar.** O Tanden sugere o treino do dia pelo que você fez nos últimos dias, ou monta um pelo foco (corpo inteiro, pernas, superior, abdômen, cardio, mobilidade, alongamento, pausa na cadeira) e pela duração. Cada treino tem aquecimento, circuito e volta à calma.
 - **Treino guiado.** Boneco animado, contagem regressiva, passo a passo, aviso sonoro nos últimos segundos e na hora de trocar de lado. A tela fica acesa, dá para pausar, voltar e pular, e o treino pela metade pode ser retomado depois.
-- **Exercícios.** Mais de 100 movimentos com instruções, cuidados e variações mais fáceis ou mais difíceis, com filtro por região e pelo que serve para você.
+- **Exercícios.** Mais de 150 movimentos com instruções, cuidados e variações mais fáceis ou mais difíceis, com filtro por região e pelo que serve para você.
 - **Ajustes.** Nível, objetos disponíveis, articulações a poupar (joelho, lombar, ombro, punho) e **sem saltos**, para não incomodar os vizinhos.
-- **Programas.** Comece do zero, Força em casa, Cardio de apartamento, Coluna e postura e 14 dias de alongamento. Cada treino completo avança um passo.
-- **Progresso.** Minutos da semana contra a meta, dias de força, sequência de dias ativos, as últimas 8 semanas e o registro, onde também dá para anotar caminhada, bicicleta e outras atividades. Concluir um treino marca o hábito *Exercício*.
+- **Programas.** Comece do zero, Força em casa, Cardio de apartamento, Coluna e postura, 14 dias de alongamento, Pernas de aço, Braços, peito e costas, Pausas de escritório e 28 dias seguidos. Cada treino completo avança um passo.
+- **Sequência.** 🔥 dias seguidos com atividade (hoje ainda vazio não quebra; a chama avisa quando a sequência acaba hoje), recorde, semanas seguidas batendo a meta e o próximo marco (3, 7, 14, 21, 30… dias). Os marcos ganham comemoração.
+- **Progresso.** Minutos da semana contra a meta, dias de força, a sequência, um calendário de calor das últimas 15 semanas, as últimas 8 semanas e o registro, onde também dá para anotar caminhada, bicicleta e outras atividades. Concluir um treino marca o hábito *Exercício*.
+- **Conquistas.** 77 conquistas em seis grupos (constância, volume, variedade, programas, horários e segredos), com raridade, progresso das que faltam e a data em que cada uma saiu. Tudo é calculado do registro, então todos os aparelhos chegam às mesmas conquistas sem sincronizar nada a mais.
 
 ```
 Exercícios/Exercícios.md          ajustes nas propriedades
@@ -434,4 +436,5 @@ Tela **Grafo**: cada nota é um nó e cada `[[link]]` uma ligação, como no Obs
 - **Atalhos**: todo comando da paleta pode ganhar um ou mais atalhos. Clique no **+**, aperte as teclas e pronto; um atalho repetido sai do comando antigo. Fica salvo por aparelho.
 - **Snippets CSS**: arquivos `.css` em `Snippets/` (vão junto no sync) ou em `.obsidian/snippets/`. Cada aparelho liga os que quiser, e o editor embutido mostra o resultado enquanto você digita. Um snippet pode trocar qualquer variável do tema (`--ember`, `--void`, `--f-body`…).
 - **Modo foco** (Ctrl+Shift+Enter): esconde as barras; Esc volta.
+- Há algo dormindo dentro do símbolo. Quem insistir no rodapé desta janela talvez consiga acordar.
 - Comandos extras na paleta: nota aleatória, próximo tema, próximo estilo, *Estilo: Aero/Terminal/Papel/Tanden*, claro/escuro, ligar/desligar sons, rolar d20 e 2d6, cara ou coroa, roleta, sorteio, bola 8, e os da Mesa de RPG (rolar fórmula, combate, fichas, tabelas, nova sessão).

@@ -305,6 +305,26 @@ export const HOME_PROGRAMS: HomeProgram[] = [
     id: 'alongar-14', name: '14 dias de alongamento', hint: 'Um pouco todo dia para ganhar flexibilidade e dormir melhor.', weeks: 2, perWeek: 7,
     session: (w, s) => ({ focus: cycle<RoutineFocus>(['alongar', 'mobilidade'], s), minutes: 8 + w * 3, level: 1 }),
   },
+  {
+    id: 'pernas-aco', name: 'Pernas de aço', hint: 'Pernas e glúteos três vezes por semana, com um dia de soltar o quadril.', weeks: 4, perWeek: 3,
+    session: (w, s) => ({ focus: cycle<RoutineFocus>(['pernas', 'mobilidade', 'pernas'], s), minutes: s === 1 ? 12 : 18 + w * 3, level: w >= 2 ? 2 : 1 }),
+  },
+  {
+    id: 'tronco', name: 'Braços, peito e costas', hint: 'Empurrar e puxar com o que tem em casa, mais abdômen para firmar.', weeks: 4, perWeek: 3,
+    session: (w, s) => ({ focus: cycle<RoutineFocus>(['superior', 'core', 'superior'], s), minutes: 16 + w * 3, level: w >= 2 ? 2 : 1 }),
+  },
+  {
+    id: 'escritorio', name: 'Pausas de escritório', hint: 'Cinco minutos na cadeira, nos dias de trabalho. Ninguém vai reparar.', weeks: 2, perWeek: 5,
+    session: (w, s) => ({ focus: cycle<RoutineFocus>(['pausa', 'pausa', 'mobilidade', 'pausa', 'alongar'], s), minutes: 5 + w, level: 1 }),
+  },
+  {
+    id: 'sequencia-28', name: '28 dias seguidos', hint: 'Um treino curto por dia, todo dia. Feito para acender a sequência.', weeks: 4, perWeek: 7,
+    session: (w, s) => ({
+      focus: cycle<RoutineFocus>(['corpo', 'alongar', 'pernas', 'mobilidade', 'superior', 'cardio', 'core'], s),
+      minutes: (s === 1 || s === 3 ? 8 : 12) + w * 2,
+      level: w >= 2 ? 2 : 1,
+    }),
+  },
 ];
 
 export const homeProgramById = (id: string): HomeProgram | undefined => HOME_PROGRAMS.find((p) => p.id === id);

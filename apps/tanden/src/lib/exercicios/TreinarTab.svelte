@@ -50,7 +50,13 @@
     <p class="t-eyebrow">Esta semana</p>
     <p class="big"><b>{ex.week.minutes}</b> de {ex.settings.weekGoal} min</p>
     <div class="meter" role="meter" aria-label="Minutos da semana" aria-valuenow={ex.week.minutes} aria-valuemin="0" aria-valuemax={ex.settings.weekGoal}><i style:width="{pct * 100}%"></i></div>
-    <p class="why">{ex.streak > 1 ? `${ex.streak} dias seguidos em movimento.` : ex.week.sessions ? `${ex.week.sessions} ${ex.week.sessions === 1 ? 'treino' : 'treinos'} na semana.` : 'Nenhum treino ainda nesta semana.'}</p>
+    <p class="why">{ex.week.sessions ? `${ex.week.sessions} ${ex.week.sessions === 1 ? 'treino' : 'treinos'} na semana.` : 'Nenhum treino ainda nesta semana.'}</p>
+    <p class="flame" class:lit={ex.streaks.current > 0} class:risk={ex.streaks.atRisk}>
+      <span aria-hidden="true">🔥</span>
+      {#if ex.streaks.current === 0}Treine hoje para acender a sequência.
+      {:else if ex.streaks.atRisk}<b>{ex.streaks.current}</b>&nbsp;{ex.streaks.current === 1 ? 'dia' : 'dias'} seguidos. Treine hoje para não apagar!
+      {:else}<b>{ex.streaks.current}</b>&nbsp;{ex.streaks.current === 1 ? 'dia seguido' : 'dias seguidos'}. Recorde: {ex.streaks.best}.{/if}
+    </p>
   </section>
 </div>
 
@@ -121,4 +127,9 @@
   li button:hover { background: var(--surface-2); }
   li small { font: 11.5px var(--f-mono); color: var(--muted); white-space: nowrap; }
   .start { justify-self: end; margin-top: var(--sp-1); }
+  .flame { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0; font-size: var(--fs-sm); color: var(--muted); }
+  .flame span { filter: grayscale(1) opacity(.5); }
+  .flame.lit span { filter: drop-shadow(0 0 6px var(--ember-glow)); }
+  .flame.risk { color: var(--ember-soft); }
+  .flame b { color: var(--ink); font: 700 var(--fs-md) var(--f-display); }
 </style>

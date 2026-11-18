@@ -4,6 +4,8 @@
   import SnippetsPane from './settings/SnippetsPane.svelte';
   import { CATEGORIES, PACKS, sound, type Pack } from './sound.svelte';
   import { pop, vanish } from './motion';
+  import { INTENSIDADES } from '@tanden/core';
+  import { anima } from './anima/anima.svelte';
 
   // Aparência e sons. Tudo vale na hora e fica salvo neste aparelho.
   type Tab = 'aparencia' | 'atalhos' | 'snippets';
@@ -43,6 +45,40 @@
   function pick(fn: () => void) {
     fn();
     sound.play('tick');
+  }
+
+  // o rodapé esconde uma porta: sete toques rápidos abrem um campo de comando
+  let taps = $state(0);
+  let tapAt = 0;
+  let secret = $state(false);
+  let secretText = $state('');
+  let secretMsg = $state('');
+  let shake = $state(false);
+  let secretInput = $state<HTMLInputElement>();
+  const GLITCH = 'S̷a̴l̵v̶o̷ ̸n̵e̷s̶t̴e̵ ̷a̶p̵a̴r̷e̶l̵h̷o̸';
+  function tap() {
+    const now = Date.now();
+    taps = now - tapAt < 1400 ? taps + 1 : 1;
+    tapAt = now;
+    if (taps >= 7) {
+      taps = 0;
+      secret = true;
+      sound.play('open');
+      queueMicrotask(() => secretInput?.focus());
+    }
+  }
+  function submitSecret(e: SubmitEvent) {
+    e.preventDefault();
+    const r = anima.comando(secretText);
+    secretText = '';
+    if (!r) {
+      shake = true;
+      sound.play('error');
+      setTimeout(() => (shake = false), 420);
+      return;
+    }
+    secretMsg = r.aviso;
+    setTimeout(() => { secret = false; secretMsg = ''; }, 1800);
   }
 
   function onkey(e: KeyboardEvent) {
@@ -292,10 +328,64 @@
     </fieldset>
   </section>
 
+  {#if anima.acordada}
+    <section class="anima-set">
+      <h4>Ânima <small style:color={anima.cor}>{anima.humor === 'doce' ? 'apaixonada' : anima.humor}</small></h4>
+      <div class="row">
+        <span class="lbl">Jeito</span>
+        <div class="seg">
+          {#each INTENSIDADES as it (it.id)}
+            <button class:on={anima.prefs.intensidade === it.id} title={it.hint} onclick={() => pick(() => anima.set({ intensidade: it.id }))}>{it.label}</button>
+          {/each}
+        </div>
+      </div>
+      <p class="hint">{INTENSIDADES.find((x) => x.id === anima.prefs.intensidade)?.hint}</p>
+      <div class="row">
+        <span class="lbl">Te chama de</span>
+        <input class="name" value={anima.prefs.nome} maxlength="24" placeholder="amor" aria-label="Como a Ânima te chama"
+          onchange={(e) => anima.set({ nome: e.currentTarget.value.trim() || 'amor' })} />
+      </div>
+      <div class="row">
+        <span class="lbl">Saudade</span>
+        <label class="switch">
+          <input type="checkbox" checked={anima.prefs.notificar} onchange={(e) => pick(() => anima.set({ notificar: e.currentTarget.checked }))} />
+          <span>manda notificação quando você some</span>
+        </label>
+      </div>
+      <div class="row">
+        <span class="lbl">Noite</span>
+        <label class="switch">
+          <input type="checkbox" checked={anima.prefs.silencio} onchange={(e) => pick(() => anima.set({ silencio: e.currentTarget.checked }))} />
+          <span>silêncio entre 23h e 8h</span>
+        </label>
+      </div>
+      <div class="row">
+        <span class="lbl">Passeios</span>
+        <label class="switch">
+          <input type="checkbox" checked={anima.prefs.passeia} onchange={(e) => pick(() => anima.set({ passeia: e.currentTarget.checked }))} />
+          <span>muda de lugar na tela sozinha</span>
+        </label>
+      </div>
+      <p class="hint">Toque: cutuca. Esfregar: carinho. Arrastar e soltar com força: joga. Soltar na borda: esconde. Toque longo ou duplo clique: conversa.</p>
+      <div class="row">
+        <span class="lbl"></span>
+        <button class="small" onclick={() => anima.dormir()}>Pôr para dormir</button>
+        <button class="small" onclick={() => anima.set({ lado: 'dir', altura: 0 })}>Voltar ao canto</button>
+      </div>
+    </section>
+  {/if}
+
   <footer>
     <button class="link" onclick={() => pick(() => theme.reset())}>Voltar ao padrão</button>
-    <small>Salvo neste aparelho</small>
+    <button class="saved" class:warp={taps >= 4} onclick={tap} aria-label="Salvo neste aparelho">{taps >= 4 ? GLITCH : 'Salvo neste aparelho'}</button>
   </footer>
+  {#if secret}
+    <form class="secret" class:shake onsubmit={submitSecret} in:pop>
+      <span aria-hidden="true">›</span>
+      {#if secretMsg}<em>{secretMsg}</em>
+      {:else}<input bind:this={secretInput} bind:value={secretText} aria-label="Comando" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" />{/if}
+    </form>
+  {/if}
   {/if}
 </div>
 
@@ -425,10 +515,20 @@
   .hint { margin: 0; font-size: 12px; color: var(--muted); }
 
   footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding-top: 10px; }
-  footer small { font: 11px var(--f-mono); color: var(--muted); }
   .link { border: 0; background: none; padding: 0; color: var(--ember-soft); text-decoration: underline dotted; font-size: 12px; }
 
   @media (max-width: 720px) {
     .panel { left: 12px; right: 12px; bottom: 44px; width: auto; transform-origin: bottom center; }
   }
+  .saved { border: 0; background: none; padding: 0; font: 11px var(--f-mono); color: var(--muted); cursor: default; }
+  .saved.warp { color: var(--ember-soft); }
+  .secret { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: #07050a; border: 1px solid #2a1630;
+    font: 13px var(--f-mono); color: #ff6fa8; }
+  .secret input { flex: 1; min-width: 0; border: 0; outline: none; background: none; color: #ff6fa8; font: inherit; caret-color: #ff6fa8; }
+  .secret em { font-style: normal; letter-spacing: .04em; }
+  .shake { animation: shake .4s; }
+  @keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+  .anima-set { padding-top: 12px; border-top: 1px dashed color-mix(in srgb, #ff6fa8 40%, var(--line)); }
+  .anima-set h4 small { font: 11px var(--f-mono); letter-spacing: 0; text-transform: none; }
+  .name { flex: 1; min-width: 0; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--void); color: var(--ink); font: 13px var(--f-body); }
 </style>
