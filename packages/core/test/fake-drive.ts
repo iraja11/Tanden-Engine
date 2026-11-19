@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { propsPath } from '../src/drive';
 
 // Imitação do pedaço da API do Google Drive v3 que o DriveRemote usa.
 // Responde como o Drive real (formatos, md5Checksum, revisões, paginação).
@@ -15,6 +16,15 @@ interface FakeFile {
 }
 
 const md5 = (b: Uint8Array) => createHash('md5').update(b).digest('hex');
+
+/** Como o Drive real: cada appProperty (chave + valor) cabe em 124 bytes UTF-8. */
+function badProps(meta: Partial<FakeFile> | undefined): Response | null {
+  for (const [k, v] of Object.entries(meta?.appProperties ?? {})) {
+    if (Buffer.byteLength(k + v, 'utf8') > 124)
+      return new Response(JSON.stringify({ error: { code: 400, message: `The property ${k} exceeds the maximum size of 124 bytes.` } }), { status: 400 });
+  }
+  return null;
+}
 
 export class FakeDrive {
   files = new Map<string, FakeFile>();
@@ -53,7 +63,10 @@ export class FakeDrive {
     if (url.searchParams.get('uploadType') === 'resumable' && (method === 'POST' || method === 'PATCH')) {
       const id = `s${++this.seq}`;
       const fileId = path.match(/^\/files\/([^/]+)$/)?.[1];
-      this.sessions.set(id, { method, fileId, meta: body.length ? JSON.parse(new TextDecoder().decode(body)) : {} });
+      const meta = body.length ? (JSON.parse(new TextDecoder().decode(body)) as Partial<FakeFile>) : {};
+      const bad = badProps(meta);
+      if (bad) return bad;
+      this.sessions.set(id, { method, fileId, meta });
       return new Response(null, { status: 200, headers: { Location: `https://www.googleapis.com/upload/drive/v3/sessao/${id}` } });
     }
     if ((m = path.match(/^\/sessao\/([^/]+)$/)) && method === 'PUT') {
@@ -93,6 +106,8 @@ export class FakeDrive {
       } else {
         meta = JSON.parse(new TextDecoder().decode(body));
       }
+      const bad = badProps(meta);
+      if (bad) return bad;
       const f: FakeFile = {
         id: `f${++this.seq}`,
         name: meta.name!,
@@ -128,19 +143,19 @@ export class FakeDrive {
 
   /** alguém edita o arquivo pelo site do Drive */
   editByPath(tandenPath: string, text: string): void {
-    const f = [...this.files.values()].find((x) => x.appProperties.tandenPath === tandenPath)!;
+    const f = [...this.files.values()].find((x) => propsPath(x.appProperties) === tandenPath)!;
     f.data = new TextEncoder().encode(text);
     f.revisions.push({ id: `r${++this.seq}`, data: f.data });
   }
 
   textByPath(tandenPath: string): string | null {
-    const f = [...this.files.values()].find((x) => x.appProperties.tandenPath === tandenPath);
+    const f = [...this.files.values()].find((x) => propsPath(x.appProperties) === tandenPath);
     return f ? new TextDecoder().decode(f.data) : null;
   }
 
   /** caminho de pastas visível no Drive, ex.: "Tanden/mundo/aurath.md" */
   visiblePath(tandenPath: string): string {
-    let f = [...this.files.values()].find((x) => x.appProperties.tandenPath === tandenPath);
+    let f = [...this.files.values()].find((x) => propsPath(x.appProperties) === tandenPath);
     const names: string[] = [];
     while (f) {
       names.unshift(f.name);

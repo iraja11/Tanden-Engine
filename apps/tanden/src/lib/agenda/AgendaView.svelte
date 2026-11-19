@@ -243,6 +243,8 @@
         <span class="gmsg warn">Falta liberar a agenda na conta Google. <button class="link" onclick={() => agenda.connect()} disabled={google.busy}>{google.busy ? 'esperando o navegador…' : 'Entrar de novo'}</button></span>
       {:else if google.status.signed_in}
         <button class="link sm" onclick={() => agenda.refresh(from, to, true)} title="Ler o Google Agenda de novo">↻ atualizar</button>
+      {:else if google.status.configured}
+        <button class="link sm" onclick={() => agenda.connect()} disabled={google.busy}>{google.busy ? 'esperando o navegador…' : 'Conectar Google Agenda'}</button>
       {/if}
     {/if}
     <button class="link sm wk" onclick={() => agenda.setPrefs({ weekStart: ws ? 0 : 1 })} title="Primeiro dia da semana">semana começa {ws ? 'segunda' : 'domingo'}</button>

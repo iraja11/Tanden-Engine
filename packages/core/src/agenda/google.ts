@@ -162,8 +162,23 @@ export class GoogleCalendar {
     }
   }
 
-  /** As agendas da conta; a principal primeiro. */
+  /**
+   * As agendas da conta; a principal primeiro. Se o login liberou os eventos
+   * mas não a lista de agendas (a tela do Google deixa desmarcar uma das
+   * permissões), fica só com a agenda principal em vez de pedir login de novo.
+   */
   async calendars(): Promise<CalendarInfo[]> {
+    try {
+      return await this.calendarList();
+    } catch (e) {
+      if (e instanceof CalendarError && e.status === 403 && e.needsConsent) {
+        return [{ id: 'primary', name: 'Agenda principal', color: '#4285f4', primary: true, writable: true }];
+      }
+      throw e;
+    }
+  }
+
+  private async calendarList(): Promise<CalendarInfo[]> {
     const out: CalendarInfo[] = [];
     let pageToken: string | undefined;
     do {

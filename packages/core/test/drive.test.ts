@@ -109,3 +109,60 @@ describe('arquivos grandes', () => {
     expect((await other.read('PDFs/livro.pdf'))!.length).toBe(big.length);
   });
 });
+
+describe('caminhos longos (appProperties de 124 bytes)', () => {
+  const fundo = 'Mundos/Reinos de Aethermoor/Histórias/A Canção das Brumas Eternas/Cenas/Capítulo 12 — A traição no salão de mármore.md';
+
+  it('fatia o caminho que não cabe e remonta igual', async () => {
+    const { pathProps, propsPath } = await import('../src/drive');
+    expect(new TextEncoder().encode(`tandenPath${fundo}`).length).toBeGreaterThan(124);
+    const props = pathProps(fundo);
+    expect(props.tandenPath).toBeUndefined();
+    for (const [k, v] of Object.entries(props)) expect(new TextEncoder().encode(k + v).length).toBeLessThanOrEqual(124);
+    expect(propsPath(props)).toBe(fundo);
+    expect(pathProps('curto.md')).toEqual({ tandenPath: 'curto.md' });
+  });
+
+  it('mundos e mesas em pastas fundas sobem e descem para o outro aparelho', async () => {
+    const drive = new FakeDrive();
+    const pc = device(drive, 'arch');
+    const phone = device(drive, 'redmi');
+    const sessao = 'Campanhas/A Maldição do Lorde Vampiro de Barovia/Sessões/Sessão 12 — O castelo de Ravenloft à meia-noite.md';
+    pc.vault.create(fundo, '# Cena');
+    pc.vault.create(sessao, '# Sessão 12');
+    pc.vault.create('Zeta.md', 'depois na ordem');
+    const r = await pc.sync();
+    expect(r.replica.failed).toBeUndefined();
+    expect(drive.textByPath(fundo)).toBe('# Cena');
+    await phone.sync();
+    expect(phone.vault.read(fundo)).toBe('# Cena');
+    expect(phone.vault.read(sessao)).toBe('# Sessão 12');
+    expect(phone.vault.read('Zeta.md')).toBe('depois na ordem');
+  });
+
+  it('um arquivo recusado não trava os outros e é tentado de novo', async () => {
+    const drive = new FakeDrive();
+    const pc = device(drive, 'arch');
+    pc.vault.create('a.md', 'a');
+    pc.vault.create('ruim.md', 'x');
+    pc.vault.create('z.md', 'z');
+    const real = drive.fetch;
+    let recusar = true;
+    drive.fetch = async (input, init = {}) => {
+      const corpo = init.body instanceof Uint8Array ? new TextDecoder().decode(init.body) : String(init.body ?? '');
+      if (recusar && init.method === 'POST' && corpo.includes('"ruim.md"'))
+        return new Response('nome inválido', { status: 400 });
+      return real(input, init);
+    };
+    const remote = new DriveRemote({ getToken: async () => 't', fetch: (i, o) => drive.fetch(i, o) });
+    const rep = new Replicator(pc.disk, remote, 'arch');
+    await pc.vault.sync();
+    const r1 = await rep.sync();
+    expect(r1.failed?.map((f) => f.path)).toContain('ruim.md');
+    expect(drive.textByPath('z.md')).toBe('z');
+    recusar = false;
+    const r2 = await rep.sync();
+    expect(r2.failed).toBeUndefined();
+    expect(drive.textByPath('ruim.md')).toBe('x');
+  });
+});

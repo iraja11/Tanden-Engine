@@ -41,6 +41,9 @@
     ]
   },
   "plugins": {
+    "deep-link": {
+      "mobile": [{ "scheme": ["dev.tanden.engine"], "appLink": false }]
+    },
     "updater": {
       "pubkey": "PREENCHER_COM_A_CHAVE_PUBLICA",
       "endpoints": [

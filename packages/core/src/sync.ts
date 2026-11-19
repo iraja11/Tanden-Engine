@@ -26,12 +26,15 @@ export async function fullSync(vault: Vault, replicator: Replicator, extras: Syn
     for (const x of extras) extraWritten += (await x.sync(opts)).written;
     const second: ReplicaReport = first.downloaded.length > 0 || merged.written > 0 || extraWritten > 0 ? await replicator.sync() : { uploaded: [], downloaded: [] };
     const removed = [...(first.removed ?? []), ...(second.removed ?? [])];
+    // o segundo envio tenta de novo os mesmos arquivos: conta cada um uma vez só
+    const failed = [...new Map([...(first.failed ?? []), ...(second.failed ?? [])].map((f) => [f.path, f])).values()];
     return {
       vault: merged,
       replica: {
         uploaded: [...first.uploaded, ...second.uploaded],
         downloaded: [...first.downloaded, ...second.downloaded],
         ...(removed.length ? { removed } : {}),
+        ...(failed.length ? { failed } : {}),
       },
     };
   });

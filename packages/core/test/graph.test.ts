@@ -196,3 +196,17 @@ describe('grafo e quadros conversam', () => {
     expect(out).toBe('# Tema\n\n## [[Pasta/Leitura]]\n\n## Soltos\n\n- solta\n');
   });
 });
+
+describe('registros do app no grafo', () => {
+  it('reconhece eventos, itens de RPG, diários e modelos', async () => {
+    const { recordKind } = await import('../src/graph');
+    expect(recordKind('Agenda/2026-11-19 Dentista.md', '---\ntitle: Dentista\n---\n')).toBe('agenda');
+    expect(recordKind('Mundos/Aurath/Itens/Espada.md', '---\ntipo: item\nraridade: rara\n---\n# Espada')).toBe('rpg');
+    expect(recordKind('Tabelas/Geradores.md', '---\ntipo: "tabela"\n---\n')).toBe('rpg');
+    expect(recordKind('Saúde/Registro/2026-11-19.md', '')).toBe('registro');
+    expect(recordKind('Modelos/Diário.md', '')).toBe('modelo');
+    expect(recordKind('Mundos/Aurath/Personagens/Lia.md', '---\ntipo: personagem\n---\nusa [[Espada]]')).toBeNull();
+    // "tipo: item" fora do frontmatter não conta
+    expect(recordKind('Notas/x.md', '# x\n\ntipo: item')).toBeNull();
+  });
+});

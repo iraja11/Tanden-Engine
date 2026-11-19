@@ -4,6 +4,7 @@ import { analyzeNote, isCalcNote, type CalcResult, type NoteCalc, type PlotSpec 
 import type { AnyPlot } from './plot-view';
 import { makePlot, sameDim } from './make-plot';
 import { renderTex } from './tex';
+import { revealRanges } from '../editor/reveal';
 
 /*
  * Cálculo, fórmulas e gráficos dentro do editor de notas.
@@ -189,14 +190,14 @@ class MathWidget extends WidgetType {
 // ---------- decorações ----------
 
 function touches(state: EditorState, from: number, to: number): boolean {
-  return state.selection.ranges.some((r) => r.from <= to && r.to >= from);
+  return revealRanges(state).some((r) => r.from <= to && r.to >= from);
 }
 
 function calcDecos(state: EditorState, fresh: Fresh): DecorationSet {
   const { doc } = state;
   const { calc } = fresh;
   const out: Range<Decoration>[] = [];
-  const cursorLines = new Set(state.selection.ranges.map((r) => doc.lineAt(r.head).number - 1));
+  const cursorLines = new Set(revealRanges(state).map((r) => doc.lineAt(r.head).number - 1));
   const lineDeco = (n: number, cls: string) => {
     if (n < doc.lines) out.push(Decoration.line({ class: cls }).range(doc.line(n + 1).from));
   };

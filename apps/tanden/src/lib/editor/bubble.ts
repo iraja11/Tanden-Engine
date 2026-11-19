@@ -2,10 +2,12 @@ import { EditorView, ViewPlugin, showTooltip, type Tooltip } from '@codemirror/v
 import { StateEffect, StateField, type EditorState } from '@codemirror/state';
 import { BLOCK_LABELS, insertLink, insertWikiLink, lineType, setBlockType, toggleMark, type BlockType, type Mark } from './format';
 import { showMenu } from './menu';
+import { showStylePanel } from './textstyle';
 
 /*
  * Barra de formatação que aparece sobre o texto selecionado, como no Notion:
- * tipo do bloco, negrito, itálico, riscado, código, realce, link, [[nota]], fórmula.
+ * tipo do bloco, negrito, itálico, riscado, código, realce, cor/tamanho/fonte,
+ * link, [[nota]], fórmula.
  * Só aparece depois que o mouse solta (não pisca enquanto se arrasta).
  */
 
@@ -62,7 +64,16 @@ function bar(state: EditorState): readonly Tooltip[] {
         dom.append(type);
         const sep = document.createElement('i');
         dom.append(sep);
+        const style = document.createElement('button');
+        style.className = 'aa';
+        style.innerHTML = '<span>Aa</span>';
+        style.title = 'Cor, tamanho e fonte';
+        style.addEventListener('click', () => {
+          const b = style.getBoundingClientRect();
+          showStylePanel(view, { x: b.left, y: b.bottom + 6 });
+        });
         for (const b of BUTTONS) {
+          if (b.mark === 'link') dom.append(style);
           const el = document.createElement('button');
           el.textContent = b.label;
           el.title = b.title;

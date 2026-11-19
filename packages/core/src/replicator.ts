@@ -38,6 +38,18 @@ export interface ReplicaReport {
   downloaded: string[];
   /** apagados no remoto porque foram apagados aqui */
   removed?: string[];
+  /** recusados pelo remoto (ex.: nome inválido); o resto do sync segue */
+  failed?: Array<{ path: string; error: string }>;
+}
+
+/**
+ * Erro que vale só para aquele arquivo (o remoto recusou o pedido: 400, 403,
+ * 404, 413…). Sem rede, token vencido (401) ou limite de taxa (429) param o
+ * sync inteiro, como antes: tentar o próximo arquivo daria no mesmo.
+ */
+function fileOnlyError(e: unknown): boolean {
+  const status = (e as { status?: unknown } | null)?.status;
+  return typeof status === 'number' && status >= 400 && status < 500 && status !== 401 && status !== 429;
 }
 
 /** Acima disso, sumiço em massa na pasta local parece acidente: não apaga nada lá. */
@@ -105,7 +117,7 @@ export class Replicator {
     const stats = this.local.stat ? await this.local.stat().catch(() => null) : null;
     const knownStat = state.stat ?? {};
     const nextStat: Record<string, string> = {};
-    const report: ReplicaReport = { uploaded: [], downloaded: [], removed: [] };
+    const report: ReplicaReport = { uploaded: [], downloaded: [], removed: [], failed: [] };
     const remoteRevs = new Map((await this.remote.list()).filter((f) => !ignoredInSync(f.path)).map((f) => [f.path, f.rev]));
     const localPaths = (await this.local.list()).filter((p) => !ignoredInSync(p));
     const paths = new Set([...localPaths, ...remoteRevs.keys()]);
@@ -123,63 +135,69 @@ export class Replicator {
       for (const path of [...paths].sort()) {
         visited.add(path);
         if (path.startsWith(LOCAL_DIR)) continue;
-        if (goneSet.has(path)) {
-          await this.remote.remove!(path);
-          delete state.local[path];
-          delete state.remote[path];
-          report.removed!.push(path);
-          continue;
-        }
-        // arquivo grande que não mudou desde a última vez: usa o hash guardado, sem ler
-        const st = stats?.[path];
-        let data: Uint8Array | null | undefined;
-        let lHash: string | null;
-        if (st && knownStat[path] === st[0] && state.local[path]) {
-          lHash = state.local[path]!;
-          nextStat[path] = st[0];
-        } else {
-          data = await this.local.read(path);
-          lHash = data ? hashBytesHex(data) : null;
-          if (st && data && now - st[1] > RACY_MS) nextStat[path] = st[0];
-        }
-        const rRev = remoteRevs.get(path) ?? null;
-        const localChanged = lHash !== null && lHash !== state.local[path];
-        const remoteChanged = rRev !== null && rRev !== state.remote[path];
-        const has = lHash !== null;
-
-        let action: 'up' | 'down' | null = null;
-        if (this.isOwn(path)) {
-          if (has && (localChanged || rRev === null)) action = 'up';
-          else if (!has && rRev !== null) action = 'down'; // aparelho reinstalado: recupera o próprio histórico
-        } else if (path.startsWith('.tanden/')) {
-          if (rRev !== null && (remoteChanged || !has)) action = 'down';
-        } else if (has && rRev === null) {
-          action = 'up';
-        } else if (!has && rRev !== null) {
-          action = 'down';
-        } else if (remoteChanged) {
-          action = 'down';
-        } else if (localChanged) {
-          action = 'up';
-        }
-
-        if (action === 'up' && data === undefined) data = await this.local.read(path);
-        if (action === 'up' && data) {
-          state.remote[path] = await this.remote.upload(path, data);
-          state.local[path] = lHash!;
-          report.uploaded.push(path);
-        } else if (action === 'down') {
-          const got = await this.remote.download(path);
-          if (got) {
-            await this.local.write(path, got);
-            state.local[path] = hashBytesHex(got);
-            report.downloaded.push(path);
-            delete nextStat[path]; // a data mudou com a gravação; o próximo sync relê uma vez
+        try {
+          if (goneSet.has(path)) {
+            await this.remote.remove!(path);
+            delete state.local[path];
+            delete state.remote[path];
+            report.removed!.push(path);
+            continue;
           }
-          state.remote[path] = rRev!;
-        } else {
-          if (rRev !== null) state.remote[path] = rRev;
-          if (lHash !== null) state.local[path] = lHash;
+          // arquivo grande que não mudou desde a última vez: usa o hash guardado, sem ler
+          const st = stats?.[path];
+          let data: Uint8Array | null | undefined;
+          let lHash: string | null;
+          if (st && knownStat[path] === st[0] && state.local[path]) {
+            lHash = state.local[path]!;
+            nextStat[path] = st[0];
+          } else {
+            data = await this.local.read(path);
+            lHash = data ? hashBytesHex(data) : null;
+            if (st && data && now - st[1] > RACY_MS) nextStat[path] = st[0];
+          }
+          const rRev = remoteRevs.get(path) ?? null;
+          const localChanged = lHash !== null && lHash !== state.local[path];
+          const remoteChanged = rRev !== null && rRev !== state.remote[path];
+          const has = lHash !== null;
+
+          let action: 'up' | 'down' | null = null;
+          if (this.isOwn(path)) {
+            if (has && (localChanged || rRev === null)) action = 'up';
+            else if (!has && rRev !== null) action = 'down'; // aparelho reinstalado: recupera o próprio histórico
+          } else if (path.startsWith('.tanden/')) {
+            if (rRev !== null && (remoteChanged || !has)) action = 'down';
+          } else if (has && rRev === null) {
+            action = 'up';
+          } else if (!has && rRev !== null) {
+            action = 'down';
+          } else if (remoteChanged) {
+            action = 'down';
+          } else if (localChanged) {
+            action = 'up';
+          }
+
+          if (action === 'up' && data === undefined) data = await this.local.read(path);
+          if (action === 'up' && data) {
+            state.remote[path] = await this.remote.upload(path, data);
+            state.local[path] = lHash!;
+            report.uploaded.push(path);
+          } else if (action === 'down') {
+            const got = await this.remote.download(path);
+            if (got) {
+              await this.local.write(path, got);
+              state.local[path] = hashBytesHex(got);
+              report.downloaded.push(path);
+              delete nextStat[path]; // a data mudou com a gravação; o próximo sync relê uma vez
+            }
+            state.remote[path] = rRev!;
+          } else {
+            if (rRev !== null) state.remote[path] = rRev;
+            if (lHash !== null) state.local[path] = lHash;
+          }
+        } catch (e) {
+          if (!fileOnlyError(e)) throw e;
+          delete nextStat[path]; // relê no próximo sync e tenta de novo
+          report.failed!.push({ path, error: e instanceof Error ? e.message : String(e) });
         }
       }
 
@@ -190,6 +208,7 @@ export class Replicator {
       await this.local.write(this.statePath, toBytes(JSON.stringify(state)));
     }
     if (!report.removed!.length) delete report.removed;
+    if (!report.failed!.length) delete report.failed;
     return report;
   }
 }

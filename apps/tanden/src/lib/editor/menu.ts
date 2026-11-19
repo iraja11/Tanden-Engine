@@ -119,6 +119,43 @@ export function showMenu(at: { x: number; y: number }, items: Array<MenuItem | n
 }
 
 /**
+ * Painel livre no lugar de um menu (ex.: cores e tamanhos do texto): mesmo
+ * visual, mesmo jeito de fechar (Esc, clique fora). `build` recebe o `close`.
+ */
+export function showPopover(at: { x: number; y: number }, build: (close: () => void) => HTMLElement, opts: { onClose?: () => void } = {}): HTMLElement {
+  closeMenu();
+  const el = document.createElement('div');
+  el.className = 'tdn-menu tdn-pop';
+  el.addEventListener('mousedown', (e) => {
+    // não tira o foco nem a seleção do editor
+    if (!(e.target as HTMLElement).closest('input')) e.preventDefault();
+  });
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key !== 'Escape') return;
+    e.preventDefault();
+    e.stopPropagation();
+    close();
+  };
+  const onDown = (e: Event) => {
+    if (!el.contains(e.target as Node)) close();
+  };
+  function close() {
+    el.remove();
+    removeEventListener('keydown', onKey, true);
+    removeEventListener('pointerdown', onDown, true);
+    if (open?.el === el) open = null;
+    opts.onClose?.();
+  }
+  el.append(build(close));
+  document.body.append(el);
+  place(el, at);
+  addEventListener('keydown', onKey, true);
+  setTimeout(() => addEventListener('pointerdown', onDown, true));
+  open = { el, close };
+  return el;
+}
+
+/**
  * Põe o menu na tela, virando para o outro lado se não couber. No celular conta
  * só a parte visível (o teclado aberto encolhe a tela) e o menu rola se for
  * mais alto que ela.

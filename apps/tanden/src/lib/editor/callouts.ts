@@ -2,6 +2,7 @@ import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemir
 import { StateEffect, StateField, type EditorState, type Range } from '@codemirror/state';
 import { CALLOUT, parseBlocks } from './blocks';
 import { hostFacet } from './host';
+import { revealRanges } from './reveal';
 
 /*
  * Callouts do Obsidian (> [!dica] Título) viram caixas coloridas, e os com
@@ -173,7 +174,7 @@ export function columnsOf(lines: string[]): string[] {
 function build(state: EditorState): DecorationSet {
   const doc = state.doc;
   const out: Range<Decoration>[] = [];
-  const sel = state.selection.ranges;
+  const sel = revealRanges(state);
   const flips = state.field(flipped);
   const touchesLine = (n: number) => {
     const l = doc.line(n);

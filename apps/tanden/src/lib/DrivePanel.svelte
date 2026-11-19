@@ -7,20 +7,21 @@
   let { onclose }: { onclose: () => void } = $props();
   let clientId = $state('');
   let clientSecret = $state('');
+  let androidId = $state('');
+  let editing = $state(false);
+  let pasted = $state('');
 
   async function saveCreds(e: SubmitEvent) {
     e.preventDefault();
-    await google.setCredentials(clientId, clientSecret);
+    await google.setCredentials(clientId, clientSecret, androidId);
+    editing = false;
   }
-  async function signIn() {
-    if (await google.signIn()) {
-      engine.connectDrive();
-      void engine.syncNow();
-    }
-  }
-  async function signOut() {
-    await google.signOut();
-    engine.connectDrive();
+  // o engine liga o Drive sozinho quando a conta entra (google.onChange)
+  const signIn = () => google.signIn();
+  const signOut = () => google.signOut();
+  async function finishPasted(e: SubmitEvent) {
+    e.preventDefault();
+    if (await google.finishWithUrl(pasted)) pasted = '';
   }
 </script>
 
@@ -36,19 +37,40 @@
       <button class="pri" onclick={() => engine.syncNow()}>Sincronizar agora</button>
       <button onclick={signOut}>Desconectar</button>
     </div>
-  {:else if !google.status.configured}
+  {:else if !google.status.configured || editing}
     <p>Cole a credencial "App para computador" que você criou no Google Cloud. Só precisa fazer isso uma vez.</p>
     <form onsubmit={saveCreds}>
       <label for="gid">Client ID</label>
-      <input id="gid" bind:value={clientId} placeholder="…apps.googleusercontent.com" autocomplete="off" required />
+      <input id="gid" bind:value={clientId} placeholder="…apps.googleusercontent.com" autocomplete="off" required={!google.status.mobile} />
       <label for="gsecret">Client secret</label>
-      <input id="gsecret" bind:value={clientSecret} type="password" autocomplete="off" required />
-      <button class="pri" type="submit">Salvar</button>
+      <input id="gsecret" bind:value={clientSecret} type="password" autocomplete="off" required={!google.status.mobile} />
+      {#if google.status.mobile}
+        <label for="gandroid">Client ID Android (recomendado no celular)</label>
+        <input id="gandroid" bind:value={androidId} placeholder="…apps.googleusercontent.com" autocomplete="off" />
+        <small>Com ele, o Google devolve você direto ao app depois do login. Veja "Android" em docs/configuracao.md.</small>
+      {/if}
+      <div class="row">
+        <button class="pri" type="submit">Salvar</button>
+        {#if editing}<button type="button" onclick={() => (editing = false)}>Voltar</button>{/if}
+      </div>
     </form>
   {:else}
     <p>O navegador vai abrir para você entrar com sua conta Google e permitir que o Tanden crie e edite a própria pasta no seu Drive. Ele não vê o resto do seu Drive.</p>
     {#if google.error}<p class="err">{google.error}</p>{/if}
     <button class="pri" onclick={signIn} disabled={google.busy}>{google.busy ? 'Esperando o navegador…' : 'Entrar com Google'}</button>
+    {#if google.busy || google.status.pending}
+      {#if google.status.mobile && !google.status.mobile_client}
+        <p class="hint">Se, depois de entrar, o navegador mostrar "não foi possível acessar" num endereço <b>127.0.0.1</b>, copie esse endereço inteiro e cole aqui:</p>
+      {:else}
+        <p class="hint">Não voltou sozinho? Cole aqui o endereço que o navegador mostrou depois do login:</p>
+      {/if}
+      <form class="paste" onsubmit={finishPasted}>
+        <input bind:value={pasted} placeholder="http://127.0.0.1:…/?state=…&code=…" autocomplete="off" aria-label="Endereço de volta do login" />
+        <button type="submit" disabled={!pasted.trim()}>Concluir</button>
+      </form>
+      <button class="link" onclick={() => google.cancel()}>Cancelar login</button>
+    {/if}
+    <button class="link" onclick={() => (editing = true)}>Trocar credencial</button>
   {/if}
 </div>
 
@@ -68,5 +90,10 @@
   button { border: 1px solid var(--line); background: var(--surface-2); border-radius: 9px; padding: 7px 12px; }
   .pri { background: var(--ember); border-color: var(--ember); color: var(--on-ember); font-weight: 600; }
   .pri:disabled { opacity: .6; }
-  .err { color: var(--crit); }
+  .err { color: var(--crit); overflow-wrap: anywhere; }
+  .hint { font-size: 12px; }
+  small { color: var(--muted); font-size: 11px; }
+  .paste { display: flex; gap: 6px; }
+  .paste input { flex: 1; min-width: 0; }
+  .link { border: 0; background: none; padding: 0; color: var(--muted); text-decoration: underline; justify-self: start; font-size: 12px; }
 </style>

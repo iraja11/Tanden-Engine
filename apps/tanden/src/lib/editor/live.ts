@@ -3,6 +3,7 @@ import { syntaxTree, foldable, foldEffect, unfoldEffect, foldedRanges } from '@c
 import { StateField, type EditorState, type Range } from '@codemirror/state';
 import { codeLines, frontmatterEnd } from './blocks';
 import { hostFacet, linkExists } from './host';
+import { revealRanges } from './reveal';
 
 /*
  * Prévia ao vivo, como no Obsidian: a marcação (#, **, [[ ]], - [ ]) some
@@ -186,7 +187,7 @@ function build(view: EditorView): DecorationSet {
   const { state } = view;
   const doc = state.doc;
   const out: Range<Decoration>[] = [];
-  const sel = state.selection.ranges;
+  const sel = revealRanges(state);
   const host = state.facet(hostFacet);
   const touches = (from: number, to: number) => sel.some((r) => r.from <= to && r.to >= from);
   const activeLines = new Set<number>();
@@ -475,7 +476,7 @@ function fmDeco(state: EditorState): DecorationSet {
   const fm = frontmatterEnd(state.doc);
   if (!fm) return Decoration.none;
   const to = state.doc.line(fm).to;
-  if (state.selection.ranges.some((r) => r.from <= to)) return Decoration.none;
+  if (revealRanges(state).some((r) => r.from <= to)) return Decoration.none;
   return Decoration.set([Decoration.replace({ block: true }).range(0, to)]);
 }
 
