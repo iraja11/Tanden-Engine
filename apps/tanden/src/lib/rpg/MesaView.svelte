@@ -3,6 +3,7 @@
   import CombatTracker from './CombatTracker.svelte';
   import CompendioPanel from './regras/CompendioPanel.svelte';
   import DiceTray from './DiceTray.svelte';
+  import GridMap from './GridMap.svelte';
   import { mesa, type MesaTab } from './mesa.svelte';
   import PartyPanel from './PartyPanel.svelte';
   import RollLog from './RollLog.svelte';
@@ -18,7 +19,7 @@
   let world = $state('');
   let system = $state('5e');
 
-  const TABS: Array<[MesaTab, string]> = [['dados', 'Dados'], ['combate', 'Combate'], ['fichas', 'Personagens'], ['regras', 'Regras'], ['tabelas', 'Tabelas'], ['sessoes', 'Sessões']];
+  const TABS: Array<[MesaTab, string]> = [['dados', 'Dados'], ['combate', 'Combate'], ['grade', 'Grade'], ['fichas', 'Personagens'], ['regras', 'Regras'], ['tabelas', 'Tabelas'], ['sessoes', 'Sessões']];
 
   function pick(t: MesaTab) {
     mesa.tab = t;
@@ -70,6 +71,8 @@
         <DiceTray autofocus />
       {:else if mesa.tab === 'combate'}
         <CombatTracker {onOpenNote} />
+      {:else if mesa.tab === 'grade'}
+        <GridMap {onOpenNote} />
       {:else if mesa.tab === 'tabelas'}
         <TablesPanel {onOpenNote} />
       {:else if mesa.tab === 'regras'}

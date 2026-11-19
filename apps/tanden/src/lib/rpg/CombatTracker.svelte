@@ -12,8 +12,7 @@
 
   const camp = $derived(mesa.campaign);
   const encounters = $derived(camp?.encounters ?? []);
-  let chosen = $state<string | null>(null);
-  const path = $derived(chosen && engine.vault.has(chosen) ? chosen : encounters.at(-1)?.path ?? null);
+  const path = $derived(mesa.encounter);
   const enc = $derived.by((): Encounter | null => { void cadernos.rev; void mesa.rev; return path ? readEncounter(cadernos.read(path)) : null; });
   const order = $derived(enc ? sortByInit(enc.list) : []);
 
@@ -49,8 +48,7 @@
   const plain = (name: string) => name.replace(/^\[\[|\]\]$/g, '').replace(/^[^|]*\|/, '');
 
   function createEncounter() {
-    const p = mesa.newEncounter(newName);
-    if (p) chosen = p;
+    mesa.newEncounter(newName);
     dialog = null;
     newName = '';
   }
@@ -185,7 +183,7 @@
 
 <div class="combat">
   <header class="head">
-    <select class="field" value={path ?? ''} onchange={(e) => (chosen = (e.currentTarget as HTMLSelectElement).value || null)} aria-label="Encontro">
+    <select class="field" value={path ?? ''} onchange={(e) => mesa.pickEncounter((e.currentTarget as HTMLSelectElement).value || null)} aria-label="Encontro">
       {#if !encounters.length}<option value="">Nenhum encontro</option>{/if}
       {#each encounters as x (x.path)}<option value={x.path}>{x.name}{x.round ? ` · rodada ${x.round}` : ''}</option>{/each}
     </select>
