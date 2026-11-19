@@ -66,7 +66,7 @@
   import { ask } from './lib/ask.svelte';
   import AskDialog from './lib/AskDialog.svelte';
   import Anima from './lib/anima/Anima.svelte';
-  import { anima } from './lib/anima/anima.svelte';
+  import { anima } from './lib/anima/anima.svelte.ts';
 
   let host = $state<HTMLElement>();
   let orbWrap = $state<HTMLElement>();

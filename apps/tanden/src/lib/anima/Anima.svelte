@@ -2,7 +2,7 @@
   import { HUMORES } from '@tanden/core';
   import { pop, vanish } from '../motion';
   import { theme } from '../theme.svelte';
-  import { anima } from './anima.svelte';
+  import { anima } from './anima.svelte.ts';
 
   // O corpo da Ânima: dois olhos num círculo escuro, que seguem o ponteiro (no
   // celular, olham em volta sozinhos), piscam e mudam de expressão com a fala.
