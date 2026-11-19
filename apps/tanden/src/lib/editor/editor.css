@@ -192,6 +192,7 @@
 .cm-bubble .b { font-weight: 800; } .cm-bubble .i { font-style: italic; font-family: serif; font-size: 15px; }
 .cm-bubble .s { text-decoration: line-through; } .cm-bubble .c, .cm-bubble .w { font: 11.5px var(--f-mono); }
 .cm-bubble .h { color: #f5c542; } .cm-bubble .m { font-family: serif; font-style: italic; }
+.cm-bubble .aa span { font: 600 13px var(--f-display); background: linear-gradient(90deg, #e5484d, #e2a336, #46a758, #0090ff, #8e4ec6); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .cm-bubble i { width: 1px; height: 18px; background: var(--line); margin: 0 3px; flex: none; }
 .cm-bubble button { flex: none; }
 /* celular: a barra não passa da largura da tela; rola de lado se precisar */
@@ -200,6 +201,20 @@
 @media (pointer: coarse) {
   .cm-bubble button { min-width: 36px; height: 36px; }
 }
+
+/* ---------- cor, tamanho e fonte ---------- */
+.cm-span-tag { color: var(--muted); opacity: .55; font: 11px var(--f-mono); }
+.tdn-pop { padding: 4px 6px 8px; width: min(292px, calc(100vw - 16px)); }
+.tdn-style { display: grid; gap: 2px; }
+.tdn-style .row { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 4px 4px; }
+.tdn-style .row button { display: block; min-width: 0; padding: 5px 9px; border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; color: var(--ink); font-size: 13px; }
+.tdn-style .row button.on { border-color: var(--ember); color: var(--ember); }
+.tdn-style .row button:hover { background: color-mix(in srgb, var(--ember) 11%, transparent); }
+.tdn-style .sw { width: 26px; height: 26px; padding: 0 !important; border-radius: 50% !important; background: var(--c) !important; border: 2px solid transparent !important; }
+.tdn-style .sw.on { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--c); }
+.tdn-style .sw.none { background: var(--surface-2) !important; border-color: var(--line) !important; color: var(--muted); font-size: 12px; }
+.tdn-style .clear { margin: 4px 4px 0; justify-self: start; border: 0; background: none; padding: 4px 6px; color: var(--muted); text-decoration: underline; font-size: 12.5px; }
+@media (pointer: coarse) { .tdn-style .sw { width: 32px; height: 32px; } .tdn-style .row button { padding: 8px 11px; } }
 
 /* ---------- menus (/, [[, @) ---------- */
 .cm-tooltip.cm-tooltip-autocomplete { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden;

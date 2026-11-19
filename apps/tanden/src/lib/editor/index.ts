@@ -11,6 +11,7 @@ import { hideFrontmatter, livePreview } from './live';
 import { linkPreview } from './hover';
 import { smartPaste } from './paste';
 import { slashMenu } from './slash';
+import { styledSpans } from './spans';
 import { tables } from './tables';
 import './editor.css';
 
@@ -20,7 +21,7 @@ export type { EditorHost } from './host';
 export const previewSlot = new Compartment();
 
 /** O que muda a cara da nota (some no modo código-fonte). */
-export const preview: Extension = [livePreview, hideFrontmatter, callouts, tables, blockHandle];
+export const preview: Extension = [livePreview, styledSpans, hideFrontmatter, callouts, tables, blockHandle];
 
 /**
  * Tudo o que faz do editor de notas um editor "de verdade": prévia ao vivo,

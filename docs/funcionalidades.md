@@ -10,7 +10,7 @@ configurar (Drive, Android, atualização), veja
 
 O editor funciona como o Notion, mas o arquivo continua sendo Markdown comum, que o Obsidian abre igual.
 
-- **Prévia ao vivo.** Os títulos, o negrito, os links, as tarefas, as tabelas e as fórmulas já aparecem formatados, e a marcação só volta na linha do cursor. O **Ctrl+Shift+E** alterna para o Markdown puro.
+- **Prévia ao vivo.** Os títulos, o negrito, os links, as tarefas, as tabelas e as fórmulas já aparecem formatados, e a marcação só volta onde está o cursor (selecionar um trecho não abre o Markdown cru, então nada pula enquanto você seleciona). O **Ctrl+Shift+E** alterna para o Markdown puro.
 - **Menu `/`.** Ele insere títulos, listas, tarefas, citação, callouts (`> [!dica]`), toggle (`> [!toggle]-`), colunas, tabela, divisor, imagem, vídeo, arquivo, página web, nota embutida, fórmula, cálculo, gráfico, código, data e lembrete. Em **Escrita criativa**: nome sorteado (élfico, anão, nórdico, latino), personalidade sorteada (motivação, medo, segredo…), linha de diálogo e bloco de regras.
 - **Buscar e substituir.** **Ctrl+F** (ou **Ctrl+H**) abre a busca dentro da nota, com substituir, maiúsculas/minúsculas, palavra inteira e regex. **F3** e **Ctrl+G** andam entre os resultados; **todos** seleciona cada ocorrência de uma vez.
 - **Foco no parágrafo** (**Ctrl+Shift+L**, ou no ⋯ da nota): só o parágrafo do cursor fica aceso, o resto esmaece, e a linha em que você escreve fica no meio da tela, como numa máquina de escrever. Vale também para o texto das fichas dos Mundos.
@@ -18,7 +18,7 @@ O editor funciona como o Notion, mas o arquivo continua sendo Markdown comum, qu
   - A alça ⋮⋮ à esquerda arrasta o bloco; o + cria um bloco embaixo.
   - O menu da alça transforma, duplica, move, apaga, copia o texto ou copia um link para o bloco (`[[Nota#^id]]`).
   - **Alt+↑/↓** move o bloco e **Ctrl+D** duplica.
-- **Seleção.** Selecionar um texto abre uma barra para mudar o tipo do bloco, aplicar negrito, itálico, riscado, código ou realce, e criar um link, um `[[ ]]` ou uma fórmula.
+- **Seleção.** Selecionar um texto abre uma barra para mudar o tipo do bloco, aplicar negrito, itálico, riscado, código ou realce, mudar **cor, tamanho e fonte** (botão **Aa**), e criar um link, um `[[ ]]` ou uma fórmula. Cor, tamanho e fonte ficam na nota como `<span style="…">texto</span>`, que o Obsidian também mostra.
 - **Tabelas.** A tabela é editada direto nas células: Tab e as setas andam entre elas, e o + adiciona linha ou coluna. O botão direito insere, apaga, alinha, ordena ou abre a tabela como Markdown.
 - **Imagens.**
   - Para inserir uma imagem, cole, arraste ou use `/imagem`.
@@ -115,7 +115,7 @@ A tela **Sorte** junta as ferramentas de acaso do dia a dia. O sorteio usa o ger
 - **Roleta.** Uma opção por linha (ou separadas por vírgula); `*2` no fim de uma opção dá o dobro de chance e uma fatia maior. Toque na roda ou aperte espaço para girar: o ponteiro estala a cada fatia e a roda freia até o resultado. *Tirar da roleta* remove a opção sorteada (para ir eliminando).
 - **Sorteio.** *Nomes* tira um ou mais nomes sem repetir; *Times* divide a lista em times equilibrados; *Ordem* embaralha a lista (quem começa, ordem de apresentação); *Números* sorteia num intervalo, com ou sem repetição, e tem atalhos para Mega-Sena e Lotofácil. *Copiar* leva o resultado para a área de transferência.
 - **Moeda.** Cara ou coroa com a moeda girando no ar, a contagem de cada lado, a sequência atual e as últimas jogadas. O comando *Cara ou coroa* da paleta entra na mesma contagem.
-- **Bola 8.** Escreva a pergunta (ou não), sacuda, e uma das 20 respostas clássicas sobe do líquido. Ela nunca repete a resposta anterior.
+- **Bola 8.** Escreva a pergunta (ou não), sacuda, e uma das 20 respostas clássicas sobe do líquido, cada vez boiando de um jeito (inclinada, mais funda ou mais rasa). Ela nunca repete a resposta anterior.
 - **Listas salvas.** *Salvar como lista* grava as opções na nota `Sorteios.md`, uma seção `## nome` por lista. A roleta e o sorteio escolhem dessas listas, e editar a nota no Obsidian vale na hora.
 - **Histórico.** Os resultados recentes ficam na coluna da direita, só neste aparelho.
 
@@ -422,6 +422,7 @@ Um banco é um bloco ` ```base ` dentro de uma nota, no formato das **Bases do O
 
 Tela **Grafo**: cada nota é um nó e cada `[[link]]` uma ligação, como no Obsidian. Os quadros (`.canvas`) entram como anéis ligados às notas que mostram.
 
+- **Registros do app** (eventos da agenda, itens/encontros/tabelas de RPG, registros de saúde, treino e alimentação, modelos) ficam fora do grafo por padrão; cada tipo tem a chave dele no painel.
 - **Global ou local** (em volta da nota aberta, de 1 a 4 ligações). O comando *Grafo local da nota aberta* abre direto.
 - **Filtro** com a busca do Obsidian: `path:Projetos`, `tag:#estudo` (ou `#estudo`), `file:ata`, `-termo` exclui e aspas juntam palavras.
 - **Grupos de cor**: cada grupo é uma busca e uma cor; o primeiro que bate pinta o nó.

@@ -1,6 +1,7 @@
 import { noteSection } from '@tanden/core';
 import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view';
 import { StateField, type EditorState, type Range } from '@codemirror/state';
+import { revealRanges } from './editor/reveal';
 
 /*
  * Anexos dentro do editor: ![[imagem.png]] e ![](https://...) viram a imagem
@@ -286,7 +287,7 @@ function widgetFor(f: Found, host: EmbedHost): WidgetType | null {
 
 function build(state: EditorState, host: EmbedHost): DecorationSet {
   const out: Range<Decoration>[] = [];
-  const sel = state.selection.ranges;
+  const sel = revealRanges(state);
   let inCode = false;
   for (let i = 1; i <= state.doc.lines; i++) {
     const line = state.doc.line(i);

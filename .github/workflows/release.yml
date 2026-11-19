@@ -162,6 +162,7 @@ jobs:
         env:
           TANDEN_GOOGLE_CLIENT_ID: ${{ secrets.TANDEN_GOOGLE_CLIENT_ID }}
           TANDEN_GOOGLE_CLIENT_SECRET: ${{ secrets.TANDEN_GOOGLE_CLIENT_SECRET }}
+          TANDEN_GOOGLE_ANDROID_CLIENT_ID: ${{ secrets.TANDEN_GOOGLE_ANDROID_CLIENT_ID }}
         run: |
           export NDK_HOME="$ANDROID_NDK_LATEST_HOME"
           pnpm tauri android build --ci --apk --target aarch64 --config src-tauri/tauri.ci.conf.json

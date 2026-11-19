@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount, untrack } from 'svelte';
-  import { buildNoteGraph, graphQuery, neighborhood, type GraphNode, type NoteGraph } from '@tanden/core/src/graph';
+  import { RECORD_KINDS, buildNoteGraph, graphQuery, neighborhood, recordKind, type GraphNode, type NoteGraph, type RecordKind } from '@tanden/core/src/graph';
   import { serializeBoard } from '@tanden/core';
   import { quadros } from '../quadro/quadros.svelte';
   import { engine } from '../engine.svelte';
@@ -38,10 +38,12 @@
     nodeScale: number;
     linkWidth: number;
     labelFade: number;
+    /** registros do app que aparecem (agenda, itens de RPG...); o resto fica de fora */
+    records: RecordKind[];
   };
   const DEFAULTS: Settings = {
     mode: 'global', depth: 2, tags: false, files: false, missing: false, orphans: true, arrows: false, hidden: [], repel: 1.6, distance: 80, gravity: 1,
-    boards: true, filter: '', colorGroups: [], nodeScale: 1, linkWidth: 1, labelFade: 1,
+    boards: true, filter: '', colorGroups: [], nodeScale: 1, linkWidth: 1, labelFade: 1, records: [],
   };
   function load(): Settings {
     try {
@@ -59,6 +61,10 @@
   let host = $state<HTMLDivElement>();
   let gc: GraphCanvas | null = null;
   let graph = $state<NoteGraph>({ nodes: [], edges: [] });
+  /** caminho → tipo de registro, para as notas que são registro do app */
+  let recordOf = new Map<string, RecordKind>();
+  /** quantas notas de cada tipo de registro existem (para mostrar ao lado da chave) */
+  let recordCount = $state<Partial<Record<RecordKind, number>>>({});
   let query = $state('');
   let selected = $state<string | null>(null);
   /** centro do grafo local: a nota selecionada ou a aberta */
@@ -76,7 +82,12 @@
   const top = (folder: string) => folder.split('/')[0] || '';
   const groups = $derived.by(() => {
     const count = new Map<string, number>();
-    for (const n of graph.nodes) if (n.kind === 'note') count.set(top(n.folder), (count.get(top(n.folder)) ?? 0) + 1);
+    for (const n of graph.nodes) {
+      if (n.kind !== 'note') continue;
+      const k = recordOf.get(n.id);
+      if (k && !s.records.includes(k)) continue; // registro escondido não conta na pasta
+      count.set(top(n.folder), (count.get(top(n.folder)) ?? 0) + 1);
+    }
     return [...count.entries()].sort((a, b) => b[1] - a[1]).map(([name, n], i) => ({ name, n, color: name ? PALETTE[i % PALETTE.length]! : 'var(--silver)' }));
   });
   const groupColor = $derived(new Map(groups.map((g) => [g.name, g.color])));
@@ -89,6 +100,15 @@
     const notes = engine.vault.list().filter((p) => p.endsWith('.md')).map((path) => ({ path, text: engine.vault.read(path) }));
     const boards = s.boards ? engine.boardList.filter((p) => engine.boards.has(p)).map((path) => ({ path, text: serializeBoard(engine.boards.read(path)) })) : [];
     graph = buildNoteGraph(notes, { tags: s.tags, missing: s.missing, files: s.files, allPaths: files.list, boards });
+    recordOf = new Map();
+    const count: Partial<Record<RecordKind, number>> = {};
+    for (const n of notes) {
+      const k = recordKind(n.path, n.text);
+      if (!k) continue;
+      recordOf.set(n.path, k);
+      count[k] = (count[k] ?? 0) + 1;
+    }
+    recordCount = count;
     rev++;
   }
   function schedule() {
@@ -125,7 +145,19 @@
   const view = $derived.by(() => {
     void rev;
     const hidden = new Set(s.hidden);
-    let keep = graph.nodes.filter((n) => (n.kind !== 'note' && n.kind !== 'board') || !hidden.has(top(n.folder)));
+    const shownRecords = new Set(s.records);
+    const isHiddenRecord = (id: string) => {
+      const k = recordOf.get(id);
+      // no grafo local, a nota do centro aparece mesmo sendo registro
+      return !!k && !shownRecords.has(k) && !(s.mode === 'local' && id === center);
+    };
+    let keep = graph.nodes.filter((n) => (n.kind !== 'note' && n.kind !== 'board') || (!hidden.has(top(n.folder)) && !isHiddenRecord(n.id)));
+    // tags e anexos que só os registros escondidos usavam saem junto
+    if (recordOf.size && s.records.length < RECORD_KINDS.length) {
+      const alive = new Set(keep.filter((n) => n.kind === 'note' || n.kind === 'board').map((n) => n.id));
+      const used = new Set(graph.edges.filter((e) => alive.has(e.from)).map((e) => e.to));
+      keep = keep.filter((n) => n.kind === 'note' || n.kind === 'board' || used.has(n.id));
+    }
     if (s.filter.trim()) {
       const f = graphQuery(s.filter);
       keep = keep.filter((n) => (n.kind !== 'note' && n.kind !== 'board') || f(n));
@@ -139,7 +171,12 @@
       const shown = new Set(order);
       keep = keep.filter((n) => shown.has(n.id) || ((n.kind === 'tag' || n.kind === 'file' || n.kind === 'missing') && graph.edges.some((e) => shown.has(e.from) && e.to === n.id)));
     }
-    if (!s.orphans) keep = keep.filter((n) => n.in + n.out > 0);
+    if (!s.orphans) {
+      // sem ligação entre o que sobrou (uma nota só ligada a registros escondidos também é órfã)
+      const ids0 = new Set(keep.map((n) => n.id));
+      const linked = new Set(graph.edges.filter((e) => ids0.has(e.from) && ids0.has(e.to)).flatMap((e) => [e.from, e.to]));
+      keep = keep.filter((n) => linked.has(n.id));
+    }
     let ids = new Set(keep.map((n) => n.id));
     let edges = graph.edges.filter((e) => ids.has(e.from) && ids.has(e.to));
     if (s.mode === 'local' && center && ids.has(center)) {
@@ -397,6 +434,17 @@
         <label class="tog"><input type="checkbox" bind:checked={s.orphans} /> Notas sem ligação</label>
         <label class="tog"><input type="checkbox" bind:checked={s.arrows} /> Setas</label>
 
+        {#if Object.keys(recordCount).length}
+          <h3>Registros do app</h3>
+          {#each RECORD_KINDS.filter((k) => recordCount[k.id]) as k (k.id)}
+            <label class="tog">
+              <input type="checkbox" checked={s.records.includes(k.id)}
+                onchange={(e) => (s.records = e.currentTarget.checked ? [...s.records, k.id] : s.records.filter((x) => x !== k.id))} />
+              {k.label} <span class="count">{recordCount[k.id]}</span>
+            </label>
+          {/each}
+        {/if}
+
         {#if groups.length > 1}
           <h3>Pastas</h3>
           <div class="groups">
@@ -511,6 +559,7 @@
 
   .tog { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 3px 0; cursor: pointer; }
   .tog input { accent-color: var(--ember); }
+  .tog .count { margin-left: auto; font: 11px var(--f-mono); color: var(--muted); }
   .groups { display: grid; gap: 1px; }
   .groups button { display: flex; align-items: center; gap: 8px; border: 0; background: none; border-radius: 8px; padding: 4px 6px; color: var(--ink); font-size: 13px; text-align: left;
     transition: opacity var(--dur), background var(--dur); }

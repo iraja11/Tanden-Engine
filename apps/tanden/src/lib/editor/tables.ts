@@ -2,6 +2,7 @@ import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemir
 import { StateField, type EditorState, type Range } from '@codemirror/state';
 import { parseBlocks } from './blocks';
 import { renderInline } from './inline';
+import { revealRanges } from './reveal';
 
 /*
  * Tabelas Markdown viram uma grade editável, como no Notion: clica na célula e
@@ -448,7 +449,7 @@ function build(state: EditorState): DecorationSet {
     const from = doc.line(b.start).from;
     const to = doc.line(b.end).to;
     // o cursor parado na borda (antes ou depois) não abre o texto
-    const inside = state.selection.ranges.some((r) => r.to > from && r.from < to && !(r.empty && (r.head === from || r.head === to)));
+    const inside = revealRanges(state).some((r) => r.head > from && r.head < to);
     if (inside) {
       for (let i = b.start; i <= b.end; i++) out.push(Decoration.line({ class: 'cm-table-src' }).range(doc.line(i).from));
       continue;
