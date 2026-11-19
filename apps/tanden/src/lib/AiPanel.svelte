@@ -2,7 +2,7 @@
   import { desktop } from './platform';
   import { engine } from './engine.svelte';
   import { ollama } from './ollama.svelte';
-  import { anima } from './anima/anima.svelte';
+  import { anima } from './anima/anima.svelte.ts';
   import Terminal from './Terminal.svelte';
 
   // Painel de IA. No PC: Claude Code e Gemini CLI rodando na pasta do cofre

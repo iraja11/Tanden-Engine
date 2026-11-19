@@ -5,7 +5,7 @@
   import { CATEGORIES, PACKS, sound, type Pack } from './sound.svelte';
   import { pop, vanish } from './motion';
   import { INTENSIDADES } from '@tanden/core';
-  import { anima } from './anima/anima.svelte';
+  import { anima } from './anima/anima.svelte.ts';
 
   // Aparência e sons. Tudo vale na hora e fica salvo neste aparelho.
   type Tab = 'aparencia' | 'atalhos' | 'snippets';
