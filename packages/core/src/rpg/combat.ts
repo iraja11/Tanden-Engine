@@ -1,5 +1,6 @@
 import { asText, parseProps, setProps } from '../caderno/frontmatter';
-import { getSection, readRecords, setSection, writeRecords, type Rec } from '../caderno/markdown';
+import { getSection, parseTable, readRecords, sameTitle, setSection, writeRecords, type Rec } from '../caderno/markdown';
+import { cellName, clampCell, footprint, parseCell, parseTokenSize, type Cell, type GridSettings } from './grid';
 
 /*
  * Encontro (combate): uma nota comum com a ordem de iniciativa numa tabela.
@@ -20,6 +21,10 @@ import { getSection, readRecords, setSection, writeRecords, type Rec } from '../
  *   ## Registro
  *   - R1 · Kael acerta Goblin 1: 4 de dano
  *
+ * Na grade de batalha (grid.ts), a casa de cada um vai na coluna "Pos" ("C4")
+ * e o tamanho em quadrados na "Tam" ("2" ou "grande"); as duas colunas só
+ * aparecem quando alguém está na grade.
+ *
  * Abre e edita igual no Obsidian; o Tanden só sabe onde mexer.
  */
 
@@ -34,6 +39,10 @@ export interface Combatant {
   ac: number | null;
   conditions: string[];
   side: 'grupo' | 'inimigo' | 'aliado' | string;
+  /** casa na grade de batalha (canto de cima à esquerda); null/ausente = fora da grade */
+  pos?: Cell | null;
+  /** lado em quadrados (1 = médio, 2 = grande...) */
+  size?: number;
   /** linha de origem na tabela (colunas extras sobrevivem) */
   _i?: number;
 }
@@ -54,6 +63,8 @@ const COLS = {
   ac: ['CA', 'AC', 'Defesa'],
   cond: ['Condições', 'Condicoes', 'Conditions', 'Estado'],
   side: ['Lado', 'Side', 'Time'],
+  pos: ['Pos', 'Posição', 'Posicao', 'Casa', 'Position'],
+  size: ['Tam', 'Tamanho', 'Size'],
 };
 type Col = keyof typeof COLS;
 
@@ -78,6 +89,8 @@ export function readEncounter(text: string): Encounter {
     ac: int(r.ac),
     conditions: r.cond.split(',').map((c) => c.trim()).filter(Boolean),
     side: r.side.trim().toLowerCase() || 'inimigo',
+    pos: parseCell(r.pos),
+    size: parseTokenSize(r.size),
     _i: r._i,
   }));
   return { round, turn, list };
@@ -95,9 +108,18 @@ export function writeEncounter(text: string, e: Encounter): string {
     ac: c.ac === null ? '' : String(c.ac),
     cond: c.conditions.join(', '),
     side: c.side,
+    pos: c.pos ? cellName(c.pos) : '',
+    size: (c.size ?? 1) === 1 ? '' : String(c.size),
     ...(c._i !== undefined ? { _i: c._i } : {}),
   }));
-  let out = writeRecords(text, SECTION, COLS, recs);
+  // as colunas da grade só entram quando servem para alguma coisa
+  const sec = getSection(text, SECTION);
+  const header = (sec === null ? null : parseTable(sec))?.header ?? [];
+  const has = (k: Col) => header.some((h) => COLS[k].some((a) => sameTitle(h, a)));
+  const keep = (k: Col) =>
+    k === 'pos' ? has('pos') || e.list.some((c) => c.pos) : k === 'size' ? has('size') || e.list.some((c) => (c.size ?? 1) !== 1) : true;
+  const cols = Object.fromEntries(Object.entries(COLS).filter(([k]) => keep(k as Col))) as typeof COLS;
+  let out = writeRecords(text, SECTION, cols, recs);
   out = setProps(out, { rodada: String(e.round), vez: e.turn ?? null });
   return out;
 }
@@ -221,6 +243,42 @@ export function rollInitiative(e: Encounter, roll: (mod: number, c: Combatant) =
 
 /** Fim do combate: volta a rodada a zero (os combatentes ficam). */
 export const endCombat = (e: Encounter): Encounter => ({ ...e, round: 0, turn: null });
+
+// ------------------------------------------------------------ grade
+
+/** Põe (ou tira, com null) alguém da grade. */
+export function moveCombatant(e: Encounter, name: string, pos: Cell | null): Encounter {
+  return { ...e, list: e.list.map((c) => (c.name === name ? { ...c, pos } : c)) };
+}
+
+/**
+ * Coloca na grade quem ainda está de fora: o grupo e os aliados pela
+ * esquerda, os inimigos pela direita, sem sobrepor ninguém.
+ */
+export function autoPlace(e: Encounter, g: Pick<GridSettings, 'cols' | 'rows'>): Encounter {
+  const taken = new Set<string>();
+  const mark = (c: Cell, size: number) => footprint(c, size).forEach((f) => taken.add(`${f.x},${f.y}`));
+  const free = (c: Cell, size: number) =>
+    c.x >= 0 && c.y >= 0 && c.x + size <= g.cols && c.y + size <= g.rows && footprint(c, size).every((f) => !taken.has(`${f.x},${f.y}`));
+  for (const c of e.list) if (c.pos) mark(c.pos, c.size ?? 1);
+  const spot = (size: number, left: boolean): Cell | null => {
+    for (let k = 1; k < g.cols; k++) {
+      const x = left ? k : g.cols - k - size;
+      for (let y = 1; y + size <= g.rows; y++) if (free({ x, y }, size)) return { x, y };
+    }
+    return null;
+  };
+  const list = e.list.map((c) => {
+    if (c.pos) return c;
+    const size = c.size ?? 1;
+    const at = spot(size, c.side !== 'inimigo');
+    if (!at) return c;
+    const pos = clampCell(at, g, size);
+    mark(pos, size);
+    return { ...c, pos };
+  });
+  return { ...e, list };
+}
 
 export const CONDITIONS = [
   'caído', 'agarrado', 'amedrontado', 'atordoado', 'cego', 'concentrando', 'contido', 'enfeitiçado', 'envenenado',

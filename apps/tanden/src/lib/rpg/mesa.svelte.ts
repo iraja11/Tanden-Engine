@@ -15,7 +15,7 @@ import { sound } from '../sound.svelte';
  * aparelho.
  */
 
-export type MesaTab = 'dados' | 'combate' | 'fichas' | 'regras' | 'tabelas' | 'sessoes';
+export type MesaTab = 'dados' | 'combate' | 'grade' | 'fichas' | 'regras' | 'tabelas' | 'sessoes';
 
 export interface LogEntry {
   id: number;
@@ -44,6 +44,7 @@ interface Saved {
   recording: boolean;
   recent: string[];
   tab: MesaTab;
+  encounter: string | null;
 }
 
 function load(): Partial<Saved> {
@@ -77,6 +78,8 @@ class Mesa {
   recording = $state(true);
   recent = $state<string[]>([]);
   tab = $state<MesaTab>('dados');
+  /** encontro escolhido (o mesmo no Combate e na Grade) */
+  encounterPath = $state<string | null>(null);
   /** pedido para o App abrir a tela da mesa */
   goto = $state(0);
   /** a última rolagem, para a animação da bandeja */
@@ -93,6 +96,7 @@ class Mesa {
     this.recording = s.recording ?? true;
     this.recent = Array.isArray(s.recent) ? s.recent.slice(0, 12) : [];
     this.tab = s.tab ?? 'dados';
+    this.encounterPath = s.encounter ?? null;
     this.seq = this.log.reduce((m, e) => Math.max(m, e.id), 0);
   }
 
@@ -125,7 +129,7 @@ class Mesa {
 
   save(): void {
     try {
-      const s: Saved = { log: this.log, campaign: this.campaignPath, session: this.sessionPath, recording: this.recording, recent: this.recent, tab: this.tab };
+      const s: Saved = { log: this.log, campaign: this.campaignPath, session: this.sessionPath, recording: this.recording, recent: this.recent, tab: this.tab, encounter: this.encounterPath };
       localStorage.setItem(KEY, JSON.stringify(s));
     } catch {
       /* sem armazenamento: segue sem lembrar */
@@ -134,6 +138,19 @@ class Mesa {
 
   get campaign(): Campaign | null {
     return this.campaigns.find((c) => c.path === this.campaignPath) ?? this.campaigns[0] ?? null;
+  }
+
+  /** O encontro em jogo: o escolhido, ou o último da campanha. */
+  get encounter(): string | null {
+    void this.rev;
+    const p = this.encounterPath;
+    if (p && engine.vault.has(p)) return p;
+    return this.campaign?.encounters.at(-1)?.path ?? null;
+  }
+
+  pickEncounter(path: string | null): void {
+    this.encounterPath = path;
+    this.save();
   }
 
   open(tab?: MesaTab): void {
@@ -268,7 +285,9 @@ class Mesa {
     const c = this.campaign;
     const folder = c ? `${c.folder}/Encontros` : 'Encontros';
     const path = cadernos.create(folder, name.trim() || 'Encontro', (n) => encounterTemplate(n, c?.name));
+    this.encounterPath = path;
     this.rebuild();
+    this.save();
     return path;
   }
 

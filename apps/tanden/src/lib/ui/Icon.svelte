@@ -43,6 +43,12 @@
     trocar: '<path d="M19.5 9A8 8 0 0 0 5.8 6.5L4 8.5M4.5 15a8 8 0 0 0 13.7 2.5l1.8-2"/><path d="M4 4v4.5h4.5M20 20v-4.5h-4.5"/>',
     ajustes: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
     grafico: '<path d="M4 20.5h16M7 17v-5M12 17V6M17 17v-8"/>',
+    mover: '<path d="M12 3.5v17M3.5 12h17"/><path d="m9.5 6 2.5-2.5L14.5 6M9.5 18l2.5 2.5 2.5-2.5M6 9.5 3.5 12 6 14.5M18 9.5l2.5 2.5-2.5 2.5"/>',
+    regua: '<path d="M3.5 16 16 3.5l4.5 4.5L8 20.5z"/><path d="m7.5 12 1.8 1.8M10.5 9l1.8 1.8M13.5 6l1.8 1.8"/>',
+    area: '<circle cx="12" cy="12" r="8.5" stroke-dasharray="2.6 2.6"/><circle cx="12" cy="12" r="1.6"/>',
+    enquadrar: '<path d="M4 9V4.5h4.5M15.5 4.5H20V9M20 15v4.5h-4.5M8.5 19.5H4V15"/>',
+    menos: '<path d="M5 12h14"/>',
+    grade: '<rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M9.2 3.5v17M14.8 3.5v17M3.5 9.2h17M3.5 14.8h17"/>',
   } as const;
   export type IconName = keyof typeof PATHS;
 </script>
