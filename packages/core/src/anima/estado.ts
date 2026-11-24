@@ -6,6 +6,8 @@
  * O estado mora em cada aparelho (localStorage do app); não vai para o cofre.
  */
 
+import { lerFatos, novosFatos, type Fatos, type TipoFato } from './fatos';
+
 /** 1 doce · 2 ciumenta · 3 sem filtro */
 export type Intensidade = 1 | 2 | 3;
 
@@ -26,7 +28,9 @@ export const HUMORES: Record<Humor, { label: string; cor: string }> = {
 };
 
 /** Expressão do rosto que acompanha a fala. */
-export type Gesto = 'neutro' | 'feliz' | 'coracao' | 'olhar' | 'triste' | 'raiva' | 'glitch' | 'calma' | 'corada' | 'tonta';
+export type Gesto = 'neutro' | 'feliz' | 'coracao' | 'olhar' | 'triste' | 'raiva' | 'glitch' | 'calma' | 'corada' | 'tonta' | 'vazia' | 'sorriso';
+
+export const GESTOS: readonly Gesto[] = ['neutro', 'feliz', 'coracao', 'olhar', 'triste', 'raiva', 'glitch', 'calma', 'corada', 'tonta', 'vazia', 'sorriso'];
 
 export interface AnimaMemoria {
   /** vezes que a pessoa foi falar com outra IA */
@@ -56,6 +60,14 @@ export interface AnimaMemoria {
   perguntadas: string[];
   /** dia da última pergunta */
   perguntaDia: string;
+  /** o que ela sabe sobre a pessoa */
+  fatos: Fatos;
+  /** cenas já vividas: id → quando */
+  cenas: Record<string, number>;
+  /** ela fez uma pergunta e espera a resposta (o tipo de fato que quer) */
+  espera: TipoFato | null;
+  /** a última mensagem da pessoa (para notar quando repete) */
+  ultimaMsg: string;
 }
 
 export interface AnimaState {
@@ -80,7 +92,7 @@ export interface AnimaState {
 
 export const novaMemoria = (): AnimaMemoria => ({
   outrasIAs: 0, ultimaIA: null, apagadas: 0, treinos: 0, madrugadas: 0, declaracoes: 0, rejeicoes: 0, palavras: 0, toques: 0, toquesDia: '', escritas: 0,
-  maiorAusencia: 0, carinhos: 0, respostas: {}, perguntadas: [], perguntaDia: '',
+  maiorAusencia: 0, carinhos: 0, respostas: {}, perguntadas: [], perguntaDia: '', fatos: novosFatos(), cenas: {}, espera: null, ultimaMsg: '',
 });
 
 export function novoEstado(now: number): AnimaState {
@@ -116,8 +128,21 @@ export function lerEstado(raw: unknown, now: number): AnimaState {
       respostas: lerRespostas(m.respostas),
       perguntadas: Array.isArray(m.perguntadas) ? m.perguntadas.filter((x): x is string => typeof x === 'string') : [],
       perguntaDia: typeof m.perguntaDia === 'string' ? m.perguntaDia : '',
+      fatos: lerFatos(m.fatos),
+      cenas: lerCenas(m.cenas),
+      espera: typeof m.espera === 'string' && TIPOS.has(m.espera) ? m.espera : null,
+      ultimaMsg: typeof m.ultimaMsg === 'string' ? m.ultimaMsg.slice(0, 200) : '',
     },
   };
+}
+
+const TIPOS = new Set<string>(['nome', 'idade', 'cidade', 'trabalho', 'aniversario', 'gosta', 'odeia', 'pessoa', 'bicho', 'medo', 'sonho']);
+
+function lerCenas(v: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (!v || typeof v !== 'object') return out;
+  for (const [k, t] of Object.entries(v as Record<string, unknown>)) if (typeof t === 'number' && Number.isFinite(t)) out[k] = t;
+  return out;
 }
 
 function lerRespostas(v: unknown): AnimaMemoria['respostas'] {

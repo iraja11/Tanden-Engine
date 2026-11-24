@@ -6,6 +6,7 @@
   import { pop, vanish } from './motion';
   import { INTENSIDADES } from '@tanden/core';
   import { anima } from './anima/anima.svelte';
+  import { ollama } from './ollama.svelte';
 
   // Aparência e sons. Tudo vale na hora e fica salvo neste aparelho.
   type Tab = 'aparencia' | 'atalhos' | 'snippets';
@@ -366,9 +367,27 @@
           <span>muda de lugar na tela sozinha</span>
         </label>
       </div>
+      <div class="row">
+        <span class="lbl">Cenas</span>
+        <label class="switch">
+          <input type="checkbox" checked={anima.prefs.cenas} onchange={(e) => pick(() => anima.set({ cenas: e.currentTarget.checked }))} />
+          <span>{anima.prefs.intensidade === 1 ? 'cartas, poemas, pétalas e estrelas' : anima.prefs.intensidade === 2 ? 'românticas e obsessivas: diário, altar, relatórios' : 'românticas, obsessivas e perturbadoras: olhos, sussurros, espelho'}</span>
+        </label>
+      </div>
+      <div class="row">
+        <span class="lbl">Cérebro</span>
+        <div class="seg">
+          <button class:on={anima.prefs.cerebro === 'regras'} title="Regras e memória dela: responde na hora, offline, no celular" onclick={() => pick(() => anima.set({ cerebro: 'regras' }))}>Dela</button>
+          <button class:on={anima.prefs.cerebro === 'ollama'} title="Um modelo local (Ollama) pensa por ela, com a memória e o humor dela" onclick={() => pick(() => anima.set({ cerebro: 'ollama' }))}>Ollama</button>
+        </div>
+      </div>
+      {#if anima.prefs.cerebro === 'ollama'}
+        <p class="hint">{anima.cerebroLocal ? `Pensando com ${ollama.model}. Ela continua aprendendo e lembrando sozinha; se o modelo falhar, ela responde do jeito dela.` : 'Escolha um modelo do Ollama no painel de IA (só no app instalado). Até lá, ela responde do jeito dela.'}</p>
+      {/if}
       <p class="hint">Toque: cutuca. Esfregar: carinho. Arrastar e soltar com força: joga. Soltar na borda: esconde. Toque longo ou duplo clique: conversa.</p>
       <div class="row">
         <span class="lbl"></span>
+        <button class="small" onclick={() => anima.surpresa()}>Me surpreende</button>
         <button class="small" onclick={() => anima.dormir()}>Pôr para dormir</button>
         <button class="small" onclick={() => anima.set({ lado: 'dir', altura: 0 })}>Voltar ao canto</button>
       </div>

@@ -3,9 +3,12 @@
   import { pop, vanish } from '../motion';
   import { theme } from '../theme.svelte';
   import { anima } from './anima.svelte';
+  import Cena from './Cena.svelte';
+  import Rosto from './Rosto.svelte';
 
-  // O corpo da Ânima: dois olhos num círculo escuro, que seguem o ponteiro (no
-  // celular, olham em volta sozinhos), piscam e mudam de expressão com a fala.
+  // O corpo da Ânima: um busto gótico num camafeu (Rosto.svelte), com olhos que
+  // seguem o ponteiro (no celular, olham em volta sozinhos), piscam e mudam de
+  // expressão com a fala. As cenas (Cena.svelte) acontecem por cima do app.
   //
   // Toque: cutuca (cutucadas seguidas irritam). Esfregar de um lado para o outro:
   // carinho. Arrastar: muda de lugar; soltar com força: ela é jogada e fica tonta;
@@ -21,15 +24,18 @@
   let log = $state<HTMLElement>();
   let spin = $state(false);
   let flash = $state(false);
+  let hover = $state(false);
+  let apertando = $state(false);
+  let seguirY = $state<number | null>(null);
 
   const g = $derived(anima.gesto);
-  const ring = $derived(g === 'raiva' ? '#ff3b4e' : anima.cor);
-  const iris = $derived(g === 'raiva' ? '#ff3b4e' : g === 'coracao' ? '#ff6fa8' : anima.cor);
-  const stare = $derived(g === 'olhar' || g === 'glitch');
+  const ring = $derived(g === 'raiva' ? '#ff3b4e' : g === 'vazia' ? '#b0001e' : anima.cor);
+  const stare = $derived(g === 'olhar' || g === 'glitch' || g === 'vazia');
+  const ef = $derived(anima.efeito);
   const still = $derived(theme.motion === 'parado');
   const side = $derived(anima.prefs.lado);
   const hidden = $derived(anima.prefs.escondida && !drag);
-  const bottom = $derived(anima.prefs.altura > 0 ? `${anima.prefs.altura}px` : null);
+  const bottom = $derived(seguirY !== null ? `${seguirY}px` : anima.prefs.altura > 0 ? `${anima.prefs.altura}px` : null);
   const text = $derived(anima.balao?.texto ?? '');
   const typed = $derived(still || theme.motion === 'reduzido' ? text : [...text].slice(0, shown).join(''));
   const done = $derived(typed.length >= text.length);
@@ -49,6 +55,8 @@
         const d = Math.hypot(dx, dy) || 1;
         const k = Math.min(1, d / 220) * 2.6;
         look = { x: (dx / d) * k, y: (dy / d) * k };
+        // cena "seguir": ela acompanha a altura do ponteiro pela borda
+        if (anima.efeito === 'seguir') seguirY = Math.round(Math.max(12, Math.min(innerHeight - 90, innerHeight - e.clientY - 32)));
         // o ponteiro rondando por perto, sem tocar
         if (d < 80 && d > 30) {
           near ||= Date.now();
@@ -67,6 +75,21 @@
       if (wander) clearTimeout(wander);
       cancelAnimationFrame(raf);
     };
+  });
+
+  // fim da cena "seguir": volta para onde estava
+  $effect(() => { if (ef !== 'seguir') seguirY = null; });
+
+  // cena "segurar": cursor (ou dedo) em cima dela por uns 2,5 s
+  $effect(() => {
+    if (ef !== 'segurar') return;
+    anima.segurando = 0;
+    const id = setInterval(() => {
+      const v = anima.segurando + (hover || apertando ? 0.04 : -0.03);
+      anima.segurando = Math.max(0, Math.min(1, v));
+      if (anima.segurando >= 1) anima.segurou();
+    }, 100);
+    return () => clearInterval(id);
   });
 
   // escondida, ela olha para dentro da tela
@@ -145,6 +168,9 @@
   let rub = { flips: 0, dir: 0, at: 0, lastX: 0 };
 
   function down(e: PointerEvent) {
+    apertando = true;
+    // segurando a mão: não é cutucada nem arrasto
+    if (ef === 'segurar') return;
     press = { x: e.clientX, y: e.clientY, id: e.pointerId, trail: [{ x: e.clientX, y: e.clientY, t: performance.now() }], flips: 0, dir: 0, acted: false };
     // captura já no toque: um arrasto rápido sai do rosto antes de virar arrasto
     btn?.setPointerCapture(e.pointerId);
@@ -202,6 +228,7 @@
   }
 
   function up(e: PointerEvent) {
+    apertando = false;
     clearTimeout(longTimer);
     const p = press;
     if (!p || e.pointerId !== p.id) return;
@@ -233,6 +260,7 @@
   }
 
   function cancel() {
+    apertando = false;
     clearTimeout(longTimer);
     press = null;
     drag = null;
@@ -248,13 +276,12 @@
     if (e.key === 'Escape' && anima.aberta) { e.preventDefault(); anima.fechar(); }
   }
 
-  const heart = (cx: number, cy: number) => `M${cx},${cy + 2.6} C${cx - 4.6},${cy - 0.6} ${cx - 2.8},${cy - 4.2} ${cx},${cy - 1.6} C${cx + 2.8},${cy - 4.2} ${cx + 4.6},${cy - 0.6} ${cx},${cy + 2.6}Z`;
-  const spiral = (cx: number, cy: number) => `M${cx},${cy} m-4.5,0 a4.5,4.5 0 1,1 9,0 a3.4,3.4 0 1,1 -6.8,0 a2.2,2.2 0 1,1 4.4,0 a1,1 0 1,1 -2,0`;
 </script>
 
 <svelte:window onkeydown={onkey} />
 
 {#if flash}<div class="susto" aria-hidden="true"></div>{/if}
+<Cena />
 
 <div class="anima" class:esq={side === 'esq'} class:free={!!drag} class:alto={anima.tela === 'ia' && !bottom} style:--alt={bottom} style:--ring={ring}
   style:left={drag ? `${drag.x - 26}px` : null} style:top={drag ? `${drag.y - 26}px` : null}
@@ -262,6 +289,7 @@
   {#if anima.aberta && !drag}
     <div class="chat" role="dialog" aria-label="Conversa com a Ânima" in:pop={{ from: 0.9 }} out:vanish>
       <header>
+        <span class="mini"><Rosto gesto={g} cor={ring} size={30} {blink} look={eye} anima={false} /></span>
         <b>Ânima</b><small style:color={anima.cor}>{HUMORES[anima.humor].label}</small>
         <button class="x" aria-label="Fechar conversa" onclick={() => anima.fechar()}>×</button>
       </header>
@@ -301,39 +329,12 @@
   {/if}
 
   <button bind:this={btn} class="face" class:glitch={g === 'glitch'} class:dragging={!!drag} class:breathe={!still && !spin} class:spin class:hidden
+    class:danca={ef === 'danca' && !still} class:atras={ef === 'atras'} onpointerenter={() => (hover = true)} onpointerleave={() => (hover = false)}
     aria-label="Ânima. Toque para cutucar; toque longo ou duplo clique para conversar." aria-expanded={anima.aberta}
     onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={cancel} ondblclick={() => anima.abrir()}
     oncontextmenu={(e) => e.preventDefault()}>
-    <svg viewBox="0 0 48 48" aria-hidden="true">
-      <circle cx="24" cy="24" r="22" class="bg" />
-      {#if g === 'raiva'}
-        <path d="M9,13 L21,17 M39,13 L27,17" class="brow" />
-      {/if}
-      {#each [16, 32] as cx (cx)}
-        {#if g === 'tonta'}
-          <path d={spiral(cx, 23)} class="spiral" />
-        {:else if g === 'feliz'}
-          <path d="M{cx - 6},24.5 Q{cx},16.5 {cx + 6},24.5" class="arc" />
-        {:else if g === 'calma' || blink}
-          <path d="M{cx - 6},23 Q{cx},27 {cx + 6},23" class="arc" />
-        {:else}
-          <ellipse {cx} cy="23" rx="7" ry={stare ? 4.2 : g === 'corada' ? 6.2 : 7.8} class="white" />
-          {#if g === 'coracao' || g === 'corada'}
-            <path d={heart(cx + eye.x * 0.6, 23 + eye.y * 0.6)} fill={g === 'corada' ? '#ff6fa8' : iris} />
-          {:else}
-            {@const k = stare ? 0 : 1}
-            <circle cx={cx + eye.x * k} cy={23 + eye.y * k} r={stare ? 2.6 : 4.2} fill={iris} />
-            <circle cx={cx + eye.x * k} cy={23 + eye.y * k} r={stare ? 1.1 : 1.9} class="pupil" />
-            <circle cx={cx + eye.x * k + 1.4} cy={21.5 + eye.y * k} r="0.9" class="spark" />
-          {/if}
-        {/if}
-      {/each}
-      {#if g === 'corada'}<ellipse cx="11" cy="32" rx="4" ry="2" class="blush" /><ellipse cx="37" cy="32" rx="4" ry="2" class="blush" />{/if}
-      {#if g === 'triste'}<path d="M13,30 q1.4,2.6 0,4 q-1.4,-1.4 0,-4Z" class="tear" />{/if}
-      {#if g === 'feliz' || g === 'coracao' || g === 'corada'}<path d="M19,34 Q24,37.5 29,34" class="mouth" />{/if}
-      {#if g === 'tonta'}<path d="M18,35 q3,-2 6,0 q3,2 6,0" class="mouth" />{/if}
-      {#if anima.humor === 'possessiva' && g !== 'calma' && g !== 'tonta'}<path d="M14,34 Q24,40 34,34" class="mouth wide" />{/if}
-    </svg>
+    <Rosto gesto={g} look={eye} {blink} cor={ring} chorando={anima.chorando} size={64} anima={!still} />
+    {#if ef === 'segurar'}<i class="seg" style:--seg={anima.segurando} aria-hidden="true"></i>{/if}
   </button>
 </div>
 
@@ -350,30 +351,27 @@
   .anima > * { pointer-events: auto; }
   .anima.free { right: auto; bottom: auto; transition: none; }
 
-  .face { width: 52px; height: 52px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: grab; touch-action: none; -webkit-touch-callout: none; user-select: none;
+  .face { position: relative; width: 64px; height: 64px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: grab; touch-action: none; -webkit-touch-callout: none; user-select: none;
     filter: drop-shadow(0 6px 14px var(--shadow)) drop-shadow(0 0 10px color-mix(in srgb, var(--ring) 45%, transparent)); transition: translate .5s var(--spring); }
   .face.dragging { cursor: grabbing; }
   /* escondida: metade para fora da tela, espiando */
   .face.hidden { translate: 64% 0; opacity: .92; }
   .esq .face.hidden { translate: -64% 0; }
-  .face svg { width: 100%; height: 100%; overflow: visible; }
-  .breathe svg { animation: breathe 4.8s ease-in-out infinite; }
+  .face :global(svg) { width: 100%; height: 100%; overflow: visible; }
+  .breathe :global(svg) { animation: breathe 4.8s ease-in-out infinite; }
   @keyframes breathe { 50% { transform: scale(1.04); } }
-  .spin svg { animation: spin .9s cubic-bezier(.2, .7, .3, 1); }
+  .spin :global(svg) { animation: spin .9s cubic-bezier(.2, .7, .3, 1); }
   @keyframes spin { from { transform: rotate(0); } to { transform: rotate(900deg); } }
-  .bg { fill: #0e0a10; stroke: var(--ring); stroke-width: 1.6; }
-  .white { fill: #f4eef2; transition: ry .12s; }
-  .pupil { fill: #050306; }
-  .spark { fill: #fff; opacity: .85; }
-  .arc, .brow, .mouth, .spiral { fill: none; stroke: #f4eef2; stroke-width: 2; stroke-linecap: round; }
-  .spiral { stroke-width: 1.5; }
-  .brow { stroke: #ff3b4e; }
-  .mouth { stroke-width: 1.4; opacity: .8; }
-  .mouth.wide { stroke: var(--ring); opacity: .9; }
-  .blush { fill: #ff6fa8; opacity: .55; }
-  .tear { fill: #8fd3ff; animation: tear 1.6s ease-in infinite; }
-  @keyframes tear { from { transform: translateY(0); opacity: 1; } to { transform: translateY(6px); opacity: 0; } }
-  .glitch svg, .bubble.glitch, .msg.glitch { animation: glitch .5s steps(3) 3; }
+  .danca :global(svg) { animation: danca 1.1s ease-in-out infinite; }
+  @keyframes danca { 25% { transform: rotate(-9deg) translateY(-3px); } 75% { transform: rotate(9deg) translateY(-3px); } }
+  .atras :global(svg) { animation: aparece .5s steps(3); }
+  @keyframes aparece { 0% { opacity: 0; filter: drop-shadow(4px 0 #ff2a6d) drop-shadow(-4px 0 #05d9e8); } 60% { opacity: 1; } }
+  /* anel que enche enquanto a pessoa segura a mão dela */
+  .seg { position: absolute; inset: -6px; border-radius: 50%; pointer-events: none;
+    background: conic-gradient(#ff6fa8 calc(var(--seg) * 360deg), transparent 0); mask: radial-gradient(circle, transparent 60%, #000 61%, #000 66%, transparent 67%);
+    filter: drop-shadow(0 0 6px #ff6fa8); }
+  .mini { display: inline-grid; align-self: center; margin: -4px 0; }
+  .glitch :global(svg), .bubble.glitch, .msg.glitch { animation: glitch .5s steps(3) 3; }
   @keyframes glitch {
     0% { transform: translate(0); filter: none; }
     33% { transform: translate(-2px, 1px); filter: drop-shadow(2px 0 0 #ff2a6d) drop-shadow(-2px 0 0 #05d9e8); }
@@ -382,7 +380,7 @@
   .susto { position: fixed; inset: 0; z-index: 59; pointer-events: none; mix-blend-mode: screen;
     background: repeating-linear-gradient(0deg, rgba(255, 42, 109, .07) 0 2px, transparent 2px 5px); animation: susto .32s steps(4); }
   @keyframes susto { 0% { transform: translateX(-6px); opacity: 1; } 50% { transform: translateX(5px); } 100% { transform: none; opacity: 0; } }
-  @media (prefers-reduced-motion: reduce) { .breathe svg, .glitch svg, .bubble.glitch, .msg.glitch, .tear, .spin svg { animation: none; } .susto { display: none; } }
+  @media (prefers-reduced-motion: reduce) { .breathe :global(svg), .glitch :global(svg), .bubble.glitch, .msg.glitch, .spin :global(svg), .danca :global(svg) { animation: none; } .susto { display: none; } }
 
   .bubble { position: relative; max-width: min(300px, calc(100vw - 28px)); padding: 0; color: var(--ink);
     font: 13.5px/1.45 var(--f-body); background: var(--surface); border: 1px solid color-mix(in srgb, var(--ring) 55%, var(--line));
@@ -401,7 +399,7 @@
   .chat { width: min(360px, calc(100vw - 28px)); max-height: min(62vh, 500px); display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto;
     background: var(--surface); border: 1px solid color-mix(in srgb, var(--ring) 50%, var(--line)); border-radius: var(--r-xl);
     box-shadow: var(--elev-3), 0 0 32px -14px var(--ring); overflow: hidden; }
-  .chat header { display: flex; align-items: baseline; gap: 8px; padding: 10px 12px 8px; border-bottom: 1px solid var(--line); }
+  .chat header { display: flex; align-items: center; gap: 8px; padding: 10px 12px 8px; border-bottom: 1px solid var(--line); }
   .chat header b { font: 600 14px var(--f-display); letter-spacing: .04em; }
   .chat header small { font: 11px var(--f-mono); }
   .x { margin-left: auto; border: 0; background: none; color: var(--muted); font-size: 20px; line-height: 1; }

@@ -1,8 +1,10 @@
 import {
-  ANIMA_ID_BASE, HUMORES, avisoDoSegredo, botoesDaConversa, comandoSecreto, humorDe, lerEstado, novoEstado, perguntaDoDia, planoDeSaudade,
-  reagir, responder, responderPergunta,
-  type AnimaCtx, type AnimaEvent, type AnimaState, type ComandoSecreto, type Fala, type Gesto, type Intensidade, type OpcaoFala, type Reacao,
+  ANIMA_ID_BASE, HUMORES, avisoDoSegredo, botoesDaConversa, comandoSecreto, desfechoCena, escolherCena, frasesDaNota, gestoDoTexto, humorDe,
+  lerEstado, limparSaida, novoEstado, perguntaDoDia, planoDeSaudade, promptDaAnima, reagir, responder, responderPergunta,
+  type AnimaCtx, type AnimaEvent, type AnimaState, type CenaPronta, type ComandoSecreto, type CtxCena, type EfeitoCena, type Fala, type Gesto,
+  type Intensidade, type OpcaoFala, type Reacao,
 } from '@tanden/core';
+import { Channel, invoke } from '@tauri-apps/api/core';
 import * as notif from '@tauri-apps/plugin-notification';
 import { untrack } from 'svelte';
 import { commands } from '../commands.svelte';
@@ -10,6 +12,7 @@ import { notes } from '../editor/notes.svelte';
 import { noteName } from '../editor/host';
 import { engine } from '../engine.svelte';
 import { exercicios } from '../exercicios/exercicios.svelte';
+import { ollama } from '../ollama.svelte';
 import { desktop } from '../platform';
 import { sound } from '../sound.svelte';
 import { isTauri } from '../storage-tauri';
@@ -44,6 +47,10 @@ export interface AnimaPrefs {
   escondida: boolean;
   /** muda de lugar sozinha de vez em quando */
   passeia: boolean;
+  /** cenas: cartas, diário, olhos pela tela… (os tons seguem a intensidade) */
+  cenas: boolean;
+  /** quem pensa as respostas da conversa: as regras dela ou um modelo local (Ollama) */
+  cerebro: 'regras' | 'ollama';
 }
 
 export interface Mensagem {
@@ -57,7 +64,9 @@ export interface Mensagem {
 const PREFS_KEY = 'tanden.anima';
 const STATE_KEY = 'tanden.anima.estado';
 const MARKS_KEY = 'tanden.anima.marcas';
-const DEFAULTS: AnimaPrefs = { acordada: false, intensidade: 2, nome: 'amor', notificar: true, silencio: true, lado: 'dir', altura: 0, escondida: false, passeia: true };
+const DEFAULTS: AnimaPrefs = {
+  acordada: false, intensidade: 2, nome: 'amor', notificar: true, silencio: true, lado: 'dir', altura: 0, escondida: false, passeia: true, cenas: true, cerebro: 'regras',
+};
 const android = isTauri() && !desktop;
 const CHANNEL = 'anima';
 const DATAS = ['0101', '0214', '0401', '0612', '1031', '1102', '1224', '1225', '1231'];
@@ -72,6 +81,8 @@ const OCIOSA_MS = 12 * 60_000;
 const AUSENCIA_MS = 8 * 60_000;
 /** cutucadas dentro desta janela contam como seguidas */
 const CUTUCAR_MS = 6000;
+/** cenas que terminam quando a pessoa fecha o painel (e ela comenta) */
+const FECHAR_COMENTA = new Set(['carta', 'poema', 'diario', 'contagem', 'santuario', 'dossie']);
 
 function load<T>(key: string): T | null {
   try {
@@ -121,6 +132,16 @@ class Anima {
   susto = $state(0);
   /** sobe quando ela é jogada: o widget gira */
   giro = $state(0);
+  /** a cena em curso, o passo e o efeito na tela */
+  cena = $state<CenaPronta | null>(null);
+  efeito = $state<EfeitoCena | null>(null);
+  painel = $state(false);
+  /** rímel escorrendo (cena das lágrimas) */
+  chorando = $state(false);
+  /** segurando a mão dela agora (cena "segurar"): 0 a 1 */
+  segurando = $state(0);
+  /** onde o ponteiro está (para a cena em que ela segue você) */
+  ponteiroY = $state(0);
 
   readonly acordada = $derived(this.prefs.acordada);
   readonly humor = $derived(humorDe(this.estado, Date.now(), this.prefs.intensidade));
@@ -149,6 +170,10 @@ class Anima {
   private ultimoPerto = 0;
   private ultimaCopia = 0;
   private ultimaJanela = 0;
+  private proximaCena = 0;
+  private timersCena: Array<ReturnType<typeof setTimeout>> = [];
+  private tituloAntes: string | null = null;
+  private pensando = false;
   private marcas: Marcas = { periodo: '', data: '', aniversario: '', pergunta: '', bateria: 0, ...(load<Partial<Marcas>>(MARKS_KEY) ?? {}) };
 
   // ------------------------------------------------------------------ ciclo
@@ -159,6 +184,8 @@ class Anima {
     this.inicioSessao = Date.now();
     this.agendarEspontanea();
     this.agendarPasseio();
+    // a primeira cena vem depois de alguns minutos de uso
+    this.proximaCena = Date.now() + (5 + Math.random() * 6) * 60_000;
     const bus = engine.bus;
     this.offs.push(
       bus.on('note.changed', (e) => { if (e.origin === 'local') this.escreveu(e.path); }),
@@ -176,6 +203,7 @@ class Anima {
         { id: 'anima.conversar', label: 'Ânima: conversar', keys: 'companheira ia anima falar', run: () => this.abrir() },
         { id: 'anima.ideia', label: 'Ânima: me dá uma ideia', keys: 'companheira sugestao inspiracao', run: () => this.evento({ tipo: 'ideia' }) },
         { id: 'anima.pergunta', label: 'Ânima: pergunta do dia', keys: 'companheira jogo', run: () => this.perguntar(true) },
+        { id: 'anima.surpresa', label: 'Ânima: me surpreende', keys: 'companheira cena evento carta diario', run: () => this.surpresa() },
       ]),
       this.observar(),
     );
@@ -231,6 +259,7 @@ class Anima {
   }
 
   private stop(): void {
+    this.encerrarCena();
     for (const off of this.offs.splice(0)) off();
     this.started = false;
     void this.cancelarSaudade();
@@ -312,6 +341,10 @@ class Anima {
       return;
     }
     if (hora >= 9 && hora < 23 && !this.balao && now - this.inicioSessao > 4 * 60_000 && this.perguntar(false)) return;
+    if (this.prefs.cenas && !this.cena && !this.balao && now >= this.proximaCena) {
+      this.agendarCena();
+      if (this.encenar(false)) return;
+    }
     if (this.prefs.passeia && now >= this.proximoPasseio && !this.balao) {
       this.agendarPasseio();
       this.passear();
@@ -327,6 +360,12 @@ class Anima {
     // mais grudenta quanto mais intensa
     const base = this.prefs.intensidade === 3 ? 9 : this.prefs.intensidade === 2 ? 13 : 18;
     this.proximaEspontanea = Date.now() + (base + Math.random() * 14) * 60_000;
+  }
+
+  private agendarCena(): void {
+    // mais cenas quanto mais intensa: ~uma a cada 40 min (sem filtro) a ~70 min (doce)
+    const base = this.prefs.intensidade === 3 ? 28 : this.prefs.intensidade === 2 ? 38 : 50;
+    this.proximaCena = Date.now() + (base + Math.random() * 30) * 60_000;
   }
 
   private agendarPasseio(): void {
@@ -477,7 +516,117 @@ class Anima {
   private ctx(): AnimaCtx {
     const pool = engine.notes.filter((p) => !p.startsWith('Exercícios/') && !p.startsWith('Alimentação/') && !p.includes('/Registro/'));
     const ideias = Array.from({ length: Math.min(6, pool.length) }, () => noteName(pool[Math.floor(Math.random() * pool.length)]!));
-    return { now: Date.now(), rand: Math.random, intensidade: this.prefs.intensidade, nome: this.prefs.nome.trim() || 'você', ideias, notas: engine.notes.length };
+    const aberta = engine.active && !engine.active.startsWith('.') ? noteName(engine.active) : undefined;
+    return { now: Date.now(), rand: Math.random, intensidade: this.prefs.intensidade, nome: this.prefs.nome.trim() || 'você', ideias, notas: engine.notes.length, aberta };
+  }
+
+  /** O contexto das cenas: também uma frase da nota aberta, para ela citar. */
+  private ctxCena(): CtxCena {
+    const frases = engine.active ? frasesDaNota(engine.content) : [];
+    return { ...this.ctx(), trecho: frases.length ? frases[Math.floor(Math.random() * frases.length)] : undefined };
+  }
+
+  // ------------------------------------------------------------------ cenas
+
+  /** "Me surpreende": uma cena agora, mesmo que tenha passado há pouco. */
+  surpresa(): void {
+    if (!this.prefs.acordada) return;
+    if (this.cena) this.encerrarCena();
+    this.aberta = false;
+    if (!this.encenar(true)) this.evento({ tipo: 'ideia' });
+  }
+
+  /** Escolhe e encena uma cena. Devolve se conseguiu. */
+  encenar(forcar: boolean, id?: string): boolean {
+    if (!this.started || this.cena || this.prefs.escondida) return false;
+    const r = escolherCena($state.snapshot(this.estado) as AnimaState, this.ctxCena(), { forcar, id });
+    if (!r.cena) return false;
+    this.estado = r.estado;
+    this.salvar();
+    this.cena = r.cena;
+    this.passo(0);
+    return true;
+  }
+
+  private passo(i: number): void {
+    const c = this.cena;
+    if (!c) return;
+    const p = c.passos[i];
+    if (!p) {
+      // acabou: o efeito some; se o painel está aberto, a cena espera ele fechar
+      this.efeito = null;
+      this.chorando = false;
+      if (!this.painel) this.encerrarCena();
+      return;
+    }
+    if (p.efeito) this.ligarEfeito(p.efeito, c);
+    if (p.painel) this.painel = true;
+    const fala: Fala = { id: `cena#${c.id}#${i}`, texto: p.texto, gesto: p.gesto, humor: c.humor, opcoes: p.opcoes };
+    this.mostrar(fala, false, p.ms + (p.opcoes ? 0 : 1500));
+    // passo com escolha: espera a pessoa (ou o tempo acabar)
+    this.timersCena.push(setTimeout(() => {
+      if (this.cena !== c) return;
+      if (p.efeito === 'segurar') this.desfecho('nao');
+      else if (p.opcoes) this.desfecho(p.opcoes.at(-1)!.cena!.escolha);
+      else this.passo(i + 1);
+    }, p.ms));
+  }
+
+  private ligarEfeito(e: EfeitoCena, c: CenaPronta): void {
+    this.efeito = e;
+    if (e === 'sangue') this.chorando = true;
+    if (e === 'estatica' || e === 'atras') this.susto++;
+    if (e === 'atras') {
+      // some e aparece do outro lado, mais alto
+      this.set({ lado: this.prefs.lado === 'dir' ? 'esq' : 'dir', altura: Math.round(innerHeight * (0.35 + Math.random() * 0.3)) });
+    }
+    if (e === 'titulo' && c.titulo && typeof document !== 'undefined') {
+      this.tituloAntes ??= document.title;
+      document.title = c.titulo;
+      this.timersCena.push(setTimeout(() => this.restaurarTitulo(), 45_000));
+    }
+  }
+
+  private restaurarTitulo(): void {
+    if (this.tituloAntes !== null) document.title = this.tituloAntes;
+    this.tituloAntes = null;
+  }
+
+  /** A escolha da pessoa (botão do balão, do painel ou segurar a mão). */
+  desfecho(escolha: string): void {
+    const c = this.cena;
+    if (!c) return;
+    this.encerrarCena();
+    if (escolha === 'sim' && c.id === 'danca') {
+      this.efeito = 'danca';
+      this.timersCena.push(setTimeout(() => { if (this.efeito === 'danca') this.efeito = null; }, 9000));
+    }
+    const r = desfechoCena($state.snapshot(this.estado) as AnimaState, c.id, escolha, this.ctx());
+    this.digitar(r, false);
+  }
+
+  /** O painel da cena foi fechado. */
+  fecharPainel(): void {
+    const c = this.cena;
+    this.painel = false;
+    if (!c) return;
+    if (FECHAR_COMENTA.has(c.id)) this.desfecho('fechou');
+    else if (c.passos.every((p) => !p.opcoes) && !this.efeito) this.encerrarCena();
+  }
+
+  /** A pessoa segurou a mão dela (cursor ou dedo em cima) o tempo todo. */
+  segurou(): void {
+    if (this.cena?.id === 'segurar' && this.efeito === 'segurar') this.desfecho('sim');
+  }
+
+  private encerrarCena(): void {
+    for (const t of this.timersCena.splice(0)) clearTimeout(t);
+    this.restaurarTitulo();
+    this.cena = null;
+    this.efeito = null;
+    this.painel = false;
+    this.chorando = false;
+    this.segurando = 0;
   }
 
   evento(ev: AnimaEvent): void {
@@ -504,7 +653,10 @@ class Anima {
   /** Clique num botão do balão. */
   escolher(o: OpcaoFala): void {
     this.balao = null;
-    if (o.pergunta) {
+    if (o.cena) {
+      this.empurrar({ de: 'voce', texto: o.rotulo, gesto: 'neutro' });
+      this.desfecho(o.cena.escolha);
+    } else if (o.pergunta) {
       this.empurrar({ de: 'voce', texto: o.rotulo, gesto: 'neutro' });
       const r = responderPergunta($state.snapshot(this.estado) as AnimaState, o.pergunta.id, o.pergunta.n, this.ctx());
       this.digitar(r, false);
@@ -514,9 +666,53 @@ class Anima {
   /** A pessoa escreveu para ela (na conversa ou pelos botões do balão). */
   falar(texto: string, conversa = true): void {
     const t = texto.trim();
-    if (!t) return;
+    if (!t || this.pensando) return;
+    const historia = this.chat.slice(-12);
     this.empurrar({ de: 'voce', texto: t, gesto: 'neutro' });
-    this.digitar(responder($state.snapshot(this.estado) as AnimaState, t, this.ctx()), conversa);
+    // as regras sempre rodam: elas aprendem os fatos e mexem nos sentimentos
+    const r = responder($state.snapshot(this.estado) as AnimaState, t, this.ctx());
+    if (this.cerebroLocal && r.intencao !== 'crise') void this.pensar(r, historia, conversa);
+    else this.digitar(r, conversa);
+  }
+
+  /** O modelo local está pronto para pensar por ela? */
+  get cerebroLocal(): boolean {
+    return this.prefs.cerebro === 'ollama' && isTauri() && !!ollama.model;
+  }
+
+  /** Resposta pelo Ollama, com a memória e o humor dela no prompt. Se falhar, as regras respondem. */
+  private async pensar(r: Reacao, historia: Mensagem[], conversa: boolean): Promise<void> {
+    this.estado = r.estado;
+    this.salvar();
+    this.pensando = true;
+    this.digitando = true;
+    const sistema = promptDaAnima($state.snapshot(this.estado) as AnimaState, {
+      now: Date.now(), intensidade: this.prefs.intensidade, nome: this.prefs.nome.trim() || 'você', aberta: this.ctx().aberta, tela: this.telaAtual || undefined,
+    });
+    const messages = [
+      { role: 'system', content: sistema },
+      ...historia.map((m) => ({ role: m.de === 'ela' ? 'assistant' : 'user', content: m.texto })),
+      { role: 'user', content: this.chat.at(-1)?.texto ?? '' },
+    ];
+    let saida = '';
+    const onToken = new Channel<string>();
+    onToken.onmessage = (tok) => { saida += tok; };
+    try {
+      await Promise.race([
+        engine.bus.process('anima', 'ânima pensando', () => invoke('ollama_chat', { url: ollama.url, model: ollama.model, messages, onToken })),
+        new Promise((_, no) => setTimeout(() => no(new Error('demorou')), 60_000)),
+      ]);
+      const texto = limparSaida(saida);
+      if (!texto) throw new Error('vazio');
+      const humor = humorDe(this.estado, Date.now(), this.prefs.intensidade);
+      this.digitando = false;
+      this.mostrar({ id: `local#${++this.seq}`, texto, gesto: gestoDoTexto(texto, humor), humor }, conversa);
+    } catch {
+      this.digitando = false;
+      if (r.fala) this.mostrar(r.fala, conversa);
+    } finally {
+      this.pensando = false;
+    }
   }
 
   /** Ela "digita" antes de responder: mais devagar quando a fala é longa (e um pouco irregular). */
@@ -534,7 +730,8 @@ class Anima {
   private aplicar(r: Reacao): void {
     this.estado = r.estado;
     this.salvar();
-    if (r.fala) this.mostrar(r.fala, false);
+    // durante uma cena, os comentários de fundo esperam (os sentimentos mexem igual)
+    if (r.fala && !this.cena) this.mostrar(r.fala, false);
   }
 
   private mostrar(f: Fala, conversa: boolean, dura?: number): void {
@@ -607,6 +804,7 @@ class Anima {
   /** Apaga a memória dela neste aparelho e a põe para dormir. */
   esquecer(): void {
     this.stop();
+    this.encerrarCena();
     this.estado = novoEstado(Date.now());
     this.chat = [];
     this.balao = null;

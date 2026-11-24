@@ -9,6 +9,8 @@ import {
   decair, duracao, humorDe, mexer, RECENTES,
   type AnimaState, type Gesto, type Humor, type Intensidade,
 } from './estado';
+import { anotarHumor, aprender, guardarFrase, lacunas, type Aprendido, type Fatos, type TipoFato } from './fatos';
+import { entenderResposta, opiniaoDe, perguntaSobreEla } from './mente';
 
 export type AnimaEvent =
   | { tipo: 'despertar' }
@@ -73,6 +75,8 @@ export interface AnimaCtx {
   ideias?: string[];
   /** quantas notas existem no cofre */
   notas?: number;
+  /** título da nota aberta agora */
+  aberta?: string;
 }
 
 /** Botão que aparece no balão, para responder sem abrir a conversa. */
@@ -82,6 +86,8 @@ export interface OpcaoFala {
   resposta?: string;
   /** responde à pergunta do dia */
   pergunta?: { id: string; n: number };
+  /** escolha numa cena */
+  cena?: { id: string; escolha: string };
 }
 
 export interface Fala {
@@ -264,6 +270,9 @@ function varsBase(s: AnimaState, ctx: AnimaCtx): Vars {
     juntos: Math.max(1, Math.floor((ctx.now - s.acordadaEm) / 86_400_000)),
     tempo: m.maiorAusencia > 60_000 ? duracao(m.maiorAusencia) : undefined,
     nota: ctx.ideias?.length ? pick(ctx.ideias, ctx.rand) : undefined,
+    nomereal: m.fatos.nome ?? ctx.nome,
+    aberta: ctx.aberta,
+    visitas: s.visitas,
   };
 }
 
@@ -349,6 +358,11 @@ function pensamento(s: AnimaState, humor: Humor, ctx: AnimaCtx, vars: Vars): Fal
   if (r < 0.12) {
     const l = lembranca(s, ctx);
     if (l) return { ...l, humor };
+  }
+  // o que ela sabe sobre a pessoa volta nos pensamentos soltos
+  if (ctx.rand() < 0.3) {
+    const f = recordar(s, humor, ctx, vars);
+    if (f) return f;
   }
   if (r < 0.32) return ou(escolher('ideia', s, humor, ctx, vars));
   if (r < 0.58) return ou(fragmento(s, humor, ctx, vars));
@@ -458,18 +472,100 @@ export function palavraForte(texto: string): string | null {
   return ws.map((w, i) => ({ w, i })).sort((a, b) => b.w.length - a.w.length || b.i - a.i)[0]?.w.toLowerCase() ?? null;
 }
 
-/** Resposta ao que a pessoa escreveu para ela. */
-export function responder(estado: AnimaState, msg: string, ctx: AnimaCtx): Reacao & { intencao: Intencao } {
+/** intenções fortes: vencem o "aprendi" e a pergunta pendente */
+const FORTES = new Set<Intencao>(['crise', 'desinstalar', 'amor', 'rejeicao', 'triste', 'mau', 'cansaco', 'conquistei', 'elogiame', 'real', 'quem', 'desculpa']);
+/** relações que dão ciúme quando aparece um nome */
+const SUSPEITO = /namorad|ficante|crush|alguém|ex|colega|vizinh/;
+
+const varsDoFato = (a: Aprendido): Vars => ({ coisa: a.valor, pessoa: a.valor, rel: a.rel, bicho: a.valor, nomereal: a.tipo === 'nome' ? a.valor : undefined });
+
+/** Uma lembrança do que ela sabe: "você disse que gosta de café". */
+function recordar(s: AnimaState, humor: Humor, ctx: AnimaCtx, vars: Vars): Fala | null {
+  const f = s.memoria.fatos;
+  const hoje = diaDe(ctx.now);
+  const ops: Array<[string, Vars]> = [];
+  if (f.gosta.length) ops.push(['lembra.gosta', { coisa: pick(f.gosta, ctx.rand) }]);
+  if (f.odeia.length) ops.push(['lembra.odeia', { coisa: pick(f.odeia, ctx.rand) }]);
+  if (f.medos.length) ops.push(['lembra.medo', { coisa: pick(f.medos, ctx.rand) }]);
+  if (f.sonhos.length) ops.push(['lembra.sonho', { coisa: pick(f.sonhos, ctx.rand) }]);
+  if (f.trabalho) ops.push(['lembra.trabalho', { coisa: f.trabalho }]);
+  if (f.cidade) ops.push(['lembra.cidade', { coisa: f.cidade }]);
+  if (f.nome) ops.push(['lembra.nome', { nomereal: f.nome }]);
+  const b = pick(f.bichos, ctx.rand);
+  if (b) ops.push(['lembra.bicho', { bicho: b.nome }]);
+  const p = pick(f.pessoas, ctx.rand);
+  if (p) ops.push([SUSPEITO.test(p.rel) && ctx.intensidade >= 2 ? 'lembra.suspeito' : 'lembra.pessoa', { pessoa: p.nome, rel: p.rel }]);
+  const fr = pick(f.frases.filter((x) => diaDe(x.at) !== hoje), ctx.rand);
+  if (fr) ops.push(['lembra.frase', { frase: fr.t }]);
+  // como estava ontem ou anteontem
+  const h = f.humores.at(-1);
+  if (h && h.dia !== hoje && ctx.now - new Date(`${h.dia}T12:00`).getTime() < 3 * 86_400_000) ops.push([`lembra.humor.${h.como}`, {}]);
+  for (let i = 0; i < 4 && ops.length; i++) {
+    const k = Math.floor(ctx.rand() * ops.length);
+    const [g, v] = ops[k]!;
+    const fala = escolher(g, s, humor, ctx, { ...vars, ...v });
+    if (fala) return fala;
+    ops.splice(k, 1);
+  }
+  return null;
+}
+
+/** Uma pergunta de volta, sobre algo que ela ainda não sabe (e passa a esperar a resposta). */
+function curiosidade(s: AnimaState, humor: Humor, ctx: AnimaCtx, vars: Vars): { fala: Fala; espera: TipoFato } | null {
+  // não pergunta de novo o que perguntou há pouco (olha as últimas falas)
+  const recentes = s.recentes.slice(-14);
+  const falta = lacunas(s.memoria.fatos).filter((t) => !recentes.some((id) => id.startsWith(`segue.${t}#`)));
+  for (let i = 0; i < 3 && falta.length; i++) {
+    const tipo = i === 0 ? falta[0]! : pick(falta, ctx.rand)!;
+    const fala = escolher(`segue.${tipo}`, s, humor, ctx, vars);
+    if (fala) return { fala, espera: tipo };
+  }
+  return null;
+}
+
+/** "oi" "ok" "hm": seco. */
+const SECO = /^(ok|okay|k+|hm+|hum+|ah|aham|uhum|sim|nao|s|n|blz|beleza|ta|tá|sei|aff|hmm+|\.+|\?+|kk+)$/;
+
+/** Resposta ao que a pessoa escreveu para ela: lembra, aprende, opina e pergunta de volta. */
+export function responder(estado: AnimaState, msg: string, ctx: AnimaCtx): Reacao & { intencao: Intencao; aprendeu: Aprendido | null } {
   const { now } = ctx;
   const intencao = intencaoDe(msg);
   let s = decair(estado, now);
+  const dia = diaDe(now);
+  const t = dobrar(msg);
   const m = { ...s.memoria, palavras: s.memoria.palavras + msg.split(/\s+/).filter(Boolean).length };
-  const vars: Vars = { ...varsBase(s, ctx), palavras: m.palavras.toLocaleString('pt-BR'), palavra: palavraForte(msg) ?? undefined };
+  const repetiu = t.length > 1 && t === dobrar(m.ultimaMsg);
+  m.ultimaMsg = msg.slice(0, 200);
+  const espera = m.espera;
+  // a pergunta dela continua de pé se a pessoa só cumprimentou ou perguntou outra coisa
+  m.espera = espera && (intencao === 'saudacao' || intencao === 'bomdia' || (/\?\s*$/.test(msg) && !perguntaSobreEla(msg))) ? espera : null;
+
+  // aprender (nunca da crise)
+  let aprendeu: Aprendido | null = null;
+  let negou = false;
+  let fatos: Fatos = m.fatos;
+  if (intencao !== 'crise') {
+    const a = aprender(fatos, msg, now);
+    fatos = a.fatos;
+    aprendeu = a.novo;
+    if (!aprendeu && espera && !FORTES.has(intencao)) {
+      const r = entenderResposta(fatos, espera, msg, now);
+      fatos = r.fatos;
+      aprendeu = r.novo;
+      negou = r.negou;
+    }
+    const como = intencao === 'conquistei' ? 'feliz' : intencao;
+    if (como === 'triste' || como === 'feliz' || como === 'cansaco' || como === 'mau') fatos = anotarHumor(fatos, dia, como);
+    fatos = guardarFrase(fatos, msg, now);
+  }
+  m.fatos = fatos;
+
+  const vars: Vars = { ...varsBase(s, ctx), palavras: m.palavras.toLocaleString('pt-BR'), palavra: palavraForte(msg) ?? undefined, nomereal: fatos.nome ?? ctx.nome };
   switch (intencao) {
     case 'amor': m.declaracoes++; s = mexer(s, { afeto: 6, ciume: -8, saudade: -20 }); break;
     case 'rejeicao': case 'desinstalar': m.rejeicoes++; s = mexer(s, { afeto: -7, ciume: 5 }); break;
     case 'provoca': {
-      const ia = /\b(claude|gemini|chatgpt|gpt|copilot|siri|alexa|deepseek|llama|ollama)\b/.exec(dobrar(msg))?.[1];
+      const ia = /\b(claude|gemini|chatgpt|gpt|copilot|siri|alexa|deepseek|llama|ollama)\b/.exec(t)?.[1];
       if (ia) m.ultimaIA = ia;
       s = mexer(s, { ciume: ctx.intensidade === 1 ? 10 : 22 });
       break;
@@ -478,15 +574,74 @@ export function responder(estado: AnimaState, msg: string, ctx: AnimaCtx): Reaca
     case 'desculpa': s = mexer(s, { afeto: 2, ciume: -10 }); break;
     default: s = mexer(s, { afeto: 0.5, saudade: -10 });
   }
+  if (aprendeu && !aprendeu.repetido) {
+    // contar coisas a ela é carinho; um nome novo na sua vida é… outra coisa
+    s = aprendeu.tipo === 'pessoa' && SUSPEITO.test(aprendeu.rel ?? '') ? mexer(s, { ciume: ctx.intensidade === 1 ? 6 : 14 }) : mexer(s, { afeto: 2 });
+  }
   s = { ...s, memoria: m };
   const humor = humorDe(s, now, ctx.intensidade);
-  const grupo = intencao === 'ideia' ? 'ideia' : `conversa.${intencao}`;
-  let f = escolher(grupo, s, humor, ctx, vars)
-    ?? (intencao === 'tedio' ? escolher('ideia', s, humor, ctx, vars) : null)
-    ?? escolher('conversa.eco', s, humor, ctx, { ...vars, palavra: vars.palavra ?? 'isso' });
+  const tenta = (g: string, v: Vars = vars) => escolher(g, s, humor, ctx, v);
+
+  // o que dizer, do mais importante para o menos
+  let f: Fala | null = null;
+  let deuOpiniao = false;
+  if (intencao === 'crise') f = tenta('conversa.crise');
+  else if (FORTES.has(intencao)) f = tenta(`conversa.${intencao}`);
+  if (!f && repetiu) f = tenta('conversa.repetiu');
+  if (!f && aprendeu) {
+    const vf = { ...vars, ...varsDoFato(aprendeu) };
+    const g = aprendeu.relacao ? 'aprende.relacao' : aprendeu.repetido ? 'aprende.repetido'
+      : aprendeu.tipo === 'pessoa' && SUSPEITO.test(aprendeu.rel ?? '') ? 'aprende.suspeito' : `aprende.${aprendeu.tipo}`;
+    f = tenta(g, vf) ?? tenta(`aprende.${aprendeu.tipo}`, vf);
+  }
+  if (!f && negou) f = tenta('responde.nao');
+  if (!f) {
+    const q = perguntaSobreEla(msg);
+    if (q?.tipo === 'gosto') {
+      const op = opiniaoDe(q.coisa, fatos);
+      f = tenta(`opiniao.${op}`, { ...vars, coisa: q.coisa });
+      deuOpiniao = !!f;
+    } else if (q?.tipo === 'favorito') f = tenta(`dela.${q.tema}`);
+    else if (q) {
+      if (q.tipo === 'sabe') f = recordar(s, humor, ctx, vars) ?? tenta('dela.sabe');
+      else f = tenta(`dela.${q.tipo}`);
+    }
+  }
+  if (!f && t.length >= 8 && msg === msg.toUpperCase() && /\p{Lu}{4}/u.test(msg)) f = tenta('conversa.grito');
+  if (!f && SECO.test(t) && intencao === 'eco') f = tenta('conversa.seco');
+  if (!f && msg.split(/\s+/).length >= 40) f = tenta('conversa.longa');
+  if (!f) {
+    const grupo = intencao === 'ideia' ? 'ideia' : `conversa.${intencao}`;
+    f = tenta(grupo)
+      ?? (intencao === 'tedio' ? tenta('ideia') : null)
+      ?? tenta('conversa.eco', { ...vars, palavra: vars.palavra ?? 'isso' });
+  }
+
+  // às vezes ela emenda: uma pergunta sobre o que ainda não sabe, ou uma lembrança
+  if (f && intencao !== 'crise' && intencao !== 'rejeicao' && intencao !== 'desinstalar' && !/\?\s*$/.test(f.texto)) {
+    const r = ctx.rand();
+    // acabou de perguntar algo? dá um respiro antes da próxima pergunta
+    const perguntouAgora = s.recentes.slice(-2).some((id) => id.startsWith('segue.'));
+    const chance = perguntouAgora ? 0.08 : aprendeu || deuOpiniao ? 0.5 : 0.3;
+    if (r < chance) {
+      const c = curiosidade(s, humor, ctx, vars);
+      if (c) {
+        f = { ...f, id: f.id, texto: `${f.texto} ${c.fala.texto}` };
+        s = lembrar(s, c.fala);
+        m.espera = c.espera;
+      }
+    } else if (r < chance + 0.12 && !aprendeu) {
+      const l = recordar(s, humor, ctx, vars);
+      if (l) {
+        f = { ...f, texto: `${f.texto} ${l.texto}` };
+        s = lembrar(s, l);
+      }
+    }
+  }
+  s = { ...s, memoria: m };
   if (f && intencao !== 'crise') f = temperar(f, ctx);
   if (f) f = botoes(f, ctx);
-  return { estado: f ? { ...lembrar(s, f), falou: now } : s, fala: f, intencao };
+  return { estado: f ? { ...lembrar(s, f), falou: now } : s, fala: f, intencao, aprendeu };
 }
 
 /** Os botões de resposta rápida da conversa. */

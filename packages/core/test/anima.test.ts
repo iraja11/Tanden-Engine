@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
-  ANIMA_ID_BASE, abrirCofre, avisoDoSegredo, banco, botoesDaConversa, comandoSecreto, corromper, decair, duracao, escolher,
+  ANIMA_ID_BASE, GESTOS, abrirCofre, avisoDoSegredo, banco, botoesDaConversa, comandoSecreto, corromper, decair, duracao, escolher,
   humorDe, intencaoDe, isAnimaNotificationId, lembranca, lerEstado, novoEstado, palavraForte, perguntaDoDia, planoDeSaudade, preencherFala,
   reagir, responder, responderPergunta, sorteio, textoDe,
   type AnimaCtx, type AnimaState,
@@ -41,8 +41,9 @@ describe('ânima: cofre', () => {
   });
 
   it('toda linha usa variáveis conhecidas, expressões válidas e todo grupo serve à intensidade doce', () => {
-    const known = new Set(['nome', 'tempo', 'segundos', 'ia', 'n', 'notas', 'tela', 'nota', 'minutos', 'esforco', 'sequencia', 'conquista', 'dias', 'texto', 'hora', 'toques', 'palavras', 'palavra', 'semana', 'juntos', 'busca', 'bateria']);
-    const gestos = new Set(['neutro', 'feliz', 'coracao', 'olhar', 'triste', 'raiva', 'glitch', 'calma', 'corada', 'tonta']);
+    const known = new Set(['nome', 'tempo', 'segundos', 'ia', 'n', 'notas', 'tela', 'nota', 'minutos', 'esforco', 'sequencia', 'conquista', 'dias', 'texto', 'hora', 'toques', 'palavras', 'palavra', 'semana', 'juntos', 'busca', 'bateria',
+      'coisa', 'pessoa', 'rel', 'bicho', 'nomereal', 'frase', 'trecho', 'visitas', 'aberta']);
+    const gestos = new Set<string>(GESTOS);
     for (const [g, ls] of Object.entries(banco().falas)) {
       expect(ls.length, g).toBeGreaterThan(0);
       expect(ls.some((l) => typeof l === 'string' || !l.i || l.i === 1), g).toBe(true);
