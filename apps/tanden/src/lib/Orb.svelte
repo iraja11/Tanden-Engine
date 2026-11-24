@@ -130,7 +130,10 @@
 </button>
 
 <style>
-  .orb { border: 0; padding: 0; background: none; border-radius: 50%; flex: none; transition: transform var(--dur) var(--spring); }
+  .orb { border: 0; padding: 0; background: none; border-radius: 50%; flex: none; transition: transform var(--dur) var(--spring);
+    -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none; }
+  /* toque/clique não acende contorno; só o teclado (focus-visible global) */
+  .orb:focus:not(:focus-visible) { outline: none; }
   .orb:active { transform: scale(.92); }
   svg { width: 100%; height: 100%; display: block; overflow: visible; filter: drop-shadow(0 0 6px var(--ember-glow));
     transition: filter var(--dur-slow); }

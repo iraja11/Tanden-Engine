@@ -31,6 +31,8 @@
 @media (max-width: 720px) { :root { --gutter: 16px; } }
 * { box-sizing: border-box; }
 html, body, #app { height: 100%; margin: 0; }
+/* sem o quadrado azul do navegador ao tocar no celular: os botões têm o próprio :active */
+html { -webkit-tap-highlight-color: transparent; }
 body { background: var(--void); color: var(--ink); font: 14px/1.5 var(--f-body); overflow: hidden; }
 
 /* Telas que cobrem tudo (diálogos, gavetas, abertura) também respeitam as barras
