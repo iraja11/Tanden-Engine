@@ -229,6 +229,20 @@ describe('Google Agenda', () => {
     expect((err as CalendarError).needsConsent).toBe(true);
   });
 
+  it('sem a permissão da lista de agendas, usa a principal', async () => {
+    const fake = (async (url: string) => {
+      if (url.includes('/calendarList')) return new Response('{"error":{"errors":[{"reason":"insufficientPermissions"}]}}', { status: 403 });
+      return new Response(JSON.stringify({ items: [{ id: '1', summary: 'Um', start: { date: '2026-11-10' }, end: { date: '2026-11-11' } }] }));
+    }) as typeof fetch;
+    const g = new GoogleCalendar({ getToken: async () => 'tok', fetch: fake, timeZone: 'UTC' });
+    const cals = await g.calendars();
+    expect(cals.map((c) => [c.id, c.writable])).toEqual([['primary', true]]);
+    expect((await g.events(cals[0]!, ...range('2026-11-01', '2026-12-01'))).map((e) => e.title)).toEqual(['Um']);
+    // API desligada continua sendo erro (não é falta de permissão)
+    const off = new GoogleCalendar({ getToken: async () => 'tok', fetch: (async () => new Response('accessNotConfigured', { status: 403 })) as typeof fetch });
+    await expect(off.calendars()).rejects.toThrow(/desligada/);
+  });
+
   it('arrastar mantém a duração', () => {
     const s = dayTime('2026-11-10', '14:00');
     const e = dayTime('2026-11-10', '15:30');

@@ -25,6 +25,9 @@ pub fn run() {
     // abrir o app de novo traz de volta a janela que está na bandeja
     #[cfg(desktop)]
     let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _, _| background::show_main(app)));
+    // no celular, a volta do login do Google chega por deep link
+    #[cfg(mobile)]
+    let builder = builder.plugin(tauri_plugin_deep_link::init());
     builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
@@ -63,6 +66,22 @@ pub fn run() {
                 });
                 app.manage(clipper::ClipperInfo { port: port.unwrap_or(clipper::PORT), token, running: port.is_some() });
             }
+            #[cfg(mobile)]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                let handle = app.handle().clone();
+                app.deep_link().on_open_url(move |e| {
+                    for url in e.urls() {
+                        google::handle_deep_link(&handle, &url);
+                    }
+                });
+                // o app foi aberto do zero pela volta do login (o Android tinha fechado ele)
+                if let Ok(Some(urls)) = app.deep_link().get_current() {
+                    for url in urls {
+                        google::handle_deep_link(app.handle(), &url);
+                    }
+                }
+            }
             // TANDEN_VAULT aponta para outra pasta (ex.: uma pasta sincronizada do Drive).
             let root = match std::env::var("TANDEN_VAULT") {
                 Ok(p) => PathBuf::from(p),
@@ -98,6 +117,8 @@ pub fn run() {
             google::google_sign_in,
             google::google_access_token,
             google::google_sign_out,
+            google::google_finish_url,
+            google::google_cancel,
             release::release_info,
             release::release_android_check,
             release::release_open_apk,

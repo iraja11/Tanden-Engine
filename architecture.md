@@ -135,7 +135,7 @@ Domínios em subpastas (cada um exporta por um `index.ts`):
 | `base/` | Bancos de dados estilo Notion (formato Bases do Obsidian): modelo, query, expr, templates, árvore. |
 | `graph/` | Grafo de notas: links, layout de força, conversões (grafo⇄quadro⇄mapa⇄nota). |
 | `convert/` | Conversões de arquivo (docx, odt, odp, pptx, epub, HTML⇄Markdown, texto de PDF, `dom`, `xml-lite`). |
-| `rpg/` | Mesa de RPG: dados, fichas, combate, tabelas de rolagem, campanhas. |
+| `rpg/` | Mesa de RPG: dados, fichas, combate, tabelas de rolagem, campanhas e `grid` (grade de batalha: casas `C4`, distância pelas regras de diagonal, áreas de efeito, deslocamento da ficha em quadrados; posição e tamanho moram nas colunas `Pos`/`Tam` do encontro, a grade nas propriedades `grade`/`quadrado`/`diagonal`/`mapa`). |
 | `saude/` | Saúde: água/pausas, biblioteca de exercícios, planner/treino. |
 | `alimentacao/` | Alimentação: tabela de alimentos, receitas, diário, metas, cardápio, compras e sugestões. |
 | `exercicios/` | Exercícios em casa: biblioteca, treinos guiados por tempo, programas, registro, `sequencias` (streak diária e semanal, calendário) e `conquistas` (métricas refeitas do registro, com data de obtenção). |
@@ -303,7 +303,7 @@ interface; a lógica de domínio vem de `@tanden/core`.
 | `pdf/` | Leitor de PDF (`PdfView`, `PdfPage`). |
 | `files/` | Arquivos, importação, ferramentas da nota, recorte de web. |
 | `cadernos/` | Cadernos de luta (`LutaView`) e mundos (`MundoView`); as abas do mundo (mapas, cartas, conflitos, simulação, ideias) ficam em `cadernos/mundo/`, e as telas dos sistemas vivos (mercado, almanaque, poderes, calendário, encontros, arauto, psique) em `cadernos/mundo/vivo/`. |
-| `rpg/` | Mesa (`MesaView`, bandeja de dados, combate, fichas, sessões, tabelas). |
+| `rpg/` | Mesa (`MesaView`, bandeja de dados, combate, grade de batalha `GridMap`, fichas, sessões, tabelas). O encontro escolhido fica em `mesa.encounter`, o mesmo no Combate e na Grade. |
 | `vida/` | Tela Hoje. |
 | `saude/` | Saúde (água, pausas, treino). |
 | `alimentacao/` | Alimentação (diário, cardápio, compras, sugestões). |

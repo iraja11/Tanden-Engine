@@ -101,6 +101,12 @@ class Engine {
     this.jornada = new JornadaStore(storage, this.vault.deviceId);
     await google.refresh();
     this.connectDrive();
+    // entrou pela Agenda, pelo deep link do celular ou perdeu o acesso: liga/desliga o Drive
+    google.onChange(() => {
+      const was = this.driveOn;
+      this.connectDrive();
+      if (this.driveOn && !was) void this.syncNow();
+    });
     this.bus.on('*', (e) => this.onEvent(e));
     await this.vault.sync();
     await this.boards.sync();
@@ -306,8 +312,11 @@ class Engine {
       return;
     }
     try {
-      await fullSync(this.vault, this.replicator, [this.boards, this.sheets, this.annots, this.library, this.jornada]);
-      this.driveError = '';
+      const r = await fullSync(this.vault, this.replicator, [this.boards, this.sheets, this.annots, this.library, this.jornada]);
+      const failed = r.replica.failed ?? [];
+      this.driveError = failed.length
+        ? `${failed.length === 1 ? 'um arquivo não subiu' : `${failed.length} arquivos não subiram`} (${failed.slice(0, 3).map((f) => f.path).join(', ')}${failed.length > 3 ? '…' : ''}): ${failed[0]!.error.slice(0, 200)}`
+        : '';
     } catch (e) {
       // sem internet ou token vencido: o cofre local continua íntegro
       this.driveError = String(e);

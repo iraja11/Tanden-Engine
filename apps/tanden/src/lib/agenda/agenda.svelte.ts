@@ -134,6 +134,13 @@ class Agenda {
       if (this.today !== today) this.today = today;
     }, 30_000);
     addEventListener('focus', () => void this.refresh());
+    // conta trocada, login feito em outra tela ou acesso revogado: relê do zero
+    google.onChange(() => {
+      this.client = null;
+      this.window = null;
+      if (!google.status.signed_in) this.remote = [];
+      void this.refresh(undefined, undefined, true);
+    });
     void this.refresh();
   }
 
@@ -228,8 +235,13 @@ class Agenda {
     this.loading = true;
     try {
       const cals = await this.gc.calendars();
-      const lists = await Promise.all(cals.map((c) => this.gc.events(c, wFrom, wTo).catch(() => [] as Occurrence[])));
+      // uma agenda que falha (ex.: agenda compartilhada removida) não esconde as outras;
+      // se todas falharem, o motivo aparece
+      let firstError: unknown = null;
+      let ok = 0;
+      const lists = await Promise.all(cals.map((c) => this.gc.events(c, wFrom, wTo).then((l) => (ok++, l), (e) => ((firstError ??= e), [] as Occurrence[]))));
       if (seq !== this.seq) return;
+      if (cals.length && !ok && firstError) throw firstError;
       this.calendars = cals;
       this.remote = lists.flat();
       this.window = { from: wFrom, to: wTo, at: Date.now() };
@@ -252,9 +264,7 @@ class Agenda {
   /** Entra de novo no Google para liberar a agenda. */
   async connect(): Promise<void> {
     if (await google.signIn()) {
-      this.client = null;
-      this.window = null;
-      await this.refresh(undefined, undefined, true);
+      // a releitura vem pelo google.onChange
       if (google.status.calendar) files.say('Google Agenda conectado.');
       else this.error = 'O Google não liberou a agenda. Na tela de login, deixe marcada a permissão do Google Agenda.';
     } else if (google.error) this.error = google.error;

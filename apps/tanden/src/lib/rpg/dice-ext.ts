@@ -3,6 +3,7 @@ import { RangeSetBuilder, Prec, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { checkRoll } from '@tanden/core';
 import { mesa } from './mesa.svelte';
+import { revealRanges } from '../editor/reveal';
 
 /*
  * Rolagens dentro das notas, no formato do plugin Dice Roller do Obsidian:
@@ -86,7 +87,7 @@ class DiceWidget extends WidgetType {
 
 function build(view: EditorView, path: string | null): DecorationSet {
   const b = new RangeSetBuilder<Decoration>();
-  const sel = view.state.selection.ranges;
+  const sel = revealRanges(view.state);
   const tree = syntaxTree(view.state);
   for (const { from, to } of view.visibleRanges) {
     tree.iterate({

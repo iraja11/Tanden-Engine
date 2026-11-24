@@ -50,6 +50,7 @@ export * from './caderno';
 export * from './rpg';
 export * from './slides';
 export { parseFeed, discoverFeeds, looksLikeFeed, type Feed, type FeedItem } from './feed';
+export { STYLED_SPAN, parseStyle, safeCss, styleAt, styleCss, styleEdit, type StyleEdit, type StylePatch, type TextStyle } from './textstyle';
 export * from './plugins';
 export * from './base';
 export * from './graph';

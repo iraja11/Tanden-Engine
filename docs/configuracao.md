@@ -84,6 +84,15 @@ Enquanto o app estiver em modo "Teste", o Google pede para entrar de novo a cada
 
 Opcional: para não colar as credenciais em cada aparelho, crie os secrets `TANDEN_GOOGLE_CLIENT_ID` e `TANDEN_GOOGLE_CLIENT_SECRET` no GitHub; o build já as embute. Para um app de computador, o Google não considera essa "chave secreta" confidencial.
 
+### Login no Android
+
+No celular, o login do "App para computador" volta para um endereço `127.0.0.1`, e o Android costuma congelar (ou fechar) o Tanden enquanto o navegador está na frente: o navegador mostra "não foi possível acessar". Há dois jeitos de resolver:
+
+- **Recomendado: um cliente Android.** No mesmo projeto do Google Cloud, em *Credenciais → Criar credenciais → ID do cliente OAuth*, escolha **Android**. Nome do pacote: `dev.tanden.engine`. Impressão digital SHA-1: a da chave que assina o APK (`keytool -list -v -keystore ~/.tauri/tanden-android.jks -alias tanden`). Depois de criar, abra o cliente, em *Configurações avançadas* marque **Ativar esquema de URI personalizado** e salve. Crie o secret `TANDEN_GOOGLE_ANDROID_CLIENT_ID` no GitHub (ou cole o ID no campo *Client ID Android* do painel do Drive, no celular). O Google então devolve você direto ao app (`dev.tanden.engine:/oauth2redirect`), mesmo que o Android tenha fechado o Tanden no meio do login. Cliente Android não tem chave secreta.
+- **Sem cliente Android:** entre normalmente; se o navegador mostrar o erro no endereço `127.0.0.1`, copie o endereço inteiro, volte ao Tanden e cole no campo que aparece no painel do Drive enquanto o login espera.
+
+Os arquivos que um cliente cria no Drive (escopo `drive.file`) valem para todos os clientes do mesmo projeto, então o celular e o computador enxergam a mesma pasta **Tanden**.
+
 ## Google Agenda
 
 A Agenda usa a mesma conta Google do Drive, com dois escopos a mais: `calendar.events` (ler e gravar eventos) e `calendar.calendarlist.readonly` (saber quais agendas você tem e as cores). Ele não mexe nas configurações das agendas nem nos compartilhamentos.
@@ -93,6 +102,10 @@ A Agenda usa a mesma conta Google do Drive, com dois escopos a mais: `calendar.e
 - Quem já tinha conectado o Google antes precisa entrar de novo uma vez: a Agenda mostra *Falta liberar a agenda → Entrar de novo*. Na tela do Google, deixe marcada a permissão da agenda; se desmarcar, o Drive segue funcionando e a Agenda volta a pedir.
 
 ## Robustez do sync
+
+- O Drive aceita no máximo 124 bytes por propriedade de arquivo. Caminhos fundos (mundos, campanhas, cenas) não cabiam e o Drive recusava o arquivo, o que parava o sync inteiro no meio; agora o caminho vai fatiado (`tp0`, `tp1`…) e um arquivo recusado por outro motivo não trava os outros (o painel do Drive mostra quais não subiram, e eles são tentados de novo no próximo sync).
+- Se o Google revogar o acesso (ex.: app em modo "Teste" depois de 7 dias), o app sai da conta e pede o login de novo, em vez de falhar calado.
+
 
 - Um `.md` apagado fora do Tanden (Obsidian, terminal, gerenciador de arquivos) vira um apagar de verdade, com cópia em `.trash/`. Renomear no Obsidian não deixa cópia. Se mais de 20 notas somem de uma vez (pasta desmontada), nada é apagado.
 - O sync com o Drive ignora `.git/`, `node_modules/`, o layout de janelas do Obsidian (`.obsidian/workspace*.json`), arquivos temporários e lixo do sistema.

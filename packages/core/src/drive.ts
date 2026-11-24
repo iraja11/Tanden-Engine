@@ -9,7 +9,49 @@ import type { RemoteFile, RemoteStore } from './replicator';
  *
  * Escopo OAuth esperado: https://www.googleapis.com/auth/drive.file
  * (o app só enxerga o que ele mesmo criou; não tem acesso ao resto do seu Drive).
+ *
+ * O Drive limita cada appProperty a 124 bytes (chave + valor, em UTF-8). Um
+ * caminho fundo ("Mundos/…/Histórias/…/Cenas/…") passa disso e o Drive recusa
+ * o arquivo; aí o caminho vai fatiado em tp0, tp1, … (ver `pathProps`).
  */
+
+/** Limite do Drive para chave + valor de uma appProperty, em bytes UTF-8. */
+export const PROP_LIMIT = 124;
+const PATH_KEY = 'tandenPath';
+const CHUNK_KEY = 'tp';
+const utf8 = new TextEncoder();
+const bytes = (s: string) => utf8.encode(s).length;
+
+/**
+ * appProperties que guardam o caminho. Cabe inteiro: `tandenPath` (como sempre
+ * foi). Não cabe: fatias `tp0`, `tp1`… cortadas em limite de caractere, sem
+ * `tandenPath` (versões antigas do app ignoram o arquivo em vez de errar o nome).
+ */
+export function pathProps(path: string): Record<string, string> {
+  if (bytes(PATH_KEY) + bytes(path) <= PROP_LIMIT) return { [PATH_KEY]: path };
+  const out: Record<string, string> = {};
+  let i = 0;
+  let cur = '';
+  for (const ch of path) {
+    if (bytes(`${CHUNK_KEY}${i}`) + bytes(cur + ch) > PROP_LIMIT) {
+      out[`${CHUNK_KEY}${i++}`] = cur;
+      cur = '';
+    }
+    cur += ch;
+  }
+  out[`${CHUNK_KEY}${i}`] = cur;
+  return out;
+}
+
+/** O caminho guardado nas appProperties (inteiro ou fatiado). */
+export function propsPath(props: Record<string, string> | undefined): string | undefined {
+  if (!props) return undefined;
+  if (props[PATH_KEY] !== undefined) return props[PATH_KEY];
+  if (props[`${CHUNK_KEY}0`] === undefined) return undefined;
+  let out = '';
+  for (let i = 0; props[`${CHUNK_KEY}${i}`] !== undefined; i++) out += props[`${CHUNK_KEY}${i}`];
+  return out;
+}
 
 const API = 'https://www.googleapis.com/drive/v3';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3';
@@ -90,7 +132,7 @@ export class DriveRemote implements RemoteStore {
         files: Array<{ id: string; mimeType: string; md5Checksum?: string; modifiedTime?: string; appProperties?: Record<string, string> }>;
       }>(`${API}/files?${params}`);
       for (const f of page.files) {
-        const path = f.appProperties?.tandenPath;
+        const path = propsPath(f.appProperties);
         if (path === undefined || index.has(path)) continue;
         index.set(path, { id: f.id, rev: f.md5Checksum ?? f.modifiedTime ?? '', folder: f.mimeType === FOLDER });
       }
@@ -190,7 +232,7 @@ export class DriveRemote implements RemoteStore {
         name,
         mimeType: FOLDER,
         parents: [parent],
-        appProperties: { tandenVault: this.vaultId, tandenPath: dir },
+        appProperties: { tandenVault: this.vaultId, ...pathProps(dir) },
       }),
     });
     index.set(dir, { id: r.id, rev: '', folder: true });
@@ -223,7 +265,7 @@ export class DriveRemote implements RemoteStore {
       const r = await this.resumable(
         `${UPLOAD}/files?uploadType=resumable&fields=id,md5Checksum,modifiedTime`,
         'POST',
-        { name, parents: [parent], mimeType: mimeFor(path), appProperties: { tandenVault: this.vaultId, tandenPath: path } },
+        { name, parents: [parent], mimeType: mimeFor(path), appProperties: { tandenVault: this.vaultId, ...pathProps(path) } },
         data,
       );
       return { id: r.id!, rev: r.md5Checksum ?? r.modifiedTime ?? '' };
@@ -233,7 +275,7 @@ export class DriveRemote implements RemoteStore {
       name,
       parents: [parent],
       mimeType: mimeFor(path),
-      appProperties: { tandenVault: this.vaultId, tandenPath: path },
+      appProperties: { tandenVault: this.vaultId, ...pathProps(path) },
     });
     const enc = new TextEncoder();
     const head = enc.encode(
