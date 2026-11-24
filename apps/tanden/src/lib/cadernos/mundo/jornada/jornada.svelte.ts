@@ -1,7 +1,7 @@
 import {
-  CONQUISTAS, ContadorEscrita, atividadeDoMundo, calcularSequencia, countWords, diaLocal, diasCumpridos, estadoDoMundo, gerarMissoes,
-  marcasDoMomento, medirAutor, medirMissao, novasConquistas, pontosDoMundo,
-  type Conquista, type EstadoMundo, type Metricas, type Missao, type Sequencia, type World,
+  CONQUISTAS, ContadorEscrita, atividadeDoMundo, bausDoAutor, calcularSequencia, colecaoDe, countWords, diaLocal, diasCumpridos, estadoDoMundo, gerarMissoes,
+  marcasDoMomento, medirAutor, medirMissao, novasConquistas, pontosDoMundo, sinaisDoMundo, sortearCarta,
+  type Bau, type Carta, type Conquista, type EstadoMundo, type Metricas, type Missao, type Sequencia, type Sinal, type Vitrine, type World,
 } from '@tanden/core';
 import { engine } from '../../../engine.svelte';
 import { sound } from '../../../sound.svelte';
@@ -41,7 +41,9 @@ export type Aviso =
   | { id: number; tipo: 'nivel'; mundo: string; nivel: number; moeda: string }
   | { id: number; tipo: 'era'; mundo: string; era: string; desc: string; glifo: string }
   | { id: number; tipo: 'missao'; texto: string; xp: number; moeda: string }
-  | { id: number; tipo: 'lote'; n: number };
+  | { id: number; tipo: 'lote'; n: number }
+  | { id: number; tipo: 'bau'; titulo: string; n: number }
+  | { id: number; tipo: 'sinal'; mundo: string; sinal: Sinal };
 
 type AvisoNovo = Aviso extends infer A ? (A extends Aviso ? Omit<A, 'id'> : never) : never;
 
@@ -80,6 +82,12 @@ class Jornada {
   private niveis = new Map<string, { nivel: number; era: number }>();
   private primeira = true;
   private quaseSumiu = false;
+  /** baús fechados na última avaliação, para avisar só dos novos */
+  private fechadosAntes: number | null = null;
+  /** sinais do arauto já anunciados nesta sessão */
+  private anunciados = new Set<string>();
+  /** pedido de abrir um painel vindo de um aviso */
+  pedido = $state<null | { tipo: 'tesouro' } | { tipo: 'arauto'; mundo: string }>(null);
 
   start(): void {
     if (this.started) return;
@@ -128,6 +136,50 @@ class Jornada {
     if (this.registro.missoes[this.hoje]?.[w.name]) return;
     engine.jornada.definirMissoes(this.hoje, w.name, gerarMissoes(w, this.hoje, this.meta), Date.now());
     this.gravar();
+  }
+
+  // ------------------------------------------------ tesouro
+
+  /** Todos os baús ganhos: os fechados primeiro. */
+  baus(): Bau[] {
+    const niveis = cadernos.worlds.map((w) => ({ mundo: w.name, nivel: this.estado(w).nivel.nivel }));
+    return bausDoAutor(this.registro, niveis, this.hoje);
+  }
+
+  colecao(): Map<string, { em: number; vezes: number }> { return colecaoDe(this.registro); }
+
+  /** Abre o baú. A carta sai do nome do baú: vale igual em qualquer aparelho. */
+  abrirBau(b: Bau): Carta {
+    const c = sortearCarta(b.id, new Set(this.colecao().keys()), b.sorte);
+    if (engine.jornada.abrirBau(b.id, c.id, Date.now(), b.mundo)) {
+      this.gravar();
+      this.agendar();
+    }
+    return c;
+  }
+
+  vitrine(mundo: string): Vitrine { return this.registro.vitrine[mundo] ?? { em: 0 }; }
+
+  definirVitrine(mundo: string, v: Omit<Vitrine, 'em'>): void {
+    engine.jornada.definirVitrine(mundo, v, Date.now());
+    this.gravar();
+  }
+
+  // ------------------------------------------------ arauto
+
+  /** Sinais lidos de um mundo (id → quando). */
+  lidos(mundo: string): Record<string, number> { return this.registro.lidos[mundo] ?? {}; }
+
+  lerSinais(mundo: string, ids: string[]): void {
+    const ja = this.lidos(mundo);
+    const novos = ids.filter((id) => !ja[id]);
+    if (!novos.length) return;
+    engine.jornada.lerSinais(mundo, novos, Date.now());
+    this.gravar();
+  }
+
+  sinais(w: World): Sinal[] {
+    return sinaisDoMundo(w, (p) => cadernos.read(p));
   }
 
   // ------------------------------------------------ escrita
@@ -308,6 +360,21 @@ class Jornada {
       if (e.indiceEra > antes.era) this.avisar({ tipo: 'era', mundo: w.name, era: e.era.nome, desc: e.era.desc, glifo: e.genero.glifo });
       else if (e.nivel.nivel > antes.nivel) this.avisar({ tipo: 'nivel', mundo: w.name, nivel: e.nivel.nivel, moeda: e.genero.moeda });
     }
+
+    // baús novos (missões completas, sequência, níveis)
+    const fechados = this.baus().filter((b) => !b.aberto);
+    if (this.fechadosAntes !== null && fechados.length > this.fechadosAntes) this.avisar({ tipo: 'bau', titulo: fechados[0]!.titulo, n: fechados.length });
+    this.fechadosAntes = fechados.length;
+
+    // o arauto: um sinal forte e ainda não lido do mundo em que se escreve
+    if (!this.primeira) {
+      const lidos = this.lidos(ativo.name);
+      const forte = this.sinais(ativo).find((s) => s.peso >= 4 && !lidos[s.id] && !this.anunciados.has(`${ativo.name}:${s.id}`));
+      if (forte) {
+        this.anunciados.add(`${ativo.name}:${forte.id}`);
+        this.avisar({ tipo: 'sinal', mundo: ativo.name, sinal: forte });
+      }
+    } else for (const w of worlds) for (const s of this.sinais(w)) this.anunciados.add(`${w.name}:${s.id}`);
     this.primeira = false;
   }
 
@@ -322,8 +389,8 @@ class Jornada {
     if (escrevendo) return;
     const a = this.espera.shift()!;
     this.avisos = [...this.avisos, a];
-    sound.play('complete');
-    setTimeout(() => this.dispensar(a.id), a.tipo === 'era' ? 9000 : 6500);
+    sound.play(a.tipo === 'sinal' ? 'tick' : 'complete');
+    setTimeout(() => this.dispensar(a.id), a.tipo === 'era' || a.tipo === 'sinal' ? 9000 : 6500);
   }
 
   dispensar(id: number): void {

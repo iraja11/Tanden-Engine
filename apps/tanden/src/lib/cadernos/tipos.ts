@@ -24,11 +24,15 @@ const COLORS: Record<string, string> = {
   plano: '#6c8ead',
   historia: '#e07a5f',
   cena: '#d4a373',
+  poder: '#c084fc',
+  recurso: '#a3c977',
+  moeda: '#e9c46a',
+  calendario: '#8ecae6',
 };
 
 /** Símbolo de cada tipo, para cartas e marcadores do mapa. */
 const GLYPHS: Record<string, string> = {
-  personagem: '☺', lugar: '⌂', faccao: '⚑', evento: '✦', item: '◆', especie: '❦', conceito: '✺', criatura: '☠', conflito: '⚔', cultura: '♫', mapa: '⌖', divindade: '☀', idioma: '✎', historia: '❧', cena: '¶', religiao: '☥', feito: '★', livro: '▤', magia: '✧', profecia: '◎', plano: '◍',
+  personagem: '☺', lugar: '⌂', faccao: '⚑', evento: '✦', item: '◆', especie: '❦', conceito: '✺', criatura: '☠', conflito: '⚔', cultura: '♫', mapa: '⌖', divindade: '☀', idioma: '✎', historia: '❧', cena: '¶', religiao: '☥', feito: '★', livro: '▤', magia: '✧', profecia: '◎', plano: '◍', poder: '✴', recurso: '⛁', moeda: '◉', calendario: '☾',
 };
 export const typeGlyph = (type: string): string => GLYPHS[type] ?? typeInfo(type).glyph ?? '●';
 
@@ -71,7 +75,11 @@ export function guessTypeFromLabel(label: string): string {
   if (/cultura|povo|tradi/.test(l)) return 'cultura';
   if (/conflito|rivalidade/.test(l)) return 'conflito';
   if (/evento|batalha|guerra/.test(l)) return 'evento';
-  if (/item|arma|artefato|poder/.test(l)) return 'item';
+  if (/^poder|habilidade|dom$|dons$|t[ée]cnica/.test(l)) return 'poder';
+  if (/^recursos?$|produz|exporta|importa|precisa|riqueza|min[ée]rio|colheita|^falta/.test(l)) return 'recurso';
+  if (/moeda|dinheiro|cunh/.test(l)) return 'moeda';
+  if (/calend[áa]rio/.test(l)) return 'calendario';
+  if (/item|arma|artefato/.test(l)) return 'item';
   if (/idioma|l[íi]ngua|dialeto|fala/.test(l)) return 'idioma';
   if (/deus|deusa|divindade|pante[ãa]o|patron|culto/.test(l)) return 'divindade';
   if (/^hist[óo]ria$|^conto$/.test(l)) return 'historia';

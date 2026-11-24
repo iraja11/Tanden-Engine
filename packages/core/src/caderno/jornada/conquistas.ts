@@ -8,6 +8,13 @@ import { reviewWorld } from '../revisao';
 import { GENEROS, generoDoMundo } from './generos';
 import { RARIDADES, estadoDoMundo, profundidades, type Raridade } from './progresso';
 import { atividadeDoMundo, calcularSequencia, diasCumpridos, somarContador, type RegistroAparelho } from './registro';
+import { cartaPorId, colecaoDe, reliquiasAbertas } from './tesouro';
+import { censo } from '../almanaque';
+import { calendarioDoMundo, conjuncoes } from '../calendario';
+import { mercado } from '../economia';
+import { equilibrio, lerPoder } from '../poderes';
+import { arcoDe, perfilPsique } from '../psique';
+import { worldYear } from '../mundo';
 
 /*
  * Conquistas. Cada uma é um limite sobre uma métrica (`metrica >= alvo`), o que
@@ -29,12 +36,12 @@ export interface Conquista {
   secreta?: boolean;
 }
 
-export type GrupoConquista = 'escrita' | 'constancia' | 'sprints' | 'fichas' | 'teia' | 'tempo' | 'historias' | 'oficina' | 'generos' | 'marcos' | 'segredos';
+export type GrupoConquista = 'escrita' | 'constancia' | 'sprints' | 'fichas' | 'teia' | 'tempo' | 'historias' | 'oficina' | 'sistemas' | 'generos' | 'marcos' | 'segredos';
 
 export const GRUPOS: Array<{ id: GrupoConquista; label: string }> = [
   { id: 'escrita', label: 'Escrita' }, { id: 'constancia', label: 'Constância' }, { id: 'sprints', label: 'Sprints' },
   { id: 'fichas', label: 'Fichas' }, { id: 'teia', label: 'Teia' }, { id: 'tempo', label: 'Tempo e mapas' },
-  { id: 'historias', label: 'Histórias' }, { id: 'oficina', label: 'Oficina' }, { id: 'generos', label: 'Gêneros' },
+  { id: 'historias', label: 'Histórias' }, { id: 'oficina', label: 'Oficina' }, { id: 'sistemas', label: 'Sistemas e tesouro' }, { id: 'generos', label: 'Gêneros' },
   { id: 'marcos', label: 'Marcos' }, { id: 'segredos', label: 'Segredos' },
 ];
 
@@ -120,12 +127,16 @@ const NOMES_TIPO: Record<string, [string, string, string, string]> = {
   magia: ['Primeira regra', 'Grimório aberto', 'Academia arcana', 'Arquimago do sistema'],
   profecia: ['Alguém previu', 'Sonhos estranhos', 'Oráculo ocupado', 'O futuro está lotado'],
   plano: ['Outro lado', 'Atravessando véus', 'Cosmologia própria', 'Multiverso particular'],
+  poder: ['Primeiro dom', 'Arsenal de dons', 'Escola de poderes', 'Panteão de habilidades'],
+  recurso: ['Algo de valor', 'Armazém cheio', 'Economia girando', 'Bolsa de mercadorias'],
+  moeda: ['Primeira moeda', 'Casa de câmbio', 'Casa da moeda', 'Banco central'],
+  calendario: ['O tempo tem nome', 'Dois calendários', 'Guerra dos calendários', 'Cronomante'],
 };
 
 for (const t of ENTITY_TYPES) {
   const nomes = NOMES_TIPO[t.id];
   if (!nomes) continue;
-  const alvos = t.id === 'cena' ? [1, 10, 50, 200] : t.id === 'historia' || t.id === 'mapa' || t.id === 'plano' ? [1, 3, 8, 20] : [1, 5, 15, 40];
+  const alvos = t.id === 'cena' ? [1, 10, 50, 200] : ['historia', 'mapa', 'plano', 'moeda', 'calendario'].includes(t.id) ? [1, 3, 8, 20] : [1, 5, 15, 40];
   alvos.forEach((alvo, i) => out.push({
     id: `n.${t.id}-${alvo}`, nome: nomes[i]!, desc: `Tenha ${alvo} ${alvo === 1 ? `ficha de ${t.label.toLowerCase()}` : `fichas de ${t.label.toLowerCase()}`} num mundo.`,
     grupo: 'fichas', raridade: (['comum', 'incomum', 'rara', 'epica'] as Raridade[])[i]!, glifo: '◆', metrica: `n.${t.id}`, alvo,
@@ -196,12 +207,29 @@ serie('marcos', 'nivel', '▲', (a) => `Leve um mundo ao nível ${a}.`, [[2, 'Pr
 serie('marcos', 'era', '◐', (a) => `Alcance a ${a + 1}ª era num mundo.`, [[1, 'Segunda era'], [2, 'Terceira era'], [3, 'Quarta era'], [4, 'Quinta era'], [5, 'Sexta era'], [6, 'O mundo despertou']]);
 serie('marcos', 'total', '🏆', (a) => `Desbloqueie ${a} conquistas.`, [[5, 'Colecionador'], [15, 'Prateleira nova'], [30, 'Sala de troféus'], [60, 'Ala inteira'], [100, 'Cem medalhas'], [175, 'Museu do autor'], [250, 'Lenda da guilda'], [350, 'Completista']]);
 
+// ------------------------------------------------------------------ sistemas e tesouro
+
+serie('sistemas', 'v.equilibrados', '✧', (a) => `Tenha ${s(a, 'poder equilibrado', 'poderes equilibrados')} num mundo.`, [[1, 'Preço justo'], [3, 'Balança arcana'], [8, 'Escola de magia'], [20, 'Sistema impecável']]);
+serie('sistemas', 'v.rotas', '⚖', (a) => `Tenha ${s(a, 'rota comercial', 'rotas comerciais')} num mundo.`, [[1, 'Primeira caravana'], [5, 'Estrada movimentada'], [15, 'Rede de comércio'], [40, 'Rota da seda']]);
+serie('sistemas', 'v.festas', '☾', (a) => `Marque ${s(a, 'festa', 'festas')} no calendário do mundo.`, [[1, 'Dia de festa'], [5, 'Calendário cheio'], [12, 'Todo mês tem festa']], 'epica');
+serie('sistemas', 'v.psiques', '❝', (a) => `Dê perfil (três traços ou mais) a ${s(a, 'personagem', 'personagens')}.`, [[1, 'Por dentro'], [5, 'Galeria de almas'], [15, 'Psicólogo do elenco'], [40, 'Mente coletiva']]);
+serie('sistemas', 'v.populacao', '⌂', (a) => `Some ${s(a, 'habitante', 'habitantes')} no censo de um mundo.`, [[1000, 'Vilarejo'], [100000, 'Cidade grande'], [1000000, 'Reino populoso'], [100000000, 'Império'], [1000000000, 'Planeta cheio']]);
+serie('sistemas', 'v.encontros', '☠', (a) => `Role ${s(a, 'encontro', 'encontros')} no bestiário.`, [[1, 'Algo se mexe no mato'], [10, 'Caçador de feras'], [50, 'Mestre do ermo'], [200, 'Nada escapa']], 'epica');
+serie('sistemas', 'v.baus', '⛋', (a) => `Abra ${s(a, 'baú', 'baús')}.`, [[1, 'Primeiro baú'], [10, 'Caçador de tesouros'], [50, 'Pirata aposentado'], [150, 'Dragão em cima do ouro']]);
+serie('sistemas', 'v.colecao', '♣', (a) => `Colecione ${s(a, 'carta', 'cartas')} de inspiração.`, [[1, 'Primeira carta'], [10, 'Mão cheia'], [25, 'Baralho em formação'], [50, 'Meio caminho'], [96, 'Baralho completo']]);
+serie('sistemas', 'v.reliquias', '◈', (a) => `Desbloqueie ${s(a, 'relíquia', 'relíquias')}.`, [[3, 'Vitrine nova'], [10, 'Relicário'], [20, 'Museu particular'], [30, 'Todas as relíquias']]);
+
 // ------------------------------------------------------------------ segredos
 
 const secreta = (id: string, nome: string, desc: string, raridade: Raridade = 'rara', glifo = '?') => {
   out.push({ id: `s.${id}`, nome, desc, grupo: 'segredos', raridade, glifo, metrica: `s.${id}`, alvo: 1, secreta: true });
 };
 
+secreta('monopolio', 'Siga o dinheiro', 'Uma facção dona de todo um recurso.', 'incomum', '💰');
+secreta('conjuncao', 'Noite de presságio', 'Duas ou mais luas cheias na mesma noite.', 'rara', '🌕');
+secreta('quebrado', 'Poder demais', 'Um poder quebrado: muito efeito, quase nenhum custo.', 'comum', '💥');
+secreta('arco', 'Arco completo', 'Uma personagem com quer, precisa, mentira, ferida e medo.', 'rara', '🏹');
+secreta('cartalendaria', 'Tirou a sorte grande', 'Uma carta lendária saiu de um baú.', 'epica', '🃏');
 secreta('madrugada', 'Coruja literária', 'Escreveu entre 3h e 5h da manhã.', 'incomum', '🦉');
 secreta('alvorada', 'Clube das cinco', 'Escreveu antes das 7h da manhã.', 'incomum', '🌅');
 secreta('almoco', 'Marmita e metáforas', 'Escreveu na hora do almoço.', 'comum', '🍱');
@@ -358,6 +386,22 @@ export function medirMundo(w: World, ler: (path: string) => string): Metricas {
   const revisao = reviewWorld(w);
   flag('s.canone', fichas.length >= 50 && !revisao.some((i) => i.level === 'erro'));
   flag('s.viagem', revisao.some((i) => i.level === 'erro'));
+  // sistemas: economia, poderes, calendário, psique e censo
+  const merc = mercado(w);
+  m['v.rotas'] = merc.rotas.length;
+  flag('s.monopolio', merc.recursos.some((r) => r.monopolio));
+  const pods = w.entities.filter((e) => e.type === 'poder').map((e) => equilibrio(lerPoder(e, ler(e.path))));
+  m['v.equilibrados'] = pods.filter((x) => x.veredito === 'equilibrado').length;
+  flag('s.quebrado', pods.some((x) => x.veredito === 'quebrado'));
+  const cal = calendarioDoMundo(w, ler);
+  if (cal.e) {
+    m['v.festas'] = cal.festas.length;
+    flag('s.conjuncao', conjuncoes(cal, worldYear(w)).length > 0);
+  }
+  m['v.psiques'] = pessoas.filter((e) => perfilPsique(e).tracos.length >= 3).length;
+  flag('s.arco', pessoas.some((e) => arcoDe(e).faltam.length === 0));
+  m['v.populacao'] = censo(w).total;
+
   flag('s.centenario', pessoas.some((e) => {
     const a = tl.find((t) => t.path === e.path && t.end !== undefined);
     return !!a && a.end! - a.at > 200;
@@ -416,6 +460,12 @@ export function medirAutor(worlds: World[], ler: (path: string) => string, r: Re
   m.missoes = missoes;
   m.diasCheios = cheios;
   m.total = Object.keys(r.conquistas).length;
+  m['v.encontros'] = somarContador(r, 'encontros');
+  const colecao = colecaoDe(r);
+  m['v.baus'] = Object.keys(r.baus).length;
+  m['v.colecao'] = colecao.size;
+  if ([...colecao.keys()].some((id) => cartaPorId(id)?.raridade === 'lendaria')) m['s.cartalendaria'] = 1;
+  m['v.reliquias'] = reliquiasAbertas(m);
   return m;
 }
 

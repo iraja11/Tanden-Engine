@@ -6,6 +6,7 @@
   import { rise } from '../../motion';
   import { typeColor } from '../tipos';
   import EspecieFigura from './EspecieFigura.svelte';
+  import EncontrosView from './vivo/EncontrosView.svelte';
 
   // Seres: as espécies e criaturas do mundo como galeria (silhuetas), em
   // escala lado a lado, numa tabela para comparar e numa teia de quem come quem.
@@ -17,7 +18,7 @@
 
   let types = $state<string[]>(['especie', 'criatura']);
   const beings = $derived(world.entities.filter((e) => types.includes(e.type)));
-  let look = $state<'galeria' | 'escala' | 'tabela' | 'teia'>('galeria');
+  let look = $state<'galeria' | 'escala' | 'tabela' | 'teia' | 'encontros'>('galeria');
 
   // ------------------------------------------------ sortear uma espécie nova
   let seed = $state(Math.floor(Math.random() * 1e6));
@@ -77,7 +78,7 @@
 <div class="seres">
   <div class="bar">
     <div class="t-seg" role="radiogroup" aria-label="Visão">
-      {#each [['galeria', 'Galeria'], ['escala', 'Escala'], ['tabela', 'Comparar'], ['teia', 'Teia alimentar']] as [id, l] (id)}
+      {#each [['galeria', 'Galeria'], ['escala', 'Escala'], ['tabela', 'Comparar'], ['teia', 'Teia alimentar'], ['encontros', 'Encontros']] as [id, l] (id)}
         <button role="radio" aria-checked={look === id} class:on={look === id} onclick={() => (look = id as typeof look)}>{l}</button>
       {/each}
     </div>
@@ -109,7 +110,9 @@
     </div>
   </section>
 
-  {#if !beings.length}
+  {#if look === 'encontros'}
+    <EncontrosView {world} {onopen} />
+  {:else if !beings.length}
     <p class="dim pad">Nenhum ser ainda. Use a forja acima, ou crie uma ficha de espécie ou criatura: a ficha traz um construtor com corpo, ciclo de vida, sentidos, mente e ambiente.</p>
   {:else if look === 'galeria'}
     <div class="gal">
@@ -202,7 +205,7 @@
 </div>
 
 <style>
-  .seres { display: grid; gap: var(--sp-3); padding-bottom: 40px; }
+  .seres { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); padding-bottom: 40px; }
   .bar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   .grow { flex: 1; }
   .forge { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp-4); align-items: center; background: radial-gradient(circle at 0 100%, color-mix(in srgb, var(--ember) 10%, var(--surface)), var(--surface) 55%); }

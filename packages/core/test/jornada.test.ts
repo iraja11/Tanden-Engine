@@ -350,7 +350,7 @@ describe('conquistas', () => {
 
   it('toda métrica do catálogo é produzida por alguma medição', () => {
     // um mundo cheio de tudo não precisa acender tudo, mas cada métrica precisa ter origem conhecida
-    const conhecidas = /^(n\.|lista\.|fam\.|gen3?\.|s\.|rec\.|marca\.)/;
+    const conhecidas = /^(n\.|lista\.|fam\.|gen3?\.|s\.|rec\.|marca\.|v\.)/;
     const diretas = new Set(['palavras', 'melhorDia', 'palavrasMundo', 'seqMelhor', 'diasAtivos', 'escudosUsados', 'sprints', 'duros', 'dobro', 'fichas', 'tiposUsados', 'incomuns', 'raras', 'epicas', 'lendarias',
       'ligacoes', 'maisLigada', 'conflitosAtivos', 'datas', 'spanAnos', 'marcadores', 'palavrasHistoria', 'cenasProntas', 'metasHistoria', 'estruturaCheia', 'oraculo', 'respostas', 'missoes', 'diasCheios', 'checks', 'listas',
       'elementos', 'familias', 'generos', 'mundos', 'nivel', 'era', 'total']);

@@ -5,3 +5,4 @@ export * from './missoes';
 export * from './oraculo';
 export * from './entrevista';
 export * from './conquistas';
+export * from './tesouro';

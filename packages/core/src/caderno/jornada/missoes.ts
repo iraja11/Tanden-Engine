@@ -50,7 +50,7 @@ const erros = (w: World) => reviewWorld(w).filter((i) => i.level === 'erro').len
 const quebradas = (w: World, alvo: string) => w.relations.filter((r) => !r.to && r.target === alvo).length;
 
 /** Tipos que todo mundo costuma querer, na ordem em que a falta deles mais pesa. */
-const TIPOS_BASICOS = ['personagem', 'lugar', 'faccao', 'evento', 'cultura', 'conflito', 'item', 'especie', 'divindade'];
+const TIPOS_BASICOS = ['personagem', 'lugar', 'faccao', 'evento', 'cultura', 'conflito', 'item', 'especie', 'divindade', 'recurso', 'poder', 'criatura'];
 
 /** Sorteia as três missões do dia: uma de escrita, uma de profundidade e uma de expansão. */
 export function gerarMissoes(w: World, dia: string, meta: number): Missao[] {

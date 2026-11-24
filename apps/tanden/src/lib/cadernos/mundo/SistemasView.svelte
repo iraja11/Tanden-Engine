@@ -6,28 +6,35 @@
   import { rise } from '../../motion';
   import { cadernos } from '../cadernos.svelte';
   import { typeColor } from '../tipos';
+  import CalendarioView from './vivo/CalendarioView.svelte';
+  import PoderesView from './vivo/PoderesView.svelte';
 
   // Sistemas do mundo, cada um com sua vitrine: idiomas, fé (religiões e
   // panteão), magia, a biblioteca, os feitos, as profecias e os planos.
   // Tudo continua sendo nota comum; aqui só se junta, cruza e cria.
-  let { world, byPath, onopen, oncreate }: {
+  let { world, byPath, onopen, oncreate, inicial }: {
     world: World;
     byPath: Map<string, Entity>;
     onopen: (path: string) => void;
     oncreate: (name: string, type: string, extra: { props: Record<string, string>; sections: string[] }) => void;
+    /** seção pedida de fora (um sinal do arauto, por exemplo) */
+    inicial?: string | null;
   } = $props();
 
-  type Sec = 'idiomas' | 'fe' | 'magia' | 'livros' | 'feitos' | 'profecias' | 'planos';
+  type Sec = 'idiomas' | 'fe' | 'magia' | 'poderes' | 'calendario' | 'livros' | 'feitos' | 'profecias' | 'planos';
   const SECS: Array<{ id: Sec; label: string; tipo: string[] }> = [
     { id: 'idiomas', label: 'Idiomas', tipo: ['idioma'] },
     { id: 'fe', label: 'Fé', tipo: ['religiao', 'divindade'] },
     { id: 'magia', label: 'Magia', tipo: ['magia'] },
+    { id: 'poderes', label: 'Poderes', tipo: ['poder'] },
+    { id: 'calendario', label: 'Calendário', tipo: ['calendario'] },
     { id: 'livros', label: 'Biblioteca', tipo: ['livro'] },
     { id: 'feitos', label: 'Feitos', tipo: ['feito'] },
     { id: 'profecias', label: 'Profecias', tipo: ['profecia'] },
     { id: 'planos', label: 'Planos', tipo: ['plano'] },
   ];
   let sec = $state<Sec>('idiomas');
+  $effect(() => { if (inicial && SECS.some((x) => x.id === inicial)) sec = inicial as Sec; });
   const count = (tipos: string[]) => world.entities.filter((e) => tipos.includes(e.type)).length;
 
   const fold = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim();
@@ -324,6 +331,10 @@
         <button class="t-btn t-btn--primary" disabled={!newMagic.trim()}>Criar sistema</button>
       </form>
     </section>
+  {:else if sec === 'poderes'}
+    <PoderesView {world} {onopen} />
+  {:else if sec === 'calendario'}
+    <CalendarioView {world} {onopen} />
   {:else if sec === 'livros'}
     <section class="block" in:rise={{ y: 6 }}>
       {#if books.length}

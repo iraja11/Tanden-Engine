@@ -2,7 +2,7 @@
   import {
     DEEP_QUESTIONS, ENTITY_TYPES, FIELD_HINTS, GENEROS, allTypes, worldYear, RESERVED, asList, backlinks, bodyOf, entityFolder, entityTemplate, getSection, linkTarget,
     NON_CARD_TYPES, normalizeType, parseProps, profundidades, readMarkers, renameProp, reviewWorld, rollTraits, rotuloEntrevista, sceneTemplate, setProp, setProps, setSection, storyIndex, storyTemplate, timeline, typeInfo, withBody,
-    worldTemplate, type AcaoMissao, type Entity, type PropValue,
+    worldTemplate, type AcaoMissao, type AcaoSinal, type Carta, type Entity, type PropValue,
   } from '@tanden/core';
   import { hasSheet, imageOf, readItemCard } from '@tanden/core';
   import ItemCard from '../rpg/ItemCard.svelte';
@@ -38,11 +38,17 @@
   import PulsoMundo from './mundo/jornada/PulsoMundo.svelte';
   import SeloRaridade from './mundo/jornada/SeloRaridade.svelte';
   import { jornada } from './mundo/jornada/jornada.svelte';
+  import AlmanaqueView from './mundo/vivo/AlmanaqueView.svelte';
+  import ArautoPainel from './mundo/vivo/ArautoPainel.svelte';
+  import FichaViva from './mundo/vivo/FichaViva.svelte';
+  import MercadoView from './mundo/vivo/MercadoView.svelte';
+  import PoderCard from './mundo/vivo/PoderCard.svelte';
+  import PsiqueCard from './mundo/vivo/PsiqueCard.svelte';
   import Icon, { type IconName } from '../ui/Icon.svelte';
 
   let { onOpenNote }: { onOpenNote: (path: string) => void } = $props();
 
-  type Tab = 'fichas' | 'mapas' | 'tempo' | 'grafo' | 'elementos' | 'seres' | 'sistemas' | 'escrita' | 'conflitos' | 'sim' | 'guia' | 'ideias' | 'regras';
+  type Tab = 'fichas' | 'mapas' | 'tempo' | 'grafo' | 'elementos' | 'seres' | 'sistemas' | 'escrita' | 'conflitos' | 'sim' | 'mercado' | 'almanaque' | 'guia' | 'ideias' | 'regras';
   // Abas em grupos: explorar o que existe, construir (elementos, seres, sistemas,
   // escrita), ver o mundo se mexer, e a oficina (guia, ideias, regras).
   // No celular, as quatro de "explorar" ficam na barra de baixo e o resto em "Mais".
@@ -54,10 +60,12 @@
     { id: 'grafo', label: 'Ligações', icon: 'grafo', group: 'explorar', desc: 'Quem se liga a quem' },
     { id: 'elementos', label: 'Elementos', icon: 'elementos', group: 'construir', desc: 'A tabela de tudo o que um mundo pode ter, e o que falta no seu' },
     { id: 'seres', label: 'Seres', icon: 'seres', group: 'construir', desc: 'Espécies e criaturas: galeria, escala, comparação e teia alimentar' },
-    { id: 'sistemas', label: 'Sistemas', icon: 'sistemas', group: 'construir', desc: 'Idiomas, fé, magia, livros, feitos, profecias e planos' },
+    { id: 'sistemas', label: 'Sistemas', icon: 'sistemas', group: 'construir', desc: 'Idiomas, fé, magia, poderes, calendário, livros, feitos, profecias e planos' },
     { id: 'escrita', label: 'Escrita', icon: 'escrita', group: 'construir', desc: 'Histórias, cenas por estrutura, elenco e manuscrito' },
     { id: 'conflitos', label: 'Conflitos', icon: 'conflitos', group: 'dinamica', desc: 'Guerras, rivalidades e alianças' },
     { id: 'sim', label: 'Simulação', icon: 'sim', group: 'dinamica', desc: 'Vidas mês a mês ou facções ano a ano' },
+    { id: 'mercado', label: 'Mercado', icon: 'mercado', group: 'dinamica', desc: 'Recursos, rotas de comércio, riqueza das facções, moedas e preços' },
+    { id: 'almanaque', label: 'Almanaque', icon: 'almanaque', group: 'dinamica', desc: 'O mundo em números: censo, demografia, escrita e recordes' },
     { id: 'guia', label: 'Guia', icon: 'guia', group: 'oficina', desc: 'O que fazer agora, checklists e dicas' },
     { id: 'ideias', label: 'Ideias', icon: 'ideias', group: 'oficina', desc: 'Revisão, contradições e geradores' },
     { id: 'regras', label: 'Regras', icon: 'regras', group: 'oficina', desc: 'Mecânicas e campos calculados' },
@@ -68,7 +76,7 @@
   const FILTERED: Tab[] = ['fichas', 'tempo', 'grafo'];
   /** folha aberta no celular: trocar de mundo ou as abas de "Mais" */
   let sheet = $state<null | 'mundos' | 'mais'>(null);
-  function goTab(t: Tab) { tab = t; sheet = null; entityPath = null; }
+  function goTab(t: Tab) { tab = t; sheet = null; entityPath = null; if (t !== 'sistemas') sisFoco = null; }
   /** foco ao pular para elementos ou escrita a partir de outra aba */
   let elFocus = $state<string | null>(null);
   let writeFocus = $state<string | null>(null);
@@ -90,8 +98,40 @@
   let newGenre = $state('Livre');
   /** painel lateral com eras, conquistas e constância */
   let cronica = $state(false);
-  let cronicaAba = $state<'mundo' | 'conquistas' | 'constancia'>('mundo');
-  function abrirCronica(a: 'mundo' | 'conquistas' | 'constancia') { cronicaAba = a; cronica = true; }
+  let cronicaAba = $state<'mundo' | 'conquistas' | 'constancia' | 'tesouro'>('mundo');
+  function abrirCronica(a: 'mundo' | 'conquistas' | 'constancia' | 'tesouro') { cronicaAba = a; cronica = true; }
+  /** painel do arauto (sinais do mundo) */
+  let arauto = $state(false);
+  /** seção dos Sistemas pedida de fora (ex.: "sistemas:calendario") */
+  let sisFoco = $state<string | null>(null);
+  /** Vai a uma aba, aceitando "aba:seção". */
+  function irPara(destino: string) {
+    const [t, sec] = destino.split(':');
+    if (!t || !TABS.some((x) => x.id === t)) return;
+    if (t === 'sistemas') sisFoco = sec ?? null;
+    goTab(t as Tab);
+  }
+  function acaoSinal(a: AcaoSinal) {
+    if (a.tipo === 'abrir') openEntity(a.path);
+    else if (a.tipo === 'aba') irPara(a.aba);
+    else startEntity(a.nome ?? '', a.ficha);
+  }
+  /** Uma carta do baú vira um conceito no mundo, com a faísca escrita. */
+  function usarCarta(c: Carta) {
+    if (!world) return;
+    const nomeMundo = world.name;
+    const path = cadernos.create(entityFolder(world, 'conceito'), c.nome, (n) => setSection(entityTemplate(n, nomeMundo, 'conceito'), 'Faísca', `${c.texto}\n\n_(carta de inspiração)_`));
+    cronica = false;
+    openEntity(path);
+  }
+  // pedidos vindos dos avisos (baú ganho, sinal do arauto)
+  $effect(() => {
+    const p = jornada.pedido;
+    if (!p) return;
+    jornada.pedido = null;
+    if (p.tipo === 'tesouro') abrirCronica('tesouro');
+    else { if (p.mundo !== world?.name && worlds.some((w) => w.name === p.mundo)) pickWorld(p.mundo); entityPath = null; arauto = true; }
+  });
   /** entrevista aberta na ficha */
   let entrevistando = $state(false);
 
@@ -575,6 +615,15 @@
         {/key}
       {/if}
 
+      {#if entity.type === 'personagem'}
+        {#key entity.path}<PsiqueCard {entity} {world} onopen={openEntity} onfield={addField} />{/key}
+      {/if}
+      {#if entity.type === 'poder'}
+        <PoderCard {entity} {world} {text} {byPath} onopen={openEntity} onfield={addField} />
+      {/if}
+      {#if ['lugar', 'recurso', 'moeda', 'calendario', 'criatura'].includes(entity.type)}
+        <FichaViva {entity} {world} {text} {byPath} onopen={openEntity} onaba={(a) => { entityPath = null; irPara(a); }} />
+      {/if}
       {#if entity.type === 'especie' || entity.type === 'criatura'}
         {#key entity.path}<EspecieCard {entity} {fm} {world} />{/key}
       {/if}
@@ -611,7 +660,7 @@
           <p class="sub">
             <span>{world.entities.length} fichas</span><span>{world.relations.filter((r) => r.to).length} ligações</span><span>{timeline(world).length} datas</span>
           </p>
-          <PulsoMundo {world} vivo={health} onabrir={abrirCronica} onmissoes={() => goTab('guia')} />
+          <PulsoMundo {world} vivo={health} onabrir={abrirCronica} onmissoes={() => goTab('guia')} onarauto={() => (arauto = true)} />
           {#if problems}<div class="health"><button class="warn" onclick={() => goTab('ideias')}><Icon name="alerta" size={13} />{problems} {problems === 1 ? 'contradição' : 'contradições'}</button></div>{/if}
         </div>
         <div class="acts">
@@ -660,7 +709,7 @@
             {#if look === 'cartas'}
               <div class="deck">
                 {#each shown as e, i (e.path)}
-                  <div class:fresh={fresh === e.path} in:rise={{ delay: Math.min(i, 24) * 30, y: 14 }}><FichaCarta entity={e} {byPath} onopen={openEntity} prof={prof.get(e.path)} /></div>
+                  <div class:fresh={fresh === e.path} in:rise={{ delay: Math.min(i, 24) * 30, y: 14 }}><FichaCarta entity={e} {byPath} onopen={openEntity} prof={prof.get(e.path)} moldura={jornada.vitrine(world.name).moldura} /></div>
                 {/each}
               </div>
             {:else}
@@ -728,7 +777,11 @@
       {:else if tab === 'seres'}
         <SeresView {world} onopen={openEntity} oncreate={createWith} />
       {:else if tab === 'sistemas'}
-        <SistemasView {world} {byPath} onopen={openEntity} oncreate={createWith} />
+        <SistemasView {world} {byPath} onopen={openEntity} oncreate={createWith} inicial={sisFoco} />
+      {:else if tab === 'mercado'}
+        <MercadoView {world} {byPath} onopen={openEntity} oncreate={createWith} />
+      {:else if tab === 'almanaque'}
+        <AlmanaqueView {world} onopen={openEntity} onaba={irPara} />
       {:else if tab === 'escrita'}
         <EscritaView {world} {byPath} onopen={openEntity} {onOpenNote} focus={writeFocus} />
       {:else if tab === 'guia'}
@@ -827,7 +880,8 @@
     </div>
   {/if}
 
-  {#if cronica && world}<CronicaPainel {world} bind:aba={cronicaAba} onclose={() => (cronica = false)} />{/if}
+  {#if cronica && world}<CronicaPainel {world} bind:aba={cronicaAba} onclose={() => (cronica = false)} onusar={usarCarta} />{/if}
+  {#if arauto && world}<ArautoPainel {world} onclose={() => (arauto = false)} onacao={acaoSinal} />{/if}
   <Celebracoes onconquistas={() => abrirCronica('conquistas')} />
 
   {#if cadernos.message}<div class="toast" role="status">{cadernos.message}</div>{/if}

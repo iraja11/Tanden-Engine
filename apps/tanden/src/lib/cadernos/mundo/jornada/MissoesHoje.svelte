@@ -10,11 +10,24 @@
   const m = $derived(jornada.missoes(world.name));
   const hoje = $derived(jornada.registro.dias[jornada.hoje]?.[world.name] ?? {});
   const moeda = $derived(jornada.estado(world).genero.moeda);
+  const completo = $derived(m.lista.length > 0 && m.feitas.length >= m.lista.length);
+  const bau = $derived.by(() => { void jornada.rev; return jornada.baus().find((b) => b.id === `m:${jornada.hoje}:${world.name}`); });
   const ROTULO: Record<AcaoMissao['tipo'], string> = { abrir: 'Abrir', aba: 'Ir', criar: 'Criar', sprint: 'Escrever', entrevista: 'Entrevistar' };
 </script>
 
 <section class="missoes">
-  <header><h3>Missões de hoje</h3><span class="dim">{m.feitas.length} de {m.lista.length}</span></header>
+  <header>
+    <h3>Missões de hoje</h3><span class="dim">{m.feitas.length} de {m.lista.length}</span>
+    <span class="premio" class:pronto={completo && !bau?.aberto} class:aberto={!!bau?.aberto}>
+      {#if completo && bau && !bau.aberto}
+        <button class="t-btn t-btn--sm" onclick={() => (jornada.pedido = { tipo: 'tesouro' })}><span aria-hidden="true">⛋</span> Abrir o baú do dia</button>
+      {:else if bau?.aberto}
+        <span aria-hidden="true">⛋</span> Baú do dia aberto
+      {:else}
+        <span aria-hidden="true">⛋</span> Cumpra as três para ganhar um baú
+      {/if}
+    </span>
+  </header>
   <ul>
     {#each m.lista as x, i (x.id)}
       {@const feita = m.feitas.includes(x.id)}
@@ -34,7 +47,12 @@
 
 <style>
   .missoes { grid-column: 1 / -1; }
-  header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+  header { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin-bottom: 8px; }
+  .premio { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+  .premio.pronto .t-btn { border-color: #e8c547; background: color-mix(in srgb, #e8c547 16%, var(--surface)); animation: brilho 2s ease-in-out infinite; }
+  .premio.aberto { color: var(--ok); }
+  @keyframes brilho { 50% { box-shadow: 0 0 14px -2px #e8c547; } }
+  @media (prefers-reduced-motion: reduce) { .premio.pronto .t-btn { animation: none; } }
   h3 { margin: 0; font: 600 10.5px var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
   .dim { color: var(--muted); font: 12px var(--f-mono); }
   ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 8px; }

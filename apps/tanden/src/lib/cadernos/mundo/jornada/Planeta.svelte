@@ -5,7 +5,7 @@
   // O mundo visto de longe. Nasce como uma brasa e cresce a cada era: ganha chão,
   // mares, nuvens, anéis e luas. Cada ficha acende uma luz, cada história vira uma
   // lua, e contradições aparecem como tempestades.
-  let { nome, genero, era, fichas = 0, historias = 0, tempestades = 0, size = 64 }: {
+  let { nome, genero, era, fichas = 0, historias = 0, tempestades = 0, size = 64, adorno }: {
     nome: string;
     genero: Genero;
     /** índice da era, de 0 a 6 */
@@ -14,6 +14,8 @@
     historias?: number;
     tempestades?: number;
     size?: number;
+    /** relíquia escolhida na vitrine (lua de prata, cometa, aurora...) */
+    adorno?: string;
   } = $props();
 
   const uid = $props.id();
@@ -73,6 +75,19 @@
   const LINHAS: EstiloPlaneta[] = ['neon', 'engrenagem', 'antigo', 'orbital'];
   const temAnel = $derived(era >= 4 || (era >= 2 && (genero.estilo === 'orbital' || genero.estilo === 'estelar' || genero.estilo === 'engrenagem')));
   const luas = $derived(Math.min(3, historias));
+  // estrelas da constelação e faíscas dos fogos: fixas pelo nome
+  const estrelas = $derived.by(() => {
+    const rng = seededRng(semente(nome) + 21);
+    return Array.from({ length: 9 }, (_, i) => {
+      const a = (i / 9) * Math.PI * 2 + rng() * 0.4;
+      const d = 92 + rng() * 10;
+      return { x: 100 + Math.cos(a) * d, y: 100 + Math.sin(a) * d, r: 1.2 + rng() * 1.6 };
+    });
+  });
+  const fogos = $derived.by(() => {
+    const rng = seededRng(semente(nome) + 33);
+    return Array.from({ length: 4 }, (_, i) => ({ x: 100 + Math.cos(i * 1.7 + 0.6) * 96, y: 100 + Math.sin(i * 1.7 + 0.6) * 90, cor: ['#ffd166', '#ef476f', '#06d6a0', '#a78bfa'][i]!, d: rng() * 2.4 }));
+  });
 </script>
 
 {#snippet superficie()}
@@ -100,8 +115,34 @@
     <clipPath id="{uid}-disco"><circle cx="100" cy="100" r={raio} /></clipPath>
     <radialGradient id="{uid}-aura"><stop offset=".55" stop-color={era === 0 ? c.luz : c.ar} stop-opacity=".5" /><stop offset="1" stop-color={c.ar} stop-opacity="0" /></radialGradient>
     <radialGradient id="{uid}-sombra" cx=".36" cy=".32" r=".82"><stop offset="0" stop-color="#fff" stop-opacity=".2" /><stop offset=".42" stop-color="#000" stop-opacity="0" /><stop offset="1" stop-color="#000" stop-opacity=".72" /></radialGradient>
+    <filter id="{uid}-blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7" /></filter>
+    <linearGradient id="{uid}-aurora" x1="0" x2="1"><stop offset="0" stop-color="#06d6a0" stop-opacity="0" /><stop offset=".3" stop-color="#06d6a0" /><stop offset=".65" stop-color="#7b6cf6" /><stop offset="1" stop-color="#ef6f9a" stop-opacity="0" /></linearGradient>
+    <linearGradient id="{uid}-cometa" x1="1" x2="0"><stop offset="0" stop-color="#fff" /><stop offset=".25" stop-color="#9ad7ff" stop-opacity=".8" /><stop offset="1" stop-color="#9ad7ff" stop-opacity="0" /></linearGradient>
     <radialGradient id="{uid}-brasa"><stop offset="0" stop-color="#fff" /><stop offset=".35" stop-color={c.luz} /><stop offset="1" stop-color={c.terra} /></radialGradient>
   </defs>
+
+ {#if adorno === 'nebulosa'}
+    <g class="adorno nebulosa" opacity=".55">
+      <ellipse cx="62" cy="70" rx="46" ry="30" fill="#b277ee" filter="url(#{uid}-blur)" />
+      <ellipse cx="140" cy="128" rx="50" ry="28" fill="#4fc1c9" filter="url(#{uid}-blur)" />
+      <ellipse cx="128" cy="58" rx="30" ry="20" fill="#ef6f9a" filter="url(#{uid}-blur)" />
+    </g>
+  {:else if adorno === 'coroa-solar'}
+    <g class="adorno coroa-solar" style:transform-origin="100px 100px">
+      {#each Array.from({ length: 24 }) as _, i (i)}<path d="M100 {100 - raio - 4}l-3 -14l3 4l3 -4z" fill="#ffb347" opacity=".85" transform="rotate({i * 15} 100 100)" />{/each}
+      <circle cx="100" cy="100" r={raio + 8} fill="none" stroke="#ffd166" stroke-width="3" opacity=".55" filter="url(#{uid}-blur)" />
+    </g>
+  {:else if adorno === 'olho-cosmico'}
+    <g class="adorno olho-cosmico">
+      <path d="M2 100Q100 18 198 100Q100 182 2 100Z" fill="none" stroke="#b277ee" stroke-width="2.2" opacity=".8" />
+      <path d="M14 100Q100 34 186 100Q100 166 14 100Z" fill="#b277ee" opacity=".12" />
+    </g>
+  {:else if adorno === 'constelacao'}
+    <g class="adorno constelacao">
+      <polyline points={estrelas.map((e) => `${e.x.toFixed(1)},${e.y.toFixed(1)}`).join(' ')} fill="none" stroke={c.luz} stroke-width=".7" opacity=".45" />
+      {#each estrelas as e, i (i)}<circle class="estrela" cx={e.x} cy={e.y} r={e.r} fill="#fff" style:animation-delay="{i * .4}s" />{/each}
+    </g>
+  {/if}
 
   <circle class="aura" cx="100" cy="100" r={Math.min(99, raio + 14 + era * 1.2)} fill="url(#{uid}-aura)" />
 
@@ -144,6 +185,36 @@
     </g>
   {/each}
 
+ {#if adorno === 'lua-prata'}
+    <g class="adorno orbita" style:animation-duration="30s" style:transform-origin="100px 100px">
+      <circle cx="100" cy="6" r="7" fill="#dfe6ee" /><circle cx="97.5" cy="4" r="1.6" fill="#b8c2cc" /><circle cx="102.5" cy="8.5" r="1.1" fill="#b8c2cc" />
+    </g>
+  {:else if adorno === 'cometa'}
+    <g class="adorno cometa"><path d="M178 26 108 52" stroke="url(#{uid}-cometa)" stroke-width="4" stroke-linecap="round" /><circle cx="178" cy="26" r="3.6" fill="#fff" /></g>
+  {:else if adorno === 'aurora'}
+    <g class="adorno aurora" opacity=".85">
+      <path d="M{100 - raio * .8} {100 - raio * .78}q{raio * .4} -16 {raio * .8} -4t{raio * .8} 2" fill="none" stroke="url(#{uid}-aurora)" stroke-width="5" stroke-linecap="round" />
+      <path d="M{100 - raio * .6} {100 - raio * .9}q{raio * .3} -12 {raio * .6} -3t{raio * .6} 1" fill="none" stroke="url(#{uid}-aurora)" stroke-width="3" stroke-linecap="round" opacity=".7" />
+    </g>
+  {:else if adorno === 'aneis'}
+    <g class="adorno" fill="none" stroke-width="2.2" opacity=".8">
+      <ellipse cx="100" cy="100" rx={Math.min(98, raio + 16)} ry="20" stroke="#e8c547" transform="rotate(28 100 100)" />
+      <ellipse cx="100" cy="100" rx={Math.min(98, raio + 16)} ry="20" stroke="#9ad7ff" transform="rotate(-28 100 100)" />
+    </g>
+  {:else if adorno === 'satelites'}
+    {#each [0, 1, 2, 3, 4] as i (i)}
+      <g class="adorno orbita" style:animation-duration="{8 + i * 3}s" style:animation-direction={i % 2 ? 'reverse' : 'normal'} style:transform-origin="100px 100px" style:rotate="{i * 70}deg">
+        <circle cx="100" cy={100 - raio - 10 - i * 3} r="1.8" fill={c.luz} />
+      </g>
+    {/each}
+  {:else if adorno === 'fogos'}
+    {#each fogos as f, i (i)}
+      <g class="adorno fogo" style:animation-delay="{f.d}s" style:transform-origin="{f.x}px {f.y}px">
+        {#each [0, 45, 90, 135, 180, 225, 270, 315] as a (a)}<line x1={f.x} y1={f.y} x2={f.x} y2={f.y - 8} stroke={f.cor} stroke-width="1.6" stroke-linecap="round" transform="rotate({a} {f.x} {f.y})" />{/each}
+      </g>
+    {/each}
+  {/if}
+
   {#if era >= 6}<circle class="coroa" cx="100" cy="100" r={raio + 5} fill="none" stroke={c.luz} stroke-width="1.5" stroke-dasharray="2 9" style:transform-origin="100px 100px" />{/if}
 </svg>
 
@@ -160,6 +231,15 @@
   .anima .coroa { animation: orbitar 40s linear infinite; }
   .anima .poeira { animation: orbitar 12s linear infinite; }
   .anima .tempestade { animation: piscar 2s ease-in-out infinite; }
+  .anima .coroa-solar { animation: orbitar 60s linear infinite; }
+  .anima .nebulosa { animation: respirar 9s ease-in-out infinite; transform-origin: 100px 100px; }
+  .anima .estrela { animation: piscar 2.6s ease-in-out infinite; }
+  .anima .cometa { animation: cometa 7s ease-in-out infinite; }
+  .anima .aurora { animation: piscar 4s ease-in-out infinite; }
+  .anima .fogo { animation: estourar 2.8s ease-out infinite; }
+  .anima .olho-cosmico { animation: respirar 6s ease-in-out infinite; transform-origin: 100px 100px; }
+  @keyframes cometa { 0% { translate: 40px -20px; opacity: 0; } 15% { opacity: 1; } 60% { translate: -60px 30px; opacity: 0; } 100% { translate: -60px 30px; opacity: 0; } }
+  @keyframes estourar { 0% { scale: .2; opacity: 0; } 15% { opacity: 1; } 60% { scale: 1.15; opacity: 0; } 100% { opacity: 0; } }
   @keyframes girar { to { transform: translateX(-200px); } }
   @keyframes orbitar { to { transform: rotate(360deg); } }
   @keyframes piscar { 50% { opacity: .35; } }

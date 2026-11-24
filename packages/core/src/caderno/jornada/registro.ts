@@ -37,13 +37,23 @@ export interface RegistroAparelho {
   /** dia → mundo → missões */
   missoes: Record<string, Record<string, MissoesDia>>;
   ajustes: { meta: number; em: number };
+  /** baús abertos: id → quando e a carta que saiu (vale o mais antigo) */
+  baus: Record<string, { em: number; carta: string; mundo?: string }>;
+  /** sinais do arauto já lidos: mundo → sinal → quando */
+  lidos: Record<string, Record<string, number>>;
+  /** relíquias escolhidas por mundo (vale a escolha mais recente) */
+  vitrine: Record<string, Vitrine>;
 }
+
+export interface Vitrine { adorno?: string; moldura?: string; titulo?: string; em: number }
 
 export const META_PADRAO = 100;
 
 export const registroVazio = (): RegistroAparelho => ({
-  v: 1, dias: {}, metas: {}, recordes: {}, conquistas: {}, missoes: {}, ajustes: { meta: META_PADRAO, em: 0 },
+  v: 1, dias: {}, metas: {}, recordes: {}, conquistas: {}, missoes: {}, ajustes: { meta: META_PADRAO, em: 0 }, baus: {}, lidos: {}, vitrine: {},
 });
+
+const objeto = (x: unknown): x is Record<string, unknown> => !!x && typeof x === 'object' && !Array.isArray(x);
 
 /** Lê um arquivo de aparelho sem confiar nele: o que não presta vira vazio. */
 export function lerRegistro(texto: string): RegistroAparelho {
@@ -59,6 +69,9 @@ export function lerRegistro(texto: string): RegistroAparelho {
       conquistas: o.conquistas && typeof o.conquistas === 'object' ? o.conquistas : base.conquistas,
       missoes: o.missoes && typeof o.missoes === 'object' ? o.missoes : base.missoes,
       ajustes: o.ajustes && typeof o.ajustes.meta === 'number' ? o.ajustes : base.ajustes,
+      baus: objeto(o.baus) ? Object.fromEntries(Object.entries(o.baus).filter(([, b]) => objeto(b) && typeof b.carta === 'string' && typeof b.em === 'number')) as RegistroAparelho['baus'] : base.baus,
+      lidos: objeto(o.lidos) ? Object.fromEntries(Object.entries(o.lidos).filter(([, l]) => objeto(l))) as RegistroAparelho['lidos'] : base.lidos,
+      vitrine: objeto(o.vitrine) ? Object.fromEntries(Object.entries(o.vitrine).filter(([, v]) => objeto(v) && typeof v.em === 'number')) as RegistroAparelho['vitrine'] : base.vitrine,
     };
   } catch {
     return registroVazio();
@@ -94,6 +107,18 @@ export function fundirRegistros(lista: RegistroAparelho[]): RegistroAparelho {
       }
     }
     if (r.ajustes.em > out.ajustes.em) out.ajustes = { ...r.ajustes };
+    for (const [id, b] of Object.entries(r.baus)) {
+      const cur = out.baus[id];
+      if (!cur || b.em < cur.em) out.baus[id] = { ...b };
+    }
+    for (const [mundo, l] of Object.entries(r.lidos)) {
+      const d = (out.lidos[mundo] ??= {});
+      for (const [id, em] of Object.entries(l)) d[id] = Math.min(d[id] ?? Infinity, Number(em) || 0);
+    }
+    for (const [mundo, v] of Object.entries(r.vitrine)) {
+      const cur = out.vitrine[mundo];
+      if (!cur || v.em > cur.em) out.vitrine[mundo] = { ...v };
+    }
   }
   return out;
 }
@@ -317,6 +342,30 @@ export class JornadaStore {
 
   definirMeta(meta: number, em: number): void {
     this.meu.ajustes = { meta: Math.max(1, Math.round(meta)), em };
+    this.mudou();
+  }
+
+  /** Abre um baú: a carta já vem sorteada pela semente do baú (ver `sortearCarta`). */
+  abrirBau(id: string, carta: string, em: number, mundo?: string): boolean {
+    if (this.registro.baus[id]) return false;
+    this.meu.baus[id] = mundo ? { em, carta, mundo } : { em, carta };
+    this.mudou();
+    return true;
+  }
+
+  /** Marca sinais do arauto como lidos. */
+  lerSinais(mundo: string, ids: string[], em: number): void {
+    const ja = this.registro.lidos[mundo] ?? {};
+    const novos = ids.filter((id) => ja[id] === undefined);
+    if (!novos.length) return;
+    const d = (this.meu.lidos[mundo] ??= {});
+    for (const id of novos) d[id] = em;
+    this.mudou();
+  }
+
+  /** Escolhe as relíquias à mostra num mundo. */
+  definirVitrine(mundo: string, v: Omit<Vitrine, 'em'>, em: number): void {
+    this.meu.vitrine[mundo] = { ...(this.registro.vitrine[mundo] ?? {}), ...v, em };
     this.mudou();
   }
 

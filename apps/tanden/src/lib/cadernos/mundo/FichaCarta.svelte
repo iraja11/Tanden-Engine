@@ -8,7 +8,11 @@
   // Carta de uma ficha do mundo. Na frente: retrato, tipo, campos-chave e a
   // primeira frase. Clicar vira a carta: no verso, as ligações. Inclina e
   // brilha seguindo o ponteiro, como as cartas de item da mesa.
-  let { entity, byPath, onopen, prof }: { entity: Entity; byPath: Map<string, Entity>; onopen: (path: string) => void; prof?: Profundidade } = $props();
+  let { entity, byPath, onopen, prof, moldura }: {
+    entity: Entity; byPath: Map<string, Entity>; onopen: (path: string) => void; prof?: Profundidade;
+    /** relíquia da vitrine: bronze, prata, rúnica, ouro, vitral, obsidiana, holográfica, astral */
+    moldura?: string;
+  } = $props();
 
   let el = $state<HTMLElement>();
   let flipped = $state(false);
@@ -100,6 +104,7 @@
   </div>
   <i class="shine" aria-hidden="true"></i>
   {#if prof?.raridade === 'epica' || prof?.raridade === 'lendaria'}<i class="foil" aria-hidden="true"></i>{/if}
+  {#if moldura}<i class="moldura m-{moldura}" aria-hidden="true"></i>{/if}
 </div>
 
 <style>
@@ -149,5 +154,19 @@
     background: linear-gradient(115deg, transparent 20%, #ff7ad9 35%, #7af0ff 48%, #fff27a 60%, transparent 76%); background-size: 240% 240%; background-position: var(--mx, 30%) var(--my, 30%); transition: opacity .25s; }
   .lendaria .foil { opacity: .28; }
   .slot:hover .foil { opacity: .42; }
-  @media (prefers-reduced-motion: reduce) { .card, .slot { transition: none; } }
+  /* molduras da vitrine: um aro desenhado por cima da borda (só decoração) */
+  .moldura { position: absolute; inset: -3px; border-radius: 19px; padding: 3px; pointer-events: none; background: var(--m);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; }
+  .card.flipped ~ .moldura { opacity: .85; }
+  .m-bronze { --m: linear-gradient(135deg, #8c5a2b, #e0a466 30%, #7a4a20 55%, #c98a4b 80%, #6b3f1a); }
+  .m-prata { --m: linear-gradient(135deg, #8a949c, #f4f7f9 28%, #9aa4ad 52%, #e3e8ec 76%, #7d868e); }
+  .m-runica { --m: repeating-linear-gradient(90deg, #8b7cf6 0 7px, #2d2550 7px 11px); box-shadow: 0 0 14px -4px #8b7cf6; }
+  .m-ouro { --m: linear-gradient(135deg, #9c7a1f, #ffe08a 25%, #b8892a 48%, #fff2b0 70%, #a07c22); box-shadow: 0 0 16px -6px #ffd166; }
+  .m-vitral { --m: conic-gradient(#ef476f, #ffd166, #06d6a0, #118ab2, #a78bfa, #ef476f); padding: 4px; }
+  .m-obsidiana { --m: linear-gradient(135deg, #0b0b10, #3a2626 35%, #ff6b3d 50%, #2a1a1a 65%, #0b0b10); box-shadow: 0 0 18px -6px #ff6b3d; }
+  .m-holo { --m: linear-gradient(115deg, #ff7ad9, #7af0ff, #fff27a, #9dff9d, #ff7ad9); background-size: 300% 300%; animation: holo 6s linear infinite; }
+  .m-astral { --m: radial-gradient(#fff 0.8px, transparent 1.4px) 0 0 / 7px 7px, linear-gradient(135deg, #1b1f4b, #4b2f7a, #1b1f4b); padding: 4px; box-shadow: 0 0 20px -6px #7b6cf6; }
+  @keyframes holo { to { background-position: 300% 0; } }
+  @media (prefers-reduced-motion: reduce) { .card, .slot { transition: none; } .m-holo { animation: none; } }
 </style>

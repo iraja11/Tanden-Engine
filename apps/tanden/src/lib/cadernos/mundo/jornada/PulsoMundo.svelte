@@ -1,16 +1,22 @@
 <script lang="ts">
-  import { reviewWorld, storyIndex, NON_CARD_TYPES, type World } from '@tanden/core';
+  import { RELIQUIAS, reviewWorld, storyIndex, NON_CARD_TYPES, type World } from '@tanden/core';
   import { jornada, totalDeConquistas } from './jornada.svelte';
   import Planeta from './Planeta.svelte';
 
   // O pulso do mundo no cabeçalho: planeta, era, nível, sequência e missões.
-  let { world, vivo, onabrir, onmissoes }: {
+  let { world, vivo, onabrir, onmissoes, onarauto }: {
     world: World;
     /** média de preenchimento das fichas, de 0 a 1 */
     vivo: number;
-    onabrir: (aba: 'mundo' | 'conquistas' | 'constancia') => void;
+    onabrir: (aba: 'mundo' | 'conquistas' | 'constancia' | 'tesouro') => void;
     onmissoes: () => void;
+    onarauto?: () => void;
   } = $props();
+  const vit = $derived.by(() => { void jornada.rev; return jornada.vitrine(world.name); });
+  const fechados = $derived.by(() => { void jornada.rev; return jornada.baus().filter((b) => !b.aberto).length; });
+  // sinais do arauto ainda não lidos
+  const novos = $derived.by(() => { void jornada.rev; const l = jornada.lidos(world.name); return jornada.sinais(world).filter((s) => !l[s.id]).length; });
+  const titulo = $derived(vit.titulo ? RELIQUIAS.find((r) => r.id === vit.titulo)?.nome : undefined);
 
   const e = $derived(jornada.estado(world));
   const seq = $derived(jornada.sequencia);
@@ -25,11 +31,11 @@
 
 <div class="pulso">
   <button class="astro" onclick={() => onabrir('mundo')} title="Ver a crônica do mundo" aria-label="Ver a crônica do mundo">
-    <Planeta nome={world.name} genero={e.genero} era={e.indiceEra} {fichas} {historias} {tempestades} size={58} />
+    <Planeta nome={world.name} genero={e.genero} era={e.indiceEra} {fichas} {historias} {tempestades} size={58} adorno={vit.adorno} />
   </button>
   <div class="info">
     <button class="era" onclick={() => onabrir('mundo')} title={e.era.desc}>
-      <b>{e.era.nome}</b><span>Nível {e.nivel.nivel}</span>
+      <b>{e.era.nome}</b><span>Nível {e.nivel.nivel}</span>{#if titulo}<em>{titulo}</em>{/if}
     </button>
     <div class="barra" title={`${fmt(e.nivel.xp - e.nivel.piso)} de ${fmt(e.nivel.teto - e.nivel.piso)} ${e.genero.moeda} para o próximo nível`}>
       <i style:width="{Math.round(e.nivel.fracao * 100)}%" style:background={e.genero.cores.luz}></i>
@@ -44,6 +50,14 @@
       <button class="chip" onclick={() => onabrir('conquistas')} title={`${jornada.totalConquistas} de ${totalDeConquistas} conquistas`}>
         <span aria-hidden="true">🏆</span>{jornada.totalConquistas}<span class="sr"> conquistas</span>
       </button>
+      <button class="chip" class:brilha={fechados > 0} onclick={() => onabrir('tesouro')} title={fechados ? `${fechados} ${fechados === 1 ? 'baú fechado' : 'baús fechados'}` : 'Tesouro: baús, cartas e relíquias'}>
+        <span aria-hidden="true">⛋</span>{fechados}<span class="sr"> {fechados === 1 ? 'baú fechado' : 'baús fechados'}</span>
+      </button>
+      {#if onarauto}
+        <button class="chip" class:novo={novos > 0} onclick={onarauto} title={novos ? `${novos} ${novos === 1 ? 'sinal novo' : 'sinais novos'} do arauto` : 'O arauto: o que está acontecendo no mundo'}>
+          <span aria-hidden="true">🔔</span>{novos}<span class="sr"> sinais novos</span>
+        </button>
+      {/if}
       <span class="vivo" title="Média de preenchimento das fichas">{Math.round(vivo * 100)}% vivo</span>
     </div>
   </div>
@@ -64,6 +78,13 @@
   .chip:hover { border-color: var(--ember); }
   .chip:not(.aceso):first-child span:first-child { filter: grayscale(1); opacity: .65; }
   .chip.aceso { border-color: color-mix(in srgb, var(--ember) 55%, var(--line)); background: color-mix(in srgb, var(--ember) 10%, var(--surface)); }
+  .era em { font: italic 600 11.5px var(--f-display); color: var(--ember-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .chip.brilha { border-color: #e8c547; background: color-mix(in srgb, #e8c547 14%, var(--surface)); animation: chama 2.4s ease-in-out infinite; }
+  .chip.novo { border-color: color-mix(in srgb, var(--ember) 60%, var(--line)); }
+  .chip.novo span:first-child { animation: balanca 2s ease-in-out infinite; transform-origin: 50% 10%; }
+  @keyframes chama { 50% { box-shadow: 0 0 12px -2px #e8c547; } }
+  @keyframes balanca { 0%, 70%, 100% { rotate: 0deg; } 78% { rotate: 14deg; } 86% { rotate: -12deg; } 94% { rotate: 6deg; } }
+  @media (prefers-reduced-motion: reduce) { .chip.brilha, .chip.novo span:first-child { animation: none; } }
   .vivo { font: 11px var(--f-mono); color: var(--muted); margin-left: 4px; white-space: nowrap; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 </style>

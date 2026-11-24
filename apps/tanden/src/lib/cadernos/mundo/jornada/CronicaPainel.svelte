@@ -1,18 +1,21 @@
 <script lang="ts">
   import {
     CONQUISTAS, GENEROS, GRUPOS, MAX_ESCUDOS, NIVEIS_DAS_ERAS, NON_CARD_TYPES, diaLocal, diasCumpridos, generoDoMundo, infoRaridade, reviewWorld, setProp, somarDias, storyIndex,
-    type Conquista, type GrupoConquista, type World,
+    RELIQUIAS, type Carta, type Conquista, type GrupoConquista, type World,
   } from '@tanden/core';
   import { rise } from '../../../motion';
   import Icon from '../../../ui/Icon.svelte';
   import { cadernos } from '../../cadernos.svelte';
   import { jornada, totalDeConquistas } from './jornada.svelte';
   import Planeta from './Planeta.svelte';
+  import TesouroPainel from './TesouroPainel.svelte';
 
   // A crônica do mundo: eras, gênero, conquistas e constância, num painel lateral
   // que abre por cima da tela de construção, sem tirar você dela.
-  type AbaCronica = 'mundo' | 'conquistas' | 'constancia';
-  let { world, aba = $bindable('mundo'), onclose }: { world: World; aba?: AbaCronica; onclose: () => void } = $props();
+  type AbaCronica = 'mundo' | 'conquistas' | 'constancia' | 'tesouro';
+  let { world, aba = $bindable('mundo'), onclose, onusar }: { world: World; aba?: AbaCronica; onclose: () => void; onusar?: (c: Carta) => void } = $props();
+  const vit = $derived.by(() => { void jornada.rev; return jornada.vitrine(world.name); });
+  const fechados = $derived.by(() => { void jornada.rev; return jornada.baus().filter((b) => !b.aberto).length; });
 
   const e = $derived(jornada.estado(world));
   const fichas = $derived(world.entities.filter((x) => !NON_CARD_TYPES.has(x.type)).length);
@@ -32,7 +35,7 @@
   const atual = $derived(generoDoMundo(world));
 
   // ------------------------------------------------ conquistas
-  const metricas = $derived.by(() => { void jornada.rev; void cadernos.rev; return aba === 'conquistas' ? jornada.metricas() : {}; });
+  const metricas = $derived.by(() => { void jornada.rev; void cadernos.rev; return aba === 'conquistas' || aba === 'tesouro' ? jornada.metricas() : {}; });
   const obtidas = $derived(jornada.registro.conquistas);
   let grupo = $state<GrupoConquista | 'todas'>('todas');
   let filtro = $state<'proximas' | 'obtidas' | 'todas'>('proximas');
@@ -79,14 +82,16 @@
       <button role="tab" aria-selected={aba === 'mundo'} class:on={aba === 'mundo'} onclick={() => (aba = 'mundo')}>Mundo</button>
       <button role="tab" aria-selected={aba === 'conquistas'} class:on={aba === 'conquistas'} onclick={() => (aba = 'conquistas')}>Conquistas</button>
       <button role="tab" aria-selected={aba === 'constancia'} class:on={aba === 'constancia'} onclick={() => (aba = 'constancia')}>Constância</button>
+      <button role="tab" aria-selected={aba === 'tesouro'} class:on={aba === 'tesouro'} onclick={() => (aba = 'tesouro')}>Tesouro{#if fechados}<span class="t-badge">{fechados}</span>{/if}</button>
     </div>
 
     {#if aba === 'mundo'}
       <div class="heroi" style:--luz={e.genero.cores.luz}>
-        <Planeta nome={world.name} genero={e.genero} era={e.indiceEra} {fichas} {historias} {tempestades} size={190} />
+        <Planeta nome={world.name} genero={e.genero} era={e.indiceEra} {fichas} {historias} {tempestades} size={190} adorno={vit.adorno} />
         <div class="nome">
           <small>Era {e.indiceEra + 1} de 7 · Nível {e.nivel.nivel}</small>
           <b>{e.era.nome}</b>
+          {#if vit.titulo}<em class="titulo">{RELIQUIAS.find((r) => r.id === vit.titulo)?.nome}</em>{/if}
           <p>{e.era.desc}</p>
           <p class="xp">{fmt(e.nivel.xp)} {e.genero.moeda}{#if e.proximaEra} · {e.proximaEra.era.nome} no nível {e.proximaEra.nivel}{/if}</p>
         </div>
@@ -120,6 +125,8 @@
         </div>
         <p class="nota">{atual.desc} O gênero muda o planeta, as eras, o oráculo e a entrevista.</p>
       </section>
+    {:else if aba === 'tesouro'}
+      <TesouroPainel {world} {metricas} {onusar} />
     {:else if aba === 'conquistas'}
       <p class="resumo"><b>{jornada.totalConquistas}</b> de {totalDeConquistas} conquistas</p>
       <div class="t-seg" role="radiogroup" aria-label="Situação">
@@ -213,6 +220,7 @@
   .nome small { font: 11px var(--f-mono); color: var(--muted); }
   .nome b { font: 600 24px/1.15 var(--f-display); }
   .nome p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+  .nome .titulo { font: italic 600 13px var(--f-display); color: var(--luz); }
   .nome .xp { font: 12px var(--f-mono); color: var(--luz); margin-top: var(--sp-1); }
 
   .eras { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }

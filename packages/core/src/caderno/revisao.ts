@@ -162,8 +162,108 @@ export function reviewWorld(w: World): Issue[] {
     else if (!e.summary && e.words < 5) out.push({ level: 'ideia', path: e.path, message: `${e.name} ainda não tem texto. Uma frase já ajuda nos cartões e no grafo.` });
   }
 
+  out.push(...logicaDoMundo(w, byPath, lived));
+
   const rank: Record<IssueLevel, number> = { erro: 0, aviso: 1, ideia: 2 };
   return out.sort((a, b) => rank[a.level] - rank[b.level]);
+}
+
+const fold = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim();
+const num = (s: string) => { const n = Number(s.replace(',', '.').replace(/[^\d.-]/g, '')); return s && Number.isFinite(n) ? n : null; };
+
+/**
+ * A lógica que liga sistemas diferentes: um evento num lugar que ainda não
+ * existia, uma espécie que amadurece depois de morrer, um poder que exige a si
+ * mesmo, um item feito antes do criador nascer, lugares dentro um do outro.
+ */
+function logicaDoMundo(w: World, byPath: Map<string, Entity>, lived: (e: Entity) => { born: { n: number; raw: string } | null; died: { n: number; raw: string } | null }): Issue[] {
+  const out: Issue[] = [];
+  const alvo = (e: Entity, re: RegExp, tipo?: string) => e.relations.filter((r) => r.to && re.test(fold(r.label))).map((r) => byPath.get(r.to!)).filter((x): x is Entity => !!x && (!tipo || x.type === tipo));
+  const fundado = (l: Entity) => date(l, 'fundação', 'fundacao', 'criação', 'criacao');
+
+  for (const e of w.entities) {
+    // aconteceu num lugar que ainda não existia
+    if (e.type === 'evento' || e.type === 'conflito' || e.type === 'feito') {
+      const when = date(e, 'data', 'início', 'inicio');
+      if (when) for (const l of alvo(e, /^(local|lugar|onde)$/, 'lugar')) {
+        const f = fundado(l);
+        if (f && when.n < f.n) out.push({ level: 'erro', path: e.path, message: `${e.name} (${when.raw}) acontece em ${l.name}, que só foi fundada em ${f.raw}.` });
+      }
+    }
+    if (e.type === 'personagem') {
+      const born = date(e, 'nascimento', 'nasceu');
+      if (born) for (const l of alvo(e, /^(origem|nasceu em|terra natal)$/, 'lugar')) {
+        const f = fundado(l);
+        if (f && born.n < f.n) out.push({ level: 'aviso', path: e.path, message: `${e.name} nasce (${born.raw}) em ${l.name} antes da fundação (${f.raw}). Era outro nome, uma aldeia anterior?` });
+      }
+      const pai = alvo(e, /^pai$/)[0];
+      const mae = alvo(e, /^(mae)$/)[0];
+      if (pai && mae && pai === mae) out.push({ level: 'aviso', path: e.path, message: `${e.name} tem ${pai.name} como pai e mãe ao mesmo tempo.` });
+    }
+    // espécie que amadurece depois de morrer
+    if (e.type === 'especie' || e.type === 'criatura') {
+      const vida = num(field(e, 'expectativa de vida', 'longevidade'));
+      const maior = num(field(e, 'maioridade', 'maturidade'));
+      if (vida !== null && maior !== null && vida > 0 && maior >= vida) out.push({ level: 'erro', path: e.path, message: `${e.name} chega à maioridade (${maior}) depois de viver o esperado (${vida}). Ninguém teria filhos.` });
+    }
+    // profecia cumprida antes de ser feita
+    if (e.type === 'profecia') {
+      const feita = date(e, 'data');
+      const cumprida = date(e, 'cumprida em', 'cumprida');
+      if (feita && cumprida && cumprida.n < feita.n) out.push({ level: 'erro', path: e.path, message: `${e.name} se cumpre (${cumprida.raw}) antes de ser profetizada (${feita.raw}). Ou é uma profecia sobre o passado?` });
+    }
+    // item feito antes de o criador nascer
+    if (e.type === 'item') {
+      const feito = date(e, 'criação', 'criacao', 'forjado em', 'data');
+      if (feito) for (const c of alvo(e, /^(criador|criadora|forjado por|autor|ferreiro)$/, 'personagem')) {
+        const b = lived(c).born;
+        if (b && feito.n < b.n) out.push({ level: 'erro', path: e.path, message: `${e.name} é feito (${feito.raw}) antes de ${c.name} nascer (${b.raw}).` });
+      }
+    }
+    // facção liderada por quem morreu antes da fundação
+    if (e.type === 'faccao') {
+      const f = date(e, 'fundação', 'fundacao');
+      if (f) for (const l of alvo(e, /^(lider|fundador|fundadora)$/, 'personagem')) {
+        const d = lived(l).died;
+        if (d && d.n < f.n) out.push({ level: 'aviso', path: e.path, message: `${l.name} lidera ${e.name}, mas morreu (${d.raw}) antes da fundação (${f.raw}).` });
+      }
+    }
+    // poderes: custo e pré-requisitos
+    if (e.type === 'poder') {
+      const nivel = num(field(e, 'nível', 'nivel'));
+      if (!field(e, 'custo', 'preço')) out.push({ level: nivel !== null && nivel >= 6 ? 'aviso' : 'ideia', path: e.path, message: `${e.name} não tem custo. Poder de graça resolve qualquer cena: o que ele cobra?` });
+      for (const r of alvo(e, /^(requer|pre-?requisito|exige)$/, 'poder')) {
+        if (r === e) out.push({ level: 'erro', path: e.path, message: `${e.name} exige a si mesmo como pré-requisito.` });
+        else {
+          const rn = num(field(r, 'nível', 'nivel'));
+          if (rn !== null && nivel !== null && rn > nivel) out.push({ level: 'aviso', path: e.path, message: `${e.name} (nível ${nivel}) exige ${r.name}, que é mais forte (nível ${rn}).` });
+        }
+      }
+    }
+    if (e.type === 'moeda' && !alvo(e, /^(emissor|cunhada por|banco|emitida por)$/).length) {
+      out.push({ level: 'ideia', path: e.path, message: `Quem cunha ${e.name}? Uma moeda sem emissor é fácil de falsificar.` });
+    }
+  }
+
+  // lugares dentro um do outro, em círculo
+  const pai = new Map<string, string>();
+  for (const l of w.entities) {
+    if (l.type !== 'lugar') continue;
+    const r = l.relations.find((x) => x.to && fold(x.label) === 'parte de');
+    if (r) pai.set(l.path, r.to!);
+  }
+  const avisado = new Set<string>();
+  for (const ini of pai.keys()) {
+    const visto: string[] = [];
+    let a: string | undefined = ini;
+    while (a && !visto.includes(a) && visto.length < 30) { visto.push(a); a = pai.get(a); }
+    if (a && a === ini && !avisado.has(ini)) {
+      visto.forEach((x) => avisado.add(x));
+      const nomes = visto.map((x) => byPath.get(x)?.name ?? x);
+      out.push({ level: 'erro', path: ini, message: `${nomes.join(' → ')} → ${nomes[0]}: um lugar está dentro de si mesmo pela "parte de".` });
+    }
+  }
+  return out;
 }
 
 function latestDate(w: World): number | null {

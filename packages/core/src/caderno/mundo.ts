@@ -50,9 +50,9 @@ export const allTypes = (): EntityType[] => [...ENTITY_TYPES, ...custom];
 export const ENTITY_TYPES: EntityType[] = [
   { id: 'personagem', label: 'Personagem', plural: 'Personagens', fields: ['espécie', 'nascimento', 'morte', 'origem', 'afiliação', 'status'],
     sections: ['Aparência', 'Personalidade', 'Motivações', 'História'],
-    extras: ['sexo', 'profissão', 'traços', 'gostos', 'local', 'cônjuge', 'pai', 'mãe', 'amigos', 'inimigos', 'motivação', 'medo', 'segredo', 'cultura', 'título', 'voz', 'olhos', 'cabelo', 'orientação'] },
+    extras: ['sexo', 'profissão', 'traços', 'gostos', 'local', 'cônjuge', 'pai', 'mãe', 'amigos', 'inimigos', 'motivação', 'medo', 'segredo', 'quer', 'precisa', 'mentira', 'ferida', 'poderes', 'cultura', 'título', 'voz', 'olhos', 'cabelo', 'orientação'] },
   { id: 'lugar', label: 'Lugar', plural: 'Lugares', fields: ['parte de', 'clima', 'governante', 'fundação'], sections: ['Descrição', 'História'],
-    extras: ['população', 'cultura', 'recursos', 'perigos', 'controle'] },
+    extras: ['população', 'cultura', 'recursos', 'precisa', 'riqueza', 'perigos', 'controle'] },
   { id: 'faccao', label: 'Facção', plural: 'Facções', fields: ['líder', 'sede', 'fundação', 'ideologia'], sections: ['Objetivos', 'História'],
     extras: ['poder', 'riqueza', 'estabilidade', 'aliados', 'inimigos', 'território', 'símbolo', 'lema'] },
   { id: 'evento', label: 'Evento', plural: 'Eventos', fields: ['data', 'fim', 'local', 'envolvidos'], sections: ['O que aconteceu', 'Consequências'], extras: ['causa', 'mortos'] },
@@ -89,6 +89,14 @@ export const ENTITY_TYPES: EntityType[] = [
     extras: ['cumprida em', 'quem acredita', 'quem teme', 'quem tenta impedir', 'idioma', 'livro', 'condição', 'escolhido'] },
   { id: 'plano', label: 'Plano', plural: 'Planos', fields: ['natureza', 'acesso', 'governante', 'habitantes'], sections: ['Descrição', 'Leis do plano', 'Como chegar', 'Perigos'],
     extras: ['tempo', 'clima', 'ligado a', 'portais', 'gravidade', 'magia', 'morte', 'parte de', 'divindades', 'mortos'] },
+  { id: 'poder', label: 'Poder', plural: 'Poderes', fields: ['fonte', 'nível', 'custo', 'requer', 'quem tem'], sections: ['Efeito', 'Limites', 'Como se manifesta', 'Contramedidas'],
+    extras: ['categoria', 'alcance', 'duração', 'efeito colateral', 'fraqueza', 'sinal', 'aprendizado', 'raridade', 'proibido', 'escola'] },
+  { id: 'recurso', label: 'Recurso', plural: 'Recursos', fields: ['categoria', 'valor', 'unidade', 'produzido em', 'raridade'], sections: ['Descrição', 'Como se obtém', 'Quem cobiça'],
+    extras: ['consumido em', 'controle', 'perecível', 'proibido', 'substituto', 'rota'] },
+  { id: 'moeda', label: 'Moeda', plural: 'Moedas', fields: ['valor', 'emissor', 'material', 'aceita em'], sections: ['Aparência', 'História'],
+    extras: ['símbolo', 'apelido', 'subdivisões', 'falsificação'] },
+  { id: 'calendario', label: 'Calendário', plural: 'Calendários', fields: ['meses', 'dias por mês', 'semana', 'luas', 'era'], sections: ['Festas', 'História do calendário'],
+    extras: ['estações', 'ano novo', 'usado por'] },
 ];
 
 /** Tipos que não aparecem como cartões nem no grafo: têm aba própria (mapas, escrita). */
@@ -111,6 +119,13 @@ export const FIELD_HINTS: Record<string, string> = {
   escolas: 'fogo, ilusão, cura…', profeta: '[[Personagem]]', sobre: '[[Personagem]], [[Lugar]] ou acontecimento', natureza: 'material, infernal, feérico, umbral, astral, subterrâneo',
   acesso: 'portais, sonhos, morte, rituais…', habitantes: '[[Espécie]], [[Criatura]]',
   escala: 'largura do mapa, ex.: 1200', unidade: 'km, léguas, dias…', vencedor: '[[Lado]]', controle: '[[Facção]] que manda aqui',
+  'nível': '1 a 10: o quanto o poder pesa no mundo', requer: '[[Poder]] que vem antes', 'quem tem': '[[Personagem]], [[Facção]]', alcance: 'toque, curto, médio, longo, ilimitado',
+  'duração': 'instantâneo, minutos, horas, dias, permanente', 'efeito colateral': 'o que acontece junto, queira ou não', fraqueza: 'o que anula ou fere', poderes: '[[Poder]], [[Outro]]',
+  quer: 'o que persegue (objetivo concreto)', precisa: 'o que falta: [[Recurso]] num lugar; numa personagem, o que ela de fato precisa', mentira: 'a crença errada que a move', ferida: 'o passado que dói',
+  valor: 'preço base, ex.: 12', 'produzido em': '[[Lugar]], [[Outro]]', 'consumido em': '[[Lugar]] que precisa', recursos: '[[Recurso]], sal, madeira…',
+  emissor: '[[Facção]] que cunha', material: 'ouro, conchas, papel, crédito…', 'aceita em': '[[Lugar]], [[Outro]]', meses: 'Nome, Nome, Nome… (ou Nome:30)',
+  'dias por mês': '30 (ou uma lista)', semana: 'Lunes, Martes…', luas: 'Selene:28, Ira:9', era: 'sufixo do ano: D.R., A.C.', 'estações': 'Primavera:1, Verão:4…',
+  'população': '12.000 ou 12 mil',
 };
 
 /**
@@ -146,6 +161,10 @@ export const DEEP_QUESTIONS: Record<string, string[]> = {
   magia: ['De onde vem esse poder, e alguém sabe de verdade?', 'O que a magia não consegue fazer de jeito nenhum?', 'Quanto custa, e quem paga quando dá errado?', 'Como se aprende, e quem é proibido de aprender?', 'Como a magia mudou a guerra, a medicina e o comércio?', 'Como se percebe que alguém está usando magia?'],
   profecia: ['Quem ouviu a profecia primeiro, e de quem?', 'Quantas interpretações existem, e quem defende cada uma?', 'Quem tenta fazê-la acontecer, e quem tenta impedir?', 'E se ela for falsa, ou mal traduzida?', 'O que acontece quando se cumpre?'],
   plano: ['Como se chega lá, e como se volta?', 'Que leis da natureza são diferentes lá?', 'Quem manda nesse plano?', 'O que acontece com quem morre lá?', 'O que de lá vaza para o mundo comum?'],
+  poder: ['O que acontece com quem abusa deste poder?', 'Quem tem medo de quem o carrega?', 'O que este poder não consegue fazer de jeito nenhum?', 'Como alguém percebe que ele está sendo usado?', 'Qual foi a primeira vez que alguém o usou, e o que deu errado?'],
+  recurso: ['Quem fica rico com isto, e quem trabalha para extrair?', 'O que acontece se acabar?', 'Quem contrabandeia, e por qual caminho?', 'Que guerra já foi travada por isso?'],
+  moeda: ['Quem cunha, e quem confia nela?', 'Como se reconhece uma moeda falsa?', 'Que gíria o povo usa para ela?', 'O que vale mais do que dinheiro aqui?'],
+  calendario: ['Quando começa o ano, e por quê?', 'Que dia todo mundo teme?', 'Quem inventou este calendário, e quem se recusa a usá-lo?', 'Que festa marca o fim da colheita?'],
   historia: ['O que o protagonista quer, e o que ele precisa?', 'Qual é a pior coisa que pode acontecer com ele?', 'Como a história termina, numa frase?', 'Por que essa história só acontece neste mundo?'],
 };
 
@@ -161,7 +180,7 @@ const TYPE_ALIASES: Record<string, string> = {
   religião: 'religiao', religiões: 'religiao', religioes: 'religiao', religion: 'religiao', fé: 'religiao', fe: 'religiao', igreja: 'religiao', crença: 'religiao', credo: 'religiao', seita: 'religiao', culto: 'religiao',
   feitos: 'feito', façanha: 'feito', facanha: 'feito', proeza: 'feito', conquista: 'feito', deed: 'feito', achievement: 'feito',
   livros: 'livro', book: 'livro', tomo: 'livro', grimório: 'livro', grimorio: 'livro', escritura: 'livro', crônica: 'livro', cronica: 'livro', texto: 'livro', pergaminho: 'livro',
-  magias: 'magia', 'sistema de magia': 'magia', feitiço: 'magia', feitico: 'magia', magic: 'magia', arcano: 'magia', poder: 'magia',
+  magias: 'magia', 'sistema de magia': 'magia', feitiço: 'magia', feitico: 'magia', magic: 'magia', arcano: 'magia',
   profecias: 'profecia', prophecy: 'profecia', presságio: 'profecia', pressagio: 'profecia', oráculo: 'profecia', visão: 'profecia',
   planos: 'plano', plane: 'plano', dimensão: 'plano', dimensao: 'plano', realm: 'plano', 'outro mundo': 'plano',
   idiomas: 'idioma', língua: 'idioma', lingua: 'idioma', línguas: 'idioma', language: 'idioma', dialeto: 'idioma',
@@ -171,6 +190,10 @@ const TYPE_ALIASES: Record<string, string> = {
   conflitos: 'conflito', guerra: 'conflito', guerras: 'conflito', rivalidade: 'conflito', conflict: 'conflito', war: 'conflito',
   culturas: 'cultura', povo: 'cultura', povos: 'cultura', culture: 'cultura', tradição: 'cultura',
   mapas: 'mapa', map: 'mapa',
+  poderes: 'poder', habilidade: 'poder', habilidades: 'poder', dom: 'poder', dons: 'poder', talento: 'poder', power: 'poder', ability: 'poder', superpoder: 'poder', técnica: 'poder', tecnica: 'poder',
+  recursos: 'recurso', bem: 'recurso', bens: 'recurso', mercadoria: 'recurso', 'matéria-prima': 'recurso', resource: 'recurso', commodity: 'recurso', minério: 'recurso',
+  moedas: 'moeda', dinheiro: 'moeda', currency: 'moeda', coin: 'moeda', dinheiros: 'moeda',
+  calendário: 'calendario', calendarios: 'calendario', calendários: 'calendario', calendar: 'calendario',
 };
 
 /** "Facção", "facções", "faction" → "faccao"; tipos desconhecidos ficam como vieram. */
@@ -424,12 +447,21 @@ export function parseWorldDate(raw: string): number | null {
   if ((m = /(-?\d+)-(\d{1,2})(?:-(\d{1,2}))?(?!\d)/.exec(s)) && Number(m[2]) >= 1 && Number(m[2]) <= 12) {
     return Number(m[1]) * before + (Number(m[2]) - 1) / 12 + (m[3] ? (Number(m[3]) - 1) / 365 : 0);
   }
+  // "12 de março de 342", "3 de Semeadura de 310", "Degelo de 10": o ano é o número depois do mês
+  if ((m = /(?:(\d{1,3})\s*[ºo°]?\s+de\s+)?([\p{L}][\p{L}' -]*?)\s+de\s+(-?\d+)(?![\d/])/u.exec(s))) {
+    const ano = Number(m[3]);
+    const mes = MESES_PT.indexOf(m[2]!.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim().slice(0, 3));
+    const frac = (mes >= 0 ? mes / 12 : 0) + (m[1] ? (Number(m[1]) - 1) / 365 : 0);
+    return ano < 0 ? ano + frac : ano * before + frac;
+  }
   if ((m = /-?\d+(?:[.,]\d+)?/.exec(s))) {
     const n = Number(m[0].replace(',', '.'));
     return n < 0 ? n : n * before;
   }
   return null;
 }
+
+const MESES_PT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
 export interface TimeSpan {
   path: string;

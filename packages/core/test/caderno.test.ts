@@ -228,6 +228,11 @@ describe('world building', () => {
     expect(parseWorldDate('Ano -7')).toBe(-7);
     expect(parseWorldDate('342-07')).toBeCloseTo(342.5);
     expect(parseWorldDate('era das cinzas')).toBeNull();
+    // datas por extenso, de calendários inventados ou não: o ano vem depois do mês
+    expect(Math.floor(parseWorldDate('3 de Semeadura de 310')!)).toBe(310);
+    expect(parseWorldDate('Degelo de 10')).toBe(10);
+    expect(parseWorldDate('12 de março de 342')).toBeCloseTo(342 + 2 / 12 + 11 / 365);
+    expect(parseWorldDate('antes de 50')).toBe(-50);
     const t = timeline(w!);
     expect(t.map((x) => x.name)).toEqual(['Ordem do Sol', 'Kael', 'Queda']);
     expect(t[1]!.end).toBe(380);

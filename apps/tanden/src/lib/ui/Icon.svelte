@@ -43,6 +43,14 @@
     trocar: '<path d="M19.5 9A8 8 0 0 0 5.8 6.5L4 8.5M4.5 15a8 8 0 0 0 13.7 2.5l1.8-2"/><path d="M4 4v4.5h4.5M20 20v-4.5h-4.5"/>',
     ajustes: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
     grafico: '<path d="M4 20.5h16M7 17v-5M12 17V6M17 17v-8"/>',
+    mercado: '<path d="M12 4v16M7 20.5h10M5 7.5h14"/><path d="M5 7.5 2.8 13a2.6 2.6 0 0 0 4.4 0zM19 7.5 16.8 13a2.6 2.6 0 0 0 4.4 0z"/><circle cx="12" cy="4" r=".9"/>',
+    sino: '<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
+    bau: '<path d="M3.5 10.5V8a4 4 0 0 1 4-4h9a4 4 0 0 1 4 4v2.5"/><rect x="3.5" y="10.5" width="17" height="9.5" rx="1.6"/><path d="M3.5 13.5h17"/><rect x="10.3" y="12" width="3.4" height="4" rx=".8"/>',
+    almanaque: '<path d="M4.5 5.5c2.5-1.3 5-1.3 7.5 0v14c-2.5-1.3-5-1.3-7.5 0zM19.5 5.5c-2.5-1.3-5-1.3-7.5 0v14c2.5-1.3 5-1.3 7.5 0z"/><path d="M14.5 15.5v-2M16.5 15.5v-4M7 9h2.5M7 12h2.5"/>',
+    poder: '<path d="M13.5 3 6 13.5h5.5L10.5 21 18 10.5h-5.5z"/>',
+    lua: '<path d="M19.5 14.5A8 8 0 1 1 9.5 4.5a6.5 6.5 0 0 0 10 10z"/>',
+    dado: '<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="8.5" cy="8.5" r="1.1"/><circle cx="15.5" cy="15.5" r="1.1"/><circle cx="12" cy="12" r="1.1"/><circle cx="15.5" cy="8.5" r="1.1"/><circle cx="8.5" cy="15.5" r="1.1"/>',
+    coroa: '<path d="M4 17.5 3 7.5l5 4 4-6.5 4 6.5 5-4-1 10z"/><path d="M4.5 20.5h15"/>',
   } as const;
   export type IconName = keyof typeof PATHS;
 </script>
