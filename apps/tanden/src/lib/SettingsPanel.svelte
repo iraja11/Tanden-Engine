@@ -361,6 +361,71 @@
         </label>
       </div>
       <div class="row">
+        <span class="lbl">Agenda</span>
+        <label class="switch">
+          <input type="checkbox" checked={anima.prefs.poderes.agenda} onchange={(e) => pick(() => anima.set({ poderes: { ...anima.prefs.poderes, agenda: e.currentTarget.checked } }))} />
+          <span>põe compromissos dela na sua agenda (marcados com "(ânima)")</span>
+        </label>
+      </div>
+      <div class="row">
+        <span class="lbl">Mundos</span>
+        <label class="switch">
+          <input type="checkbox" checked={anima.prefs.poderes.mundo} onchange={(e) => pick(() => anima.set({ poderes: { ...anima.prefs.poderes, mundo: e.currentTarget.checked } }))} />
+          <span>escreve profecias, lendas e rumores no seu world building</span>
+        </label>
+      </div>
+      <div class="row">
+        <span class="lbl">Água</span>
+        <label class="switch">
+          <input type="checkbox" checked={anima.prefs.poderes.agua} onchange={(e) => pick(() => anima.set({ poderes: { ...anima.prefs.poderes, agua: e.currentTarget.checked } }))} />
+          <span>ela cuida dos avisos de água (na voz dela)</span>
+        </label>
+      </div>
+      <div class="row">
+        <span class="lbl">Jogos</span>
+        <label class="switch">
+          <input type="checkbox" checked={anima.prefs.poderes.jogos} onchange={(e) => pick(() => anima.set({ poderes: { ...anima.prefs.poderes, jogos: e.currentTarget.checked } }))} />
+          <span>reage aos jogos da Steam (no app do computador){anima.jogo ? ` · jogando ${anima.jogo.j.nome}` : ''}</span>
+        </label>
+      </div>
+      <div class="row">
+        <span class="lbl">Web</span>
+        <label class="switch">
+          <input type="checkbox" checked={anima.prefs.poderes.web} onchange={(e) => pick(() => anima.set({ poderes: { ...anima.prefs.poderes, web: e.currentTarget.checked } }))} />
+          <span>comenta o site ou app em foco (lê só o título da janela; nada sai do aparelho)</span>
+        </label>
+      </div>
+      {#if anima.prefs.poderes.web}
+        <p class="hint">{anima.webErro ? anima.webErro : anima.web ? `agora: ${anima.web.p.site} · ${anima.web.p.categoria}${anima.web.p.pagina ? ` · ${anima.web.p.pagina}` : ''}` : 'Linux: Hyprland, Sway, KDE (com kdotool) ou X11 (com xdotool).'}</p>
+      {/if}
+      {#if anima.prefs.poderes.jogos}
+        <div class="row">
+          <span class="lbl">Acordo às</span>
+          <span class="rotina">
+            <input class="t-input" type="time" value={anima.prefs.rotina.acordaAs} aria-label="Que horas você acorda nos dias de trabalho"
+              onchange={(e) => anima.set({ rotina: { ...anima.prefs.rotina, acordaAs: e.currentTarget.value || '06:00' } })} />
+            <input class="t-input" type="number" min="4" max="12" step="0.5" value={anima.prefs.rotina.horasSono} aria-label="Horas de sono"
+              onchange={(e) => anima.set({ rotina: { ...anima.prefs.rotina, horasSono: Math.min(12, Math.max(4, Number(e.currentTarget.value) || 7.5)) } })} />
+            <small>h de sono</small>
+          </span>
+        </div>
+        <div class="row">
+          <span class="lbl">Trabalho</span>
+          <span class="dias">
+            {#each ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'] as d, i (d)}
+              <button class:on={anima.prefs.rotina.diasTrabalho.includes(i)} aria-pressed={anima.prefs.rotina.diasTrabalho.includes(i)}
+                onclick={() => { const ds = anima.prefs.rotina.diasTrabalho; anima.set({ rotina: { ...anima.prefs.rotina, diasTrabalho: ds.includes(i) ? ds.filter((x) => x !== i) : [...ds, i].sort() } }); }}>{d}</button>
+            {/each}
+          </span>
+        </div>
+        <div class="row">
+          <span class="lbl">Steam</span>
+          <input class="t-input" type="password" autocomplete="off" placeholder="chave da Web API (opcional)" value={anima.prefs.steamChave} aria-label="Chave da Web API da Steam (opcional)"
+            onchange={(e) => anima.set({ steamChave: e.currentTarget.value.trim() })} />
+        </div>
+        <p class="hint">Sem chave ela já vê o jogo aberto e se ele é single ou multiplayer. A chave (steamcommunity.com/dev/apikey) só serve para saber se você está numa partida online agora; fica só neste aparelho.</p>
+      {/if}
+      <div class="row">
         <span class="lbl">Passeios</span>
         <label class="switch">
           <input type="checkbox" checked={anima.prefs.passeia} onchange={(e) => pick(() => anima.set({ passeia: e.currentTarget.checked }))} />
@@ -550,4 +615,11 @@
   .anima-set { padding-top: 12px; border-top: 1px dashed color-mix(in srgb, #ff6fa8 40%, var(--line)); }
   .anima-set h4 small { font: 11px var(--f-mono); letter-spacing: 0; text-transform: none; }
   .name { flex: 1; min-width: 0; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--void); color: var(--ink); font: 13px var(--f-body); }
+  .rotina { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+  .rotina input[type='time'] { width: 7.5em; }
+  .rotina input[type='number'] { width: 4.5em; }
+  .rotina small { color: var(--muted); }
+  .dias { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+  .dias button { border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); border-radius: 999px; padding: 2px 8px; font: 12px var(--f-body); min-height: 28px; }
+  .dias button.on { border-color: var(--ember); color: var(--ink); background: color-mix(in srgb, var(--ember) 14%, var(--surface-2)); }
 </style>

@@ -87,6 +87,13 @@ class Mesa {
   private seq = 0;
   private started = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
+  private ouvintes = new Set<(rs: RollResult[], formula: string, who: string) => void>();
+
+  /** Avisa cada rolagem (a Ânima comemora crítico e zoa falha crítica). */
+  ouvir(fn: (rs: RollResult[], formula: string, who: string) => void): () => void {
+    this.ouvintes.add(fn);
+    return () => this.ouvintes.delete(fn);
+  }
 
   constructor() {
     const s = load();
@@ -193,6 +200,13 @@ class Mesa {
       groups: r.groups.slice(0, 8).map((g) => ({ notation: g.notation, sides: g.sides, dice: g.dice.slice(0, 60) })),
     }));
     this.push(entries);
+    for (const f of this.ouvintes) {
+      try {
+        f(rs, formula, opts.who ?? '');
+      } catch {
+        /* quem ouve não derruba a rolagem */
+      }
+    }
     const clean = formula.trim();
     if (!opts.who) this.recent = [clean, ...this.recent.filter((x) => x !== clean)].slice(0, 12);
     sound.play(rs.some((r) => r.critical === 'max') ? 'complete' : rs.some((r) => r.critical === 'min') ? 'error' : 'tick');

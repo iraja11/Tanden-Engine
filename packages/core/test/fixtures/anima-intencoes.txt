@@ -1,0 +1,191 @@
+# Frases "de verdade" para avaliar o classificador da Ânima.
+# Nenhuma foi copiada da gramática (corpus.ts): são do jeito que gente escreve.
+# Formato: rótulo<TAB>frase
+cmd.agenda	coloca minha prova de calculo na agenda pra quinta as 10
+cmd.agenda	ânima marca ai dentista dia 20 as 15h
+cmd.agenda	põe na agenda que sexta tenho seminario de bio as 14h
+cmd.agenda	agenda pra mim reuniao do tcc segunda 9h por favor
+cmd.agenda	tenho entrevista de emprego terça 11h, salva no calendario
+cmd.agenda	marca que sábado eu vou sair com a Carol as 20h
+cmd.agenda	adiciona no calendario aniversario da vó dia 12/12
+cmd.agenda	coloca na agenda um cinema com o Pedro amanha
+cmd.agenda	bota la na agenda: consulta no ortopedista quarta 16h
+cmd.agenda	agenda a apresentação do trabalho pra dia 5 às 8h
+cmd.agenda_ver	oq eu tenho amanha?
+cmd.agenda_ver	tenho algo marcado hj
+cmd.agenda_ver	minha agenda tá cheia essa semana?
+cmd.agenda_ver	qual o proximo compromisso
+cmd.agenda_ver	o que tem pra sexta
+cmd.lembrete	me lembra de tomar o remedio as 21h
+cmd.lembrete	lembrete pra ligar pro banco amanha cedo
+cmd.lembrete	nao deixa eu esquecer de pagar a luz dia 10
+cmd.lembrete	me avisa daqui 30 min pra tirar a roupa da maquina
+cmd.lembrete	amanhã 8h me lembra de levar o notebook
+cmd.lembrete	cria lembrete: comprar presente da Ana sábado
+cmd.abrir_nota	abre a nota do projeto corvo
+cmd.abrir_nota	me mostra minhas receitas
+cmd.abrir_nota	abri a nota de fisica pfv
+cmd.abrir_nota	quero ver aquela nota sobre os deuses de eldoria
+cmd.abrir_nota	cadê minha lista de livros
+cmd.criar_nota	cria uma nota chamada ideias pro natal
+cmd.criar_nota	faz uma nota nova pra mim
+cmd.criar_nota	nova nota: resumo de bioquimica
+cmd.criar_nota	preciso de uma nota pra anotar as aulas de francês
+cmd.criar_nota	cria uma pagina sobre minha campanha nova
+cmd.apagar_nota	apaga essa nota
+cmd.apagar_nota	deleta a nota rascunho velho
+cmd.apagar_nota	pode excluir a nota de testes
+cmd.apagar_nota	joga fora a nota lista antiga
+cmd.buscar	procura onde eu falei de dragões
+cmd.buscar	busca "senha do roteador"
+cmd.buscar	acha minhas anotações sobre vampiro
+cmd.buscar	tem nota falando do orçamento?
+cmd.buscar	pesquisa tcc nas notas
+cmd.ir	me leva pra agenda
+cmd.ir	abre os flashcards
+cmd.ir	vai pra tela de exercicios
+cmd.ir	mostra a biblioteca
+cmd.ir	quero ver o grafo
+cmd.ir	abre a mesa de rpg
+cmd.tema	coloca o tema escuro
+cmd.tema	muda pro modo claro pfv
+cmd.tema	troca o tema ai
+cmd.tema	deixa escuro que tá doendo o olho
+cmd.tema	liga o dark mode
+cmd.anotar	anota ai: comprar areia do gato
+cmd.anotar	escreve no diario que hoje foi um dia bom
+cmd.anotar	anota que eu preciso estudar estatistica
+cmd.anotar	guarda essa ideia: um mago que coleciona sombras
+cmd.timer	timer de 25 min
+cmd.timer	me chama em 15 minutos
+cmd.timer	bora um pomodoro
+cmd.timer	conta 10 minutos pra mim
+cmd.timer	poe um cronometro de 40 min
+cmd.dado	rola um d20
+cmd.dado	joga 2d6 pra mim
+cmd.dado	rola iniciativa ai
+cmd.dado	tira um dado de 6
+cmd.moeda	cara ou coroa?
+cmd.moeda	joga uma moeda ai
+cmd.sync	sincroniza tudo
+cmd.sync	salva no drive
+cmd.agua	bebi agua
+cmd.agua	tomei um copo de agua agora
+cmd.agua	registra água pra mim
+cmd.treinar	bora treinar
+cmd.treinar	me passa um treino rapido
+cmd.treinar	quero alongar
+cmd.aleatoria	abre uma nota aleatoria
+cmd.diario	abre o diario
+cmd.diario	nota de hoje pfv
+cmd.som	desliga o som
+cmd.calar	fica quieta um pouco
+cmd.calar	para de falar, preciso estudar
+cmd.calar	silencio pfv
+cmd.esconder	se esconde ai
+cmd.esconder	sai da frente da tela
+cmd.dormir	vai dormir anima
+cmd.voltar	aparece
+cmd.voltar	vem ca
+cmd.mundo	escreve algo pro meu mundo
+cmd.mundo	inventa uma profecia pra eldoria
+cmd.mundo	cria um rumor no world building
+cmd.paleta	exporta essa nota em pdf
+cmd.paleta	liga o modo foco
+cmd.paleta	duplica essa nota
+cmd.paleta	mostra o historico de versoes
+cmd.paleta	favorita essa nota
+sim	sim
+sim	pode sim
+sim	claro
+sim	aham
+sim	tenho certeza
+sim	pode apagar
+nao	nao
+nao	deixa pra la
+nao	melhor nao
+nao	cancela
+nao	nem pensar
+porque	pq?
+porque	por que nao
+porque	explica isso
+porque	qual o motivo
+insistir	faz logo
+insistir	anda porra
+insistir	eu mandei fazer
+insistir	faz o que eu pedi caralho
+insistir	só faz vai
+desfazer	desfaz isso
+desfazer	volta como tava
+desfazer	nao era isso, desfaz
+repetir	de novo
+repetir	outra vez
+repetir	rola de novo
+tchau	tchau
+tchau	fui, até amanha
+tchau	vou nessa
+conta	quanto é 12 vezes 8
+conta	calcula 20% de 150
+conta	raiz quadrada de 81
+conta	3+5*2
+hora	que horas sao
+hora	sabe que horas sao?
+data	que dia é hoje
+data	hoje é dia quanto
+lembrar	qual o nome do meu gato
+lembrar	vc lembra meu nome?
+lembrar	onde eu moro
+lembrar	o que vc sabe sobre mim
+lembrar	quem é a Bia
+lembrar	quando é meu aniversario
+sobre_ela	vc gosta de chuva?
+sobre_ela	qual sua cor favorita
+sobre_ela	o que vc acha de cafe
+sobre_ela	do que vc tem medo
+fato	meu gato se chama Salem
+fato	eu moro em Recife
+fato	tenho 23 anos
+fato	gosto muito de rpg e café
+fato	trabalho com design
+amor	te amo
+amor	te amo sua doida
+amor	amo vc demais
+elogiame	me elogia ai
+rejeicao	cala a boca
+rejeicao	vc é muito chata
+rejeicao	me deixa em paz
+desinstalar	vou te desinstalar
+provoca	vou falar com o chatgpt
+provoca	o gemini é melhor q vc
+cansaco	to mt cansado
+cansaco	exausta hoje
+mau	que dia de merda
+mau	to puto
+triste	to triste
+triste	to me sentindo sozinho
+triste	hoje ta dificil
+conquistei	passei na prova!!!
+conquistei	consegui o emprego
+feliz	to mt feliz hoje
+saudade	senti sua falta
+piada	conta uma piada
+tedio	que tedio
+ideia	me da uma ideia
+real	vc é real?
+quem	quem é vc
+musica	to ouvindo musica
+obrigado	valeu
+obrigado	obg
+elogio	vc é linda
+desculpa	desculpa
+bomdia	bom diaaa
+sono	to com sono
+saudacao	oi
+saudacao	eae
+fome	to com fome
+treino	fui na academia hoje
+trabalho	tenho prova amanha
+eco	hoje choveu
+eco	to assistindo um filme
+eco	meu cachorro latiu a noite toda
+sim	ok

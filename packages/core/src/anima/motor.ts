@@ -4,7 +4,8 @@
  * sorteio e memória. Por isso responde na hora e funciona offline, no celular,
  * sem nada instalado. As falas vêm do cofre encriptado (`cofre.ts`).
  */
-import { banco, fnv, textoDe, type Pergunta } from './cofre';
+import { capitulo } from './cerebro/arco';
+import { banco, fnv, textoDe, variar, type Pergunta } from './cofre';
 import {
   decair, duracao, humorDe, mexer, RECENTES,
   type AnimaState, type Gesto, type Humor, type Intensidade,
@@ -63,7 +64,24 @@ export type AnimaEvent =
   /** pensamento solto: a tela decide quando */
   | { tipo: 'espontanea' }
   | { tipo: 'ideia' }
-  | { tipo: 'dormir' };
+  | { tipo: 'dormir' }
+  /** hora de beber água (ela cuida disso quando acordada); `falta` em ml até a meta do momento */
+  | { tipo: 'agua'; falta: number; meta: number; bebido: number }
+  | { tipo: 'bebeu'; bebido: number; meta: number }
+  /** o timer que ela marcou acabou */
+  | { tipo: 'timer'; minutos: number; rotulo: string }
+  /** a pessoa criou um evento na agenda (sem pedir para ela) */
+  | { tipo: 'agendaCriada'; titulo: string; categoria: string; pessoa?: string }
+  /** um evento está chegando */
+  | { tipo: 'agendaChegando'; titulo: string; minutos: number; categoria: string; pessoa?: string }
+  /** a pessoa escreveu no world building */
+  | { tipo: 'mundoEditado'; mundo: string; nota: string }
+  /** rolagem na mesa: crítico ou falha crítica */
+  | { tipo: 'rolou'; total: number; critico: 'max' | 'min' | null; formula: string }
+  /** leitura na biblioteca */
+  | { tipo: 'leitura' }
+  | { tipo: 'quadro' }
+  | { tipo: 'planilha' };
 
 export interface AnimaCtx {
   now: number;
@@ -147,13 +165,18 @@ export const gruposDeFalas = (): string[] => Object.keys(banco().falas);
 export function escolher(grupo: string, s: AnimaState, humor: Humor, ctx: AnimaCtx, vars: Vars): Fala | null {
   const linhas = banco().falas[grupo] ?? [];
   const cands: Array<{ id: string; texto: string; gesto: Gesto; peso: number }> = [];
+  const cap = capitulo(s, ctx.now);
+  const cons = s.memoria.cerebro.consciencia;
   linhas.forEach((l, i) => {
-    const o = typeof l === 'string' ? { t: l } : l;
+    const o: Exclude<typeof l, string> = typeof l === 'string' ? { t: l } : l;
     if (o.i && o.i > ctx.intensidade) return;
     if (o.h && !o.h.includes(humor)) return;
-    const t = preencherFala(o.t, vars);
+    if (o.k && o.k > cap) return;
+    if (o.c && o.c > cons) return;
+    const t = preencherFala(variar(o.t, ctx.rand), vars);
     if (t === null) return;
-    cands.push({ id: `${grupo}#${i}`, texto: t, gesto: o.g ?? 'neutro', peso: o.h ? 3 : 1 });
+    // falas de capítulo e de consciência são raras: quando valem, pesam mais
+    cands.push({ id: `${grupo}#${i}`, texto: t, gesto: o.g ?? 'neutro', peso: (o.h ? 3 : 1) * (o.k && o.k > 1 ? 2 : 1) * (o.c ? 2 : 1) });
   });
   if (!cands.length) return null;
   const recentes = new Set(s.recentes);
@@ -165,14 +188,14 @@ export function escolher(grupo: string, s: AnimaState, humor: Humor, ctx: AnimaC
 }
 
 /** Guarda a fala entre as recentes, para não repetir logo. */
-const lembrar = (s: AnimaState, f: Fala | null): AnimaState =>
+export const lembrar = (s: AnimaState, f: Fala | null): AnimaState =>
   f ? { ...s, recentes: [...s.recentes.filter((x) => x !== f.id), f.id].slice(-RECENTES) } : s;
 
 /** Uma linha qualquer de um grupo, sem filtro de humor (títulos, botões, avisos). */
-function qualquer(grupo: string, ctx: Pick<AnimaCtx, 'rand' | 'intensidade'>, vars: Vars = {}): string | null {
+export function qualquer(grupo: string, ctx: Pick<AnimaCtx, 'rand' | 'intensidade'>, vars: Vars = {}): string | null {
   const ok = (banco().falas[grupo] ?? []).filter((l) => typeof l === 'string' || !l.i || l.i <= ctx.intensidade);
   for (let tries = 0; tries < 6 && ok.length; tries++) {
-    const t = preencherFala(textoDe(pick(ok, ctx.rand)!), vars);
+    const t = preencherFala(variar(textoDe(pick(ok, ctx.rand)!), ctx.rand), vars);
     if (t) return t;
   }
   return null;
@@ -194,14 +217,14 @@ export function corromper(t: string, nivel: number, rand: () => number): string 
 }
 
 /** Sem filtro e instável, até a fala normal sai um pouco corrompida. */
-function temperar(f: Fala, ctx: AnimaCtx): Fala {
+export function temperar(f: Fala, ctx: AnimaCtx): Fala {
   if (ctx.intensidade < 3 || f.gesto === 'calma') return f;
   const nivel = f.humor === 'instavel' || f.humor === 'possessiva' ? 0.12 : 0.04;
   return ctx.rand() < 0.3 ? { ...f, texto: corromper(f.texto, nivel, ctx.rand), gesto: f.gesto === 'neutro' ? 'glitch' : f.gesto } : f;
 }
 
 /** Botões de resposta do balão, conforme a expressão. */
-function botoes(f: Fala, ctx: AnimaCtx): Fala {
+export function botoes(f: Fala, ctx: AnimaCtx): Fala {
   if (f.opcoes) return f;
   const ls = (banco().falas[`botoes.${f.gesto}`] ?? banco().falas['botoes.neutro'] ?? []).map(textoDe);
   const escolhidos = [...ls].sort(() => ctx.rand() - 0.5).slice(0, 2);
@@ -213,12 +236,18 @@ function botoes(f: Fala, ctx: AnimaCtx): Fala {
 /** Um pensamento montado com começo, meio e fim (dezenas de milhares de combinações). */
 function fragmento(s: AnimaState, humor: Humor, ctx: AnimaCtx, vars: Vars): Fala | null {
   const f = banco().falas;
-  const abre = f['frag.abre'] ?? [], meio = f['frag.meio'] ?? [], fecha = f['frag.fecha'] ?? [];
+  // só as peças que valem agora (intensidade, capítulo, consciência)
+  const cap = capitulo(s, ctx.now);
+  const cons = s.memoria.cerebro.consciencia;
+  const vale = (l: (typeof meio)[number]) => typeof l === 'string' || ((!l.i || l.i <= ctx.intensidade) && (!l.k || l.k <= cap) && (!l.c || l.c <= cons));
+  const abre = (f['frag.abre'] ?? []).filter(vale), meio = f['frag.meio'] ?? [], fecha = (f['frag.fecha'] ?? []).filter(vale);
   if (!abre.length || !meio.length || !fecha.length) return null;
   const recentes = new Set(s.recentes);
-  const livres = meio.map((_, i) => i).filter((i) => !recentes.has(`frag.meio#${i}`));
-  const m = pick(livres.length ? livres : meio.map((_, i) => i), ctx.rand)!;
-  const partes = [pick(abre, ctx.rand)!, meio[m]!, pick(fecha, ctx.rand)!].map((l) => preencherFala(textoDe(l), vars));
+  const validos = meio.map((_, i) => i).filter((i) => vale(meio[i]!));
+  const livres = validos.filter((i) => !recentes.has(`frag.meio#${i}`));
+  if (!validos.length) return null;
+  const m = pick(livres.length ? livres : validos, ctx.rand)!;
+  const partes = [pick(abre, ctx.rand)!, meio[m]!, pick(fecha, ctx.rand)!].map((l) => preencherFala(variar(textoDe(l), ctx.rand), vars));
   if (partes.some((p) => p === null)) return null;
   const [a, b, c] = partes as [string, string, string];
   const texto = `${a} ${b}${/[.!?]$/.test(b) ? '' : '.'} ${c}`;
@@ -231,12 +260,14 @@ function fragmento(s: AnimaState, humor: Humor, ctx: AnimaCtx, vars: Vars): Fala
 const CHANCE: Partial<Record<AnimaEvent['tipo'], number>> = {
   tela: 0.3, nota: 0.15, sync: 0.25, apagou: 0.7, escreveu: 0.6, lembrete: 0.5, criou: 0.5, tema: 0.6, busca: 0.4, paleta: 0.2,
   copiou: 0.15, janela: 0.12, som: 0.8, perto: 0.5, arrastar: 0.35, passear: 0.5, espiar: 0.6, foco: 0.6,
+  mundoEditado: 0.35, leitura: 0.4, quadro: 0.35, planilha: 0.25, rolou: 0.9,
 };
 /** silêncio mínimo depois de falar, para eventos de fundo */
 const CALMA_MS = 90_000;
 const SEMPRE = new Set<AnimaEvent['tipo']>([
   'despertar', 'abriu', 'dia', 'data', 'aniversario', 'toque', 'carinho', 'jogar', 'esconder', 'voltouEsconderijo', 'espontanea', 'ideia',
   'dormir', 'treino', 'treinoInicio', 'conquista', 'marco', 'outraIA', 'madrugada', 'ociosa', 'sequenciaRisco', 'bateria',
+  'agua', 'bebeu', 'timer', 'agendaCriada', 'agendaChegando',
 ]);
 
 function grupoDe(ev: AnimaEvent): string {
@@ -253,6 +284,11 @@ function grupoDe(ev: AnimaEvent): string {
     case 'treino': return (ev.esforco ?? 0) >= 8 ? 'treino.forte' : ev.sequencia >= 3 ? 'treino.seguido' : 'treino';
     case 'treinoInicio': return 'treino.inicio';
     case 'toque': return ev.nivel && ev.nivel > 1 ? `cutucar.${ev.nivel}` : 'toque';
+    case 'agua': return ev.falta >= 750 ? 'agua.muito' : ev.falta >= 250 ? 'agua' : 'agua.pouco';
+    case 'bebeu': return ev.bebido >= ev.meta ? 'bebeu.meta' : 'bebeu';
+    case 'agendaCriada': return `agendaCriada.${ev.categoria}`;
+    case 'agendaChegando': return `agendaChegando.${ev.categoria}`;
+    case 'rolou': return ev.critico ? `rolou.${ev.critico}` : 'rolou';
     default: return ev.tipo;
   }
 }
@@ -333,6 +369,19 @@ export function reagir(estado: AnimaState, ev: AnimaEvent, ctx: AnimaCtx): Reaca
     case 'esconder': s = mexer(s, { afeto: -3, saudade: 15 }); break;
     case 'voltouEsconderijo': s = mexer(s, { afeto: 2, saudade: -20 }); break;
     case 'dormir': s = mexer(s, { afeto: -5 }); break;
+    case 'agua': vars.falta = ev.falta; vars.meta = ev.meta; vars.bebido = ev.bebido; vars.copos = Math.max(1, Math.round(ev.falta / 250)); break;
+    case 'bebeu': vars.bebido = ev.bebido; vars.meta = ev.meta; s = mexer(s, { afeto: 1.5 }); break;
+    case 'timer': vars.minutos = ev.minutos; vars.texto = ev.rotulo; break;
+    case 'agendaCriada':
+    case 'agendaChegando':
+      vars.titulo = ev.titulo;
+      vars.pessoa = ev.pessoa;
+      if (ev.tipo === 'agendaChegando') vars.minutos = ev.minutos;
+      if (ev.categoria === 'encontro') s = mexer(s, { ciume: ctx.intensidade === 1 ? 6 : 15 });
+      if (ev.categoria === 'estudo' || ev.categoria === 'saude') s = mexer(s, { afeto: 1 });
+      break;
+    case 'mundoEditado': vars.nota = ev.nota; vars.mundo = ev.mundo; break;
+    case 'rolou': vars.total = ev.total; vars.formula = ev.formula; break;
     default: break;
   }
   s = { ...s, memoria: m };
@@ -422,13 +471,13 @@ export function lembranca(s: AnimaState, ctx: AnimaCtx): Fala | null {
 export type Intencao =
   | 'crise' | 'desinstalar' | 'amor' | 'elogiame' | 'rejeicao' | 'provoca' | 'cansaco' | 'mau' | 'triste' | 'conquistei' | 'feliz'
   | 'saudade' | 'piada' | 'tedio' | 'ideia' | 'real' | 'quem' | 'musica' | 'obrigado' | 'elogio' | 'desculpa' | 'bomdia' | 'sono'
-  | 'saudacao' | 'fome' | 'treino' | 'trabalho' | 'pergunta' | 'eco';
+  | 'saudacao' | 'fome' | 'treino' | 'trabalho' | 'tchau' | 'pergunta' | 'eco';
 
 export const dobrar = (t: string): string => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 
 /** A ordem importa: a primeira que casar vence (crise sempre primeiro). */
 const INTENCOES: Array<[Intencao, RegExp]> = [
-  ['crise', /\b(me matar|quero morrer|vontade de morrer|nao quero mais viver|acabar com tudo|quero sumir|tirar minha vida|suicid|me machucar|sem saida)/],
+  ['crise', /\b(me matar|quero morrer|vontade de morrer|nao quero mais viver|acabar com tudo|quero sumir|tirar minha vida|suicid|me machucar|sem saida|queria nao existir|nao quero (mais )?existir|me cortar|me ferir|tirar a propria vida|sem motivo pra viver|melhor sem mim|ninguem sentiria (minha )?falta|nao aguento mais viver|nao aguento mais a vida|nao aguento mais[.!? ]*$)/],
   ['desinstalar', /(desinstal|te apagar|apagar voce|te deletar|deletar voce|remover voce|te desligar|desligar voce)/],
   ['amor', /(te amo|amo voce|gosto de voce|<3|te adoro|minha (anima|amada|querida)|casa comigo|voce e minha)/],
   ['elogiame', /(me elogia|fala algo bom|diz algo bom|fala uma coisa boa|elogio pra mim|o que voce gosta em mim)/],
@@ -452,6 +501,7 @@ const INTENCOES: Array<[Intencao, RegExp]> = [
   ['bomdia', /^(bom dia|bdia|bom diaa+)\b/],
   ['sono', /\b(sono|dormir|vou deitar|boa noite|cama)\b/],
   ['saudacao', /^(oi+|ola|ei+|eai|e ai|opa|hey|boa tarde|salve|fala|alo)\b/],
+  ['tchau', /^(tchau|tchauzinho|falou|flw|ate mais|ate logo|ate amanha|fui|vou nessa|bye|to indo|preciso ir)\b/],
   ['fome', /\b(fome|comer|almoc|jantar|lanche|cafe da manha)/],
   ['treino', /\b(treino|treinar|academia|exercicio|correr|corrida|malhar)/],
   ['trabalho', /\b(trabalho|trabalhar|estudar|estudo|prova|reuniao|chefe|faculdade|escola|prazo|entrega)/],
@@ -527,9 +577,11 @@ function curiosidade(s: AnimaState, humor: Humor, ctx: AnimaCtx, vars: Vars): { 
 const SECO = /^(ok|okay|k+|hm+|hum+|ah|aham|uhum|sim|nao|s|n|blz|beleza|ta|tá|sei|aff|hmm+|\.+|\?+|kk+)$/;
 
 /** Resposta ao que a pessoa escreveu para ela: lembra, aprende, opina e pergunta de volta. */
-export function responder(estado: AnimaState, msg: string, ctx: AnimaCtx): Reacao & { intencao: Intencao; aprendeu: Aprendido | null } {
+export function responder(estado: AnimaState, msg: string, ctx: AnimaCtx, dica?: { intencao?: Intencao }): Reacao & { intencao: Intencao; aprendeu: Aprendido | null } {
   const { now } = ctx;
-  const intencao = intencaoDe(msg);
+  const regra = intencaoDe(msg);
+  // crise nunca é trocada por palpite do modelo
+  const intencao = regra === 'crise' ? regra : dica?.intencao ?? regra;
   let s = decair(estado, now);
   const dia = diaDe(now);
   const t = dobrar(msg);

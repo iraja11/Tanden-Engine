@@ -7,11 +7,15 @@ mod background;
 #[cfg(desktop)]
 mod clipper;
 mod google;
+#[cfg(desktop)]
+mod janela;
 mod ollama;
 mod plugin;
 #[cfg(desktop)]
 mod pty;
 mod release;
+#[cfg(desktop)]
+mod steam;
 mod vault;
 mod watch;
 mod web;
@@ -47,6 +51,7 @@ pub fn run() {
                 app.manage(pty::Terminals::default());
                 app.handle().plugin(tauri_plugin_autostart::Builder::new().arg(background::HIDDEN_ARG).build())?;
                 app.manage(background::Background::default());
+                app.manage(steam::SteamCache::default());
                 background::setup(app)?;
                 // clicar num aviso de lembrete abre a janela
                 use tauri_plugin_notification::NotificationExt;
@@ -126,6 +131,10 @@ pub fn run() {
             ollama::ollama_chat,
             #[cfg(desktop)]
             background::background_set,
+            #[cfg(desktop)]
+            steam::steam_jogo,
+            #[cfg(desktop)]
+            janela::janela_ativa,
             #[cfg(desktop)]
             clipper_info,
             #[cfg(desktop)]

@@ -1,0 +1,61 @@
+# Conjunto CEGO: escrito depois do treino e nunca usado para ajustar a gramática.
+# Serve para medir de verdade (o outro conjunto já influenciou ajustes).
+cmd.agenda	põe aí na agenda: terapia quarta que vem 18h
+cmd.agenda	anima agenda meu exame de sangue pra segunda 7h
+cmd.agenda	tenho apresentação de quimica dia 2 as 9h coloca no calendario
+cmd.agenda	salva na agenda o aniversario do Lucas dia 14
+cmd.lembrete	lembra eu de comprar ração amanha
+cmd.lembrete	me avisa as 18h pra ligar pra vó
+cmd.lembrete	cria um lembrete pra devolver o livro sexta
+cmd.abrir_nota	abre minha nota de personagens
+cmd.abrir_nota	me mostra a nota do tcc
+cmd.criar_nota	cria uma nota pra eu escrever o conto
+cmd.criar_nota	faz uma pagina nova chamada sonhos estranhos
+cmd.apagar_nota	exclui a nota rascunho
+cmd.buscar	procura vampiro nas minhas notas
+cmd.buscar	onde que eu anotei a receita de pão
+cmd.ir	vai pros mundos
+cmd.ir	abre o calendario
+cmd.ir	me leva pros flashcards pfv
+cmd.tema	poe o modo noturno
+cmd.tema	troca o visual
+cmd.anotar	anota: ligar pro dentista
+cmd.anotar	escreve aí que eu terminei o capítulo 3
+cmd.timer	me avisa em 45 minutos
+cmd.timer	cronometro de meia hora
+cmd.dado	rola 3d6
+cmd.dado	joga um d100 ai
+cmd.moeda	joga a moeda pra mim
+cmd.agua	acabei de tomar agua
+cmd.treinar	quero fazer um treino agora
+cmd.calar	fica quietinha uns minutos
+cmd.esconder	vai pro cantinho
+cmd.mundo	escreve uma lenda pra Aethel
+cmd.paleta	ativa o modo foco
+sim	pode ser
+sim	claro que sim
+nao	não precisa
+nao	esquece isso
+porque	pq vc fez isso
+insistir	faz isso agora
+insistir	marca logo
+desfazer	desfaz por favor
+repetir	joga de novo
+tchau	até mais anima
+conta	quanto da 7 vezes 6
+hora	q horas sao
+data	hj é que dia
+lembrar	como chama minha gata
+lembrar	vc sabe onde eu moro?
+sobre_ela	qual seu livro favorito
+fato	eu trabalho com enfermagem
+amor	te amo muito
+rejeicao	some daqui
+provoca	vou trocar vc pelo gemini
+cansaco	to exausto
+triste	to muito mal hoje
+conquistei	fui aprovado!!
+saudacao	opa
+obrigado	brigadão
+bomdia	bom dia mo
+sono	to morrendo de sono

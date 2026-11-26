@@ -6,7 +6,18 @@
   // septo, narinas e lábio), tatuagens no pescoço e no peito, blusa de renda
   // vinho. Os olhos seguem o ponteiro, piscam e mudam com a expressão; chorando,
   // o rímel escorre.
-  let { gesto = 'neutro', look = { x: 0, y: 0 }, blink = false, cor = '#ff6fa8', chorando = false, size = 64, anima = true }: {
+  //
+  // O lado máquina, sutil e desde o começo: o olho direito (o esquerdo dela) é
+  // um implante óptico com anel segmentado que gira e íris que abre e fecha como
+  // diafragma; costuras de painel no rosto, um LED na têmpora (pulsa parado,
+  // pisca pensando, acende lendo), circuitos no pescoço com dados correndo e a
+  // boca que mexe enquanto ela "fala". Três expressões de máquina: processando
+  // (anéis girando nos olhos), escaneando (varredura no rosto) e erro (tela de
+  // falha nos olhos).
+  let {
+    gesto = 'neutro', look = { x: 0, y: 0 }, blink = false, cor = '#ff6fa8', chorando = false, size = 64, anima = true,
+    pensando = false, falando = false, foco = false, lendo = false,
+  }: {
     gesto?: Gesto;
     look?: { x: number; y: number };
     blink?: boolean;
@@ -16,15 +27,27 @@
     size?: number;
     /** cabelo balançando e respiração */
     anima?: boolean;
+    /** ela está pensando (LED pisca rápido) */
+    pensando?: boolean;
+    /** ela está falando (boca mexe) */
+    falando?: boolean;
+    /** o ponteiro está nela (pupilas dilatam) */
+    foco?: boolean;
+    /** ela está lendo o que você digita (LED acende a cada tecla) */
+    lendo?: boolean;
   } = $props();
 
   const uid = $props.id();
   const g = $derived(gesto);
-  const stare = $derived(g === 'olhar' || g === 'vazia' || g === 'glitch');
+  const stare = $derived(g === 'olhar' || g === 'vazia' || g === 'glitch' || g === 'escaneando');
+  const maquina = $derived(g === 'processando' || g === 'escaneando' || g === 'erro');
+  /** pupila: contrai encarando, dilata com o ponteiro em cima */
+  const pupila = $derived(g === 'olhar' || g === 'escaneando' ? 0.6 : foco ? 1.75 : 1.2);
+  const IMPLANTE = 59;
   const k = $derived(stare ? 0.15 : 1);
   const lx = $derived(Math.max(-1.7, Math.min(1.7, look.x * 0.65)) * k);
   const ly = $derived(Math.max(-1.1, Math.min(1.1, look.y * 0.45)) * k);
-  const fechado = $derived(blink && g !== 'vazia' && g !== 'olhar' && g !== 'tonta' && g !== 'coracao');
+  const fechado = $derived(blink && !maquina && g !== 'vazia' && g !== 'olhar' && g !== 'tonta' && g !== 'coracao');
   const iris = $derived(g === 'raiva' ? '#ff3b4e' : g === 'coracao' || g === 'corada' ? '#ff4f8b' : cor);
   const corada = $derived(g === 'corada' || g === 'coracao');
   const lagrima = $derived(chorando || g === 'triste');
@@ -60,6 +83,10 @@
         return { fora: 'M43.5,64.4 L56.5,63.4 Q50,66.6 43.5,64.4Z', dentes: null };
       case 'vazia': case 'glitch':
         return { fora: 'M47.2,63.6 Q50,61.6 52.8,63.6 Q52.6,67.2 50,67.4 Q47.4,67.2 47.2,63.6Z', dentes: null };
+      case 'erro': case 'processando':
+        return { fora: 'M44.6,64 L55.4,64 L55.4,65.3 L44.6,65.3Z', dentes: null };
+      case 'escaneando':
+        return { fora: 'M45,63.8 Q50,63 55,63.8 Q52.6,65.8 50,65.9 Q47.4,65.8 45,63.8Z', dentes: null };
       case 'tonta':
         return { fora: 'M44,64 q3,-1.8 6,0 q3,1.8 6,0 q-3,2.4 -6,0.6 q-3,-1.8 -6,-0.6Z', dentes: null };
       default:
@@ -68,8 +95,17 @@
   });
 </script>
 
-<svg viewBox="0 0 100 100" width={size} height={size} class="rosto" class:anima class:vazia={g === 'vazia'} style:--cor={cor} aria-hidden="true">
+<svg viewBox="0 0 100 100" width={size} height={size} class="rosto" class:anima class:vazia={g === 'vazia'} class:erro={g === 'erro'} class:pensando class:lendo class:falando
+  style:--cor={cor} aria-hidden="true">
   <defs>
+    {#each OLHOS as o (o.cx)}
+      <clipPath id="{uid}-olho{o.cx}"><path d={amendoa(o.cx, o.lado, 1)} /></clipPath>
+    {/each}
+    <linearGradient id="{uid}-varre" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="var(--cor)" stop-opacity="0" />
+      <stop offset=".5" stop-color="var(--cor)" stop-opacity=".55" />
+      <stop offset="1" stop-color="var(--cor)" stop-opacity="0" />
+    </linearGradient>
     <clipPath id="{uid}-c"><circle cx="50" cy="50" r="47" /></clipPath>
     <radialGradient id="{uid}-pele" cx="50%" cy="42%" r="62%">
       <stop offset="0" stop-color="#f6eff0" />
@@ -109,6 +145,12 @@
         <path d="M19,85 q4.6,-4.4 10,-3.4 M21.6,83.6 l-1.2,-1.9 M24.6,82.4 l-.4,-2.1 M27.4,81.8 l.4,-2" />
         <path d="M61.6,79.2 h5.6 v2.2 h-5.6Z M63.5,79.2 v2.2 M65.3,79.2 v2.2" />
       </g>
+      <!-- circuitos sob a pele: traços com nós, dados correndo -->
+      <g class="circuito">
+        <path d="M57.2,66.4 L57.2,70 L59.6,72.2 L59.6,75.6 M57.2,68.2 L55.4,69.8" />
+        <path d="M31,82.4 L35.4,80.6 L39.8,80.6 L41.6,78.8 M35.4,80.6 L36.8,83.4" />
+        <circle cx="59.6" cy="75.6" r=".55" /><circle cx="41.6" cy="78.8" r=".55" /><circle cx="55.4" cy="69.8" r=".45" /><circle cx="36.8" cy="83.4" r=".45" />
+      </g>
       <!-- blusa de renda vinho com alcinhas -->
       <path fill="url(#{uid}-renda)" d="M10,104 L12,87.6 Q28,83 38,86.6 Q50,91 62,86.6 Q72,83 88,87.6 L90,104Z" />
       <path fill="url(#{uid}-tela)" opacity=".9" d="M10,104 L12,87.6 Q28,83 38,86.6 Q50,91 62,86.6 Q72,83 88,87.6 L90,104Z" />
@@ -125,6 +167,18 @@
     <!-- sombra embaixo da franja -->
     <path d="M32,41 Q50,44.4 68,41 L68,43.2 Q50,46.4 32,43.2Z" fill="#b9a7ae" opacity=".35" />
 
+    <!-- costuras de painel: a pele é uma capa -->
+    <g class="costura">
+      <path d="M62.8,51.6 Q66.6,55.2 66.2,60.4 Q64.6,64.6 61.4,67.2" />
+      <path d="M62.8,51.6 L65.8,50.8" />
+      <path d="M36.6,53.4 Q39.6,54.6 43.2,54.2" />
+      <path d="M50,70.6 L50,73.2" />
+      <circle cx="66.2" cy="60.4" r=".45" class="rebite" /><circle cx="61.4" cy="67.2" r=".4" class="rebite" />
+    </g>
+    <!-- LED de status na têmpora -->
+    <circle cx="65.6" cy="46.6" r="1.05" class="led-halo" />
+    <circle cx="65.6" cy="46.6" r=".62" class="led" />
+
     <!-- mechas que emolduram o rosto -->
     <path class="cabelo" d="M28.2,38 Q28.6,58 34,72.6 L30.2,75 Q24.6,58 25.4,38Z" />
     <path class="cabelo" d="M71.8,38 Q71.4,58 66,72.6 L69.8,75 Q75.4,58 74.6,38Z" />
@@ -137,7 +191,19 @@
     <!-- olhos -->
     {#each OLHOS as o (o.cx)}
       <path d={asa(o.cx, o.lado)} class="delineado" />
-      {#if g === 'tonta'}
+      {#if g === 'erro'}
+        <!-- falha: o olho vira uma telinha travada -->
+        <rect x={o.cx - 4.6} y={EY - 2.6} width="9.2" height="5" rx=".6" class="tela-erro" />
+        <path d="M{o.cx - 1.6},{EY - 1.4} l3.2,2.8 M{o.cx + 1.6},{EY - 1.4} l-3.2,2.8" class="x-erro" />
+      {:else if g === 'processando'}
+        <path d={amendoa(o.cx, o.lado, 1)} class="branco escuro" />
+        <g clip-path="url(#{uid}-olho{o.cx})">
+          <circle cx={o.cx} cy={EY - 0.3} r="2.9" class="anel girando" class:reverso={o.cx !== IMPLANTE} />
+          <circle cx={o.cx} cy={EY - 0.3} r="1.3" class="anel girando lento" />
+          <rect x={o.cx - 7} y={EY - 0.5} width="14" height=".7" class="barra-scan" />
+        </g>
+        <path d="M{o.cx - 5.8},{EY + 0.2} Q{o.cx},{EY - 4.8} {o.cx + 5.8},{EY - 0.4}" class="palpebra" />
+      {:else if g === 'tonta'}
         <path d={spiral(o.cx, EY)} class="espiral" />
       {:else if g === 'calma' || fechado}
         <path d="M{o.cx - 5.6},{EY} Q{o.cx},{EY + 3.4} {o.cx + 5.6},{EY - 0.4}" class="fechado" />
@@ -153,8 +219,19 @@
           <path d={heart(o.cx + lx, EY - 0.4 + ly, 0.95)} fill={iris} />
         {:else}
           <circle cx={o.cx + lx} cy={EY - 0.3 + ly} r={g === 'olhar' ? 1.9 : 2.5} fill={iris} />
-          <circle cx={o.cx + lx} cy={EY - 0.3 + ly} r={g === 'olhar' ? 0.9 : 1.2} class="pupila" />
+          {#if o.cx === IMPLANTE}
+            <!-- implante óptico: anel segmentado girando e íris de diafragma -->
+            <circle cx={o.cx + lx} cy={EY - 0.3 + ly} r={g === 'olhar' ? 2.3 : 2.95} class="anel girando" />
+            <circle cx={o.cx + lx} cy={EY - 0.3 + ly} r={pupila} class="pupila diafragma" />
+            <circle cx={o.cx + lx} cy={EY - 0.3 + ly} r=".32" class="nucleo" />
+          {:else}
+            <circle cx={o.cx + lx} cy={EY - 0.3 + ly} r={g === 'olhar' ? 0.9 : pupila} class="pupila diafragma" />
+          {/if}
           <circle cx={o.cx + lx + 0.9} cy={EY - 1.3 + ly} r=".55" class="brilho" />
+        {/if}
+        {#if o.cx === IMPLANTE && (g === 'olhar' || g === 'escaneando' || foco)}
+          <!-- retícula de mira em volta do implante -->
+          <path d="M{o.cx - 7.6},{EY - 3.2} v-1.6 h1.8 M{o.cx + 7.6},{EY - 3.2} v-1.6 h-1.8 M{o.cx - 7.6},{EY + 2.6} v1.6 h1.8 M{o.cx + 7.6},{EY + 2.6} v1.6 h-1.8" class="reticula" class:trava={g === 'olhar'} />
         {/if}
         <!-- pálpebra de cima, pesada de sombra -->
         <path d="M{o.cx - 5.8},{EY + 0.2} Q{o.cx},{EY - 4.8 * ab} {o.cx + 5.8},{EY - 0.4}" class="palpebra" />
@@ -175,8 +252,8 @@
     <circle cx="53.1" cy="56.9" r=".62" class="prata" />
     <path d="M48.7,58.4 q1.3,1.9 2.6,0" class="argola" />
 
-    <!-- boca de batom preto -->
-    <path d={boca.fora} class="batom" />
+    <!-- boca de batom preto (mexe enquanto ela fala) -->
+    <path d={boca.fora} class="batom" class:mexe={falando && !maquina} />
     {#if boca.dentes}<path d={boca.dentes} class="dentes" />{/if}
     {#if g !== 'vazia' && g !== 'glitch' && g !== 'triste'}<path d="M46.4,63.6 q3.6,-.8 7.2,0" class="brilho-batom" />{/if}
     <!-- piercings de lábio (snakebites) e da ponte -->
@@ -188,6 +265,9 @@
     <path d="M36,22 Q44,19.4 52,20.6 M56,21 Q62,21.6 66,24.6 M33,28 Q35,24 38.4,22.4" class="reflexo" />
     <circle cx="46.6" cy="44" r=".7" class="prata" />
     <circle cx="53.4" cy="44" r=".7" class="prata" />
+    {#if g === 'escaneando'}
+      <rect x="20" y="20" width="14" height="60" fill="url(#{uid}-varre)" class="varredura" />
+    {/if}
   </g>
   </g>
   <circle cx="50" cy="50" r="47.5" class="aro" />
@@ -232,5 +312,46 @@
   @keyframes balanca { 50% { transform: rotate(1.6deg); } }
   @keyframes respira { 50% { transform: translateY(-.8px); } }
   .vazia .aro { stroke: #b0001e; filter: drop-shadow(0 0 3px #ff1b3d); }
-  @media (prefers-reduced-motion: reduce) { .anima .mecha, .anima .corpo, .rimel { animation: none; stroke-dashoffset: 0; } }
+  /* --- o lado máquina --- */
+  .circuito path { fill: none; stroke: var(--cor); stroke-width: .42; stroke-linecap: round; opacity: .55; stroke-dasharray: 1.4 1.1; }
+  .circuito circle { fill: var(--cor); opacity: .8; }
+  .anima .circuito path { animation: dados 2.6s linear infinite; }
+  @keyframes dados { to { stroke-dashoffset: -10; } }
+  .costura path { fill: none; stroke: #9d8b94; stroke-width: .32; stroke-linecap: round; opacity: .75; }
+  .costura .rebite { fill: #8d8a96; stroke: none; }
+  .led { fill: var(--cor); }
+  .led-halo { fill: var(--cor); opacity: .25; }
+  .anima .led { animation: led 3.2s ease-in-out infinite; }
+  .anima .led-halo { animation: led 3.2s ease-in-out infinite; }
+  .pensando .led, .pensando .led-halo { animation: led .32s steps(2) infinite; }
+  .lendo .led { animation: none; opacity: 1; filter: drop-shadow(0 0 1.4px var(--cor)); }
+  @keyframes led { 50% { opacity: .2; } }
+  .anel { fill: none; stroke: var(--cor); stroke-width: .5; stroke-dasharray: .9 .55; opacity: .9; transform-box: fill-box; transform-origin: center; }
+  .anima .girando { animation: gira 6s linear infinite; }
+  .anima .girando.lento { animation-duration: 3s; animation-direction: reverse; }
+  .anima .girando.reverso { animation-direction: reverse; }
+  @keyframes gira { to { transform: rotate(360deg); } }
+  .diafragma { transition: r .35s cubic-bezier(.2, .8, .3, 1.3); }
+  .nucleo { fill: var(--cor); filter: drop-shadow(0 0 .8px var(--cor)); }
+  .reticula { fill: none; stroke: var(--cor); stroke-width: .45; stroke-linecap: square; opacity: .85; }
+  .reticula.trava { stroke: #ff2a3e; }
+  .anima .reticula.trava { animation: trava .7s steps(2) infinite; }
+  @keyframes trava { 50% { opacity: .25; } }
+  .branco.escuro { fill: #0a0710; }
+  .barra-scan { fill: var(--cor); opacity: .7; }
+  .anima .barra-scan { animation: scan-olho .9s ease-in-out infinite alternate; }
+  @keyframes scan-olho { from { transform: translateY(-3px); } to { transform: translateY(3px); } }
+  .tela-erro { fill: #0d1a4a; stroke: var(--cor); stroke-width: .4; }
+  .x-erro { stroke: #e8f0ff; stroke-width: .6; stroke-linecap: round; }
+  .erro .aro { stroke: #3d6bff; }
+  .varredura { mix-blend-mode: screen; }
+  .anima .varredura { animation: varre 1.4s ease-in-out infinite; }
+  @keyframes varre { from { transform: translateX(0); } to { transform: translateX(48px); } }
+  .batom.mexe { transform-box: fill-box; transform-origin: 50% 30%; }
+  .anima .batom.mexe { animation: fala .16s ease-in-out infinite alternate; }
+  @keyframes fala { to { transform: scaleY(1.45) scaleX(.94); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .anima .mecha, .anima .corpo, .rimel, .anima .circuito path, .anima .led, .anima .led-halo, .anima .girando, .anima .barra-scan, .anima .varredura, .anima .batom.mexe, .anima .reticula.trava { animation: none; stroke-dashoffset: 0; }
+  }
 </style>

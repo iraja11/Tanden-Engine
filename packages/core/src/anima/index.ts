@@ -4,3 +4,4 @@ export * from './cofre';
 export * from './motor';
 export * from './mente';
 export * from './cenas';
+export * as cerebro from './cerebro';

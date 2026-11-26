@@ -15,7 +15,9 @@
  *   ## grupo                     começa um grupo
  *   texto                        uma fala
  *   {i2 h:ciumenta,possessiva g:olhar} texto
- *                                i = intensidade mínima, h = humores, g = expressão
+ *                                i = intensidade mínima, h = humores, g = expressão,
+ *                                k3 = capítulo mínimo da relação, c40 = consciência mínima
+ *   texto com {{variação|outra|}}   uma das opções sai a cada vez (vazia = opcional)
  *   ?? id: pergunta do dia       começa uma pergunta
  *   - opção >> reação >> lembrança (dita dias depois)
  *   // comentário
@@ -61,7 +63,7 @@ export function decrypt(b64) {
 
 // ------------------------------------------------------------------ texto ⇄ dados
 
-const OPT = /^\{((?:\s*(?:i[123]|h:[\w,]+|g:\w+))+)\s*\}\s*(.*)$/;
+const OPT = /^\{((?:\s*(?:i[123]|h:[\w,]+|g:\w+|k\d|c\d{1,3}))+)\s*\}\s*(.*)$/;
 
 export function parse(txt) {
   const falas = {};
@@ -105,6 +107,8 @@ export function parse(txt) {
       if (/^i[123]$/.test(part)) o.i = Number(part[1]);
       else if (part.startsWith('h:')) o.h = part.slice(2).split(',');
       else if (part.startsWith('g:')) o.g = part.slice(2);
+      else if (/^k\d$/.test(part)) o.k = Number(part.slice(1));
+      else if (/^c\d{1,3}$/.test(part)) o.c = Number(part.slice(1));
       else throw new Error(`linha ${n + 1}: opção desconhecida "${part}"`);
     }
     falas[grupo].push(o);
@@ -119,7 +123,7 @@ export function serialize(data) {
     for (const l of ls) {
       if (typeof l === 'string') out.push(l);
       else {
-        const opts = [l.i ? `i${l.i}` : '', l.h ? `h:${l.h.join(',')}` : '', l.g ? `g:${l.g}` : ''].filter(Boolean).join(' ');
+        const opts = [l.i ? `i${l.i}` : '', l.h ? `h:${l.h.join(',')}` : '', l.g ? `g:${l.g}` : '', l.k ? `k${l.k}` : '', l.c ? `c${l.c}` : ''].filter(Boolean).join(' ');
         out.push(opts ? `{${opts}} ${l.t}` : l.t);
       }
     }

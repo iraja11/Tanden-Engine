@@ -1,7 +1,8 @@
 import {
   ANIMA_ID_BASE, HUMORES, avisoDoSegredo, botoesDaConversa, comandoSecreto, desfechoCena, escolherCena, frasesDaNota, gestoDoTexto, humorDe,
-  lerEstado, limparSaida, novoEstado, perguntaDoDia, planoDeSaudade, promptDaAnima, reagir, responder, responderPergunta,
-  type AnimaCtx, type AnimaEvent, type AnimaState, type CenaPronta, type ComandoSecreto, type CtxCena, type EfeitoCena, type Fala, type Gesto,
+  lerEstado, limparSaida, novoEstado, perguntaDoDia, planoDeSaudade, promptDaAnima, reagir, responderPergunta,
+  cerebro, dayTime, eventPath, isEventPath, parseEventNote, safeName,
+  type AnimaCtx, type AnimaEvent, type AnimaState, type CenaPronta, type ComandoSecreto, type CtxCena, type EfeitoCena, type EventInput, type Fala, type Gesto,
   type Intensidade, type OpcaoFala, type Reacao,
 } from '@tanden/core';
 import { Channel, invoke } from '@tauri-apps/api/core';
@@ -12,6 +13,12 @@ import { notes } from '../editor/notes.svelte';
 import { noteName } from '../editor/host';
 import { engine } from '../engine.svelte';
 import { exercicios } from '../exercicios/exercicios.svelte';
+import { agenda, TANDEN } from '../agenda/agenda.svelte';
+import { cadernos } from '../cadernos/cadernos.svelte';
+import { reminders } from '../reminders.svelte';
+import { mesa } from '../rpg/mesa.svelte';
+import { saude } from '../saude/saude.svelte';
+import { sorte } from '../sorte/sorte.svelte';
 import { ollama } from '../ollama.svelte';
 import { desktop } from '../platform';
 import { sound } from '../sound.svelte';
@@ -51,6 +58,12 @@ export interface AnimaPrefs {
   cenas: boolean;
   /** quem pensa as respostas da conversa: as regras dela ou um modelo local (Ollama) */
   cerebro: 'regras' | 'ollama';
+  /** o que ela pode fazer por conta própria */
+  poderes: { agenda: boolean; mundo: boolean; agua: boolean; jogos: boolean; web: boolean };
+  /** quando você acorda (para ela saber a hora de você largar o jogo e dormir) */
+  rotina: { acordaAs: string; horasSono: number; diasTrabalho: number[] };
+  /** chave da Web API da Steam (opcional: só para saber se você está num lobby online agora) */
+  steamChave: string;
 }
 
 export interface Mensagem {
@@ -66,6 +79,9 @@ const STATE_KEY = 'tanden.anima.estado';
 const MARKS_KEY = 'tanden.anima.marcas';
 const DEFAULTS: AnimaPrefs = {
   acordada: false, intensidade: 2, nome: 'amor', notificar: true, silencio: true, lado: 'dir', altura: 0, escondida: false, passeia: true, cenas: true, cerebro: 'regras',
+  poderes: { agenda: true, mundo: true, agua: true, jogos: true, web: false },
+  rotina: { acordaAs: '06:00', horasSono: 7.5, diasTrabalho: [1, 2, 3, 4, 5] },
+  steamChave: '',
 };
 const android = isTauri() && !desktop;
 const CHANNEL = 'anima';
@@ -117,7 +133,12 @@ const IAS: Record<string, string> = { claude: 'claude', gemini: 'gemini', ollama
 interface Marcas { periodo: string; data: string; aniversario: string; pergunta: string; bateria: number }
 
 class Anima {
-  prefs = $state<AnimaPrefs>({ ...DEFAULTS, ...(load<Partial<AnimaPrefs>>(PREFS_KEY) ?? {}) });
+  prefs = $state<AnimaPrefs>((() => {
+    const p = { ...DEFAULTS, ...(load<Partial<AnimaPrefs>>(PREFS_KEY) ?? {}) };
+    return { ...p, poderes: { ...DEFAULTS.poderes, ...(p.poderes ?? {}) }, rotina: { ...DEFAULTS.rotina, ...(p.rotina ?? {}) } };
+  })());
+  /** o raciocínio do último pensamento (modo depuração: "/pensamento" na conversa) */
+  pensamento = $state<string[]>([]);
   estado = $state<AnimaState>(lerEstado(load(STATE_KEY), Date.now()));
   /** a fala no balão, se houver */
   balao = $state<Fala | null>(null);
@@ -174,6 +195,26 @@ class Anima {
   private timersCena: Array<ReturnType<typeof setTimeout>> = [];
   private tituloAntes: string | null = null;
   private pensando = false;
+  /** desfaz a última travessura (ou tema, timer) */
+  private desfazer: (() => void) | null = null;
+  /** caminhos que ela mesma escreveu (para não comentar o que ela fez) */
+  private meus = new Set<string>();
+  private timerDela: ReturnType<typeof setTimeout> | null = null;
+  private timerDelaFim = 0;
+  private adiadoTimer: ReturnType<typeof setTimeout> | undefined;
+  private proximaRotina = 0;
+  private ultimoMundo = 0;
+  private ultimaLeitura = 0;
+  private ultimaPlanilha = 0;
+  /** o jogo da Steam aberto agora, desde quando e quantas broncas já levou */
+  jogo = $state<{ j: cerebro.JogoAtual; inicio: number; broncas: number; ultimaBronca: number } | null>(null);
+  private olhandoSteam = false;
+  /** a página/app em foco agora (web), e o erro de leitura se houver */
+  web = $state<{ p: cerebro.Pagina; desde: number } | null>(null);
+  webErro = $state('');
+  private webUltimo = 0;
+  private webPorCategoria: Record<string, number> = {};
+  private webComentou = '';
   private marcas: Marcas = { periodo: '', data: '', aniversario: '', pergunta: '', bateria: 0, ...(load<Partial<Marcas>>(MARKS_KEY) ?? {}) };
 
   // ------------------------------------------------------------------ ciclo
@@ -189,7 +230,37 @@ class Anima {
     const bus = engine.bus;
     this.offs.push(
       bus.on('note.changed', (e) => { if (e.origin === 'local') this.escreveu(e.path); }),
-      bus.on('note.created', (e) => this.evento({ tipo: 'criou', nota: noteName(e.path) })),
+      bus.on('note.created', (e) => {
+        if (this.meus.has(e.path)) return;
+        if (isEventPath(e.path)) this.eventoDaAgenda(e.path);
+        else this.evento({ tipo: 'criou', nota: noteName(e.path) });
+      }),
+      bus.on('note.changed', (e) => {
+        if (e.origin !== 'local' || !e.path.startsWith('Mundos/') || this.meus.has(e.path) || Date.now() - this.ultimoMundo < 20 * 60_000) return;
+        this.ultimoMundo = Date.now();
+        this.evento({ tipo: 'mundoEditado', mundo: e.path.split('/')[1] ?? 'seu mundo', nota: noteName(e.path) });
+      }),
+      bus.on('library.changed', (e) => {
+        if (e.origin !== 'local' || Date.now() - this.ultimaLeitura < 30 * 60_000) return;
+        this.ultimaLeitura = Date.now();
+        this.evento({ tipo: 'leitura' });
+      }),
+      bus.on('board.created', (e) => { if (!this.meus.has(e.path)) this.evento({ tipo: 'quadro' }); }),
+      bus.on('sheet.changed', (e) => {
+        if (e.origin !== 'local' || Date.now() - this.ultimaPlanilha < 30 * 60_000) return;
+        this.ultimaPlanilha = Date.now();
+        this.evento({ tipo: 'planilha' });
+      }),
+      mesa.ouvir((rs, formula, who) => {
+        const r = rs[0];
+        if (who === 'Ânima' || !r?.critical) return;
+        this.evento({ tipo: 'rolou', total: r.total, critico: r.critical, formula });
+      }),
+      saude.ouvir((e) => {
+        if (!this.prefs.poderes.agua || e.kind !== 'agua') return;
+        if (e.tipo === 'aviso') this.evento({ tipo: 'agua', falta: e.falta, meta: e.meta, bebido: e.bebido });
+        else this.evento({ tipo: 'bebeu', bebido: e.bebido, meta: e.meta });
+      }),
       bus.on('note.deleted', (e) => this.evento({ tipo: 'apagou', nota: noteName(e.path) })),
       bus.on('sync.finished', (e) => { if (e.written + e.merged > 0) this.evento({ tipo: 'sync' }); }),
       bus.on('reminder.fired', (e) => this.evento({ tipo: 'lembrete', texto: e.text })),
@@ -204,6 +275,7 @@ class Anima {
         { id: 'anima.ideia', label: 'Ânima: me dá uma ideia', keys: 'companheira sugestao inspiracao', run: () => this.evento({ tipo: 'ideia' }) },
         { id: 'anima.pergunta', label: 'Ânima: pergunta do dia', keys: 'companheira jogo', run: () => this.perguntar(true) },
         { id: 'anima.surpresa', label: 'Ânima: me surpreende', keys: 'companheira cena evento carta diario', run: () => this.surpresa() },
+        { id: 'anima.pensamento', label: 'Ânima: mostrar o último pensamento (depuração)', keys: 'cerebro debug raciocinio traco', run: () => this.mostrarPensamento() },
       ]),
       this.observar(),
     );
@@ -249,6 +321,23 @@ class Anima {
       clearInterval(tick);
       clearTimeout(buscaTimer);
     });
+    // os avisos de água na voz dela
+    saude.voz = (_kind, info) => {
+      if (!this.prefs.acordada || !this.prefs.poderes.agua) return null;
+      const r = reagir($state.snapshot(this.estado) as AnimaState, { tipo: 'agua', ...info }, this.ctx());
+      return r.fala ? { title: 'Ânima 💧', body: r.fala.texto } : null;
+    };
+    this.offs.push(() => { saude.voz = null; });
+    if (this.prefs.poderes.mundo) cadernos.start();
+    this.proximaRotina = Date.now() + (2 + Math.random() * 4) * 60_000;
+    // jogos da Steam (só no app do computador): olha a cada 45 s, mesmo com a janela na bandeja
+    if (desktop && isTauri()) {
+      const steam = setInterval(() => void this.olharSteam(), 45_000);
+      setTimeout(() => void this.olharSteam(), 5000);
+      const web = setInterval(() => void this.olharJanela(), 20_000);
+      this.offs.push(() => clearInterval(steam), () => clearInterval(web));
+    }
+    this.agendarAdiado();
     void this.bateria();
     if (android) void this.canal();
     void this.cancelarSaudade();
@@ -327,8 +416,23 @@ class Anima {
       else if (Math.random() < 0.08) this.evento({ tipo: 'espiar' });
       return;
     }
+    // silêncio pedido: nada de pensamento solto, cena ou rotina
+    if (now < this.estado.memoria.cerebro.quietaAte) return;
     const ativa = now - this.ultimoInput < 3 * 60_000;
     if (!ativa || this.aberta) return;
+    // o cérebro proativo: provas, compromissos, coisas dela na agenda, world building, deduções
+    if (now >= this.proximaRotina && !this.balao && !this.cena) {
+      this.proximaRotina = now + (6 + Math.random() * 8) * 60_000;
+      const r = cerebro.rotina($state.snapshot(this.estado) as AnimaState, this.ctxCerebro(), { agenda: this.prefs.poderes.agenda, mundo: this.prefs.poderes.mundo });
+      if (r) {
+        this.estado = r.estado;
+        this.salvar();
+        this.pensamento = r.traco;
+        if (r.fala) this.mostrar(r.fala, false);
+        if (r.acao) void this.executarAcao(r.acao, false);
+        return;
+      }
+    }
     if (hora >= 1 && hora < 5 && this.avisos.madrugada !== dia) {
       this.avisos.madrugada = dia;
       this.evento({ tipo: 'madrugada' });
@@ -388,6 +492,12 @@ class Anima {
     if (!this.started || tela === this.telaAtual) return;
     this.telaAtual = tela;
     this.tela = tela;
+    // prova chegando e você na mesa de RPG? bronca
+    const b = cerebro.broncaDeTela($state.snapshot(this.estado) as AnimaState, tela, this.ctxCerebro());
+    if (b?.fala) {
+      this.aplicar(b);
+      return;
+    }
     if (tela === 'ia') this.outraIA(this.aiTab);
     else this.evento({ tipo: 'tela', tela, rotulo });
   }
@@ -481,6 +591,12 @@ class Anima {
     if (Date.now() - this.ultimoCarinho < 8000) return;
     this.ultimoCarinho = Date.now();
     this.evento({ tipo: 'carinho' });
+    // carinho conta para a vontade dela (e cumpre uma negociação que pedia carinho)
+    const r = cerebro.registrarCarinho($state.snapshot(this.estado) as AnimaState, this.ctxCerebro());
+    if (!r) return;
+    this.estado = r.estado;
+    this.salvar();
+    if (r.fala || r.acao) this.digitar(r, this.aberta, r.acao);
   }
 
   jogar(): void {
@@ -518,6 +634,25 @@ class Anima {
     const ideias = Array.from({ length: Math.min(6, pool.length) }, () => noteName(pool[Math.floor(Math.random() * pool.length)]!));
     const aberta = engine.active && !engine.active.startsWith('.') ? noteName(engine.active) : undefined;
     return { now: Date.now(), rand: Math.random, intensidade: this.prefs.intensidade, nome: this.prefs.nome.trim() || 'você', ideias, notas: engine.notes.length, aberta };
+  }
+
+  /** O contexto do cérebro: notas, comandos da paleta, agenda e mundos. */
+  private ctxCerebro(): cerebro.CtxCerebro {
+    const now = Date.now();
+    const titulos = engine.notes.filter((p) => !p.startsWith('.')).map(noteName);
+    const comandos = commands.list.filter((c) => !c.id.startsWith('anima.') && (!c.when || c.when())).map((c) => ({ id: c.id, rotulo: c.label, chaves: c.keys }));
+    let ags: cerebro.Ocorrencia[] = [];
+    try {
+      ags = agenda.occurrences(now - 3_600_000, now + 14 * 864e5).map((o) => ({ titulo: o.title, inicio: o.start, diaInteiro: o.allDay }));
+    } catch {
+      /* agenda ainda não carregou */
+    }
+    const mundos: cerebro.MundoInfo[] = cadernos.worlds.filter((w) => w.name).map((w) => {
+      const de = (t: string) => w.entities.filter((e) => e.type === t).map((e) => e.name).slice(0, 40);
+      const pasta = w.path && w.path.includes('/') ? `${w.path.slice(0, w.path.lastIndexOf('/'))}/Ânima` : `Mundos/${w.name}/Ânima`;
+      return { nome: w.name, pasta, personagens: de('personagem'), lugares: de('lugar'), faccoes: de('faccao'), criaturas: de('criatura'), divindades: de('divindade') };
+    });
+    return { ...this.ctx(), titulos, comandos, agenda: ags, mundos };
   }
 
   /** O contexto das cenas: também uma frase da nota aberta, para ela citar. */
@@ -631,7 +766,8 @@ class Anima {
 
   evento(ev: AnimaEvent): void {
     if (!this.prefs.acordada || !this.started && ev.tipo !== 'despertar' && ev.tipo !== 'dormir') return;
-    this.aplicar(reagir($state.snapshot(this.estado) as AnimaState, ev, this.ctx()));
+    const essencial = ev.tipo === 'timer' || ev.tipo === 'agendaChegando';
+    this.aplicar(reagir($state.snapshot(this.estado) as AnimaState, ev, this.ctx()), essencial);
   }
 
   /** A pergunta do dia, no balão. `forcar` ignora o "uma por dia" da tela (não o do núcleo). */
@@ -667,12 +803,346 @@ class Anima {
   falar(texto: string, conversa = true): void {
     const t = texto.trim();
     if (!t || this.pensando) return;
+    if (/^\/(pensamento|cerebro|cérebro|debug)\b/i.test(t)) {
+      this.mostrarPensamento();
+      return;
+    }
     const historia = this.chat.slice(-12);
     this.empurrar({ de: 'voce', texto: t, gesto: 'neutro' });
-    // as regras sempre rodam: elas aprendem os fatos e mexem nos sentimentos
-    const r = responder($state.snapshot(this.estado) as AnimaState, t, this.ctx());
-    if (this.cerebroLocal && r.intencao !== 'crise') void this.pensar(r, historia, conversa);
-    else this.digitar(r, conversa);
+    // o cérebro sempre roda: entende, decide, aprende, mexe nos sentimentos
+    const r = cerebro.pensar($state.snapshot(this.estado) as AnimaState, t, this.ctxCerebro());
+    this.pensamento = r.traco;
+    // o modelo local só troca o texto da conversa; ordens, decisões e crise são dela
+    if (this.cerebroLocal && !r.acao && !r.decisao && r.intencao !== 'crise' && !r.intencao.startsWith('cmd.')) void this.pensar(r, historia, conversa);
+    else this.digitar(r, conversa, r.acao);
+  }
+
+  /** Mostra na conversa o raciocínio do último pensamento. */
+  mostrarPensamento(): void {
+    this.aberta = true;
+    const linhas = this.pensamento.length ? this.pensamento : ['(ainda não pensei em nada que valha mostrar)'];
+    this.empurrar({ de: 'ela', texto: `⟨pensamento⟩\n${linhas.map((l) => `· ${l}`).join('\n')}`, gesto: 'neutro' });
+  }
+
+  // ------------------------------------------------------------------ ações (o que ela faz no app)
+
+  private achar(nome: string): string | undefined {
+    const n = nome.toLowerCase();
+    return engine.notes.find((p) => noteName(p) === nome) ?? engine.notes.find((p) => noteName(p).toLowerCase() === n);
+  }
+
+  /** "17/11 19:00": o formato que o leitor de lembretes entende sem ambiguidade. */
+  private quandoLinha(at: number): string {
+    const d = new Date(at);
+    return `${d.getDate()}/${d.getMonth() + 1} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  /** Executa a ação e (se `comentar`) deixa ela falar do resultado. */
+  private async executarAcao(acao: cerebro.Acao, comentar = true): Promise<void> {
+    let res: cerebro.ResultadoAcao;
+    // enquanto mexe no app, ela varre a tela
+    const antes = this.gesto;
+    if (acao.tipo !== 'calar' && acao.tipo !== 'dormir' && acao.tipo !== 'esconder') this.gesto = 'escaneando';
+    try {
+      res = await this.executar(acao);
+    } catch (e) {
+      res = { ok: false, erro: e instanceof Error ? e.message : String(e) };
+    }
+    setTimeout(() => {
+      if (this.gesto === 'escaneando') this.gesto = res.ok ? antes : 'erro';
+      if (!res.ok) setTimeout(() => { if (this.gesto === 'erro') this.gesto = 'neutro'; }, 2400);
+    }, 1100);
+    if (!comentar && res.ok) return;
+    const r = cerebro.depoisDaAcao($state.snapshot(this.estado) as AnimaState, acao, res, this.ctx());
+    this.estado = r.estado;
+    this.salvar();
+    if (r.fala) setTimeout(() => this.mostrar(r.fala!, this.aberta), 700);
+  }
+
+  private async executar(a: cerebro.Acao): Promise<cerebro.ResultadoAcao> {
+    if (a.tipo === 'desfazer') {
+      const f = this.desfazer;
+      this.desfazer = null;
+      f?.();
+      return { ok: true };
+    }
+    this.desfazer = null;
+    const trav = this.estado.memoria.cerebro.ultimaAcao?.travessura ?? null;
+    switch (a.tipo) {
+      case 'agenda': {
+        const salvar = async (ev: cerebro.EventoPedido, dela: boolean): Promise<string> => {
+          const input: EventInput = {
+            title: ev.titulo, date: ev.dia, endDate: null, allDay: !ev.inicio, start: ev.inicio, end: ev.inicio ? ev.fim : null, repeat: null,
+            location: ev.local, description: dela ? 'marcado pela Ânima' : '',
+          };
+          const path = eventPath(input.title, input.date, (x) => engine.vault.has(x));
+          this.meus.add(path);
+          if (!(await agenda.save({ occ: null, input, target: TANDEN }))) throw new Error(agenda.error || 'a agenda não aceitou');
+          return path;
+        };
+        await salvar(a.evento, a.evento.titulo.endsWith('(ânima)'));
+        const extras: string[] = [];
+        for (const e of a.extras) extras.push(await salvar(e, true));
+        for (const e of a.estudo) reminders.add(`${this.quandoLinha(e.at)} ${e.texto}`);
+        if (extras.length) this.desfazer = () => { for (const x of extras) void engine.deleteNote(x); };
+        return { ok: true };
+      }
+      case 'lembrete': {
+        const linha = a.texto.endsWith('🖤') ? `${this.quandoLinha(a.at)} ${a.texto}` : a.linha;
+        return reminders.add(linha) ? { ok: true } : { ok: false, erro: reminders.error };
+      }
+      case 'abrirNota': {
+        const p = this.achar(a.nota);
+        if (!p) return { ok: false, erro: 'não achei a nota' };
+        engine.open(p);
+        commands.run('ir.notas');
+        return { ok: true };
+      }
+      case 'criarNota': {
+        const base = safeName(a.titulo) || 'Sem título';
+        let path = `${base}.md`;
+        for (let n = 2; engine.vault.has(path); n++) path = `${base} ${n}.md`;
+        this.meus.add(path);
+        engine.writeNote(path, '');
+        engine.open(path);
+        commands.run('ir.notas');
+        return { ok: true };
+      }
+      case 'apagarNota': {
+        const p = this.achar(a.nota);
+        if (!p) return { ok: false, erro: 'não achei a nota' };
+        await notes.remove(p);
+        return { ok: true };
+      }
+      case 'buscar':
+        notes.searchFor(a.busca);
+        commands.run('ir.notas');
+        return { ok: true };
+      case 'ir':
+        commands.run(`ir.${a.tela}`);
+        if (trav === 'telaErrada') this.desfazer = () => commands.run('ir.ia');
+        return { ok: true };
+      case 'tema': {
+        const antes = theme.preset, estilo = theme.skin;
+        if (a.tema === 'escuro' && !theme.dark) theme.toggleDark();
+        else if (a.tema === 'claro' && theme.dark) theme.toggleDark();
+        else if (a.tema === 'proximo') theme.nextPreset();
+        else if (a.tema === 'estilo') theme.nextSkin();
+        this.desfazer = () => {
+          if (antes !== 'custom') theme.usePreset(antes);
+          else if (a.tema === 'escuro' || a.tema === 'claro') theme.toggleDark();
+          if (theme.skin !== estilo) theme.useSkin(estilo);
+        };
+        return { ok: true };
+      }
+      case 'anotar': {
+        let path = a.onde === 'aberta' ? engine.active : null;
+        if (!path) {
+          notes.daily(0);
+          path = engine.active;
+        }
+        if (!path) return { ok: false, erro: 'sem nota para anotar' };
+        const ps = a.ps ? `\n  > ${a.ps}` : '';
+        engine.writeNote(path, `${engine.vault.read(path).replace(/\s*$/, '')}\n- ${a.texto}${ps}\n`);
+        if (a.ps) this.desfazer = () => engine.writeNote(path!, engine.vault.read(path!).replace(ps, ''));
+        return { ok: true };
+      }
+      case 'timer':
+        this.marcarTimer(a.ms, a.rotulo);
+        this.desfazer = trav === 'minutoExtra' ? () => this.marcarTimer(this.timerDelaFim - Date.now() - 60_000, a.rotulo) : () => this.cancelarTimer();
+        return { ok: true };
+      case 'dado': {
+        const r = mesa.roll(a.formula, { who: 'Ânima', label: 'ânima', quiet: true });
+        if (typeof r === 'string') return { ok: false, erro: r };
+        const x = r[0]!;
+        return { ok: true, vars: { total: x.total, critico: x.critical ?? '', formula: a.formula } };
+      }
+      case 'moeda':
+        return { ok: true, vars: { lado: sorte.flip() } };
+      case 'sync':
+        void engine.syncNow();
+        return { ok: true };
+      case 'agua':
+        saude.drink();
+        return { ok: true };
+      case 'treinar':
+        return { ok: commands.run('exercicios.sugestao') };
+      case 'aleatoria': {
+        const p = a.nota ? this.achar(a.nota) : undefined;
+        if (p) {
+          engine.open(p);
+          commands.run('ir.notas');
+          return { ok: true };
+        }
+        return { ok: commands.run('nota.aleatoria') };
+      }
+      case 'diario':
+        return { ok: commands.run(a.deslocamento < 0 ? 'nota.ontem' : a.deslocamento > 0 ? 'nota.amanha' : 'nota.hoje') };
+      case 'som':
+        sound.set({ on: a.modo === 'liga' ? true : a.modo === 'desliga' ? false : !sound.on });
+        return { ok: true };
+      case 'calar':
+        this.desfazer = () => { this.estado = { ...this.estado, memoria: { ...this.estado.memoria, cerebro: { ...this.estado.memoria.cerebro, quietaAte: 0 } } }; };
+        return { ok: true };
+      case 'esconder':
+        this.escondidaEm = Date.now();
+        this.aberta = false;
+        this.set({ escondida: true });
+        return { ok: true };
+      case 'dormir':
+        this.estado = { ...this.estado, memoria: { ...this.estado.memoria, cerebro: { ...this.estado.memoria.cerebro, quietaAte: Date.now() + 3 * 3_600_000 } } };
+        this.gesto = 'calma';
+        this.salvar();
+        return { ok: true };
+      case 'voltar':
+        this.set({ escondida: false });
+        this.estado = { ...this.estado, memoria: { ...this.estado.memoria, cerebro: { ...this.estado.memoria.cerebro, quietaAte: 0 } } };
+        return { ok: true };
+      case 'mundo': {
+        if (!cadernos.worlds.length) cadernos.start();
+        const nome = safeName(a.escrito.titulo) || 'Escrito da Ânima';
+        const path = `${a.escrito.pasta}/${nome}.md`;
+        this.meus.add(path);
+        const final = cadernos.create(a.escrito.pasta, a.escrito.titulo, () => a.escrito.texto);
+        this.meus.add(final);
+        this.desfazer = () => void engine.deleteNote(final);
+        return { ok: true, vars: { titulo: a.escrito.titulo, mundo: a.escrito.mundo } };
+      }
+      case 'comando':
+        return commands.run(a.id) ? { ok: true } : { ok: false, erro: `o comando "${a.rotulo}" não está disponível agora` };
+    }
+  }
+
+  private marcarTimer(ms: number, rotulo: string): void {
+    this.cancelarTimer();
+    const dur = Math.max(1000, ms);
+    this.timerDelaFim = Date.now() + dur;
+    this.timerDela = setTimeout(() => {
+      this.timerDela = null;
+      sound.play('alert');
+      this.evento({ tipo: 'timer', minutos: Math.max(1, Math.round(dur / 60_000)), rotulo });
+      if (document.hidden) this.notificar('Ânima ⏱', `acabou o tempo (${rotulo}).`, ANIMA_ID_BASE + 50);
+    }, dur);
+  }
+
+  private cancelarTimer(): void {
+    if (this.timerDela) clearTimeout(this.timerDela);
+    this.timerDela = null;
+  }
+
+  /** Pedido adiado: quando o tempo dela acaba, ela faz. */
+  private agendarAdiado(): void {
+    const p = this.estado.memoria.cerebro.pendente;
+    clearTimeout(this.adiadoTimer);
+    if (p?.tipo !== 'adiado') return;
+    this.adiadoTimer = setTimeout(() => {
+      const r = cerebro.cumprirAdiado($state.snapshot(this.estado) as AnimaState, this.ctxCerebro());
+      if (r) this.digitar(r, this.aberta, r.acao);
+    }, Math.max(500, p.ate - Date.now() + 200));
+  }
+
+  // ------------------------------------------------------------------ jogos (Steam)
+
+  /** de quanto em quanto tempo ela volta a reclamar, por problema */
+  private static readonly INTERVALO_BRONCA: Record<cerebro.ProblemaJogo, number> = {
+    compromisso: 8 * 60_000, prova: 25 * 60_000, dormir: 20 * 60_000, madrugada: 30 * 60_000, maratona: 45 * 60_000,
+  };
+
+  private async olharSteam(): Promise<void> {
+    if (!this.prefs.poderes.jogos || !this.prefs.acordada || this.olhandoSteam) return;
+    this.olhandoSteam = true;
+    let j: cerebro.JogoAtual | null = null;
+    try {
+      j = await invoke<cerebro.JogoAtual | null>('steam_jogo', { chave: this.prefs.steamChave.trim() || null });
+    } catch {
+      return;
+    } finally {
+      this.olhandoSteam = false;
+    }
+    const now = Date.now();
+    const ctx: cerebro.CtxJogo = { ...this.ctxCerebro(), rotina: this.prefs.rotina };
+    const atual = this.jogo;
+    const snap = () => $state.snapshot(this.estado) as AnimaState;
+    if (atual && (!j || j.appid !== atual.j.appid)) {
+      // fechou (ou trocou de jogo)
+      this.jogo = null;
+      this.falarFora(cerebro.reagirJogo(snap(), 'parou', atual.j, atual.inicio, ctx));
+    }
+    if (!j) return;
+    if (!this.jogo) {
+      const r = cerebro.reagirJogo(snap(), 'comecou', j, now, ctx);
+      this.jogo = { j, inicio: now, broncas: r.problema ? 1 : 0, ultimaBronca: r.problema ? now : 0 };
+      this.falarFora(r, r.problema === 'compromisso');
+      return;
+    }
+    this.jogo = { ...this.jogo, j };
+    const { problema } = cerebro.problemaDoJogo(snap(), this.jogo.inicio, ctx);
+    if (!problema || now - this.jogo.ultimaBronca < Anima.INTERVALO_BRONCA[problema]) return;
+    const r = cerebro.reagirJogo(snap(), 'jogando', j, this.jogo.inicio, ctx, this.jogo.broncas);
+    if (r.fala) this.jogo = { ...this.jogo, broncas: this.jogo.broncas + 1, ultimaBronca: now };
+    this.falarFora(r, problema === 'compromisso');
+  }
+
+  // ------------------------------------------------------------------ web e apps em foco
+
+  /** intervalo mínimo entre comentários da mesma categoria */
+  private static readonly ESPERA_WEB: Partial<Record<cerebro.CategoriaWeb, number>> = {
+    adulto: 30 * 60_000, ia: 15 * 60_000, video: 20 * 60_000, live: 20 * 60_000, rede: 25 * 60_000, estudo: 40 * 60_000, trabalho: 60 * 60_000, obsidian: 30 * 60_000,
+  };
+
+  private async olharJanela(): Promise<void> {
+    if (!this.prefs.poderes.web || !this.prefs.acordada) return;
+    let jan: { titulo: string; app: string } | null = null;
+    try {
+      jan = await invoke<{ titulo: string; app: string } | null>('janela_ativa');
+      this.webErro = '';
+    } catch (e) {
+      this.webErro = String(e);
+      return;
+    }
+    const now = Date.now();
+    const p = jan ? cerebro.lerJanela(jan.titulo, jan.app) : null;
+    const antes = this.web;
+    // o tempo da página anterior conta para a categoria dela
+    if (antes) this.estado = cerebro.contarWeb($state.snapshot(this.estado) as AnimaState, antes.p.categoria, Math.min(now - antes.desde, 25_000), now);
+    if (!p) {
+      this.web = null;
+      return;
+    }
+    const mesma = antes && antes.p.site === p.site && antes.p.pagina === p.pagina;
+    // `desde` marca a última leitura: a próxima soma só o intervalo entre elas
+    this.web = { p, desde: now };
+    // só comenta o que ficou pelo menos uma volta (20 s) na tela, uma vez por página
+    const chave = `${p.site}|${p.pagina}`;
+    if (!mesma || this.webComentou === chave) return;
+    const espera = Anima.ESPERA_WEB[p.categoria] ?? 30 * 60_000;
+    if (now - this.webUltimo < 4 * 60_000 || now - (this.webPorCategoria[p.categoria] ?? 0) < espera) return;
+    const r = cerebro.reagirWeb($state.snapshot(this.estado) as AnimaState, p, { ...this.ctxCerebro(), rotina: this.prefs.rotina });
+    this.webComentou = chave;
+    if (!r.fala) return;
+    this.webUltimo = now;
+    this.webPorCategoria[p.categoria] = now;
+    this.pensamento = [`janela: "${jan?.titulo}" (${jan?.app})`, `site: ${p.site} · categoria: ${p.categoria} · página: ${p.pagina}`, `fala: ${r.grupo}`];
+    this.falarFora(r);
+  }
+
+  /** Fala mesmo com o app escondido: com a janela na bandeja, vira notificação do sistema. */
+  private falarFora(r: { estado: AnimaState; fala: Fala | null }, essencial = false): void {
+    this.estado = r.estado;
+    this.salvar();
+    if (!r.fala) return;
+    if (!essencial && Date.now() < this.estado.memoria.cerebro.quietaAte) return;
+    if (typeof document !== 'undefined' && (document.hidden || !document.hasFocus())) this.notificar('Ânima 🎮', r.fala.texto, ANIMA_ID_BASE + 60);
+    this.mostrar(r.fala, false);
+  }
+
+  /** Um evento que a pessoa criou na agenda (não ela): ela reage pelo sentido. */
+  private eventoDaAgenda(path: string): void {
+    const ev = engine.vault.has(path) ? parseEventNote(path, engine.vault.read(path)) : null;
+    if (!ev) return;
+    const r = cerebro.eventoCriado($state.snapshot(this.estado) as AnimaState, ev.title, dayTime(ev.date, ev.start), this.ctxCerebro());
+    this.estado = r.estado;
+    this.evento({ tipo: 'agendaCriada', titulo: ev.title, categoria: r.categoria, pessoa: r.pessoa ?? undefined });
   }
 
   /** O modelo local está pronto para pensar por ela? */
@@ -716,20 +1186,25 @@ class Anima {
   }
 
   /** Ela "digita" antes de responder: mais devagar quando a fala é longa (e um pouco irregular). */
-  private digitar(r: Reacao, conversa: boolean): void {
+  private digitar(r: Reacao, conversa: boolean, acao: cerebro.Acao | null = null): void {
     this.estado = r.estado;
     this.salvar();
+    this.agendarAdiado();
     this.digitando = true;
     const espera = Math.min(2600, 500 + (r.fala?.texto.length ?? 0) * 14) * (0.7 + Math.random() * 0.6);
     setTimeout(() => {
       this.digitando = false;
       if (r.fala) this.mostrar(r.fala, conversa);
+      // primeiro ela fala, depois faz (dá para ver o que ela decidiu antes de acontecer)
+      if (acao) setTimeout(() => void this.executarAcao(acao), 450);
     }, espera);
   }
 
-  private aplicar(r: Reacao): void {
+  private aplicar(r: Reacao, essencial = false): void {
     this.estado = r.estado;
     this.salvar();
+    // calada a pedido: os sentimentos mexem, a boca não (só o essencial fala)
+    if (!essencial && Date.now() < this.estado.memoria.cerebro.quietaAte) return;
     // durante uma cena, os comentários de fundo esperam (os sentimentos mexem igual)
     if (r.fala && !this.cena) this.mostrar(r.fala, false);
   }
