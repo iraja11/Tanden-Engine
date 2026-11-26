@@ -46,7 +46,9 @@ describe('ânima: cofre', () => {
       // cérebro
       'titulo', 'quando', 'opcoes', 'extra', 'formula', 'total', 'lado', 'mundo', 'erro', 'segundos', 'afeto', 'ciume', 'humor', 'expr', 'resultado', 'data',
       'idade', 'lista', 'tipo', 'periodo', 'assunto', 'horas', 'capitulo', 'coisa2', 'personagem', 'lugar', 'faccao', 'criatura', 'divindade', 'comando',
-      'falta', 'meta', 'bebido', 'copos', 'campo', 'jogo', 'acorda', 'site', 'pagina']);
+      'falta', 'meta', 'bebido', 'copos', 'campo', 'jogo', 'acorda', 'site', 'pagina',
+      // música e Minecraft
+      'artista', 'musica', 'album', 'vezes', 'faixas', 'jogador', 'vida', 'fome', 'bioma', 'y', 'item', 'mortes', 'sessoes', 'presentes', 'termo']);
     const gestos = new Set<string>(GESTOS);
     for (const [g, ls] of Object.entries(banco().falas)) {
       expect(ls.length, g).toBeGreaterThan(0);

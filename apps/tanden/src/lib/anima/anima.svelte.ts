@@ -6,6 +6,7 @@ import {
   type Intensidade, type OpcaoFala, type Reacao,
 } from '@tanden/core';
 import { Channel, invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import * as notif from '@tauri-apps/plugin-notification';
 import { untrack } from 'svelte';
 import { commands } from '../commands.svelte';
@@ -59,7 +60,7 @@ export interface AnimaPrefs {
   /** quem pensa as respostas da conversa: as regras dela ou um modelo local (Ollama) */
   cerebro: 'regras' | 'ollama';
   /** o que ela pode fazer por conta própria */
-  poderes: { agenda: boolean; mundo: boolean; agua: boolean; jogos: boolean; web: boolean };
+  poderes: { agenda: boolean; mundo: boolean; agua: boolean; jogos: boolean; web: boolean; musica: boolean; minecraft: boolean };
   /** quando você acorda (para ela saber a hora de você largar o jogo e dormir) */
   rotina: { acordaAs: string; horasSono: number; diasTrabalho: number[] };
   /** chave da Web API da Steam (opcional: só para saber se você está num lobby online agora) */
@@ -79,7 +80,7 @@ const STATE_KEY = 'tanden.anima.estado';
 const MARKS_KEY = 'tanden.anima.marcas';
 const DEFAULTS: AnimaPrefs = {
   acordada: false, intensidade: 2, nome: 'amor', notificar: true, silencio: true, lado: 'dir', altura: 0, escondida: false, passeia: true, cenas: true, cerebro: 'regras',
-  poderes: { agenda: true, mundo: true, agua: true, jogos: true, web: false },
+  poderes: { agenda: true, mundo: true, agua: true, jogos: true, web: false, musica: true, minecraft: true },
   rotina: { acordaAs: '06:00', horasSono: 7.5, diasTrabalho: [1, 2, 3, 4, 5] },
   steamChave: '',
 };
@@ -215,6 +216,20 @@ class Anima {
   private webUltimo = 0;
   private webPorCategoria: Record<string, number> = {};
   private webComentou = '';
+  private adultoDesde = 0;
+  /** a música tocando agora (Spotify ou outro player) e desde quando */
+  musica = $state<{ f: cerebro.Faixa; desde: number } | null>(null);
+  musicaErro = $state('');
+  private musicaUltima = 0;
+  private musicaComentou = '';
+  /** ela dentro do Minecraft: desde quando, o último estado do jogo e a porta da ponte */
+  mine = $state<{ inicio: number; jogo: cerebro.EstadoMine | null; mundo: string; jogador: string; broncas: number; ultimaBronca: number } | null>(null);
+  minePorta = $state(0);
+  mineErro = $state('');
+  /** até quando as falas dela também vão para o chat do jogo (resposta a quem falou lá) */
+  private mineAte = 0;
+  private mineUltimaFala = 0;
+  private mineOff: (() => void) | null = null;
   private marcas: Marcas = { periodo: '', data: '', aniversario: '', pergunta: '', bateria: 0, ...(load<Partial<Marcas>>(MARKS_KEY) ?? {}) };
 
   // ------------------------------------------------------------------ ciclo
@@ -335,7 +350,10 @@ class Anima {
       const steam = setInterval(() => void this.olharSteam(), 45_000);
       setTimeout(() => void this.olharSteam(), 5000);
       const web = setInterval(() => void this.olharJanela(), 20_000);
-      this.offs.push(() => clearInterval(steam), () => clearInterval(web));
+      const musica = setInterval(() => void this.olharMusica(), 15_000);
+      const mine = setInterval(() => this.tickMine(), 60_000);
+      this.offs.push(() => clearInterval(steam), () => clearInterval(web), () => clearInterval(musica), () => clearInterval(mine), () => void this.ponteMine(false));
+      void this.ponteMine(this.prefs.poderes.minecraft);
     }
     this.agendarAdiado();
     void this.bateria();
@@ -1103,6 +1121,11 @@ class Anima {
     const now = Date.now();
     const p = jan ? cerebro.lerJanela(jan.titulo, jan.app) : null;
     const antes = this.web;
+    // saiu do site adulto: ela tira as mãos dos olhos (sem notificação, sem citar nada)
+    if (p?.categoria === 'adulto' && antes?.p.categoria !== 'adulto') this.adultoDesde = now;
+    if (antes?.p.categoria === 'adulto' && p?.categoria !== 'adulto' && now - this.adultoDesde >= 40_000) {
+      this.falarFora(cerebro.saiuDoAdulto($state.snapshot(this.estado) as AnimaState, (now - this.adultoDesde) / 60_000, { ...this.ctxCerebro(), rotina: this.prefs.rotina }), false, true);
+    }
     // o tempo da página anterior conta para a categoria dela
     if (antes) this.estado = cerebro.contarWeb($state.snapshot(this.estado) as AnimaState, antes.p.categoria, Math.min(now - antes.desde, 25_000), now);
     if (!p) {
@@ -1122,17 +1145,214 @@ class Anima {
     if (!r.fala) return;
     this.webUltimo = now;
     this.webPorCategoria[p.categoria] = now;
-    this.pensamento = [`janela: "${jan?.titulo}" (${jan?.app})`, `site: ${p.site} · categoria: ${p.categoria} · página: ${p.pagina}`, `fala: ${r.grupo}`];
+    const discreta = p.categoria === 'adulto';
+    this.pensamento = [discreta ? `janela: (escondida) (${jan?.app})` : `janela: "${jan?.titulo}" (${jan?.app})`, `site: ${p.site} · categoria: ${p.categoria}${p.pagina ? ` · página: ${p.pagina}` : ''}`, `fala: ${r.grupo}`];
+    this.falarFora(r, false, discreta);
+  }
+
+
+  // ------------------------------------------------------------------ música (Spotify e outros players)
+
+  /** só comenta uma faixa que tocou pelo menos isso, e espera entre um comentário e outro */
+  private static readonly MUSICA_MIN_TOCANDO = 25_000;
+  private static readonly MUSICA_ESPERA = 12 * 60_000;
+
+  private async olharMusica(): Promise<void> {
+    if (!this.prefs.poderes.musica || !this.prefs.acordada) return;
+    let f: cerebro.Faixa | null = null;
+    try {
+      f = await invoke<cerebro.Faixa | null>('musica_tocando');
+      this.musicaErro = '';
+    } catch (e) {
+      this.musicaErro = String(e);
+      return;
+    }
+    const now = Date.now();
+    if (!f || !f.tocando) {
+      // pausou: mantém a faixa (voltar a tocar a mesma não conta de novo)
+      if (!f) this.musica = null;
+      return;
+    }
+    const antes = this.musica;
+    if (!antes || antes.f.id !== f.id) {
+      this.musica = { f, desde: now };
+      this.estado = cerebro.contarFaixa($state.snapshot(this.estado) as AnimaState, f, now);
+      this.salvar();
+      return;
+    }
+    this.musica = { f, desde: antes.desde };
+    if (this.musicaComentou === f.id || now - antes.desde < Anima.MUSICA_MIN_TOCANDO) return;
+    // música em repetição fala antes do intervalo normal; o resto espera
+    const vezes = this.estado.memoria.cerebro.musica.faixas[f.id] ?? 1;
+    if (now - this.musicaUltima < (vezes >= 3 ? 4 * 60_000 : Anima.MUSICA_ESPERA)) return;
+    // conversando ou numa cena: ela só ouve
+    if (this.cena || this.digitando || this.pensando) return;
+    this.musicaComentou = f.id;
+    const r = cerebro.reagirMusica($state.snapshot(this.estado) as AnimaState, f, { ...this.ctxCerebro(), rotina: this.prefs.rotina });
+    if (!r.fala) return;
+    this.musicaUltima = now;
+    this.pensamento = [`música: "${f.titulo}" · ${f.artista} (${f.player})`, `estilo: ${r.estilo ?? '?'} · tocou ${vezes}× hoje`, `fala: ${r.grupo}`];
     this.falarFora(r);
   }
 
+  // ------------------------------------------------------------------ Minecraft
+
+  /** Liga/desliga a ponte local (o mod do jogo conecta nela). */
+  private async ponteMine(ligar: boolean): Promise<void> {
+    if (!desktop || !isTauri()) return;
+    try {
+      if (ligar && !this.mineOff) {
+        const off = await listen<Record<string, unknown>>('minecraft', (e) => this.doMine(e.payload));
+        this.mineOff = off;
+      }
+      this.minePorta = await invoke<number>('minecraft_ligar', { ligado: ligar });
+      this.mineErro = '';
+    } catch (e) {
+      this.mineErro = String(e);
+    }
+    if (!ligar) {
+      this.mineOff?.();
+      this.mineOff = null;
+      if (this.mine) this.saiuDoMine();
+    }
+  }
+
+  private enviarMine(msg: cerebro.MsgParaMine): void {
+    void invoke<boolean>('minecraft_enviar', { msg }).catch(() => false);
+  }
+
+  /** O que ela disse vai também para o chat do jogo. */
+  private dizerNoMine(f: Fala): void {
+    this.mineUltimaFala = Date.now();
+    this.enviarMine({ t: 'fala', texto: f.texto, gesto: f.gesto });
+  }
+
+  private ctxMine(): cerebro.CtxMine {
+    return { ...this.ctxCerebro(), rotina: this.prefs.rotina, jogo: this.mine?.jogo ?? null };
+  }
+
+  /** Aplica a resposta: estado, fala no app e no jogo, e o que o jogo deve fazer. */
+  private aplicarMine(r: cerebro.RespostaMine, atraso = 500): void {
+    this.estado = r.estado;
+    this.salvar();
+    for (const m of r.envios) this.enviarMine(m);
+    if (!r.fala) return;
+    const f = r.fala;
+    setTimeout(() => {
+      // a receita já vai com a fala dentro; aqui só mostra no app
+      if (r.noChat) this.mineAte = Math.max(this.mineAte, Date.now() + 1500);
+      this.mostrar(f, this.aberta);
+    }, atraso);
+  }
+
+  private reagirNoMine(ev: cerebro.EventoMine): void {
+    if (!this.mine) return;
+    this.aplicarMine(cerebro.reagirMine($state.snapshot(this.estado) as AnimaState, ev, this.ctxMine()));
+  }
+
+  /** Mensagens do jogo (uma linha JSON do mod, já sem a chave). */
+  private doMine(m: Record<string, unknown>): void {
+    if (!this.prefs.acordada || !this.started) return;
+    const str = (k: string) => (typeof m[k] === 'string' ? (m[k] as string) : '');
+    const numero = (k: string) => (typeof m[k] === 'number' ? (m[k] as number) : 0);
+    switch (m.t) {
+      case 'ola': {
+        const now = Date.now();
+        this.mine = { inicio: now, jogo: null, mundo: str('mundo') || 'seu mundo', jogador: str('jogador') || this.prefs.nome, broncas: 0, ultimaBronca: now };
+        this.mineUltimaFala = now;
+        break;
+      }
+      case 'entrou':
+        // o corpo dela apareceu no mundo
+        if (this.mine) this.reagirNoMine({ tipo: 'entrou', mundo: this.mine.mundo, jogador: this.mine.jogador });
+        break;
+      case 'estado':
+        if (this.mine) this.mine = { ...this.mine, jogo: m as unknown as cerebro.EstadoMine };
+        break;
+      case 'chat':
+        this.chatDoMine(str('texto'));
+        break;
+      case 'evento': {
+        const ev = m.evento as cerebro.EventoMine | undefined;
+        if (ev && typeof ev.tipo === 'string') this.reagirNoMine(ev);
+        break;
+      }
+      case 'desconectou':
+        if (this.mine) this.saiuDoMine();
+        break;
+      default:
+        break;
+    }
+  }
+
+  /** Alguém falou com ela no chat do jogo. */
+  private chatDoMine(texto: string): void {
+    const t = texto.trim().slice(0, 400);
+    if (!t || !this.mine) return;
+    this.mineUltimaFala = Date.now();
+    const p = cerebro.entenderMine(t);
+    if (!p) {
+      // conversa ou pedido do app: o cérebro de sempre responde, e a resposta volta para o jogo
+      this.mineAte = Date.now() + (this.cerebroLocal ? 65_000 : 25_000);
+      this.falar(cerebro.limparChat(t) ? t : 'oi', this.aberta);
+      return;
+    }
+    this.empurrar({ de: 'voce', texto: `⛏ ${t}`, gesto: 'neutro' });
+    const r = cerebro.responderMine($state.snapshot(this.estado) as AnimaState, p, this.ctxMine());
+    this.pensamento = [`minecraft: "${t}"`, `pedido: ${JSON.stringify(p)}`, `fala: ${r.grupo}`, ...r.envios.map((e) => `jogo: ${e.t}${'acao' in e ? ` ${e.acao}` : 'item' in e ? ` ${e.item}` : ''}`)];
+    this.aplicarMine(r, 350);
+  }
+
+  /** Ela saiu do jogo (fechou o Minecraft, saiu do mundo ou desligou o poder). */
+  private saiuDoMine(): void {
+    const m = this.mine;
+    if (!m) return;
+    const minutos = (Date.now() - m.inicio) / 60_000;
+    const r = cerebro.reagirMine($state.snapshot(this.estado) as AnimaState, { tipo: 'saiu', minutos }, this.ctxMine());
+    this.mine = null;
+    this.estado = r.estado;
+    // conta como jogo também (horas, rival)
+    const j: cerebro.JogoAtual = { appid: 0, nome: 'Minecraft', modo: 'single', generos: ['Aventura', 'Simulação'], online: null };
+    const parou = cerebro.reagirJogo($state.snapshot(this.estado) as AnimaState, 'parou', j, m.inicio, { ...this.ctxCerebro(), rotina: this.prefs.rotina });
+    this.estado = parou.estado;
+    this.salvar();
+    if (minutos >= 2 && r.fala) this.mostrar(r.fala, false);
+  }
+
+  /** A cada minuto no jogo: broncas de hora (prova, dormir...) e um comentário solto quando o chat está quieto. */
+  private tickMine(): void {
+    const m = this.mine;
+    if (!m || !this.prefs.acordada) return;
+    const now = Date.now();
+    const ctx = { ...this.ctxCerebro(), rotina: this.prefs.rotina };
+    const { problema } = cerebro.problemaDoJogo($state.snapshot(this.estado) as AnimaState, m.inicio, ctx);
+    if (problema && now - m.ultimaBronca >= Anima.INTERVALO_BRONCA[problema]) {
+      const j: cerebro.JogoAtual = { appid: 0, nome: 'Minecraft', modo: 'single', generos: ['Aventura'], online: null };
+      const r = cerebro.reagirJogo($state.snapshot(this.estado) as AnimaState, 'jogando', j, m.inicio, ctx, m.broncas);
+      if (r.fala) {
+        this.mine = { ...m, broncas: m.broncas + 1, ultimaBronca: now };
+        this.mineAte = now + 1500;
+      }
+      this.falarFora(r, problema === 'compromisso');
+      return;
+    }
+    // silêncio no chat por 7–12 min: ela puxa assunto pelo que está vendo
+    if (m.jogo && now - this.mineUltimaFala > (7 + Math.random() * 5) * 60_000 && now >= this.estado.memoria.cerebro.quietaAte) {
+      this.mineUltimaFala = now;
+      this.reagirNoMine({ tipo: 'espontanea' });
+    }
+  }
+
   /** Fala mesmo com o app escondido: com a janela na bandeja, vira notificação do sistema. */
-  private falarFora(r: { estado: AnimaState; fala: Fala | null }, essencial = false): void {
+  private falarFora(r: { estado: AnimaState; fala: Fala | null }, essencial = false, discreta = false): void {
     this.estado = r.estado;
     this.salvar();
     if (!r.fala) return;
     if (!essencial && Date.now() < this.estado.memoria.cerebro.quietaAte) return;
-    if (typeof document !== 'undefined' && (document.hidden || !document.hasFocus())) this.notificar('Ânima 🎮', r.fala.texto, ANIMA_ID_BASE + 60);
+    // discreta (site adulto): nada de notificação do sistema, que aparece no celular pelo KDE Connect e em tela compartilhada
+    if (!discreta && typeof document !== 'undefined' && (document.hidden || !document.hasFocus())) this.notificar('Ânima 🎮', r.fala.texto, ANIMA_ID_BASE + 60);
+    // dentro do Minecraft, o que ela comenta aqui fora aparece no chat do jogo também
+    if (!discreta && this.mine) this.mineAte = Math.max(this.mineAte, Date.now() + 1500);
     this.mostrar(r.fala, false);
   }
 
@@ -1210,6 +1430,7 @@ class Anima {
   }
 
   private mostrar(f: Fala, conversa: boolean, dura?: number): void {
+    if (this.mine && Date.now() < this.mineAte) this.dizerNoMine(f);
     this.empurrar({ de: 'ela', texto: f.texto, gesto: f.gesto });
     this.gesto = f.gesto;
     if ((f.gesto === 'glitch' || f.gesto === 'raiva') && this.prefs.intensidade === 3) this.susto++;
@@ -1290,8 +1511,10 @@ class Anima {
   }
 
   set(p: Partial<AnimaPrefs>): void {
+    const antes = this.prefs.poderes.minecraft;
     this.prefs = { ...this.prefs, ...p };
     keep(PREFS_KEY, this.prefs);
+    if (this.started && desktop && isTauri() && antes !== this.prefs.poderes.minecraft) void this.ponteMine(this.prefs.poderes.minecraft);
   }
 
   private salvar(): void {

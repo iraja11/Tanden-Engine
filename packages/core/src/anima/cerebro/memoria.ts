@@ -64,11 +64,19 @@ export interface MemoriaCerebro {
   jogos: Record<string, { nome: string; minutos: number; sessoes: number; ultimo: number }>;
   /** minutos do dia por categoria de site/app em foco */
   web: { dia: string; minutos: Record<string, number> };
+  /** música (Spotify): quantas vezes cada faixa tocou hoje e quantas faixas de cada artista no total */
+  musica: { dia: string; faixas: Record<string, number>; artistas: Record<string, number> };
+  /** Minecraft: as vezes que ela entrou no jogo com você */
+  minecraft: { sessoes: number; minutos: number; mortes: number; presentes: number; ultima: number };
 }
+
+export const novaMusica = (): MemoriaCerebro['musica'] => ({ dia: '', faixas: {}, artistas: {} });
+export const novoMinecraft = (): MemoriaCerebro['minecraft'] => ({ sessoes: 0, minutos: 0, mortes: 0, presentes: 0, ultima: 0 });
 
 export const novaMemoriaCerebro = (): MemoriaCerebro => ({
   consciencia: 0, vinculo: 0, pendente: null, ultimoPedido: null, ultimaNota: null, ultimaDecisao: null, ultimaAcao: null, pedidos: [], social: [],
   carinhoEm: 0, declaracaoEm: 0, criseEm: 0, eventosDela: [], escritos: [], estudos: [], quietaAte: 0, capitulo: 0, diaVisto: '', jogos: {}, web: { dia: '', minutos: {} },
+  musica: novaMusica(), minecraft: novoMinecraft(),
 });
 
 const num = (v: unknown, d: number, lo = -Infinity, hi = Infinity) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d);
@@ -125,5 +133,15 @@ export function lerMemoriaCerebro(raw: unknown): MemoriaCerebro {
     web: obj(r.web) && typeof r.web.dia === 'string' && obj(r.web.minutos)
       ? { dia: r.web.dia, minutos: Object.fromEntries(Object.entries(r.web.minutos).filter((e): e is [string, number] => typeof e[1] === 'number')) }
       : { dia: '', minutos: {} },
+    musica: obj(r.musica) && typeof r.musica.dia === 'string'
+      ? { dia: r.musica.dia, faixas: contagens(r.musica.faixas), artistas: contagens(r.musica.artistas) }
+      : novaMusica(),
+    minecraft: obj(r.minecraft)
+      ? { sessoes: num(r.minecraft.sessoes, 0, 0), minutos: num(r.minecraft.minutos, 0, 0), mortes: num(r.minecraft.mortes, 0, 0), presentes: num(r.minecraft.presentes, 0, 0), ultima: num(r.minecraft.ultima, 0) }
+      : novoMinecraft(),
   };
+}
+
+function contagens(v: unknown): Record<string, number> {
+  return obj(v) ? Object.fromEntries(Object.entries(v).filter((e): e is [string, number] => typeof e[1] === 'number')) : {};
 }

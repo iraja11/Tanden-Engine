@@ -4,8 +4,10 @@
 //!
 //! No Linux não existe um jeito único: tenta, nesta ordem, Hyprland
 //! (`hyprctl`), Sway (`swaymsg`), KDE no Wayland (`kdotool`) e X11
-//! (`xdotool`, depois `xprop`). No GNOME/Wayland nenhum funciona sem extensão;
-//! aí o comando avisa.
+//! (`xdotool`, depois `xprop`). No KDE sem kdotool, pergunta ao próprio KWin:
+//! carrega um script de uma linha pelo D-Bus e lê a resposta no journal (é o
+//! que o kdotool faz por baixo). No GNOME/Wayland nenhum funciona sem
+//! extensão; aí o comando avisa.
 
 use serde::Serialize;
 use std::process::{Command, Stdio};
@@ -86,6 +88,54 @@ pub fn ler_xprop(saida: &str) -> Option<Janela> {
     (!j.titulo.is_empty()).then_some(j)
 }
 
+/// A linha que o script do KWin imprime: `TANDEN_JANELA:<marca>:{"titulo":...,"app":...}`
+pub fn ler_kwin(journal: &str, marca: &str) -> Option<Janela> {
+    let prefixo = format!("TANDEN_JANELA:{marca}:");
+    let l = journal.lines().rev().find_map(|l| l.find(&prefixo).map(|i| &l[i + prefixo.len()..]))?;
+    let v: serde_json::Value = serde_json::from_str(l.trim()).ok()?;
+    let titulo = v.get("titulo")?.as_str()?.to_string();
+    let app = v.get("app").and_then(|a| a.as_str()).unwrap_or("").to_string();
+    (!titulo.is_empty() || !app.is_empty()).then_some(Janela { titulo, app })
+}
+
+/// KDE Plasma (Wayland) sem kdotool: um script de KWin diz a janela ativa.
+#[cfg(target_os = "linux")]
+fn kwin() -> Option<Janela> {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static N: AtomicU64 = AtomicU64::new(0);
+    let n = N.fetch_add(1, Ordering::Relaxed);
+    let marca = format!("{}-{n}", std::process::id());
+    let nome = format!("tanden-janela-{marca}");
+    let arq = std::env::temp_dir().join(format!("{nome}.js"));
+    let js = format!(
+        "const w = workspace.activeWindow || workspace.activeClient;\nprint(\"TANDEN_JANELA:{marca}:\" + JSON.stringify({{ titulo: w ? String(w.caption) : \"\", app: w ? String(w.resourceClass) : \"\" }}));\n"
+    );
+    std::fs::write(&arq, js).ok()?;
+    let caminho = arq.to_string_lossy().to_string();
+    let dbus = |args: &[&str]| rodar("dbus-send", &[&["--session", "--print-reply", "--dest=org.kde.KWin"], args].concat());
+    let saida = dbus(&["/Scripting", "org.kde.kwin.Scripting.loadScript", &format!("string:{caminho}"), &format!("string:{nome}")]);
+    let id = saida.as_deref().and_then(|s| s.split_whitespace().last()).and_then(|x| x.parse::<i64>().ok());
+    let mut achou = None;
+    if let Some(id) = id.filter(|i| *i >= 0) {
+        // Plasma 6 usa /Scripting/Script<id>; o 5, /<id>
+        if dbus(&[&format!("/Scripting/Script{id}"), "org.kde.kwin.Script.run"]).is_none() {
+            let _ = dbus(&[&format!("/{id}"), "org.kde.kwin.Script.run"]);
+        }
+        for _ in 0..6 {
+            std::thread::sleep(Duration::from_millis(60));
+            if let Some(j) = rodar("journalctl", &["--user", "-b", "--since", "-15s", "-o", "cat", "--no-pager"]) {
+                achou = ler_kwin(&j, &marca);
+                if achou.is_some() {
+                    break;
+                }
+            }
+        }
+    }
+    let _ = dbus(&["/Scripting", "org.kde.kwin.Scripting.unloadScript", &format!("string:{nome}")]);
+    let _ = std::fs::remove_file(&arq);
+    achou
+}
+
 #[cfg(target_os = "linux")]
 fn ativa() -> Result<Option<Janela>, String> {
     let tem = |v: &str| std::env::var_os(v).is_some();
@@ -105,6 +155,11 @@ fn ativa() -> Result<Option<Janela>, String> {
             return Ok(Some(Janela { titulo: t, app }));
         }
     }
+    if tem("WAYLAND_DISPLAY") && std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default().to_lowercase().contains("kde") {
+        if let Some(j) = kwin() {
+            return Ok(Some(j));
+        }
+    }
     if tem("DISPLAY") {
         if let Some(t) = rodar("xdotool", &["getactivewindow", "getwindowname"]) {
             let app = rodar("xdotool", &["getactivewindow", "getwindowclassname"]).unwrap_or_default();
@@ -118,7 +173,7 @@ fn ativa() -> Result<Option<Janela>, String> {
             }
         }
     }
-    Err("não consegui ler a janela em foco: no Hyprland/Sway ela usa hyprctl/swaymsg; no KDE Wayland instale kdotool; no X11, xdotool (sudo pacman -S xdotool). No GNOME Wayland não há jeito sem extensão.".into())
+    Err("não consegui ler a janela em foco: no Hyprland/Sway ela usa hyprctl/swaymsg; no KDE Wayland, o KWin pelo D-Bus (ou o kdotool); no X11, xdotool (sudo pacman -S xdotool). No GNOME Wayland não há jeito sem extensão.".into())
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -155,6 +210,20 @@ mod tests {
     fn le_o_xprop() {
         let s = "_NET_WM_NAME(UTF8_STRING) = \"xQc - Twitch — Mozilla Firefox\"\nWM_CLASS(STRING) = \"Navigator\", \"firefox\"";
         assert_eq!(ler_xprop(s), Some(Janela { titulo: "xQc - Twitch — Mozilla Firefox".into(), app: "firefox".into() }));
+    }
+
+    #[test]
+    fn le_o_kwin() {
+        let j = "outra linha\njs: TANDEN_JANELA:9-1:{\"titulo\":\"Novo chat - Claude - Brave\",\"app\":\"brave-browser\"}\nTANDEN_JANELA:9-0:{\"titulo\":\"velha\",\"app\":\"x\"}";
+        assert_eq!(ler_kwin(j, "9-1"), Some(Janela { titulo: "Novo chat - Claude - Brave".into(), app: "brave-browser".into() }));
+        assert_eq!(ler_kwin(j, "9-2"), None);
+    }
+
+    #[test]
+    #[ignore = "precisa de uma sessão KDE Plasma"]
+    fn kwin_de_verdade() {
+        let j = kwin().expect("o KWin respondeu");
+        assert!(!j.app.is_empty() || !j.titulo.is_empty());
     }
 
     #[test]

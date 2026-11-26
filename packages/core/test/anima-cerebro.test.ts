@@ -470,3 +470,195 @@ describe('cérebro: web e apps em foco', () => {
     expect(s.memoria.cerebro.web.minutos.video).toBe(1);
   });
 });
+
+describe('cérebro: música (Spotify)', () => {
+  const { reagirMusica, contarFaixa, estiloDe, artistaFavorito } = cerebro;
+  const rot = { acordaAs: '06:00', horasSono: 7.5, diasTrabalho: [1, 2, 3, 4, 5] };
+  const faixa = (x: Partial<cerebro.Faixa> = {}): cerebro.Faixa => ({ player: 'spotify', artista: 'LiSA', titulo: 'Catch the Moment', album: 'LiTTLE DEViL PARADE', id: 't1', tocando: true, ...x });
+
+  it('estilo pelo artista e, sem ele, pelo título', () => {
+    expect(estiloDe(faixa())).toBe('anime');
+    expect(estiloDe(faixa({ artista: 'The Cure', titulo: 'Pictures of You' }))).toBe('dela');
+    expect(estiloDe(faixa({ artista: 'Ninguém', titulo: 'Tears in the rain' }))).toBe('triste');
+    expect(estiloDe(faixa({ artista: 'Ninguém', titulo: 'Qualquer', album: '' }))).toBeNull();
+  });
+
+  it('conta a faixa do dia e o artista; a mesma música várias vezes vira bronca', () => {
+    const now = new Date(2026, 10, 18, 15, 0).getTime();
+    let s = novoEstado(T0);
+    for (let i = 0; i < 3; i++) s = contarFaixa(s, faixa(), now + i * 300_000);
+    expect(s.memoria.cerebro.musica.faixas.t1).toBe(3);
+    expect(s.memoria.cerebro.musica.artistas.LiSA).toBe(3);
+    const r = reagirMusica(s, faixa(), { now, rand: sorteio(3), intensidade: 2, nome: 'amor', rotina: rot });
+    expect(r.grupo).toBe('musica.repete');
+    expect(r.fala!.texto).toMatch(/3/);
+    // outro dia zera as faixas, não os artistas
+    s = contarFaixa(s, faixa(), now + 864e5);
+    expect(s.memoria.cerebro.musica.faixas.t1).toBe(1);
+    expect(s.memoria.cerebro.musica.artistas.LiSA).toBe(4);
+    expect(artistaFavorito(s)).toBeNull();
+  });
+
+  it('sempre tem o que dizer de uma faixa qualquer', () => {
+    const now = new Date(2026, 10, 18, 15, 0).getTime();
+    const s = contarFaixa(novoEstado(T0), faixa({ artista: 'Banda X', titulo: 'Y', album: 'Z', id: 'x' }), now);
+    const r = reagirMusica(s, faixa({ artista: 'Banda X', titulo: 'Y', album: 'Z', id: 'x' }), { now, rand: sorteio(5), intensidade: 1, nome: 'amor', rotina: rot });
+    expect(r.fala).not.toBeNull();
+  });
+});
+
+describe('cérebro: site adulto com discrição', () => {
+  const { lerJanela, reagirWeb, saiuDoAdulto } = cerebro;
+  const rot = { acordaAs: '06:00', horasSono: 7.5, diasTrabalho: [1, 2, 3, 4, 5] };
+
+  it('nunca guarda nem repete o título da página', () => {
+    const p = lerJanela('Algum título qualquer - Pornhub — Mozilla Firefox', 'firefox')!;
+    expect(p.categoria).toBe('adulto');
+    expect(p.pagina).toBe('');
+    const now = new Date(2026, 10, 18, 15, 0).getTime();
+    const r = reagirWeb(novoEstado(T0), p, { now, rand: sorteio(4), intensidade: 3, nome: 'amor', rotina: rot });
+    expect(r.fala).not.toBeNull();
+    expect(r.fala!.texto).not.toMatch(/título qualquer/);
+  });
+
+  it('ao sair da aba ela às vezes comenta, sem citar nada', () => {
+    const now = new Date(2026, 10, 18, 15, 0).getTime();
+    const r = saiuDoAdulto(novoEstado(T0), 6, { now, rand: () => 0.1, intensidade: 2, nome: 'amor', rotina: rot });
+    expect(r.fala).not.toBeNull();
+    expect(saiuDoAdulto(novoEstado(T0), 6, { now, rand: () => 0.9, intensidade: 2, nome: 'amor', rotina: rot }).fala).toBeNull();
+  });
+});
+
+describe('cérebro: Minecraft', () => {
+  const { entenderMine, responderMine, reagirMine, itemDoTermo, biomaDe } = cerebro;
+  const now = new Date(2026, 10, 18, 15, 0).getTime();
+  const rot = { acordaAs: '06:00', horasSono: 7.5, diasTrabalho: [1, 2, 3, 4, 5] };
+  const jogo: cerebro.EstadoMine = {
+    jogador: 'Iraja', mundo: 'Novo Mundo', vida: 20, vidaMax: 20, fome: 20, dimensao: 'overworld', bioma: 'minecraft:dark_forest', hora: 6000, clima: 'limpo',
+    y: 64, segurando: 'iron_pickaxe', hostis: 0, modoDela: 'seguir', bolso: 0,
+  };
+  const c = (x: Partial<cerebro.CtxMine> = {}): cerebro.CtxMine => ({ now, rand: sorteio(9), intensidade: 2, nome: 'amor', rotina: rot, jogo, ...x });
+
+  it('entende ordens, receitas, dúvidas e ideias; o resto é conversa', () => {
+    expect(entenderMine('anima, me segue')).toEqual({ tipo: 'acao', acao: 'seguir' });
+    expect(entenderMine('fica aqui')).toEqual({ tipo: 'acao', acao: 'ficar' });
+    expect(entenderMine('vem cá ânima')).toEqual({ tipo: 'acao', acao: 'vir' });
+    expect(entenderMine('pega uma flor pra mim')).toEqual({ tipo: 'acao', acao: 'colher' });
+    expect(entenderMine('me dá o que você pegou')).toEqual({ tipo: 'acao', acao: 'dar' });
+    expect(entenderMine('pega os itens')).toEqual({ tipo: 'acao', acao: 'coletar' });
+    expect(entenderMine('dança!')).toEqual({ tipo: 'acao', acao: 'dancar' });
+    expect(entenderMine('como faz um pistão?')).toEqual({ tipo: 'receita', termo: 'pistao', item: 'piston' });
+    expect(entenderMine('como craftar picareta de diamante')).toMatchObject({ item: 'diamond_pickaxe' });
+    expect(entenderMine('como faz o portal do nether')).toEqual({ tipo: 'duvida', tema: 'portal' });
+    expect(entenderMine('onde acho diamante?')).toEqual({ tipo: 'duvida', tema: 'diamante' });
+    expect(entenderMine('to entediado, alguma ideia?')).toEqual({ tipo: 'ideia' });
+    expect(entenderMine('como eu to?')).toEqual({ tipo: 'estado' });
+    expect(entenderMine('me lembra de estudar amanhã às 10')).toBeNull();
+    expect(entenderMine('hoje eu tive um dia horrível na faculdade, fica difícil estudar assim')).toBeNull();
+  });
+
+  it('itens em português, com material, e em inglês', () => {
+    expect(itemDoTermo('uma mesa de encantamento')).toBe('enchanting_table');
+    expect(itemDoTermo('botas de ouro')).toBe('golden_boots');
+    expect(itemDoTermo('capacete')).toBe('iron_helmet');
+    expect(itemDoTermo('espada')).toBe('wooden_sword');
+    expect(itemDoTermo('sticky piston')).toBe('sticky_piston');
+    expect(itemDoTermo('coisa de outro mundo')).toBeNull();
+    expect(biomaDe('minecraft:cherry_grove').tipo).toBe('cerejeira');
+  });
+
+  it('ordem vira ação no jogo; receita vai com a fala dentro', () => {
+    const a = responderMine(novoEstado(T0), { tipo: 'acao', acao: 'seguir' }, c());
+    expect(a.envios).toEqual([{ t: 'acao', acao: 'seguir' }]);
+    expect(a.fala).not.toBeNull();
+    const r = responderMine(novoEstado(T0), { tipo: 'receita', termo: 'pistao', item: 'piston' }, c());
+    expect(r.noChat).toBe(false);
+    expect(r.envios[0]).toMatchObject({ t: 'receita', item: 'piston' });
+    expect((r.envios[0] as { texto: string }).texto).toMatch(/pistao/);
+    // bolso vazio: nem manda a ação
+    const d = responderMine(novoEstado(T0), { tipo: 'acao', acao: 'dar' }, c());
+    expect(d.envios).toEqual([]);
+    expect(d.grupo).toBe('mine.feito.deu.nada');
+  });
+
+  it('lembra das sessões, das mortes e dos presentes', () => {
+    let s = reagirMine(novoEstado(T0), { tipo: 'entrou', mundo: 'Novo Mundo', jogador: 'Iraja' }, c()).estado;
+    expect(s.memoria.cerebro.minecraft.sessoes).toBe(1);
+    const m = reagirMine(s, { tipo: 'morreu', causa: 'death.attack.explosion.player' }, c());
+    expect(m.grupo).toBe('mine.morreu.creeper');
+    s = m.estado;
+    const p = reagirMine(s, { tipo: 'presente', item: 'minecraft:poppy', n: 1 }, c());
+    expect(p.grupo).toBe('mine.presente.flor');
+    expect(p.estado.afeto).toBeGreaterThan(s.afeto);
+    expect(p.estado.memoria.cerebro.minecraft).toMatchObject({ mortes: 1, presentes: 1 });
+  });
+
+  it('placa: pedida com texto, sem texto e por conta própria', () => {
+    expect(entenderMine('ânima, escreve uma placa dizendo Casa da Ânima e do Iraja')).toEqual({ tipo: 'placa', texto: 'Casa da Ânima e do Iraja' });
+    expect(entenderMine('faz uma placa')).toEqual({ tipo: 'placa', texto: '' });
+    expect(cerebro.linhasDePlaca('Casa da Ânima e do Iraja')).toEqual(['Casa da Ânima e', 'do Iraja']);
+    expect(cerebro.linhasDePlaca('aqui jaz / Iraja / morte nº 3 / ♥ ânima / sobra')).toEqual(['aqui jaz', 'Iraja', 'morte nº 3', '♥ ânima']);
+    for (const l of cerebro.linhasDePlaca('umapalavragigantescademais e mais um monte de texto que não cabe')) expect(l.length).toBeLessThanOrEqual(15);
+    const p = responderMine(novoEstado(T0), { tipo: 'placa', texto: 'Casa da Ânima' }, c());
+    expect(p.envios).toEqual([{ t: 'placa', linhas: ['Casa da Ânima'], motivo: 'pedido' }]);
+    const livre = responderMine(novoEstado(T0), { tipo: 'placa', texto: '' }, c());
+    expect(livre.envios[0]).toMatchObject({ t: 'placa', motivo: 'pedido' });
+    // morreu com sorte baixa: "aqui jaz" onde caiu
+    const m = reagirMine(novoEstado(T0), { tipo: 'morreu', causa: 'death.fell.accident' }, c({ rand: () => 0.1 }));
+    expect(m.envios[0]).toMatchObject({ t: 'placa', motivo: 'morte' });
+    expect(reagirMine(novoEstado(T0), { tipo: 'morreu' }, c({ rand: () => 0.9 })).envios).toEqual([]);
+    const casal = reagirMine(novoEstado(T0), { tipo: 'camaDupla' }, c({ rand: () => 0.1 }));
+    expect(casal.grupo).toBe('mine.camaDupla');
+    expect(casal.envios[0]).toMatchObject({ t: 'placa', motivo: 'casal' });
+  });
+
+  it('detesta gato e tem ciúme; cama do lado e conquistas', () => {
+    expect(entenderMine('você gosta de gatos?')).toEqual({ tipo: 'gato' });
+    const s0 = novoEstado(T0);
+    const d = reagirMine(s0, { tipo: 'gato', acao: 'domou' }, c());
+    expect(d.grupo).toBe('mine.gato.domou');
+    expect(d.estado.ciume).toBeGreaterThan(s0.ciume);
+    expect(reagirMine(s0, { tipo: 'dormiu', juntos: true }, c()).grupo).toBe('mine.dormiu.juntos');
+    expect(reagirMine(s0, { tipo: 'dormiu' }, c()).grupo).toBe('mine.dormiu');
+    const q = reagirMine(s0, { tipo: 'conquista', id: 'story/mine_diamond', titulo: 'Diamantes!' }, c());
+    expect(q.grupo).toBe('mine.conquista.diamante');
+    const g = reagirMine(s0, { tipo: 'conquista', id: 'adventure/hero_of_the_village', titulo: 'Herói da Vila', desafio: true }, c());
+    expect(g.grupo).toBe('mine.conquista.desafio');
+    expect(reagirMine(s0, { tipo: 'conquista', id: 'nether/x', titulo: 'Algo' }, c()).fala!.texto).toMatch(/Algo|conquista/i);
+  });
+
+  it('recursos: diz o que falta e dá ideia com o que sobra', () => {
+    expect(entenderMine('do que eu preciso agora?')).toEqual({ tipo: 'recursos' });
+    expect(entenderMine('o que falta pegar?')).toEqual({ tipo: 'recursos' });
+    const pobre = { ...jogo, y: 20, recursos: { comida: 12, tocha: 2, ferro: 0 } };
+    expect(cerebro.faltaDe(pobre)).toEqual({ falta: 'tocha', n: 2 });
+    expect(cerebro.faltaDe({ ...jogo, recursos: { comida: 12, tocha: 2, ferro: 30, diamante: 5, obsidiana: 12 } })).toBeNull();
+    const r = responderMine(novoEstado(T0), { tipo: 'recursos' }, c({ jogo: pobre }));
+    expect(r.grupo).toBe('mine.recursos.tocha');
+    expect(r.fala!.texto).toMatch(/2/);
+    expect(responderMine(novoEstado(T0), { tipo: 'recursos' }, c()).grupo).toBe('mine.recursos.naosei');
+    const rico = { ...jogo, recursos: { comida: 20, obsidiana: 14, diamante: 4, ferro: 30 } };
+    expect(responderMine(novoEstado(T0), { tipo: 'ideia' }, c({ jogo: rico, rand: () => 0.1 })).grupo).toBe('mine.ideia.recurso.portal');
+  });
+
+  it('todo grupo do Minecraft e da música existe no cofre', () => {
+    const f = banco().falas;
+    const acoes = ['seguir', 'ficar', 'vir', 'passear', 'coletar', 'colher', 'dar', 'dancar', 'sentar', 'levantar', 'pular', 'olhar', 'sair', 'voltar', 'resmunga'];
+    const temas = ['netherite', 'diamante', 'warden', 'wither', 'end', 'portal', 'encantar', 'mending', 'aldeao', 'creeper', 'elytra', 'pocao', 'slime', 'ferro', 'fazenda', 'comida', 'dormir', 'xp', 'perdido', 'noite'];
+    const grupos = [
+      ...acoes.map((a) => `mine.acao.${a}`), ...temas.map((t) => `mine.duvida.${t}`),
+      'mine.entrou', 'mine.entrou.primeira', 'mine.saiu', 'mine.morreu', 'mine.noite', 'mine.dia', 'mine.vidaBaixa', 'mine.fome', 'mine.chuva', 'mine.tempestade',
+      'mine.dimensao.nether', 'mine.dimensao.end', 'mine.dimensao.overworld', 'mine.bateu', 'mine.presente', 'mine.dormiu', 'mine.creeper', 'mine.achou',
+      'mine.feito.coletou', 'mine.feito.coletou.nada', 'mine.feito.colheu', 'mine.feito.colheu.nada', 'mine.feito.deu', 'mine.feito.deu.nada',
+      'mine.receita', 'mine.receita.naosei', 'mine.receita.semreceita', 'mine.duvida', 'mine.ideia', 'mine.espontanea',
+      'mine.estado.bem', 'mine.estado.vida', 'mine.estado.fome', 'mine.estado.perigo',
+      'mine.conquista', 'mine.conquista.desafio', ...['gatos', 'domou', 'diamante', 'nether', 'end', 'dragao', 'ferro', 'cama', 'mob', 'armadura', 'encantou', 'inicio'].map((x) => `mine.conquista.${x}`),
+      'mine.gato.perto', 'mine.gato.carinho', 'mine.gato.domou', 'mine.gato.conversa', 'mine.camaDupla', 'mine.dormiu.juntos', 'mine.ferramenta', 'mine.inventarioCheio',
+      ...['naosei', 'tudo', 'comida', 'tocha', 'ferro', 'diamante', 'obsidiana'].map((x) => `mine.recursos.${x}`),
+      ...['portal', 'diamante', 'armadura', 'esmeralda'].map((x) => `mine.ideia.recurso.${x}`),
+      ...['pedido', 'livre', 'morte', 'casal', 'recado'].map((x) => `mine.placa.${x}`),
+      'musica.faixa', 'musica.repete', 'musica.madrugada', 'musica.favorito', 'musica.amor', 'web.adulto.saiu', 'web.adulto.denovo',
+    ];
+    for (const g of grupos) expect(f[g]?.length, g).toBeGreaterThan(0);
+  });
+});

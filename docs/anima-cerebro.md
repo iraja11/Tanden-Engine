@@ -137,7 +137,9 @@ Só no app do computador (Tauri). Os dois poderes ficam em Personalizar → Âni
 **Web e apps** (`src-tauri/src/janela.rs` + `cerebro/web.ts`), desligado por padrão:
 
 - Lê só o título e a classe da janela em foco: Hyprland (`hyprctl`), Sway
-  (`swaymsg`), KDE Wayland (`kdotool`) ou X11 (`xdotool`, depois `xprop`).
+  (`swaymsg`), KDE Wayland (o próprio KWin, por um script de uma linha pelo
+  D-Bus, lido no journal; ou o `kdotool`, se instalado) ou X11 (`xdotool`,
+  depois `xprop`).
   No GNOME Wayland não há jeito sem extensão.
 - O navegador põe o título da aba na janela; daí saem o site e a página.
   Categorias: vídeo, live, estudo, trabalho, IA, jogos, adulto, redes,
@@ -147,3 +149,84 @@ Só no app do computador (Tauri). Os dois poderes ficam em Personalizar → Âni
   categoria e no mínimo 4 min entre comentários; prova perto ou hora de
   dormir mudam o tom. Soma o tempo do dia por categoria.
 - Nada sai do aparelho. Com a janela na bandeja, a fala vira notificação do sistema.
+- **Site adulto, com discrição:** o título da página nunca é guardado, citado
+  na fala, posto no `/pensamento` nem mandado como notificação do sistema (que
+  apareceria no celular pelo KDE Connect ou numa tela compartilhada). Ela
+  reage com ciúme e vergonha (`web.adulto`, `web.adulto.denovo` se já passou
+  tempo ali hoje) e, quando você sai da aba, às vezes "tira as mãos dos olhos"
+  (`web.adulto.saiu`).
+
+## Música (Spotify)
+
+`src-tauri/src/musica.rs` + `cerebro/musica.ts`, ligado por padrão
+(Personalizar → Ânima → Música). Só no app do computador.
+
+- Lê a faixa tocando pelo D-Bus (MPRIS, com o `dbus-send` que vem com o
+  próprio D-Bus): funciona com o programa do Spotify minimizado ou em outra
+  área de trabalho, sem depender da janela em foco. Se o Spotify não estiver
+  aberto, vale outro player (VLC, Elisa...); navegadores ficam de fora (a aba
+  já é lida pela janela).
+- Comenta uma faixa que tocou pelo menos 25 s, no máximo a cada 12 min (4 min
+  se for a mesma música pela 3ª vez no dia). Grupos: `musica.repete`,
+  `musica.madrugada`, `musica.favorito` (o artista mais ouvido, depois de 25
+  faixas), `musica.amor` (título de amor: ciúme), `musica.estilo.<estilo>`
+  (dela, anime, metal, triste, rap, funk, sertanejo, eletrônica, lo-fi,
+  k-pop, clássica, pop) e `musica.faixa`.
+- Conta as vezes de cada faixa no dia e as faixas de cada artista (os 200
+  mais ouvidos).
+
+## Minecraft
+
+`src-tauri/src/minecraft.rs` + `cerebro/minecraft.ts` + o mod Vanilla Remix
+(`feature/TandenAnima.java`, pasta `feature/anima/`). Ligado por padrão
+(Personalizar → Ânima → Minecraft).
+
+**A ponte.** Com o poder ligado, o Tanden escuta em `127.0.0.1` numa porta
+livre e grava a porta e uma chave nova em `~/.config/tanden/minecraft.json`
+(modo 600; `%APPDATA%\tanden\` no Windows). O mod lê o arquivo, conecta e se
+apresenta com a chave; sem ela, a conexão cai. JSON, uma mensagem por linha.
+Fechou o Tanden, desligou o poder ou saiu do mundo: ela sai do jogo.
+
+**No jogo.** Ela é um manequim vanilla (nada de mob novo) com a skin dela
+(`assets/vanillaremix/textures/entity/anima.png`), invencível, que anda pela
+física do próprio jogo: segue, espera, passeia, junta itens do chão, colhe a
+flor mais perto e traz na mão, esvazia o bolso em você, dança, senta, pula.
+Longe demais, em outra dimensão ou presa (inclusive na beira de um penhasco),
+teleporta para perto de você. Item que você joga perto dela é presente.
+
+Ela é competente sem ser complicada: corre para longe de creeper (6 blocos),
+não anda para dentro de lava nem de buraco, e se afasta de gato emburrada
+(ela detesta gato e tem ciúme: carinho ou domar um vira bronca). Se você
+deitar numa cama com outra colada do lado (mesma direção), ela deita na do
+lado e levanta quando você levantar. De vez em quando escreve uma placa
+(madeira escura, letra rosa, encerada): "aqui jaz" onde você morreu, o nome
+dos dois no quarto de casal, um recado quando o chat fica quieto, ou o que
+você pedir. Ela nunca quebra bloco para pôr placa; sem chão livre, não põe.
+Por conta própria, no máximo uma a cada 10 min. Toggle `tandenAnimaSigns`.
+
+**O chat.** No singleplayer, tudo o que você escreve vai para ela; com mais
+gente no mundo, só o que cita "Ânima". `entenderMine` separa:
+
+| Pedido | Exemplos | O que acontece |
+| --- | --- | --- |
+| ação | "me segue", "fica aqui", "vem cá", "pega uma flor", "pega os itens", "me dá o que pegou", "dança", "sai do jogo" / "volta pro jogo" | `{t:"acao"}` para o mod + `mine.acao.<ação>` |
+| receita | "como faz um pistão?", "como craftar picareta de diamante" | o mod lê a receita do próprio jogo e responde com os nomes no idioma do jogo |
+| dúvida | "onde acho diamante?", "como faz o portal do nether" | `mine.duvida.<tema>` (20 temas, citando o que o mod muda) |
+| ideia / estado | "alguma ideia?", "como eu tô?" | pelo bioma, a hora, a dimensão e o que você tem (obsidiana para o portal, diamante...); vida e fome |
+| recursos | "do que eu preciso?", "o que falta pegar?" | olha o inventário: comida, tocha (embaixo da terra), ferro, diamante, obsidiana (`faltaDe`) |
+| placa | "escreve uma placa dizendo Casa da Ânima", "faz uma placa" | `{t:"placa"}`; até 4 linhas de 15 letras (`linhasDePlaca`); sem texto, ela escolhe |
+| gato | "você gosta de gato?" | `mine.gato.conversa` (não gosta) |
+| o resto | "me lembra de estudar amanhã às 10" | o cérebro de sempre (`pensar`), e a resposta volta para o chat do jogo |
+
+**Eventos do jogo** viram fala (`reagirMine`): entrou (primeira vez, saudade,
+e as broncas de hora do `problemaDoJogo`), saiu, morreu (por causa, e marcos
+de 10 mortes), noite, dia, vida e fome baixas, chuva, tempestade, dimensão,
+creeper do lado, dormiu, bateu nela, presente (flor, joia, comida, lixo),
+achou diamante, detrito antigo ou esmeralda, conquista (pelo título no idioma
+do jogo; `mine.conquista.<tema>` para diamante, Nether, End, dragão, domar,
+todos os gatos...), gato perto/carinho/domado, cama de casal achada, dormir
+junto, ferramenta quase quebrando e inventário cheio. Com o chat quieto por 7 a 12 min,
+ela puxa assunto pelo que vê. O tempo no jogo conta como jogo (horas, rival,
+broncas de prova e de sono).
+
+Memória: `minecraft.sessoes/minutos/mortes/presentes`.

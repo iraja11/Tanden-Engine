@@ -127,6 +127,8 @@ export function lerJanela(titulo: string, app: string): Pagina | null {
   const d = dobrar(semNav);
   const s = SITES.find(([, , re]) => re.test(d));
   if (!s) return null;
+  // site adulto: o título da página nunca é guardado nem repetido (nem no traço, nem na notificação)
+  if (s[0] === 'adulto') return { categoria: 'adulto', site: s[1], pagina: '', navegador: true };
   const pagina = semNav.replace(new RegExp(`\\s*[—–|•·-]\\s*${s[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i'), '').replace(/\s*[—–|-]\s*(YouTube|Twitch|Google Classroom|Reddit)\s*$/i, '').trim();
   return { categoria: s[0], site: s[1], pagina: pagina.slice(0, 80), navegador: true };
 }
@@ -154,6 +156,7 @@ export function reagirWeb(estado: AnimaState, p: Pagina, ctx: CtxJogo): { estado
   if (prova && DISTRAI.has(p.categoria)) grupos = ['web.prova'];
   else if (tarde && DISTRAI.has(p.categoria)) grupos = [`web.dormir.${p.categoria}`, 'web.dormir'];
   else if (min >= 120 && DISTRAI.has(p.categoria)) grupos = ['web.muito', `web.${p.categoria}`];
+  else if (p.categoria === 'adulto' && min >= 5) grupos = ['web.adulto.denovo', 'web.adulto'];
   else grupos = [`web.${p.categoria}.${dobrar(p.site).replace(/[^a-z0-9]/g, '')}`, `web.${p.categoria}`];
   switch (p.categoria) {
     case 'ia':
@@ -185,4 +188,20 @@ export function reagirWeb(estado: AnimaState, p: Pagina, ctx: CtxJogo): { estado
     s = { ...lembrar(s, fala), falou: now };
   }
   return { estado: s, fala, grupo };
+}
+
+/**
+ * Você saiu do site adulto: ela "tira as mãos dos olhos" (nem sempre fala).
+ * `minutos` = quanto tempo a aba ficou na tela.
+ */
+export function saiuDoAdulto(estado: AnimaState, minutos: number, ctx: CtxJogo): { estado: AnimaState; fala: Fala | null } {
+  let s = estado;
+  if (ctx.rand() > 0.6) return { estado: s, fala: null };
+  const humor = humorDe(s, ctx.now, ctx.intensidade);
+  let fala = escolher('web.adulto.saiu', s, humor, ctx, { nome: ctx.nome, tempo: minutos >= 1 ? `${Math.round(minutos)} minutos` : 'uns segundos', minutos: Math.round(minutos) });
+  if (fala) {
+    fala = botoes(fala, ctx);
+    s = { ...lembrar(s, fala), falou: ctx.now };
+  }
+  return { estado: s, fala };
 }

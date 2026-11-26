@@ -395,8 +395,28 @@
           <span>comenta o site ou app em foco (lê só o título da janela; nada sai do aparelho)</span>
         </label>
       </div>
+      <div class="row">
+        <span class="lbl">Música</span>
+        <label class="switch">
+          <input type="checkbox" checked={anima.prefs.poderes.musica} onchange={(e) => pick(() => anima.set({ poderes: { ...anima.prefs.poderes, musica: e.currentTarget.checked } }))} />
+          <span>ouve junto o Spotify (o programa, mesmo minimizado) e comenta de vez em quando</span>
+        </label>
+      </div>
+      {#if anima.prefs.poderes.musica && (anima.musica || anima.musicaErro)}
+        <p class="hint">{anima.musicaErro || (anima.musica ? `tocando: ${anima.musica.f.titulo} · ${anima.musica.f.artista}` : '')}</p>
+      {/if}
+      <div class="row">
+        <span class="lbl">Minecraft</span>
+        <label class="switch">
+          <input type="checkbox" checked={anima.prefs.poderes.minecraft} onchange={(e) => pick(() => anima.set({ poderes: { ...anima.prefs.poderes, minecraft: e.currentTarget.checked } }))} />
+          <span>entra no seu mundo do Minecraft (com o mod Vanilla Remix): conversa, segue, colhe flor, responde receita</span>
+        </label>
+      </div>
+      {#if anima.prefs.poderes.minecraft}
+        <p class="hint">{anima.mineErro || (anima.mine ? `no jogo: ${anima.mine.mundo} com ${anima.mine.jogador}` : anima.minePorta ? 'esperando o jogo abrir um mundo (a ponte só escuta no próprio computador, com chave)' : 'ponte desligada')}</p>
+      {/if}
       {#if anima.prefs.poderes.web}
-        <p class="hint">{anima.webErro ? anima.webErro : anima.web ? `agora: ${anima.web.p.site} · ${anima.web.p.categoria}${anima.web.p.pagina ? ` · ${anima.web.p.pagina}` : ''}` : 'Linux: Hyprland, Sway, KDE (com kdotool) ou X11 (com xdotool).'}</p>
+        <p class="hint">{anima.webErro ? anima.webErro : anima.web ? `agora: ${anima.web.p.site} · ${anima.web.p.categoria}${anima.web.p.pagina ? ` · ${anima.web.p.pagina}` : ''}` : 'Linux: Hyprland, Sway, KDE Plasma ou X11 (com xdotool).'}</p>
       {/if}
       {#if anima.prefs.poderes.jogos}
         <div class="row">

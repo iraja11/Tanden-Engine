@@ -21,4 +21,9 @@ export { treinar, avaliar, calibrar, carregar, serializar, prever, indices, type
 export { gerarCorpus, ROTULOS, GRAMATICA, SLOTS } from './corpus';
 export { lerMemoriaCerebro, novaMemoriaCerebro, type MemoriaCerebro, type Pendencia } from './memoria';
 export { reagirJogo, problemaDoJogo, sono, rival, ROTINA_PADRAO, type JogoAtual, type Rotina, type ProblemaJogo, type ReacaoJogo, type CtxJogo } from './jogos';
-export { lerJanela, reagirWeb, contarWeb, type Pagina, type CategoriaWeb } from './web';
+export { lerJanela, reagirWeb, contarWeb, saiuDoAdulto, type Pagina, type CategoriaWeb } from './web';
+export { reagirMusica, contarFaixa, estiloDe, artistaFavorito, type Faixa, type EstiloMusica, type ReacaoMusica } from './musica';
+export {
+  entenderMine, responderMine, reagirMine, itemDoTermo, nomeDoItem, biomaDe, limparChat, linhasDePlaca, faltaDe,
+  type EstadoMine, type AcaoMine, type PedidoMine, type MsgParaMine, type EventoMine, type CtxMine, type RespostaMine, type Recurso, type MotivoPlaca,
+} from './minecraft';

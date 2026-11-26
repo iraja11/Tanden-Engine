@@ -9,6 +9,10 @@ mod clipper;
 mod google;
 #[cfg(desktop)]
 mod janela;
+#[cfg(desktop)]
+mod minecraft;
+#[cfg(desktop)]
+mod musica;
 mod ollama;
 mod plugin;
 #[cfg(desktop)]
@@ -52,6 +56,7 @@ pub fn run() {
                 app.handle().plugin(tauri_plugin_autostart::Builder::new().arg(background::HIDDEN_ARG).build())?;
                 app.manage(background::Background::default());
                 app.manage(steam::SteamCache::default());
+                app.manage(minecraft::Ponte::default());
                 background::setup(app)?;
                 // clicar num aviso de lembrete abre a janela
                 use tauri_plugin_notification::NotificationExt;
@@ -135,6 +140,12 @@ pub fn run() {
             steam::steam_jogo,
             #[cfg(desktop)]
             janela::janela_ativa,
+            #[cfg(desktop)]
+            musica::musica_tocando,
+            #[cfg(desktop)]
+            minecraft::minecraft_ligar,
+            #[cfg(desktop)]
+            minecraft::minecraft_enviar,
             #[cfg(desktop)]
             clipper_info,
             #[cfg(desktop)]
