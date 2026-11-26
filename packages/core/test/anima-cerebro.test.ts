@@ -378,3 +378,53 @@ describe('cérebro: rotina e world building', () => {
     for (const g of grupos) expect(f[g]?.length, g).toBeGreaterThan(0);
   });
 });
+
+describe('cérebro: jogos da Steam', () => {
+  const { reagirJogo, problemaDoJogo, sono, rival } = cerebro;
+  const HK = { appid: 367520, nome: 'Hollow Knight', modo: 'single', generos: ['Ação', 'Aventura', 'Indie'], online: null };
+  const CS = { appid: 730, nome: 'Counter-Strike 2', modo: 'multi', generos: ['Ação'], online: true };
+  const rot = { acordaAs: '06:00', horasSono: 7.5, diasTrabalho: [1, 2, 3, 4, 5] };
+  const quarta = (h: number, m = 0) => new Date(2026, 10, 18, h, m).getTime();
+
+  it('hora de dormir: conta para trás a partir de quando você acorda, só antes de dia de trabalho', () => {
+    expect(sono(quarta(22, 0), rot).passou).toBe(false);
+    expect(sono(quarta(22, 45), rot).passou).toBe(true);
+    // sexta à noite: sábado não é dia de trabalho
+    expect(sono(new Date(2026, 10, 20, 23, 30).getTime(), rot).passou).toBe(false);
+    // domingo à noite: segunda é
+    expect(sono(new Date(2026, 10, 22, 23, 30).getTime(), rot).passou).toBe(true);
+  });
+
+  it('o problema mais grave primeiro: compromisso > prova > dormir > madrugada > maratona', () => {
+    const s = novoEstado(T0);
+    const c = (now: number, x: Partial<cerebro.CtxJogo> = {}) => ({ now, rand: sorteio(1), intensidade: 2 as const, nome: 'amor', rotina: rot, ...x });
+    expect(problemaDoJogo(s, quarta(15), c(quarta(15, 10))).problema).toBeNull();
+    expect(problemaDoJogo(s, quarta(12), c(quarta(15))).problema).toBe('maratona');
+    expect(problemaDoJogo(s, quarta(22), c(quarta(23))).problema).toBe('dormir');
+    expect(problemaDoJogo(s, quarta(22), c(quarta(23), { agenda: [{ titulo: 'Call com o cliente', inicio: quarta(23, 30), diaInteiro: false }] })).problema).toBe('compromisso');
+    const p = novoEstado(T0);
+    p.memoria.cerebro.estudos = [{ titulo: 'Prova de física', assunto: 'física', at: quarta(15) + 20 * 3_600_000, cobrou: {}, perguntou: false }];
+    expect(problemaDoJogo(p, quarta(15), c(quarta(15, 5))).problema).toBe('prova');
+  });
+
+  it('reage ao começo (multi dá ciúme), cobra quando passa da hora e soma as horas no fim', () => {
+    const c = (now: number) => ({ now, rand: sorteio(3), intensidade: 2 as const, nome: 'amor', rotina: rot });
+    const s0 = novoEstado(T0);
+    const a = reagirJogo(s0, 'comecou', CS, quarta(15), c(quarta(15)));
+    expect(a.fala!.texto.length).toBeGreaterThan(5);
+    expect(a.estado.ciume).toBeGreaterThan(s0.ciume);
+    const b = reagirJogo(a.estado, 'jogando', CS, quarta(15), c(quarta(23)));
+    expect(b.problema).toBe('dormir');
+    expect(b.fala!.texto).toMatch(/06:00|dorm|cama|acord/i);
+    const fim = reagirJogo(b.estado, 'parou', CS, quarta(15), c(quarta(23, 20)));
+    expect(fim.estado.memoria.cerebro.jogos['730']!.minutos).toBe(500);
+    expect(rival(fim.estado)?.nome).toBeUndefined();
+    const longo = reagirJogo(fim.estado, 'parou', HK, quarta(8), c(quarta(19)));
+    expect(rival(longo.estado)!.nome).toBe('Hollow Knight');
+  });
+
+  it('jogando sem problema nenhum: ela não fala', () => {
+    const r = reagirJogo(novoEstado(T0), 'jogando', HK, quarta(15), { now: quarta(15, 30), rand: sorteio(1), intensidade: 2, nome: 'amor', rotina: rot });
+    expect(r.fala).toBeNull();
+  });
+});

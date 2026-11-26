@@ -59,7 +59,11 @@ export interface AnimaPrefs {
   /** quem pensa as respostas da conversa: as regras dela ou um modelo local (Ollama) */
   cerebro: 'regras' | 'ollama';
   /** o que ela pode fazer por conta própria */
-  poderes: { agenda: boolean; mundo: boolean; agua: boolean };
+  poderes: { agenda: boolean; mundo: boolean; agua: boolean; jogos: boolean };
+  /** quando você acorda (para ela saber a hora de você largar o jogo e dormir) */
+  rotina: { acordaAs: string; horasSono: number; diasTrabalho: number[] };
+  /** chave da Web API da Steam (opcional: só para saber se você está num lobby online agora) */
+  steamChave: string;
 }
 
 export interface Mensagem {
@@ -75,7 +79,9 @@ const STATE_KEY = 'tanden.anima.estado';
 const MARKS_KEY = 'tanden.anima.marcas';
 const DEFAULTS: AnimaPrefs = {
   acordada: false, intensidade: 2, nome: 'amor', notificar: true, silencio: true, lado: 'dir', altura: 0, escondida: false, passeia: true, cenas: true, cerebro: 'regras',
-  poderes: { agenda: true, mundo: true, agua: true },
+  poderes: { agenda: true, mundo: true, agua: true, jogos: true },
+  rotina: { acordaAs: '06:00', horasSono: 7.5, diasTrabalho: [1, 2, 3, 4, 5] },
+  steamChave: '',
 };
 const android = isTauri() && !desktop;
 const CHANNEL = 'anima';
@@ -129,7 +135,7 @@ interface Marcas { periodo: string; data: string; aniversario: string; pergunta:
 class Anima {
   prefs = $state<AnimaPrefs>((() => {
     const p = { ...DEFAULTS, ...(load<Partial<AnimaPrefs>>(PREFS_KEY) ?? {}) };
-    return { ...p, poderes: { ...DEFAULTS.poderes, ...(p.poderes ?? {}) } };
+    return { ...p, poderes: { ...DEFAULTS.poderes, ...(p.poderes ?? {}) }, rotina: { ...DEFAULTS.rotina, ...(p.rotina ?? {}) } };
   })());
   /** o raciocínio do último pensamento (modo depuração: "/pensamento" na conversa) */
   pensamento = $state<string[]>([]);
@@ -200,6 +206,9 @@ class Anima {
   private ultimoMundo = 0;
   private ultimaLeitura = 0;
   private ultimaPlanilha = 0;
+  /** o jogo da Steam aberto agora, desde quando e quantas broncas já levou */
+  jogo = $state<{ j: cerebro.JogoAtual; inicio: number; broncas: number; ultimaBronca: number } | null>(null);
+  private olhandoSteam = false;
   private marcas: Marcas = { periodo: '', data: '', aniversario: '', pergunta: '', bateria: 0, ...(load<Partial<Marcas>>(MARKS_KEY) ?? {}) };
 
   // ------------------------------------------------------------------ ciclo
@@ -315,6 +324,12 @@ class Anima {
     this.offs.push(() => { saude.voz = null; });
     if (this.prefs.poderes.mundo) cadernos.start();
     this.proximaRotina = Date.now() + (2 + Math.random() * 4) * 60_000;
+    // jogos da Steam (só no app do computador): olha a cada 45 s, mesmo com a janela na bandeja
+    if (desktop && isTauri()) {
+      const steam = setInterval(() => void this.olharSteam(), 45_000);
+      setTimeout(() => void this.olharSteam(), 5000);
+      this.offs.push(() => clearInterval(steam));
+    }
     this.agendarAdiado();
     void this.bateria();
     if (android) void this.canal();
@@ -1017,6 +1032,58 @@ class Anima {
       const r = cerebro.cumprirAdiado($state.snapshot(this.estado) as AnimaState, this.ctxCerebro());
       if (r) this.digitar(r, this.aberta, r.acao);
     }, Math.max(500, p.ate - Date.now() + 200));
+  }
+
+  // ------------------------------------------------------------------ jogos (Steam)
+
+  /** de quanto em quanto tempo ela volta a reclamar, por problema */
+  private static readonly INTERVALO_BRONCA: Record<cerebro.ProblemaJogo, number> = {
+    compromisso: 8 * 60_000, prova: 25 * 60_000, dormir: 20 * 60_000, madrugada: 30 * 60_000, maratona: 45 * 60_000,
+  };
+
+  private async olharSteam(): Promise<void> {
+    if (!this.prefs.poderes.jogos || !this.prefs.acordada || this.olhandoSteam) return;
+    this.olhandoSteam = true;
+    let j: cerebro.JogoAtual | null = null;
+    try {
+      j = await invoke<cerebro.JogoAtual | null>('steam_jogo', { chave: this.prefs.steamChave.trim() || null });
+    } catch {
+      return;
+    } finally {
+      this.olhandoSteam = false;
+    }
+    const now = Date.now();
+    const ctx: cerebro.CtxJogo = { ...this.ctxCerebro(), rotina: this.prefs.rotina };
+    const atual = this.jogo;
+    const snap = () => $state.snapshot(this.estado) as AnimaState;
+    if (atual && (!j || j.appid !== atual.j.appid)) {
+      // fechou (ou trocou de jogo)
+      this.jogo = null;
+      this.falarFora(cerebro.reagirJogo(snap(), 'parou', atual.j, atual.inicio, ctx));
+    }
+    if (!j) return;
+    if (!this.jogo) {
+      const r = cerebro.reagirJogo(snap(), 'comecou', j, now, ctx);
+      this.jogo = { j, inicio: now, broncas: r.problema ? 1 : 0, ultimaBronca: r.problema ? now : 0 };
+      this.falarFora(r, r.problema === 'compromisso');
+      return;
+    }
+    this.jogo = { ...this.jogo, j };
+    const { problema } = cerebro.problemaDoJogo(snap(), this.jogo.inicio, ctx);
+    if (!problema || now - this.jogo.ultimaBronca < Anima.INTERVALO_BRONCA[problema]) return;
+    const r = cerebro.reagirJogo(snap(), 'jogando', j, this.jogo.inicio, ctx, this.jogo.broncas);
+    if (r.fala) this.jogo = { ...this.jogo, broncas: this.jogo.broncas + 1, ultimaBronca: now };
+    this.falarFora(r, problema === 'compromisso');
+  }
+
+  /** Fala mesmo com o app escondido: com a janela na bandeja, vira notificação do sistema. */
+  private falarFora(r: { estado: AnimaState; fala: Fala | null }, essencial = false): void {
+    this.estado = r.estado;
+    this.salvar();
+    if (!r.fala) return;
+    if (!essencial && Date.now() < this.estado.memoria.cerebro.quietaAte) return;
+    if (typeof document !== 'undefined' && (document.hidden || !document.hasFocus())) this.notificar('Ânima 🎮', r.fala.texto, ANIMA_ID_BASE + 60);
+    this.mostrar(r.fala, false);
   }
 
   /** Um evento que a pessoa criou na agenda (não ela): ela reage pelo sentido. */

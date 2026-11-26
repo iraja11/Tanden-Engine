@@ -60,11 +60,13 @@ export interface MemoriaCerebro {
   capitulo: number;
   /** último dia em que a rotina rodou (o vínculo cresce um pouco por dia junto) */
   diaVisto: string;
+  /** horas de cada jogo da Steam (AppID → nome, minutos, sessões, última vez) */
+  jogos: Record<string, { nome: string; minutos: number; sessoes: number; ultimo: number }>;
 }
 
 export const novaMemoriaCerebro = (): MemoriaCerebro => ({
   consciencia: 0, vinculo: 0, pendente: null, ultimoPedido: null, ultimaNota: null, ultimaDecisao: null, ultimaAcao: null, pedidos: [], social: [],
-  carinhoEm: 0, declaracaoEm: 0, criseEm: 0, eventosDela: [], escritos: [], estudos: [], quietaAte: 0, capitulo: 0, diaVisto: '',
+  carinhoEm: 0, declaracaoEm: 0, criseEm: 0, eventosDela: [], escritos: [], estudos: [], quietaAte: 0, capitulo: 0, diaVisto: '', jogos: {},
 });
 
 const num = (v: unknown, d: number, lo = -Infinity, hi = Infinity) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d);
@@ -84,6 +86,15 @@ function lerPendente(v: unknown): Pendencia | null {
   if (t === 'negocia' && typeof v.condicao === 'string') return v as unknown as Pendencia;
   if (t === 'adiado' && typeof v.ate === 'number') return v as unknown as Pendencia;
   return null;
+}
+
+function lerJogos(v: unknown): MemoriaCerebro['jogos'] {
+  const out: MemoriaCerebro['jogos'] = {};
+  if (!obj(v)) return out;
+  for (const [k, x] of Object.entries(v)) {
+    if (obj(x) && typeof x.nome === 'string' && typeof x.minutos === 'number') out[k] = { nome: x.nome, minutos: x.minutos, sessoes: num(x.sessoes, 0, 0), ultimo: num(x.ultimo, 0) };
+  }
+  return out;
 }
 
 export function lerMemoriaCerebro(raw: unknown): MemoriaCerebro {
@@ -108,5 +119,6 @@ export function lerMemoriaCerebro(raw: unknown): MemoriaCerebro {
     quietaAte: num(r.quietaAte, 0),
     capitulo: num(r.capitulo, 0, 0, 20),
     diaVisto: typeof r.diaVisto === 'string' ? r.diaVisto : '',
+    jogos: lerJogos(r.jogos),
   };
 }

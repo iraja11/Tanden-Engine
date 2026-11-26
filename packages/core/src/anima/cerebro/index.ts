@@ -20,3 +20,4 @@ export { classificar, modeloPadrao, usarModelo, lexicoBase, amostrar } from './m
 export { treinar, avaliar, calibrar, carregar, serializar, prever, indices, type Modelo, type Previsao } from './classificador';
 export { gerarCorpus, ROTULOS, GRAMATICA, SLOTS } from './corpus';
 export { lerMemoriaCerebro, novaMemoriaCerebro, type MemoriaCerebro, type Pendencia } from './memoria';
+export { reagirJogo, problemaDoJogo, sono, rival, ROTINA_PADRAO, type JogoAtual, type Rotina, type ProblemaJogo, type ReacaoJogo, type CtxJogo } from './jogos';
