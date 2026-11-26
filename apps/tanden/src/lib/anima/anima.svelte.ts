@@ -59,7 +59,7 @@ export interface AnimaPrefs {
   /** quem pensa as respostas da conversa: as regras dela ou um modelo local (Ollama) */
   cerebro: 'regras' | 'ollama';
   /** o que ela pode fazer por conta própria */
-  poderes: { agenda: boolean; mundo: boolean; agua: boolean; jogos: boolean };
+  poderes: { agenda: boolean; mundo: boolean; agua: boolean; jogos: boolean; web: boolean };
   /** quando você acorda (para ela saber a hora de você largar o jogo e dormir) */
   rotina: { acordaAs: string; horasSono: number; diasTrabalho: number[] };
   /** chave da Web API da Steam (opcional: só para saber se você está num lobby online agora) */
@@ -79,7 +79,7 @@ const STATE_KEY = 'tanden.anima.estado';
 const MARKS_KEY = 'tanden.anima.marcas';
 const DEFAULTS: AnimaPrefs = {
   acordada: false, intensidade: 2, nome: 'amor', notificar: true, silencio: true, lado: 'dir', altura: 0, escondida: false, passeia: true, cenas: true, cerebro: 'regras',
-  poderes: { agenda: true, mundo: true, agua: true, jogos: true },
+  poderes: { agenda: true, mundo: true, agua: true, jogos: true, web: false },
   rotina: { acordaAs: '06:00', horasSono: 7.5, diasTrabalho: [1, 2, 3, 4, 5] },
   steamChave: '',
 };
@@ -209,6 +209,12 @@ class Anima {
   /** o jogo da Steam aberto agora, desde quando e quantas broncas já levou */
   jogo = $state<{ j: cerebro.JogoAtual; inicio: number; broncas: number; ultimaBronca: number } | null>(null);
   private olhandoSteam = false;
+  /** a página/app em foco agora (web), e o erro de leitura se houver */
+  web = $state<{ p: cerebro.Pagina; desde: number } | null>(null);
+  webErro = $state('');
+  private webUltimo = 0;
+  private webPorCategoria: Record<string, number> = {};
+  private webComentou = '';
   private marcas: Marcas = { periodo: '', data: '', aniversario: '', pergunta: '', bateria: 0, ...(load<Partial<Marcas>>(MARKS_KEY) ?? {}) };
 
   // ------------------------------------------------------------------ ciclo
@@ -328,7 +334,8 @@ class Anima {
     if (desktop && isTauri()) {
       const steam = setInterval(() => void this.olharSteam(), 45_000);
       setTimeout(() => void this.olharSteam(), 5000);
-      this.offs.push(() => clearInterval(steam));
+      const web = setInterval(() => void this.olharJanela(), 20_000);
+      this.offs.push(() => clearInterval(steam), () => clearInterval(web));
     }
     this.agendarAdiado();
     void this.bateria();
@@ -1074,6 +1081,49 @@ class Anima {
     const r = cerebro.reagirJogo(snap(), 'jogando', j, this.jogo.inicio, ctx, this.jogo.broncas);
     if (r.fala) this.jogo = { ...this.jogo, broncas: this.jogo.broncas + 1, ultimaBronca: now };
     this.falarFora(r, problema === 'compromisso');
+  }
+
+  // ------------------------------------------------------------------ web e apps em foco
+
+  /** intervalo mínimo entre comentários da mesma categoria */
+  private static readonly ESPERA_WEB: Partial<Record<cerebro.CategoriaWeb, number>> = {
+    adulto: 30 * 60_000, ia: 15 * 60_000, video: 20 * 60_000, live: 20 * 60_000, rede: 25 * 60_000, estudo: 40 * 60_000, trabalho: 60 * 60_000, obsidian: 30 * 60_000,
+  };
+
+  private async olharJanela(): Promise<void> {
+    if (!this.prefs.poderes.web || !this.prefs.acordada) return;
+    let jan: { titulo: string; app: string } | null = null;
+    try {
+      jan = await invoke<{ titulo: string; app: string } | null>('janela_ativa');
+      this.webErro = '';
+    } catch (e) {
+      this.webErro = String(e);
+      return;
+    }
+    const now = Date.now();
+    const p = jan ? cerebro.lerJanela(jan.titulo, jan.app) : null;
+    const antes = this.web;
+    // o tempo da página anterior conta para a categoria dela
+    if (antes) this.estado = cerebro.contarWeb($state.snapshot(this.estado) as AnimaState, antes.p.categoria, Math.min(now - antes.desde, 25_000), now);
+    if (!p) {
+      this.web = null;
+      return;
+    }
+    const mesma = antes && antes.p.site === p.site && antes.p.pagina === p.pagina;
+    // `desde` marca a última leitura: a próxima soma só o intervalo entre elas
+    this.web = { p, desde: now };
+    // só comenta o que ficou pelo menos uma volta (20 s) na tela, uma vez por página
+    const chave = `${p.site}|${p.pagina}`;
+    if (!mesma || this.webComentou === chave) return;
+    const espera = Anima.ESPERA_WEB[p.categoria] ?? 30 * 60_000;
+    if (now - this.webUltimo < 4 * 60_000 || now - (this.webPorCategoria[p.categoria] ?? 0) < espera) return;
+    const r = cerebro.reagirWeb($state.snapshot(this.estado) as AnimaState, p, { ...this.ctxCerebro(), rotina: this.prefs.rotina });
+    this.webComentou = chave;
+    if (!r.fala) return;
+    this.webUltimo = now;
+    this.webPorCategoria[p.categoria] = now;
+    this.pensamento = [`janela: "${jan?.titulo}" (${jan?.app})`, `site: ${p.site} · categoria: ${p.categoria} · página: ${p.pagina}`, `fala: ${r.grupo}`];
+    this.falarFora(r);
   }
 
   /** Fala mesmo com o app escondido: com a janela na bandeja, vira notificação do sistema. */

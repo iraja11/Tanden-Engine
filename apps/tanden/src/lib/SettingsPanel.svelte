@@ -388,6 +388,16 @@
           <span>reage aos jogos da Steam (no app do computador){anima.jogo ? ` · jogando ${anima.jogo.j.nome}` : ''}</span>
         </label>
       </div>
+      <div class="row">
+        <span class="lbl">Web</span>
+        <label class="switch">
+          <input type="checkbox" checked={anima.prefs.poderes.web} onchange={(e) => pick(() => anima.set({ poderes: { ...anima.prefs.poderes, web: e.currentTarget.checked } }))} />
+          <span>comenta o site ou app em foco (lê só o título da janela; nada sai do aparelho)</span>
+        </label>
+      </div>
+      {#if anima.prefs.poderes.web}
+        <p class="hint">{anima.webErro ? anima.webErro : anima.web ? `agora: ${anima.web.p.site} · ${anima.web.p.categoria}${anima.web.p.pagina ? ` · ${anima.web.p.pagina}` : ''}` : 'Linux: Hyprland, Sway, KDE (com kdotool) ou X11 (com xdotool).'}</p>
+      {/if}
       {#if anima.prefs.poderes.jogos}
         <div class="row">
           <span class="lbl">Acordo às</span>

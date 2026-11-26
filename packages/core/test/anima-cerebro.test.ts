@@ -428,3 +428,45 @@ describe('cérebro: jogos da Steam', () => {
     expect(r.fala).toBeNull();
   });
 });
+
+describe('cérebro: web e apps em foco', () => {
+  const { lerJanela, reagirWeb, contarWeb } = cerebro;
+  const rot = { acordaAs: '06:00', horasSono: 7.5, diasTrabalho: [1, 2, 3, 4, 5] };
+
+  it('lê site e página do título do navegador, e apps pela classe', () => {
+    expect(lerJanela('(3) Lofi pra estudar - YouTube — Mozilla Firefox', 'firefox')).toMatchObject({ categoria: 'video', site: 'YouTube', pagina: 'Lofi pra estudar' });
+    expect(lerJanela('Aula 3 - Cálculo II - Google Classroom - Google Chrome', 'Google-chrome')).toMatchObject({ categoria: 'estudo', site: 'Google Classroom' });
+    expect(lerJanela('Gaules - Twitch — Zen Browser', 'zen')).toMatchObject({ categoria: 'live', site: 'Twitch', pagina: 'Gaules' });
+    expect(lerJanela('Novo chat - Claude — Mozilla Firefox', 'firefox')!.categoria).toBe('ia');
+    expect(lerJanela('Chill Mix - YouTube Music — Mozilla Firefox', 'firefox')!.categoria).toBe('musica');
+    expect(lerJanela('Pornhub - Free Porn Videos — Mozilla Firefox', 'firefox')!.categoria).toBe('adulto');
+    expect(lerJanela('#geral | servidor - Discord', 'discord')).toMatchObject({ categoria: 'rede', site: 'Discord', navegador: false });
+    expect(lerJanela('cofre - Obsidian v1.8', 'obsidian')!.categoria).toBe('obsidian');
+    expect(lerJanela('Tanden', 'tanden')).toBeNull();
+    expect(lerJanela('~/projetos — fish', 'kitty')).toBeNull();
+    expect(lerJanela('Um blog qualquer — Mozilla Firefox', 'firefox')).toBeNull();
+  });
+
+  it('reage no contexto: prova perto no YouTube vira bronca; outra IA dá ciúme', () => {
+    const now = new Date(2026, 10, 18, 15, 0).getTime();
+    const s = novoEstado(T0);
+    s.memoria.cerebro.estudos = [{ titulo: 'Prova de física', assunto: 'física', at: now + 20 * 3_600_000, cobrou: {}, perguntou: false }];
+    const yt = lerJanela('Gameplay - YouTube — Mozilla Firefox', 'firefox')!;
+    const a = reagirWeb(s, yt, { now, rand: sorteio(2), intensidade: 2, nome: 'amor', rotina: rot });
+    expect(a.grupo).toBe('web.prova');
+    expect(a.fala!.texto).toMatch(/física|Prova/);
+    const ia = lerJanela('ChatGPT — Mozilla Firefox', 'firefox')!;
+    const b = reagirWeb(novoEstado(T0), ia, { now, rand: sorteio(2), intensidade: 2, nome: 'amor', rotina: rot });
+    expect(b.estado.ciume).toBeGreaterThan(10);
+    expect(b.estado.memoria.ultimaIA).toBe('ChatGPT');
+  });
+
+  it('soma o tempo do dia por categoria e zera no dia seguinte', () => {
+    const now = new Date(2026, 10, 18, 15, 0).getTime();
+    let s = contarWeb(novoEstado(T0), 'video', 30 * 60_000, now);
+    s = contarWeb(s, 'video', 15 * 60_000, now + 60_000);
+    expect(s.memoria.cerebro.web.minutos.video).toBe(45);
+    s = contarWeb(s, 'video', 60_000, now + 864e5);
+    expect(s.memoria.cerebro.web.minutos.video).toBe(1);
+  });
+});

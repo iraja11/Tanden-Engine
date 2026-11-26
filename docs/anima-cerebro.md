@@ -113,3 +113,37 @@ Grupos que o cérebro usa: `ordem.<desfecho>[.<comando>[.<categoria>]]`,
 `infere.<regra>`, `estudo.<urgência>`, `agenda.*`, `mundo.<gênero>.*`,
 `capitulo.<n>`, `feito.*`. O teste `todo grupo que o cérebro usa existe no
 cofre` lista os obrigatórios.
+
+## Jogos (Steam) e o que está em foco
+
+Só no app do computador (Tauri). Os dois poderes ficam em Personalizar → Ânima.
+
+**Jogos** (`src-tauri/src/steam.rs` + `cerebro/jogos.ts`), ligado por padrão:
+
+- No Linux, o jogo aberto é achado pelo `SteamAppId` que a Steam põe no
+  ambiente de todo processo de jogo (nativo, Proton ou Flatpak), lido em
+  `/proc/<pid>/environ`. Se não achar, vale o `RunningAppID` do
+  `~/.steam/registry.vdf` (no Windows, o registro). Sem chave nenhuma.
+- O nome vem do `appmanifest_<id>.acf` da biblioteca; single/multi das
+  categorias da API pública da loja (em cache).
+- A chave da Web API (opcional) e o SteamID do `loginusers.vdf` dizem se
+  você está num lobby ou servidor online agora.
+- O problema de jogar agora, do mais grave ao mais leve: compromisso na
+  próxima hora, prova em até 36 h, passou da hora de dormir (contada para
+  trás a partir do horário em que você acorda nos dias de trabalho), madrugada,
+  maratona de 2h30. As broncas voltam em intervalos e escalam (`.insiste`).
+  Ela soma as horas de cada jogo e o mais jogado vira o rival.
+
+**Web e apps** (`src-tauri/src/janela.rs` + `cerebro/web.ts`), desligado por padrão:
+
+- Lê só o título e a classe da janela em foco: Hyprland (`hyprctl`), Sway
+  (`swaymsg`), KDE Wayland (`kdotool`) ou X11 (`xdotool`, depois `xprop`).
+  No GNOME Wayland não há jeito sem extensão.
+- O navegador põe o título da aba na janela; daí saem o site e a página.
+  Categorias: vídeo, live, estudo, trabalho, IA, jogos, adulto, redes,
+  compras, música, leitura (e o Obsidian, o rival dela). Apps fora do
+  navegador pela classe (Discord, Spotify, VS Code...).
+- Comenta uma vez por página que ficou 20 s na tela, com intervalo por
+  categoria e no mínimo 4 min entre comentários; prova perto ou hora de
+  dormir mudam o tom. Soma o tempo do dia por categoria.
+- Nada sai do aparelho. Com a janela na bandeja, a fala vira notificação do sistema.

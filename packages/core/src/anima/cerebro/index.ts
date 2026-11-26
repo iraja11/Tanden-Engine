@@ -21,3 +21,4 @@ export { treinar, avaliar, calibrar, carregar, serializar, prever, indices, type
 export { gerarCorpus, ROTULOS, GRAMATICA, SLOTS } from './corpus';
 export { lerMemoriaCerebro, novaMemoriaCerebro, type MemoriaCerebro, type Pendencia } from './memoria';
 export { reagirJogo, problemaDoJogo, sono, rival, ROTINA_PADRAO, type JogoAtual, type Rotina, type ProblemaJogo, type ReacaoJogo, type CtxJogo } from './jogos';
+export { lerJanela, reagirWeb, contarWeb, type Pagina, type CategoriaWeb } from './web';

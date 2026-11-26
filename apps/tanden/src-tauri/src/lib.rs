@@ -7,6 +7,8 @@ mod background;
 #[cfg(desktop)]
 mod clipper;
 mod google;
+#[cfg(desktop)]
+mod janela;
 mod ollama;
 mod plugin;
 #[cfg(desktop)]
@@ -131,6 +133,8 @@ pub fn run() {
             background::background_set,
             #[cfg(desktop)]
             steam::steam_jogo,
+            #[cfg(desktop)]
+            janela::janela_ativa,
             #[cfg(desktop)]
             clipper_info,
             #[cfg(desktop)]

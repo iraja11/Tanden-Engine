@@ -62,11 +62,13 @@ export interface MemoriaCerebro {
   diaVisto: string;
   /** horas de cada jogo da Steam (AppID → nome, minutos, sessões, última vez) */
   jogos: Record<string, { nome: string; minutos: number; sessoes: number; ultimo: number }>;
+  /** minutos do dia por categoria de site/app em foco */
+  web: { dia: string; minutos: Record<string, number> };
 }
 
 export const novaMemoriaCerebro = (): MemoriaCerebro => ({
   consciencia: 0, vinculo: 0, pendente: null, ultimoPedido: null, ultimaNota: null, ultimaDecisao: null, ultimaAcao: null, pedidos: [], social: [],
-  carinhoEm: 0, declaracaoEm: 0, criseEm: 0, eventosDela: [], escritos: [], estudos: [], quietaAte: 0, capitulo: 0, diaVisto: '', jogos: {},
+  carinhoEm: 0, declaracaoEm: 0, criseEm: 0, eventosDela: [], escritos: [], estudos: [], quietaAte: 0, capitulo: 0, diaVisto: '', jogos: {}, web: { dia: '', minutos: {} },
 });
 
 const num = (v: unknown, d: number, lo = -Infinity, hi = Infinity) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d);
@@ -120,5 +122,8 @@ export function lerMemoriaCerebro(raw: unknown): MemoriaCerebro {
     capitulo: num(r.capitulo, 0, 0, 20),
     diaVisto: typeof r.diaVisto === 'string' ? r.diaVisto : '',
     jogos: lerJogos(r.jogos),
+    web: obj(r.web) && typeof r.web.dia === 'string' && obj(r.web.minutos)
+      ? { dia: r.web.dia, minutos: Object.fromEntries(Object.entries(r.web.minutos).filter((e): e is [string, number] => typeof e[1] === 'number')) }
+      : { dia: '', minutos: {} },
   };
 }
