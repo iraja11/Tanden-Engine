@@ -59,6 +59,8 @@ export interface AnimaPrefs {
   cenas: boolean;
   /** quem pensa as respostas da conversa: as regras dela ou um modelo local (Ollama) */
   cerebro: 'regras' | 'ollama';
+  /** prompt de sistema do Ollama, editado nas configurações (null = o padrão); {chaves} viram o estado dela */
+  prompt: string | null;
   /** o que ela pode fazer por conta própria */
   poderes: { agenda: boolean; mundo: boolean; agua: boolean; jogos: boolean; web: boolean; musica: boolean; minecraft: boolean };
   /** quando você acorda (para ela saber a hora de você largar o jogo e dormir) */
@@ -79,7 +81,7 @@ const PREFS_KEY = 'tanden.anima';
 const STATE_KEY = 'tanden.anima.estado';
 const MARKS_KEY = 'tanden.anima.marcas';
 const DEFAULTS: AnimaPrefs = {
-  acordada: false, intensidade: 2, nome: 'amor', notificar: true, silencio: true, lado: 'dir', altura: 0, escondida: false, passeia: true, cenas: true, cerebro: 'regras',
+  acordada: false, intensidade: 2, nome: 'amor', notificar: true, silencio: true, lado: 'dir', altura: 0, escondida: false, passeia: true, cenas: true, cerebro: 'regras', prompt: null,
   poderes: { agenda: true, mundo: true, agua: true, jogos: true, web: false, musica: true, minecraft: true },
   rotina: { acordaAs: '06:00', horasSono: 7.5, diasTrabalho: [1, 2, 3, 4, 5] },
   steamChave: '',
@@ -1370,27 +1372,35 @@ class Anima {
     return this.prefs.cerebro === 'ollama' && isTauri() && !!ollama.model;
   }
 
+  /** O prompt de sistema exatamente como iria ao Ollama agora (o editor mostra isso). */
+  promptAgora(): string {
+    return promptDaAnima($state.snapshot(this.estado) as AnimaState, {
+      now: Date.now(), intensidade: this.prefs.intensidade, nome: this.prefs.nome.trim() || 'você', aberta: this.ctx().aberta, tela: this.telaAtual || undefined,
+    }, this.prefs.prompt);
+  }
+
   /** Resposta pelo Ollama, com a memória e o humor dela no prompt. Se falhar, as regras respondem. */
   private async pensar(r: Reacao, historia: Mensagem[], conversa: boolean): Promise<void> {
     this.estado = r.estado;
     this.salvar();
     this.pensando = true;
     this.digitando = true;
-    const sistema = promptDaAnima($state.snapshot(this.estado) as AnimaState, {
-      now: Date.now(), intensidade: this.prefs.intensidade, nome: this.prefs.nome.trim() || 'você', aberta: this.ctx().aberta, tela: this.telaAtual || undefined,
-    });
+    const sistema = this.promptAgora();
     const messages = [
-      { role: 'system', content: sistema },
+      ...(sistema ? [{ role: 'system', content: sistema }] : []),
       ...historia.map((m) => ({ role: m.de === 'ela' ? 'assistant' : 'user', content: m.texto })),
       { role: 'user', content: this.chat.at(-1)?.texto ?? '' },
     ];
     let saida = '';
+    let vivo = Date.now();
     const onToken = new Channel<string>();
-    onToken.onmessage = (tok) => { saida += tok; };
+    onToken.onmessage = (tok) => { saida += tok; vivo = Date.now(); };
+    // desiste só se o modelo ficar 60 s sem escrever nada (resposta longa não é demora)
+    let vigia: ReturnType<typeof setInterval> | undefined;
     try {
       await Promise.race([
         engine.bus.process('anima', 'ânima pensando', () => invoke('ollama_chat', { url: ollama.url, model: ollama.model, messages, onToken })),
-        new Promise((_, no) => setTimeout(() => no(new Error('demorou')), 60_000)),
+        new Promise((_, no) => { vigia = setInterval(() => { if (Date.now() - vivo > 60_000) no(new Error('demorou')); }, 2000); }),
       ]);
       const texto = limparSaida(saida);
       if (!texto) throw new Error('vazio');
@@ -1401,6 +1411,7 @@ class Anima {
       this.digitando = false;
       if (r.fala) this.mostrar(r.fala, conversa);
     } finally {
+      clearInterval(vigia);
       this.pensando = false;
     }
   }

@@ -4,7 +4,7 @@
   import SnippetsPane from './settings/SnippetsPane.svelte';
   import { CATEGORIES, PACKS, sound, type Pack } from './sound.svelte';
   import { pop, vanish } from './motion';
-  import { INTENSIDADES } from '@tanden/core';
+  import { CHAVES_DO_PROMPT, INTENSIDADES, PROMPT_PADRAO } from '@tanden/core';
   import { anima } from './anima/anima.svelte';
   import { ollama } from './ollama.svelte';
 
@@ -27,6 +27,8 @@
 
   // cores livres abertas mesmo antes de mexer numa
   let free = $state(false);
+  /** o prompt já preenchido, como vai ao Ollama (aberto sob demanda) */
+  let promptVisto = $state<string | null>(null);
   let wallInput = $state<HTMLInputElement>();
   let wallMsg = $state('');
   async function pickWall(e: Event) {
@@ -468,6 +470,23 @@
       </div>
       {#if anima.prefs.cerebro === 'ollama'}
         <p class="hint">{anima.cerebroLocal ? `Pensando com ${ollama.model}. Ela continua aprendendo e lembrando sozinha; se o modelo falhar, ela responde do jeito dela.` : 'Escolha um modelo do Ollama no painel de IA (só no app instalado). Até lá, ela responde do jeito dela.'}</p>
+        <div class="row top">
+          <span class="lbl">Prompt</span>
+          <div class="prompt">
+            <textarea
+              class="t-input prompt-txt"
+              spellcheck="false"
+              value={anima.prefs.prompt ?? PROMPT_PADRAO}
+              oninput={(e) => { const v = e.currentTarget.value; anima.set({ prompt: v.trim() === PROMPT_PADRAO.trim() ? null : v }); if (promptVisto !== null) promptVisto = anima.promptAgora(); }}
+            ></textarea>
+            <p class="hint">É tudo o que vai como instrução ao Ollama, junto só com a conversa. Parágrafos separados por linha em branco; um que fica vazio some. Apagar tudo manda sem prompt. Chaves: {#each CHAVES_DO_PROMPT as c, i (c.chave)}<code title={c.o}>{`{${c.chave}}`}</code>{i < CHAVES_DO_PROMPT.length - 1 ? ' ' : ''}{/each}</p>
+            <div class="prompt-acoes">
+              <button class="small" onclick={() => (promptVisto = promptVisto === null ? anima.promptAgora() : null)}>{promptVisto === null ? 'Ver como vai agora' : 'Fechar prévia'}</button>
+              <button class="small" disabled={anima.prefs.prompt === null} onclick={() => { anima.set({ prompt: null }); if (promptVisto !== null) promptVisto = anima.promptAgora(); }}>Voltar ao padrão</button>
+            </div>
+            {#if promptVisto !== null}<pre class="prompt-previa">{promptVisto}</pre>{/if}
+          </div>
+        </div>
       {/if}
       <p class="hint">Toque: cutuca. Esfregar: carinho. Arrastar e soltar com força: joga. Soltar na borda: esconde. Toque longo ou duplo clique: conversa.</p>
       <div class="row">
@@ -617,6 +636,11 @@
   .try button { border: 1px solid var(--line); background: none; color: var(--muted); border-radius: 8px; padding: 3px 8px; font: 11px var(--f-mono); }
   .try button:hover { color: var(--ember); border-color: var(--ember); }
   .hint { margin: 0; font-size: 12px; color: var(--muted); }
+  .prompt { flex: 1; min-width: 0; display: grid; gap: var(--sp-2); }
+  .prompt-txt { width: 100%; min-height: 220px; padding: var(--sp-2) var(--sp-3); resize: vertical; font: 12.5px/1.5 var(--f-mono); }
+  .prompt code { font: 11px var(--f-mono); color: var(--silver); }
+  .prompt-acoes { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+  .prompt-previa { margin: 0; max-height: 260px; overflow: auto; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--void); color: var(--silver); font: 11.5px/1.5 var(--f-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 
   footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding-top: 10px; }
   .link { border: 0; background: none; padding: 0; color: var(--ember-soft); text-decoration: underline dotted; font-size: 12px; }

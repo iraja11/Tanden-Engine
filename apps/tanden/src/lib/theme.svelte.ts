@@ -133,6 +133,14 @@ type Saved = Look & {
   custom: Colors | null;
 };
 
+/**
+ * App instalado no Linux (WebKitGTK). A View Transition do círculo derruba o
+ * processo da janela ao trocar o tema (falha de segmentação dentro do
+ * libwebkit2gtk, visto com placa NVIDIA no KDE Wayland); lá a troca vai pelo
+ * esmaecer de cores, que não usa captura de tela.
+ */
+const webkitGtk = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window && /Linux/i.test(navigator.userAgent) && !/Android/i.test(navigator.userAgent);
+
 const KEY = 'tanden.theme';
 const WALL_KEY = 'tanden.wallpaper';
 const DEFAULTS: Saved = { skin: 'tanden', ...SKINS[0]!.look, motion: 'completo', zoom: 1, custom: null };
@@ -417,7 +425,7 @@ class Theme {
     };
     const doc = document as Document & { startViewTransition?: (cb: () => void) => { ready: Promise<void> } };
     const visual = 'base' in patch || 'accent' in patch || 'skin' in patch || 'custom' in patch;
-    if (visual && from && doc.startViewTransition && this.motion === 'completo') {
+    if (visual && from && doc.startViewTransition && this.motion === 'completo' && !webkitGtk) {
       const t = doc.startViewTransition(run);
       const r = Math.hypot(Math.max(from.x, innerWidth - from.x), Math.max(from.y, innerHeight - from.y));
       void t.ready.then(() => {

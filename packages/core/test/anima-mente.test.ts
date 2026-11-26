@@ -243,6 +243,22 @@ describe('ânima: cabeça', () => {
     expect(p).toMatch(/gótica/);
   });
 
+  it('o prompt editado vai sozinho, com as chaves trocadas', () => {
+    const s = novoEstado(T0);
+    const p = promptDaAnima(s, { now: T0, intensidade: 2, nome: 'Teo' }, 'oi {nome}, humor {humor}.\n\n{frases}\n\n{desconhecida}');
+    expect(p).toMatch(/^oi Teo, humor /);
+    expect(p).toMatch(/\{desconhecida\}$/);
+    expect(p).not.toMatch(/188|gótica/);
+    expect(p.split('\n\n')).toHaveLength(2);
+    expect(promptDaAnima(s, { now: T0, intensidade: 2, nome: 'Teo' }, '')).toBe('');
+    expect(promptDaAnima(s, { now: T0, intensidade: 2, nome: 'Teo' }, null)).toMatch(/gótica/);
+  });
+
+  it('não corta resposta longa', () => {
+    const longa = 'palavra '.repeat(200).trim();
+    expect(limparSaida(longa)).toBe(longa);
+  });
+
   it('limpa a saída do modelo e escolhe uma expressão', () => {
     expect(limparSaida('Ânima: "oi, amor"')).toBe('oi, amor');
     expect(limparSaida('<think>hmm</think>olá')).toBe('olá');
