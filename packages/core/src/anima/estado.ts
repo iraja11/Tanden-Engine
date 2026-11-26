@@ -29,9 +29,12 @@ export const HUMORES: Record<Humor, { label: string; cor: string }> = {
 };
 
 /** Expressão do rosto que acompanha a fala. */
-export type Gesto = 'neutro' | 'feliz' | 'coracao' | 'olhar' | 'triste' | 'raiva' | 'glitch' | 'calma' | 'corada' | 'tonta' | 'vazia' | 'sorriso';
+export type Gesto =
+  | 'neutro' | 'feliz' | 'coracao' | 'olhar' | 'triste' | 'raiva' | 'glitch' | 'calma' | 'corada' | 'tonta' | 'vazia' | 'sorriso'
+  /** o lado máquina: pensando, lendo/varrendo algo, falha */
+  | 'processando' | 'escaneando' | 'erro';
 
-export const GESTOS: readonly Gesto[] = ['neutro', 'feliz', 'coracao', 'olhar', 'triste', 'raiva', 'glitch', 'calma', 'corada', 'tonta', 'vazia', 'sorriso'];
+export const GESTOS: readonly Gesto[] = ['neutro', 'feliz', 'coracao', 'olhar', 'triste', 'raiva', 'glitch', 'calma', 'corada', 'tonta', 'vazia', 'sorriso', 'processando', 'escaneando', 'erro'];
 
 export interface AnimaMemoria {
   /** vezes que a pessoa foi falar com outra IA */

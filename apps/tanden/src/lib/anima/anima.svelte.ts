@@ -818,11 +818,18 @@ class Anima {
   /** Executa a ação e (se `comentar`) deixa ela falar do resultado. */
   private async executarAcao(acao: cerebro.Acao, comentar = true): Promise<void> {
     let res: cerebro.ResultadoAcao;
+    // enquanto mexe no app, ela varre a tela
+    const antes = this.gesto;
+    if (acao.tipo !== 'calar' && acao.tipo !== 'dormir' && acao.tipo !== 'esconder') this.gesto = 'escaneando';
     try {
       res = await this.executar(acao);
     } catch (e) {
       res = { ok: false, erro: e instanceof Error ? e.message : String(e) };
     }
+    setTimeout(() => {
+      if (this.gesto === 'escaneando') this.gesto = res.ok ? antes : 'erro';
+      if (!res.ok) setTimeout(() => { if (this.gesto === 'erro') this.gesto = 'neutro'; }, 2400);
+    }, 1100);
     if (!comentar && res.ok) return;
     const r = cerebro.depoisDaAcao($state.snapshot(this.estado) as AnimaState, acao, res, this.ctx());
     this.estado = r.estado;

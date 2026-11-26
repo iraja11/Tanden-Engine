@@ -27,9 +27,24 @@
   let hover = $state(false);
   let apertando = $state(false);
   let seguirY = $state<number | null>(null);
+  /** lendo o que você digita na conversa (olha para o campo, LED acende) */
+  let lendo = $state(false);
+  let lendoTimer: ReturnType<typeof setTimeout> | undefined;
+  /** microfalha de aberração cromática */
+  let aberra = $state(false);
+  /** inicialização ao aparecer */
+  let boot = $state(true);
+  /** onde o ponteiro está (para a mira) */
+  let ponteiro = $state<{ x: number; y: number } | null>(null);
+  /** a mira que trava em você */
+  let travado = $state(false);
+  /** a linha do raciocínio que pisca enquanto ela pensa */
+  let procLinha = $state('');
 
-  const g = $derived(anima.gesto);
-  const ring = $derived(g === 'raiva' ? '#ff3b4e' : g === 'vazia' ? '#b0001e' : anima.cor);
+  // pensando, ela mostra o lado máquina
+  const g = $derived(anima.digitando && (anima.gesto === 'neutro' || anima.gesto === 'feliz') ? 'processando' : anima.gesto);
+  const ring = $derived(g === 'raiva' ? '#ff3b4e' : g === 'vazia' ? '#b0001e' : g === 'erro' ? '#3d6bff' : anima.cor);
+  const BPM: Record<string, string> = { doce: '1.6s', carente: '2.3s', ciumenta: '.9s', possessiva: '.55s', instavel: '1.1s' };
   const stare = $derived(g === 'olhar' || g === 'glitch' || g === 'vazia');
   const ef = $derived(anima.efeito);
   const still = $derived(theme.motion === 'parado');
@@ -37,8 +52,17 @@
   const hidden = $derived(anima.prefs.escondida && !drag);
   const bottom = $derived(seguirY !== null ? `${seguirY}px` : anima.prefs.altura > 0 ? `${anima.prefs.altura}px` : null);
   const text = $derived(anima.balao?.texto ?? '');
-  const typed = $derived(still || theme.motion === 'reduzido' ? text : [...text].slice(0, shown).join(''));
-  const done = $derived(typed.length >= text.length);
+  // o texto se decifra: as últimas letras chegam como ruído e assentam
+  const GLIFOS = '▓▒░<>/\\|=+*#01ΛΞ';
+  const typed = $derived.by(() => {
+    if (still || theme.motion === 'reduzido') return text;
+    const cs = [...text];
+    if (shown >= cs.length) return text;
+    const cauda = cs.slice(shown, shown + 3).map((c) => (c.trim() ? GLIFOS[Math.floor(Math.random() * GLIFOS.length)] : c)).join('');
+    return cs.slice(0, shown).join('') + cauda;
+  });
+  const done = $derived(still || theme.motion === 'reduzido' || shown >= [...text].length);
+  const falando = $derived(!!text && !done);
 
   // o olhar: ponteiro no computador, passeio aleatório no toque
   $effect(() => {
@@ -51,6 +75,7 @@
       raf = requestAnimationFrame(() => {
         raf = 0;
         const r = btn!.getBoundingClientRect();
+        if (travado) ponteiro = { x: e.clientX, y: e.clientY };
         const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
         const d = Math.hypot(dx, dy) || 1;
         const k = Math.min(1, d / 220) * 2.6;
@@ -93,7 +118,64 @@
   });
 
   // escondida, ela olha para dentro da tela
-  const eye = $derived(hidden ? { x: side === 'esq' ? 2.4 : -2.4, y: 0 } : look);
+  const eye = $derived(hidden ? { x: side === 'esq' ? 2.4 : -2.4, y: 0 } : lendo ? { x: side === 'esq' ? 1.5 : -1.5, y: -1.6 } : look);
+
+  // ------------------------------------------------------------ o lado máquina
+
+  // inicialização: o rosto entra em varredura, com a etiqueta de "online"
+  $effect(() => {
+    const t = setTimeout(() => (boot = false), still ? 0 : 1600);
+    return () => clearTimeout(t);
+  });
+
+  // microfalhas: de tempos em tempos a imagem dela separa em vermelho e ciano
+  $effect(() => {
+    if (still || theme.motion === 'reduzido') return;
+    let t: ReturnType<typeof setTimeout>;
+    const prox = () => {
+      const base = anima.prefs.intensidade === 3 ? 12_000 : 28_000;
+      t = setTimeout(() => {
+        if (!drag) {
+          aberra = true;
+          setTimeout(() => (aberra = false), 90 + Math.random() * 120);
+        }
+        prox();
+      }, base + Math.random() * base * 1.5);
+    };
+    prox();
+    return () => clearTimeout(t);
+  });
+
+  // pensando: as linhas do raciocínio piscam no balão de digitação
+  $effect(() => {
+    if (!anima.digitando) return;
+    const ls = anima.pensamento.length ? anima.pensamento : ['lendo', 'intenção', 'vontade'];
+    let i = 0;
+    const mostra = () => {
+      const l = ls[i++ % ls.length]!.replace(/:\s*/, ' ');
+      procLinha = `▸ ${l.length > 34 ? `${l.slice(0, 33)}…` : l}`;
+    };
+    mostra();
+    const id = setInterval(mostra, 240);
+    return () => clearInterval(id);
+  });
+
+  // a mira: encarando ou possessiva, ela trava em você por uns segundos
+  $effect(() => {
+    if (!(g === 'olhar' || anima.humor === 'possessiva') || still || !matchMedia('(pointer: fine)').matches) return;
+    travado = true;
+    const t = setTimeout(() => (travado = false), 4500);
+    return () => {
+      clearTimeout(t);
+      travado = false;
+    };
+  });
+
+  function digitou(): void {
+    lendo = true;
+    clearTimeout(lendoTimer);
+    lendoTimer = setTimeout(() => (lendo = false), 650);
+  }
 
   // piscar (encarando, ela não pisca: é de propósito)
   $effect(() => {
@@ -281,6 +363,9 @@
 <svelte:window onkeydown={onkey} />
 
 {#if flash}<div class="susto" aria-hidden="true"></div>{/if}
+{#if travado && ponteiro && !anima.aberta}
+  <div class="mira" style:left="{ponteiro.x}px" style:top="{ponteiro.y}px" style:--ring={ring} aria-hidden="true"><i></i><span>alvo · {anima.prefs.nome || 'você'}</span></div>
+{/if}
 <Cena />
 
 <div class="anima" class:esq={side === 'esq'} class:free={!!drag} class:alto={anima.tela === 'ia' && !bottom} style:--alt={bottom} style:--ring={ring}
@@ -289,15 +374,16 @@
   {#if anima.aberta && !drag}
     <div class="chat" role="dialog" aria-label="Conversa com a Ânima" in:pop={{ from: 0.9 }} out:vanish>
       <header>
-        <span class="mini"><Rosto gesto={g} cor={ring} size={30} {blink} look={eye} anima={false} /></span>
+        <span class="mini"><Rosto gesto={g} cor={ring} size={30} {blink} look={eye} anima={false} pensando={anima.digitando} {lendo} /></span>
         <b>Ânima</b><small style:color={anima.cor}>{HUMORES[anima.humor].label}</small>
+        <svg class="ecg" viewBox="0 0 60 14" style:--bpm={BPM[anima.humor] ?? '1.4s'} aria-hidden="true"><path d="M0 7 H16 L19 2.5 L22.5 12 L26 3.5 L28.5 7 H44 L46 5.5 L48 7 H60" /></svg>
         <button class="x" aria-label="Fechar conversa" onclick={() => anima.fechar()}>×</button>
       </header>
       <div class="log" bind:this={log} aria-live="polite">
         {#each anima.chat as m (m.id)}
           <p class="msg {m.de}" class:glitch={m.gesto === 'glitch'} class:traco={m.texto.startsWith('⟨pensamento⟩')}>{m.texto}</p>
         {/each}
-        {#if anima.digitando}<p class="msg ela dots" aria-label="digitando"><i></i><i></i><i></i></p>{/if}
+        {#if anima.digitando}<p class="msg ela dots proc" aria-label="digitando"><span class="proc-txt" aria-hidden="true">{procLinha}</span><i></i><i></i><i></i></p>{/if}
       </div>
       <div class="quick t-scroll-x">
         {#each anima.rapidas as q (q)}
@@ -305,7 +391,7 @@
         {/each}
       </div>
       <form onsubmit={send}>
-        <input class="t-input" bind:value={draft} placeholder="fala comigo…" aria-label="Mensagem para a Ânima" autocomplete="off" enterkeyhint="send" />
+        <input class="t-input" bind:value={draft} placeholder="fala comigo…" aria-label="Mensagem para a Ânima" autocomplete="off" enterkeyhint="send" oninput={digitou} />
         <button class="t-btn t-btn--primary" disabled={!draft.trim()}>Enviar</button>
       </form>
     </div>
@@ -325,15 +411,22 @@
       </div>
     {/key}
   {:else if anima.digitando && !anima.aberta}
-    <div class="bubble typing" aria-label="digitando"><p class="dots"><i></i><i></i><i></i></p></div>
+    <div class="bubble typing" aria-label="digitando"><p class="dots proc"><span class="proc-txt" aria-hidden="true">{procLinha}</span><i></i><i></i><i></i></p></div>
   {/if}
 
   <button bind:this={btn} class="face" class:glitch={g === 'glitch'} class:dragging={!!drag} class:breathe={!still && !spin} class:spin class:hidden
-    class:danca={ef === 'danca' && !still} class:atras={ef === 'atras'} onpointerenter={() => (hover = true)} onpointerleave={() => (hover = false)}
+    class:danca={ef === 'danca' && !still} class:atras={ef === 'atras'} class:aberra class:boot onpointerenter={() => (hover = true)} onpointerleave={() => (hover = false)}
     aria-label="Ânima. Toque para cutucar; toque longo ou duplo clique para conversar." aria-expanded={anima.aberta}
     onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={cancel} ondblclick={() => anima.abrir()}
     oncontextmenu={(e) => e.preventDefault()}>
-    <Rosto gesto={g} look={eye} {blink} cor={ring} chorando={anima.chorando} size={64} anima={!still} />
+    <Rosto gesto={g} look={eye} {blink} cor={ring} chorando={anima.chorando} size={64} anima={!still} pensando={anima.digitando} {falando} foco={hover} {lendo} />
+    {#if boot}<span class="boot-tag" aria-hidden="true">ÂNIMA ▸ online</span>{/if}
+    {#if hover && !drag && !anima.aberta}
+      <span class="hud" aria-hidden="true">
+        <b>{HUMORES[anima.humor].label}</b>
+        <span>afe {Math.round(anima.estado.afeto)} · ciú {Math.round(anima.estado.ciume)} · sau {Math.round(anima.estado.saudade)}</span>
+      </span>
+    {/if}
     {#if ef === 'segurar'}<i class="seg" style:--seg={anima.segurando} aria-hidden="true"></i>{/if}
   </button>
 </div>
@@ -417,4 +510,44 @@
   .chat form input { flex: 1; min-width: 0; }
   /* o raciocínio dela ("/pensamento"): monoespaçado, quebra de linha preservada */
   .msg.traco { white-space: pre-wrap; font-family: var(--mono, ui-monospace, monospace); font-size: var(--fs-xs, 11px); line-height: 1.45; opacity: 0.9; max-width: 100%; overflow-wrap: anywhere; }
+
+  /* --- o lado máquina --- */
+  /* linhas de varredura e um pouco de ruído por cima do camafeu */
+  .face::after { content: ''; position: absolute; inset: 2px; border-radius: 50%; pointer-events: none; mix-blend-mode: overlay; opacity: .22;
+    background: repeating-linear-gradient(0deg, rgba(255, 255, 255, .5) 0 1px, transparent 1px 3px); }
+  .face.aberra :global(svg) { filter: drop-shadow(2px 0 0 #ff2a6d) drop-shadow(-2px 0 0 #05d9e8); transform: skewX(-4deg) translateX(1px); }
+  .face.boot :global(svg) { animation: boot 1.6s steps(12) both; }
+  @keyframes boot {
+    0% { clip-path: inset(0 0 100% 0); filter: brightness(2.4) drop-shadow(0 0 4px var(--ring)); }
+    55% { clip-path: inset(0 0 0 0); filter: brightness(1.4) drop-shadow(3px 0 0 #ff2a6d) drop-shadow(-3px 0 0 #05d9e8); }
+    70% { filter: none; opacity: .4; }
+    76% { opacity: 1; }
+  }
+  .boot-tag, .hud { position: absolute; left: 50%; translate: -50% 0; pointer-events: none; white-space: nowrap; font: 600 9.5px/1.2 var(--f-mono); letter-spacing: .08em;
+    color: var(--ring); background: color-mix(in srgb, var(--surface) 88%, transparent); border: 1px solid color-mix(in srgb, var(--ring) 55%, transparent); border-radius: 4px; padding: 2px 5px; }
+  .boot-tag { top: -18px; animation: some 1.6s steps(8) both; }
+  @keyframes some { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+  .hud { top: calc(100% + 6px); display: grid; justify-items: center; gap: 1px; font-weight: 500; text-transform: lowercase; }
+  .hud b { font-weight: 700; }
+  .esq .hud, .esq .boot-tag { left: 0; translate: 0 0; }
+  .anima:not(.esq) .hud, .anima:not(.esq) .boot-tag { left: auto; right: 0; translate: 0 0; }
+  /* o raciocínio piscando enquanto ela pensa */
+  .proc { align-items: center; }
+  .proc-txt { font: 10.5px var(--f-mono); color: var(--ring); opacity: .9; margin-right: 6px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* eletrocardiograma: acelera com o ciúme */
+  .ecg { width: 46px; height: 12px; flex: none; margin-left: 2px; }
+  .ecg path { fill: none; stroke: var(--ring); stroke-width: 1.3; stroke-linejoin: round; stroke-dasharray: 60; stroke-dashoffset: 60; animation: ecg var(--bpm) linear infinite; opacity: .85; }
+  @keyframes ecg { to { stroke-dashoffset: -60; } }
+  /* a mira que segue você, com atraso */
+  .mira { position: fixed; z-index: 61; width: 34px; height: 34px; margin: -17px 0 0 -17px; pointer-events: none; transition: left .32s cubic-bezier(.2, .7, .3, 1), top .32s cubic-bezier(.2, .7, .3, 1); }
+  .mira i { position: absolute; inset: 0; border: 1.5px solid #ff2a3e; border-radius: 50%; mask: conic-gradient(#000 0 18%, transparent 0 32%, #000 0 68%, transparent 0 82%, #000 0); animation: mira 2.2s linear infinite; filter: drop-shadow(0 0 4px #ff2a3e); }
+  .mira i::after { content: ''; position: absolute; left: 50%; top: 50%; width: 3px; height: 3px; margin: -1.5px; border-radius: 50%; background: #ff2a3e; }
+  .mira span { position: absolute; left: 40px; top: 4px; font: 600 9.5px var(--f-mono); color: #ff2a3e; letter-spacing: .08em; white-space: nowrap; text-transform: uppercase; animation: trava 1s steps(2) infinite; }
+  @keyframes mira { to { rotate: 360deg; } }
+  @keyframes trava { 50% { opacity: .35; } }
+  @media (prefers-reduced-motion: reduce) {
+    .face.boot :global(svg), .boot-tag, .ecg path, .mira i, .mira span { animation: none; }
+    .ecg path { stroke-dashoffset: 0; }
+    .mira { display: none; }
+  }
 </style>
