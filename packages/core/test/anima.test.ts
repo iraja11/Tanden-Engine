@@ -42,7 +42,11 @@ describe('ânima: cofre', () => {
 
   it('toda linha usa variáveis conhecidas, expressões válidas e todo grupo serve à intensidade doce', () => {
     const known = new Set(['nome', 'tempo', 'segundos', 'ia', 'n', 'notas', 'tela', 'nota', 'minutos', 'esforco', 'sequencia', 'conquista', 'dias', 'texto', 'hora', 'toques', 'palavras', 'palavra', 'semana', 'juntos', 'busca', 'bateria',
-      'coisa', 'pessoa', 'rel', 'bicho', 'nomereal', 'frase', 'trecho', 'visitas', 'aberta']);
+      'coisa', 'pessoa', 'rel', 'bicho', 'nomereal', 'frase', 'trecho', 'visitas', 'aberta',
+      // cérebro
+      'titulo', 'quando', 'opcoes', 'extra', 'formula', 'total', 'lado', 'mundo', 'erro', 'segundos', 'afeto', 'ciume', 'humor', 'expr', 'resultado', 'data',
+      'idade', 'lista', 'tipo', 'periodo', 'assunto', 'horas', 'capitulo', 'coisa2', 'personagem', 'lugar', 'faccao', 'criatura', 'divindade', 'comando',
+      'falta', 'meta', 'bebido', 'copos', 'campo']);
     const gestos = new Set<string>(GESTOS);
     for (const [g, ls] of Object.entries(banco().falas)) {
       expect(ls.length, g).toBeGreaterThan(0);

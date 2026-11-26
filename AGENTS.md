@@ -80,6 +80,9 @@ O documento [architecture.md](architecture.md) tem o mapa completo e as camadas.
 - **Comando da paleta:** registre em `apps/tanden/src/lib/app-commands.ts`.
 - **Evento novo:** acrescente a `TandenEvent` em `packages/core/src/events.ts`,
   emita pelo `bus`, e reaja em `engine.onEvent`.
+- **Ânima (cérebro, comandos, falas):** veja [docs/anima-cerebro.md](docs/anima-cerebro.md).
+  Mudou `anima/cerebro/corpus.ts` ou o cofre de falas? Retreine o classificador com
+  `node scripts/anima-cerebro/treinar.mjs treinar` (uns 20 s) e commite o `modelo.dat.ts`.
 
 ---
 

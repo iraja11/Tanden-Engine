@@ -9,7 +9,12 @@
 import { FALAS_DAT } from './falas.dat';
 import type { Gesto, Humor, Intensidade } from './estado';
 
-export type Linha = string | { t: string; h?: Humor[]; i?: Intensidade; g?: Gesto };
+/**
+ * Uma fala. Marcas: `i` intensidade mínima, `h` humores, `g` expressão,
+ * `k` capítulo mínimo da relação, `c` consciência mínima (0 a 100).
+ * O texto pode ter variação: {{a|b|c}} escolhe uma (e {{x|}} é opcional).
+ */
+export type Linha = string | { t: string; h?: Humor[]; i?: Intensidade; g?: Gesto; k?: number; c?: number };
 
 export interface OpcaoPergunta {
   texto: string;
@@ -67,6 +72,19 @@ export function banco(): Banco {
     cache = { falas: raw.falas ?? {}, perguntas: raw.perguntas ?? [] };
   }
   return cache;
+}
+
+/** Expande as variações {{a|b|c}} (de dentro para fora). */
+export function variar(t: string, rand: () => number): string {
+  let s = t;
+  for (let i = 0; i < 8 && s.includes('{{'); i++) {
+    // aceita {variáveis} dentro das opções: {{do sono de {personagem}|da vela}}
+    s = s.replace(/\{\{((?:[^{}]|\{\w+\})*)\}\}/g, (_, alts: string) => {
+      const ops = alts.split('|');
+      return ops[Math.floor(rand() * ops.length)] ?? '';
+    });
+  }
+  return s.replace(/\s{2,}/g, ' ').replace(/\s+([,.!?…])/g, '$1').trim();
 }
 
 /** Texto de uma linha, sem as opções. */

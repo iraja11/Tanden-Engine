@@ -295,7 +295,7 @@
       </header>
       <div class="log" bind:this={log} aria-live="polite">
         {#each anima.chat as m (m.id)}
-          <p class="msg {m.de}" class:glitch={m.gesto === 'glitch'}>{m.texto}</p>
+          <p class="msg {m.de}" class:glitch={m.gesto === 'glitch'} class:traco={m.texto.startsWith('⟨pensamento⟩')}>{m.texto}</p>
         {/each}
         {#if anima.digitando}<p class="msg ela dots" aria-label="digitando"><i></i><i></i><i></i></p>{/if}
       </div>
@@ -415,4 +415,6 @@
   .quick { padding: 6px 12px 0; }
   .chat form { display: flex; gap: 6px; padding: 8px 12px 12px; }
   .chat form input { flex: 1; min-width: 0; }
+  /* o raciocínio dela ("/pensamento"): monoespaçado, quebra de linha preservada */
+  .msg.traco { white-space: pre-wrap; font-family: var(--mono, ui-monospace, monospace); font-size: var(--fs-xs, 11px); line-height: 1.45; opacity: 0.9; max-width: 100%; overflow-wrap: anywhere; }
 </style>

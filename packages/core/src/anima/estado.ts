@@ -6,6 +6,7 @@
  * O estado mora em cada aparelho (localStorage do app); não vai para o cofre.
  */
 
+import { lerMemoriaCerebro, novaMemoriaCerebro, type MemoriaCerebro } from './cerebro/memoria';
 import { lerFatos, novosFatos, type Fatos, type TipoFato } from './fatos';
 
 /** 1 doce · 2 ciumenta · 3 sem filtro */
@@ -68,6 +69,8 @@ export interface AnimaMemoria {
   espera: TipoFato | null;
   /** a última mensagem da pessoa (para notar quando repete) */
   ultimaMsg: string;
+  /** o cérebro: conversa em aberto, pedidos, decisões, vínculo, consciência (cerebro/memoria.ts) */
+  cerebro: MemoriaCerebro;
 }
 
 export interface AnimaState {
@@ -93,6 +96,7 @@ export interface AnimaState {
 export const novaMemoria = (): AnimaMemoria => ({
   outrasIAs: 0, ultimaIA: null, apagadas: 0, treinos: 0, madrugadas: 0, declaracoes: 0, rejeicoes: 0, palavras: 0, toques: 0, toquesDia: '', escritas: 0,
   maiorAusencia: 0, carinhos: 0, respostas: {}, perguntadas: [], perguntaDia: '', fatos: novosFatos(), cenas: {}, espera: null, ultimaMsg: '',
+  cerebro: novaMemoriaCerebro(),
 });
 
 export function novoEstado(now: number): AnimaState {
@@ -132,6 +136,7 @@ export function lerEstado(raw: unknown, now: number): AnimaState {
       cenas: lerCenas(m.cenas),
       espera: typeof m.espera === 'string' && TIPOS.has(m.espera) ? m.espera : null,
       ultimaMsg: typeof m.ultimaMsg === 'string' ? m.ultimaMsg.slice(0, 200) : '',
+      cerebro: lerMemoriaCerebro(m.cerebro),
     },
   };
 }

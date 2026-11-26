@@ -86,6 +86,8 @@ tanden-engine/
 │       └── src-tauri/         lado nativo (Rust)
 ├── scripts/ci-config.mjs      gera a config do build de release
 ├── scripts/anima-falas.mjs    abre/fecha as falas encriptadas da Ânima
+├── scripts/anima-cerebro/     treino do classificador da Ânima (Node; e PyTorch para a GPU)
+├── scripts/ts-loader.mjs      roda o TypeScript do núcleo direto em scripts Node
 └── .github/workflows/         CI de release (Linux, Windows, Android)
 ```
 
@@ -139,7 +141,7 @@ Domínios em subpastas (cada um exporta por um `index.ts`):
 | `saude/` | Saúde: água/pausas, biblioteca de exercícios, planner/treino. |
 | `alimentacao/` | Alimentação: tabela de alimentos, receitas, diário, metas, cardápio, compras e sugestões. |
 | `exercicios/` | Exercícios em casa: biblioteca, treinos guiados por tempo, programas, registro, `sequencias` (streak diária e semanal, calendário) e `conquistas` (métricas refeitas do registro, com data de obtenção). |
-| `anima/` | Ânima, a companheira escondida: `estado` (afeto, ciúme e saudade que decaem com o tempo, humor, memória), `cofre` (abre as falas, que ficam **encriptadas** em `falas.dat.ts` para não estragar a surpresa; edite com `node scripts/anima-falas.mjs abrir` / `fechar`) e `motor` (reagir a eventos do app e a gestos no widget, conversa por intenção, pergunta do dia com lembranças, pensamentos montados por fragmentos, glitch, comando secreto guardado como hash e o plano de notificações de saudade). Sem rede e sem modelo de linguagem. |
+| `anima/` | Ânima, a companheira escondida: `estado` (afeto, ciúme e saudade que decaem com o tempo, humor, memória), `cofre` (abre as falas, que ficam **encriptadas** em `falas.dat.ts` para não estragar a surpresa; edite com `node scripts/anima-falas.mjs abrir` / `fechar`) e `motor` (reagir a eventos do app e a gestos no widget, conversa por intenção, pergunta do dia com lembranças, pensamentos montados por fragmentos, glitch, comando secreto guardado como hash e o plano de notificações de saudade). Sem rede e sem modelo de linguagem. `anima/cerebro/` é o cérebro: normalização (gíria, corretor SymSpell), sentimento, classificador de intenções treinável (fastText com quantização de produto, `modelo.dat.ts`), comandos com semântica, vontade explicável, diálogo com pendências, grafo de conhecimento com inferência, rotina proativa e escrita no world building. Ver [docs/anima-cerebro.md](docs/anima-cerebro.md). |
 | `vida/` | Tela Hoje: tarefas, projetos, hábitos, metas, diário, revisão semanal. |
 | `plugins/` | Plugins: manifesto/permissões, host que confere chamadas, SDK injetado. |
 
@@ -313,7 +315,7 @@ interface; a lógica de domínio vem de `@tanden/core`.
 | `plugins/` | Registro, aprovação e a janela (`<iframe sandbox>`) dos plugins. |
 | `settings/` | Atalhos e snippets. |
 | `theme.svelte.ts`, `sound.svelte.ts`, `feel.svelte.ts`, `motion.ts`, `Orb.svelte`, `Splash.svelte`, `Veins.svelte`, `veias.ts` | Aparência (cores, estilos e peças de forma, desenhados em `src/skins.css`), sons, gestos do símbolo e as veias/pulsos. `veias.ts` traça as veias em linhas retas pelas bordas dos painéis (Dijkstra numa grade de bordas, com custo por curva), sem cruzar o conteúdo. |
-| `anima/` | A Ânima: store (eventos do app → núcleo: telas, escrita, busca, cópia, tema, bateria, datas, treinos; ociosidade, passeios, pergunta do dia; saudade agendada no Android ao sair do app) e o widget com olhos (cutucar, carinho, jogar, esconder na borda, conversa). Acorda pelo campo secreto do rodapé de Personalizar; estado só no aparelho (localStorage). |
+| `anima/` | A Ânima: store (eventos do app → núcleo: telas, escrita, busca, cópia, tema, bateria, datas, treinos; ociosidade, passeios, pergunta do dia; saudade agendada no Android ao sair do app) e o widget com olhos (cutucar, carinho, jogar, esconder na borda, conversa). Acorda pelo campo secreto do rodapé de Personalizar; estado só no aparelho (localStorage). A store também executa as ações que o cérebro decide (agenda, lembretes, notas, tema, timer próprio, dados, world building, comandos da paleta), com desfazer, e cuida da água pela voz dela (`saude.voz`). |
 | `commands.svelte.ts`, `app-commands.ts`, `embeds.ts`, `platform.ts` | Paleta/comandos, embeds, detecção de plataforma. |
 | `storage-tauri.ts`, `storage-browser.ts` | `Storage` do app (Tauri e web). |
 | `google.svelte.ts`, `ollama.svelte.ts`, `updater.svelte.ts`, `reminders.svelte.ts`, `snippets.svelte.ts` | Integrações e serviços do app. |

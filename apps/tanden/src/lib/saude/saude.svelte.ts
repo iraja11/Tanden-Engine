@@ -127,6 +127,30 @@ class Saude {
 
   private started = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Quem fala nos avisos de água. Quando a Ânima está acordada, ela assume:
+   * devolve título e corpo do aviso na voz dela (ou null para o texto normal).
+   */
+  voz: ((kind: NudgeKind, info: { falta: number; meta: number; bebido: number }) => { title: string; body: string } | null) | null = null;
+  private ouvintes = new Set<(e: { tipo: 'aviso' | 'bebeu'; kind: NudgeKind; falta: number; meta: number; bebido: number }) => void>();
+
+  /** Avisa quando um aviso aparece ou quando a pessoa bebe (a Ânima reage). */
+  ouvir(fn: (e: { tipo: 'aviso' | 'bebeu'; kind: NudgeKind; falta: number; meta: number; bebido: number }) => void): () => void {
+    this.ouvintes.add(fn);
+    return () => this.ouvintes.delete(fn);
+  }
+
+  private avisar(tipo: 'aviso' | 'bebeu', kind: NudgeKind): void {
+    const e = { tipo, kind, falta: this.behindMl, meta: this.config.agua.goalMl, bebido: this.todayCare.ml };
+    for (const f of this.ouvintes) {
+      try {
+        f(e);
+      } catch {
+        /* quem ouve não derruba a saúde */
+      }
+    }
+  }
   private reloadTimer: ReturnType<typeof setTimeout> | null = null;
   private nativeReady = false;
 
@@ -277,6 +301,8 @@ class Saude {
   }
 
   private message(kind: NudgeKind, at: number): { title: string; body: string } {
+    const dela = kind === 'agua' ? this.voz?.(kind, { falta: this.behindMl, meta: this.config.agua.goalMl, bebido: this.todayCare.ml }) : null;
+    if (dela) return dela;
     if (kind === 'agua') {
       return android
         ? { title: 'Hora de beber água 💧', body: `Meta de hoje: ${this.config.agua.goalMl} ml. Toque em "Bebi" para registrar ${this.config.agua.cupMl} ml.` }
@@ -287,6 +313,7 @@ class Saude {
 
   private show(kind: NudgeKind, at: number): void {
     const m = this.message(kind, at);
+    this.avisar('aviso', kind);
     sound.play('alert');
     if (isTauri()) {
       notif.sendNotification({
@@ -373,6 +400,7 @@ class Saude {
     sound.play('complete');
     this.changed();
     const goal = this.config.agua.goalMl;
+    this.avisar('bebeu', 'agua');
     if (before < goal && this.todayCare.ml >= goal) {
       files.say(`Meta de água batida: ${this.todayCare.ml} ml hoje. 💧`);
       vida.markHabit(['agua', 'água'], this.day);

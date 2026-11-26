@@ -361,6 +361,27 @@
         </label>
       </div>
       <div class="row">
+        <span class="lbl">Agenda</span>
+        <label class="switch">
+          <input type="checkbox" checked={anima.prefs.poderes.agenda} onchange={(e) => pick(() => anima.set({ poderes: { ...anima.prefs.poderes, agenda: e.currentTarget.checked } }))} />
+          <span>põe compromissos dela na sua agenda (marcados com "(ânima)")</span>
+        </label>
+      </div>
+      <div class="row">
+        <span class="lbl">Mundos</span>
+        <label class="switch">
+          <input type="checkbox" checked={anima.prefs.poderes.mundo} onchange={(e) => pick(() => anima.set({ poderes: { ...anima.prefs.poderes, mundo: e.currentTarget.checked } }))} />
+          <span>escreve profecias, lendas e rumores no seu world building</span>
+        </label>
+      </div>
+      <div class="row">
+        <span class="lbl">Água</span>
+        <label class="switch">
+          <input type="checkbox" checked={anima.prefs.poderes.agua} onchange={(e) => pick(() => anima.set({ poderes: { ...anima.prefs.poderes, agua: e.currentTarget.checked } }))} />
+          <span>ela cuida dos avisos de água (na voz dela)</span>
+        </label>
+      </div>
+      <div class="row">
         <span class="lbl">Passeios</span>
         <label class="switch">
           <input type="checkbox" checked={anima.prefs.passeia} onchange={(e) => pick(() => anima.set({ passeia: e.currentTarget.checked }))} />
