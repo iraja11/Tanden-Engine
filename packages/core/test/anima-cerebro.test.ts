@@ -143,7 +143,8 @@ describe('cérebro: entidades', () => {
   });
 });
 
-describe('cérebro: classificador', () => {
+// a rede e o classificador rodam todas as frases reais: ~2 s aqui, bem mais nos runners do GitHub
+describe('cérebro: classificador', { timeout: 30_000 }, () => {
   it('o modelo do app existe, carrega e cobre todas as intenções', () => {
     const m = modeloPadrao()!;
     expect(m).toBeTruthy();

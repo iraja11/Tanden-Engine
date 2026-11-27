@@ -65,7 +65,7 @@
   import { back } from './lib/back';
   import { ask } from './lib/ask.svelte';
   import AskDialog from './lib/AskDialog.svelte';
-  import Anima from './lib/anima/Anima.svelte';
+  import Anima from './lib/anima/AnimaView.svelte';
   import { anima } from './lib/anima/anima.svelte';
 
   let host = $state<HTMLElement>();
