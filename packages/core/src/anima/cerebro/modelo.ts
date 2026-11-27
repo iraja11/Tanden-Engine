@@ -9,7 +9,7 @@ import { banco, textoDe } from '../cofre';
 import { carregar, indices, prever, type Amostra, type Modelo, type Previsao } from './classificador';
 import { palavrasDaGramatica, type Exemplo } from './corpus';
 import { MODELO_DAT } from './modelo.dat';
-import { carregarRede, probabilidadesDaRede, type Rede } from './rede';
+import { carregarRede, probabilidadesDaRede, vetorDaRede, type Rede } from './rede';
 import { Lexico, normalizar, type Texto } from './texto';
 import { VOCABULARIO_DAT } from './vocabulario.dat';
 
@@ -96,6 +96,18 @@ export function classificar(t: Texto, m: Modelo | null = modeloPadrao(), r: Rede
   const ordem = [...final.keys()].sort((x, y) => final[y]! - final[x]!);
   const top = ordem.slice(0, 3).map((i) => [r.rotulos[i]!, final[i]!] as [string, number]);
   return { rotulo: top[0]![0], p: top[0]![1], top, conhecidas };
+}
+
+/** O significado de uma frase pela rede (vetor unitário), ou null se a rede não carregou ou não tem a cabeça de significado. */
+const cacheSentido = new Map<string, Float32Array | null>();
+export function sentido(t: Texto, r: Rede | null = redePadrao()): Float32Array | null {
+  if (!r?.proj) return null;
+  const k = t.limpo;
+  if (cacheSentido.has(k)) return cacheSentido.get(k)!;
+  const v = vetorDaRede(r, t);
+  if (cacheSentido.size > 400) cacheSentido.delete(cacheSentido.keys().next().value!);
+  cacheSentido.set(k, v);
+  return v;
 }
 
 /** Exemplos de texto → amostras (índices) para o treino. */

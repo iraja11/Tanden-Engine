@@ -635,6 +635,50 @@ describe('cérebro: Minecraft', () => {
     expect(entenderMine('hoje eu tive um dia horrível na faculdade, fica difícil estudar assim')).toBeNull();
   });
 
+  it('caça a pedido: qual bicho, quantos e se é o que você mira', () => {
+    const ovelha = cerebro.mobDoTermo('ovelha')!;
+    expect(entenderMine('pode matar essa ovelha?')).toEqual({ tipo: 'cacar', mob: ovelha, n: 1, mirando: true });
+    expect(entenderMine('anima, mata a ovelha')).toEqual({ tipo: 'cacar', mob: ovelha, n: 1, mirando: false });
+    expect(entenderMine('mata 3 vacas pra mim')).toMatchObject({ tipo: 'cacar', mob: { ids: ['cow', 'mooshroom'] }, n: 3 });
+    expect(entenderMine('mata duas galinhas')).toMatchObject({ mob: { nome: 'galinha' }, n: 2 });
+    expect(entenderMine('caça umas galinhas')).toMatchObject({ mob: { nome: 'galinha' }, n: 3 });
+    expect(entenderMine('mata todos os porcos')).toMatchObject({ mob: { nome: 'porco' }, n: cerebro.TODOS_CACA });
+    expect(entenderMine('mata as vacas')).toMatchObject({ mob: { nome: 'vaca' }, n: cerebro.TODOS_CACA });
+    expect(entenderMine('consegue matar aqueles aldeões?')).toMatchObject({ mob: { tipo: 'aldeao' }, mirando: true, n: cerebro.TODOS_CACA });
+    expect(entenderMine('ataca aquele zumbi')).toMatchObject({ mob: { ids: expect.arrayContaining(['zombie']) }, mirando: true, n: 1 });
+    expect(entenderMine('mata isso')).toEqual({ tipo: 'cacar', mob: null, n: 1, mirando: true });
+    expect(entenderMine('mata esse bicho aí')).toEqual({ tipo: 'cacar', mob: null, n: 1, mirando: true });
+    // o que não é caça continua como era
+    expect(entenderMine('me protege')).toEqual({ tipo: 'acao', acao: 'proteger' });
+    expect(entenderMine('mata os monstros')).toEqual({ tipo: 'acao', acao: 'proteger' });
+    expect(entenderMine('pode atacar')).toEqual({ tipo: 'acao', acao: 'proteger' });
+    expect(entenderMine('não mata a ovelha')).toEqual({ tipo: 'acao', acao: 'paz' });
+    expect(entenderMine('vou matar o tempo jogando')).toBeNull();
+  });
+
+  it('caça: manda o mod atrás do bicho, recusa creeper e conta no fim', () => {
+    const r = responderMine(novoEstado(T0), entenderMine('pode matar essa ovelha?')!, c());
+    expect(r.envios).toEqual([{ t: 'cacar', mobs: ['sheep'], n: 1, mirando: true }]);
+    expect(r.grupo).toMatch(/^mine\.cacar/);
+    expect(r.fala!.texto).not.toMatch(/ninguém encosta em você/);
+    const cr = responderMine(novoEstado(T0), entenderMine('mata o creeper')!, c());
+    expect(cr.envios).toEqual([]);
+    expect(cr.grupo).toBe('mine.cacar.creeper');
+    // cada abate a pedido conta no placar, mas ela só fala no fim
+    const m = reagirMine(novoEstado(T0), { tipo: 'matou', mob: 'sheep', caca: true }, c({ rand: () => 0.01 }));
+    expect(m.fala).toBeNull();
+    expect(m.estado.memoria.cerebro.minecraft.abates).toBe(1);
+    expect(reagirMine(novoEstado(T0), { tipo: 'cacou', mob: 'sheep', n: 1, pedidos: 1 }, c()).grupo).toBe('mine.cacou.animal');
+    expect(reagirMine(novoEstado(T0), { tipo: 'cacou', mob: 'cow', n: 3, pedidos: 3 }, c()).grupo).toBe('mine.cacou.varios');
+    expect(reagirMine(novoEstado(T0), { tipo: 'cacou', mob: 'cow', n: 1, pedidos: 3 }, c()).grupo).toBe('mine.cacou.parcial');
+    expect(reagirMine(novoEstado(T0), { tipo: 'cacou', mob: 'pig', n: 4, pedidos: cerebro.TODOS_CACA }, c()).grupo).toBe('mine.cacou.varios');
+    const nada = reagirMine(novoEstado(T0), { tipo: 'cacou', mob: 'sheep', n: 0, pedidos: 1, motivo: 'nada' }, c());
+    expect(nada.fala!.texto).toMatch(/nenhuma ovelha/);
+    expect(reagirMine(novoEstado(T0), { tipo: 'cacou', mob: 'wolf', n: 0, pedidos: 1, motivo: 'seu' }, c()).grupo).toBe('mine.cacou.seu');
+    expect(cerebro.alvoEmPalavras(cerebro.mobDoTermo('aldeao'), 3, false)).toBe('3 aldeões');
+    expect(cerebro.alvoEmPalavras(cerebro.mobDoTermo('porco'), 1, true)).toBe('esse porco');
+  });
+
   it('itens em português, com material, e em inglês', () => {
     expect(itemDoTermo('uma mesa de encantamento')).toBe('enchanting_table');
     expect(itemDoTermo('botas de ouro')).toBe('golden_boots');
@@ -737,6 +781,8 @@ describe('cérebro: Minecraft', () => {
       ...['pedido', 'livre', 'morte', 'casal', 'recado'].map((x) => `mine.placa.${x}`),
       'musica.faixa', 'musica.repete', 'musica.madrugada', 'musica.favorito', 'musica.amor',
       ...['rock', 'indie', 'mpb'].map((x) => `musica.estilo.${x}`), ...['comovai', 'estoubem', 'comofoi', 'presenca', 'etu', 'humordela', 'concorda', 'espanto', 'risada', 'contamais', 'opiniaogeral', 'desabafo', 'capacidades', 'jogar', 'surpresa', 'perguntame'].map((x) => `conversa.${x}`),
+      ...['', '.animal', '.hostil', '.aldeao', '.gato', '.qualquer', '.outro', '.creeper'].map((x) => `mine.cacar${x}`),
+      ...['', '.varios', '.animal', '.hostil', '.parcial', '.nada', '.fugiu', '.seu'].map((x) => `mine.cacou${x}`),
       'musica.longa', 'musica.curta', 'musica.feat', 'musica.manha', 'musica.noite', 'web.adulto.saiu', 'web.adulto.denovo',
     ];
     for (const g of grupos) expect(f[g]?.length, g).toBeGreaterThan(0);

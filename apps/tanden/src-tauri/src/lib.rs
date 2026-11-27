@@ -29,8 +29,25 @@ mod web;
 use std::path::PathBuf;
 use tauri::Manager;
 
+/// O renderizador DMABUF do WebKitGTK com o driver da NVIDIA (principalmente no
+/// Wayland) deixa rastro do que se mexe na tela, pinta texto velho por cima do
+/// novo e às vezes congela a janela por alguns segundos. Com a NVIDIA, o Tanden
+/// desliga esse caminho (o WebKit continua acelerado pela GPU). Para testar com
+/// ele ligado: `TANDEN_DMABUF=1`. Precisa rodar antes de a GTK subir.
+#[cfg(target_os = "linux")]
+fn webkit_nvidia() {
+    const VAR: &str = "WEBKIT_DISABLE_DMABUF_RENDERER";
+    let nvidia = std::path::Path::new("/proc/driver/nvidia/version").exists();
+    if nvidia && std::env::var_os(VAR).is_none() && std::env::var_os("TANDEN_DMABUF").is_none() {
+        // ainda não há outras threads: mexer no ambiente aqui é seguro
+        std::env::set_var(VAR, "1");
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(target_os = "linux")]
+    webkit_nvidia();
     let builder = tauri::Builder::default();
     // abrir o app de novo traz de volta a janela que está na bandeja
     #[cfg(desktop)]

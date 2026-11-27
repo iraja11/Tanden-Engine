@@ -34,6 +34,29 @@ export interface Estudo {
   perguntou: boolean;
 }
 
+/** Uma fala dela dentro de um turno: o grupo, o texto e o que ela citou (o vídeo, a música, o fato lembrado). */
+export interface Dito {
+  g: string;
+  t: string;
+  ref?: Record<string, string | number>;
+  /** terminou em pergunta */
+  q?: 1;
+}
+
+/**
+ * Um turno da conversa (a memória de trabalho do diálogo: dialogo.ts). O dela
+ * pode juntar várias falas (resposta + pergunta emendada). `em` = 0 até o
+ * próximo turno carimbar a hora (quem guarda a fala não sabe o relógio).
+ */
+export interface Turno {
+  de: 'eu' | 'ela';
+  t: string;
+  em: number;
+  /** intenção (turno da pessoa) */
+  i?: string;
+  ditos?: Dito[];
+}
+
 export interface MemoriaCerebro {
   consciencia: number;
   vinculo: number;
@@ -71,6 +94,8 @@ export interface MemoriaCerebro {
    * (esconde-esconde, pega-pega: quem ganhou mais)
    */
   minecraft: { sessoes: number; minutos: number; mortes: number; presentes: number; ultima: number; abates: number; abatesVoce: number; vitorias: number; derrotas: number };
+  /** os últimos turnos da conversa, dos dois lados (para "ela quem?", "e você?", "mais uma", "não, eu nunca disse isso") */
+  dialogo: Turno[];
 }
 
 export const novaMusica = (): MemoriaCerebro['musica'] => ({ dia: '', faixas: {}, artistas: {} });
@@ -79,7 +104,7 @@ export const novoMinecraft = (): MemoriaCerebro['minecraft'] => ({ sessoes: 0, m
 export const novaMemoriaCerebro = (): MemoriaCerebro => ({
   consciencia: 0, vinculo: 0, pendente: null, ultimoPedido: null, ultimaNota: null, ultimaDecisao: null, ultimaAcao: null, pedidos: [], social: [],
   carinhoEm: 0, declaracaoEm: 0, criseEm: 0, eventosDela: [], escritos: [], estudos: [], quietaAte: 0, capitulo: 0, diaVisto: '', jogos: {}, web: { dia: '', minutos: {} },
-  musica: novaMusica(), minecraft: novoMinecraft(),
+  musica: novaMusica(), minecraft: novoMinecraft(), dialogo: [],
 });
 
 const num = (v: unknown, d: number, lo = -Infinity, hi = Infinity) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d);
@@ -143,7 +168,17 @@ export function lerMemoriaCerebro(raw: unknown): MemoriaCerebro {
       ? { sessoes: num(r.minecraft.sessoes, 0, 0), minutos: num(r.minecraft.minutos, 0, 0), mortes: num(r.minecraft.mortes, 0, 0), presentes: num(r.minecraft.presentes, 0, 0), ultima: num(r.minecraft.ultima, 0),
           abates: num(r.minecraft.abates, 0, 0), abatesVoce: num(r.minecraft.abatesVoce, 0, 0), vitorias: num(r.minecraft.vitorias, 0, 0), derrotas: num(r.minecraft.derrotas, 0, 0) }
       : novoMinecraft(),
+    dialogo: arr(r.dialogo, turnoOk, TURNOS),
   };
+}
+
+/** Quantos turnos a memória de trabalho guarda. */
+export const TURNOS = 12;
+
+const ditoOk = (x: unknown): x is Dito => obj(x) && typeof x.g === 'string' && typeof x.t === 'string' && (x.ref === undefined || obj(x.ref));
+function turnoOk(x: unknown): x is Turno {
+  return obj(x) && (x.de === 'eu' || x.de === 'ela') && typeof x.t === 'string' && typeof x.em === 'number'
+    && (x.i === undefined || typeof x.i === 'string') && (x.ditos === undefined || (Array.isArray(x.ditos) && x.ditos.every(ditoOk)));
 }
 
 function contagens(v: unknown): Record<string, number> {

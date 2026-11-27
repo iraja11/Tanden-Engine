@@ -67,3 +67,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 [data-motion='parado'] *, [data-motion='parado'] *::before, [data-motion='parado'] *::after {
   animation-duration: 0s !important; animation-iteration-count: 1 !important; transition-duration: 0s !important;
 }
+
+/* janela em segundo plano (main.ts): animações contínuas param até o foco voltar */
+html.fundo *, html.fundo *::before, html.fundo *::after { animation-play-state: paused !important; }

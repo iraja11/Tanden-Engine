@@ -144,6 +144,8 @@ class Anima {
   estado = $state<AnimaState>(lerEstado(load(STATE_KEY), Date.now()));
   /** a fala no balão, se houver */
   balao = $state<Fala | null>(null);
+  /** conta cada balão novo (a mesma fala repetida também é um balão novo) */
+  balaoSeq = $state(0);
   gesto = $state<Gesto>('neutro');
   chat = $state<Mensagem[]>([]);
   aberta = $state(false);
@@ -187,6 +189,8 @@ class Anima {
   /** a pessoa respondeu pela notificação: a resposta dela volta como notificação também */
   private viaAviso = 0;
   /** expressões cujo retrato o lado nativo já guardou em cache */
+  /** já avisou, nesta sessão, que o sistema está sem servidor de notificações */
+  private avisouSemServidor = false;
   private retratosEnviados = new Set<string>();
   private aiTab = 'claude';
   private ultimaIA = 0;
@@ -870,7 +874,7 @@ class Anima {
     this.pensamento = r.traco;
     // o modelo local só troca o texto da conversa; ordens, decisões e crise são dela
     if (this.cerebroLocal && !r.acao && !r.decisao && r.intencao !== 'crise' && !r.intencao.startsWith('cmd.')) void this.pensar(r, historia, conversa);
-    else this.digitar(r, conversa, r.acao);
+    else this.digitar(r, conversa, r.acao, r.acoes);
   }
 
   /** Mostra na conversa o raciocínio do último pensamento. */
@@ -1337,7 +1341,7 @@ class Anima {
     }
     this.empurrar({ de: 'voce', texto: `⛏ ${t}`, gesto: 'neutro' });
     const r = cerebro.responderMine($state.snapshot(this.estado) as AnimaState, p, this.ctxMine());
-    this.pensamento = [`minecraft: "${t}"`, `pedido: ${JSON.stringify(p)}`, `fala: ${r.grupo}`, ...r.envios.map((e) => `jogo: ${e.t}${'acao' in e ? ` ${e.acao}` : 'item' in e ? ` ${e.item}` : ''}`)];
+    this.pensamento = [`minecraft: "${t}"`, `pedido: ${JSON.stringify(p)}`, `fala: ${r.grupo}`, ...r.envios.map((e) => `jogo: ${e.t}${'acao' in e ? ` ${e.acao}` : 'item' in e ? ` ${e.item}` : 'mobs' in e ? ` ${e.n}× ${e.mobs.join('/') || 'o que você mira'}` : ''}`)];
     this.aplicarMine(r, 350);
   }
 
@@ -1452,7 +1456,7 @@ class Anima {
   }
 
   /** Ela "digita" antes de responder: mais devagar quando a fala é longa (e um pouco irregular). */
-  private digitar(r: Reacao, conversa: boolean, acao: cerebro.Acao | null = null): void {
+  private digitar(r: Reacao, conversa: boolean, acao: cerebro.Acao | null = null, outras: cerebro.Acao[] = []): void {
     this.estado = r.estado;
     this.salvar();
     this.agendarAdiado();
@@ -1462,7 +1466,12 @@ class Anima {
       this.digitando = false;
       if (r.fala) this.mostrar(r.fala, conversa);
       // primeiro ela fala, depois faz (dá para ver o que ela decidiu antes de acontecer)
-      if (acao) setTimeout(() => void this.executarAcao(acao), 450);
+      // "me lembra de X e marca Y": as ações vão uma depois da outra; ela comenta
+      // só a última (um erro no meio ela comenta sempre)
+      const todas = [...(acao ? [acao] : []), ...outras];
+      if (todas.length) setTimeout(() => void (async () => {
+        for (const [i, a] of todas.entries()) await this.executarAcao(a, i === todas.length - 1);
+      })(), 450);
     }, espera);
   }
 
@@ -1490,6 +1499,7 @@ class Anima {
     if ((f.gesto === 'glitch' || f.gesto === 'raiva') && this.prefs.intensidade === 3) this.susto++;
     if (!this.aberta || !conversa) {
       this.balao = this.aberta ? null : f;
+      if (this.balao) this.balaoSeq++;
       if (this.balaoTimer) clearTimeout(this.balaoTimer);
       this.balaoTimer = setTimeout(() => {
         this.balao = null;
@@ -1629,7 +1639,16 @@ class Anima {
           const novo = !!r && !this.retratosEnviados.has(r.chave);
           await invoke('anima_notificar', { vaga, titulo, corpo, chave: r?.chave ?? null, imagem: novo ? r!.png : null, responder: vaga !== 'timer' });
           if (r) this.retratosEnviados.add(r.chave);
-        } catch {
+        } catch (e) {
+          // sem servidor de notificações: o plugin usa o mesmo D-Bus e ficaria esperando igual.
+          // Ela avisa uma vez, aqui dentro, e segue falando só no app.
+          if (String(e).includes('sem-servidor')) {
+            if (!this.avisouSemServidor) {
+              this.avisouSemServidor = true;
+              this.empurrar({ de: 'ela', texto: 'não consigo te chamar fora daqui: o sistema tá sem servidor de notificações. no KDE: botão direito na bandeja → Configurar a bandeja → Entradas → Notificações → "Mostrar quando relevante". aí eu volto a aparecer pra você.', gesto: 'triste' });
+            }
+            return;
+          }
           notif.sendNotification({ id, title: titulo, body: corpo, autoCancel: true });
         }
       })();

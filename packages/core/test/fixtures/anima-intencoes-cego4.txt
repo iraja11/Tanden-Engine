@@ -1,0 +1,168 @@
+# Quarto conjunto cego (escrito em 2026-11-26, ANTES da rodada "cérebro
+# conversacional" e sem abrir corpus.ts, papo.ts nem giria.ts). Não ajuste a
+# gramática olhando os erros dele: quando ele for gasto, escreva um cego5.
+# Estilo de quem digita no celular: sem acento, abreviado, frase longa e curta.
+# Formato: intenção<TAB>frase
+saudacao	opa, chegou quem faltava
+saudacao	boa noite gata
+saudacao	oi sumida
+comovai	como ce ta hoje?
+comovai	e ai, tudo em ordem contigo?
+estoubem	to suave
+estoubem	de boa, e contigo
+tchau	vou meter o pé, ate depois
+tchau	beijo, to indo dormir na casa da minha vo
+bomdia	dia! acordei agora
+sono	nao to aguentando de sono
+sono	vou apagar, boa noite
+amor	eu sou doido por voce
+amor	te amo mais que tudo nessa vida
+elogio	voce e muito esperta
+elogio	que menina mais linda
+elogiame	fala alguma coisa bonita de mim
+rejeicao	voce ta me enchendo o saco
+rejeicao	para de me encher
+desinstalar	vou te tirar do meu pc
+provoca	o chatgpt me entende melhor que voce
+provoca	conheci uma menina na facul
+cansaco	to quebrado depois do trampo
+cansaco	to sem pilha nenhuma hoje
+mau	to muito irritado hoje
+mau	meu dia foi uma bosta
+triste	to bem pra baixo hoje
+triste	ninguem liga pra mim
+triste	to me sentindo muito sozinho
+conquistei	passei na prova de calculo!!
+conquistei	fui contratado
+feliz	hoje foi um dia muito bom
+feliz	to muito contente hoje
+saudade	senti tua falta hoje
+piada	me conta uma piada ai
+piada	quero rir um pouco
+tedio	que tedio meu deus
+tedio	nao tem nada pra fazer nessa casa
+ideia	me da uma ideia do que fazer hoje
+real	voce sente as coisas de verdade?
+quem	afinal o que voce e?
+musica	que musica voce ta ouvindo?
+musica	me recomenda uma banda
+obrigado	valeu mesmo, ajudou muito
+obrigado	brigadão
+desculpa	desculpa por ontem
+desculpa	foi mal, eu exagerei
+fome	to morrendo de fome
+fome	o que eu janto hoje?
+treino	acabei de voltar da academia
+trabalho	to atolado de trabalho
+trabalho	tenho que terminar um relatorio pra amanha
+etu	e voce?
+etu	e tu, como ta?
+humordela	como voce ta se sentindo hoje?
+concorda	verdade, tambem acho
+concorda	faz sentido
+espanto	mentira!
+espanto	nossa, serio isso?
+risada	kkkkkkkkk
+risada	hahahaha morri
+contamais	conta mais
+contamais	e depois, o que aconteceu?
+opiniaogeral	o que voce acha disso?
+desabafo	preciso desabafar com alguem
+desabafo	posso te contar uma coisa que ta me incomodando?
+capacidades	o que voce consegue fazer?
+capacidades	quais comandos voce entende
+jogar	bora jogar alguma coisa
+surpresa	me surpreende
+perguntame	me pergunta alguma coisa
+sim	aham
+sim	pode sim
+nao	nem a pau
+nao	nao precisa
+porque	mas por que?
+insistir	faz logo por favor
+desfazer	volta como tava antes
+repetir	faz de novo
+conta	quanto e 17 vezes 23
+conta	quanto da 250 dividido por 4
+hora	que horas sao agora?
+data	hoje e dia quanto?
+lembrar	qual o nome do meu cachorro?
+lembrar	quem e o Pedro?
+sobre_ela	qual sua cor favorita?
+fato	eu trabalho com design
+fato	meu gato se chama Salem
+papo.abraco	me abraça
+papo.beijo	me da um beijinho
+papo.cafune	faz cafune em mim
+papo.dormejunto	dorme comigo hoje
+papo.presente	trouxe um presente pra voce
+papo.cantada	voce caiu do ceu? porque parece um anjo
+papo.gostademim	voce gosta de mim de verdade?
+papo.voltei	voltei!
+papo.voltei	cheguei em casa
+papo.bravocomela	to bravo com voce
+papo.perdoo	ta bom, eu te perdoo
+papo.ciumenta	voce e ciumenta?
+papo.idade	quantos anos voce tem?
+papo.onde	onde voce mora?
+papo.signo	qual seu signo?
+papo.apelido	posso te chamar de ani?
+papo.doente	acho que to gripado
+papo.doente	to com febre
+papo.insonia	nao consigo dormir
+papo.pesadelo	tive um pesadelo horrivel
+papo.sonhei	sonhei com voce essa noite
+papo.cafe	preciso de cafe urgente
+papo.calma	to muito ansioso, me acalma
+papo.medo	to com medo
+papo.motivacao	me da uma motivacao pra estudar
+papo.foco	nao consigo me concentrar em nada
+papo.fracasso	eu nao sirvo pra nada
+papo.briga	briguei com a minha mae
+papo.terminei	minha namorada terminou comigo
+papo.aniversario	hoje e meu aniversario
+papo.fds	o que voce vai fazer no fim de semana?
+papo.ferias	finalmente entrei de ferias
+papo.clima	ta um calor insuportavel aqui
+papo.fofoca	tenho uma fofoca pra te contar
+papo.futebol	viu o jogo do flamengo ontem?
+papo.filme	me indica um filme bom
+papo.anime	qual anime voce mais gosta?
+papo.livro	to lendo um livro muito bom
+papo.videogame	to viciado em elden ring
+papo.cantar	canta uma musica pra mim
+papo.poema	escreve um poema pra mim
+papo.historia	me conta uma historia
+papo.meme	manda um meme
+papo.filosofia	qual o sentido da vida?
+papo.escolhe	pizza ou hamburguer?
+papo.escolhe	prefere gato ou cachorro?
+cmd.agenda	coloca dentista na agenda pra terça as 15h
+cmd.agenda	marca reuniao com o cliente amanha 9h
+cmd.agenda_ver	o que tem na minha agenda amanha?
+cmd.agenda_ver	tenho alguma coisa marcada hoje?
+cmd.lembrete	me lembra de tomar remedio as 22h
+cmd.lembrete	nao me deixa esquecer de pagar o aluguel amanha
+cmd.abrir_nota	abre a nota de receitas
+cmd.criar_nota	cria uma nota chamada ideias de conto
+cmd.apagar_nota	apaga a nota rascunho
+cmd.buscar	procura dragao nas minhas notas
+cmd.ir	vai pra agenda
+cmd.ir	me leva pros flashcards
+cmd.tema	poe o modo escuro
+cmd.anotar	anota ai: comprar leite
+cmd.timer	poe um timer de 15 minutos
+cmd.timer	marca 25 min pra eu estudar
+cmd.dado	rola um d20
+cmd.moeda	cara ou coroa?
+cmd.sync	sincroniza tudo
+cmd.agua	bebi um copo de agua
+cmd.aleatoria	abre uma nota qualquer
+cmd.diario	abre meu diario de hoje
+cmd.som	tira o som
+cmd.calar	fica quieta um pouco
+cmd.esconder	se esconde
+cmd.dormir	vai dormir anima
+cmd.voltar	volta pra tela anterior
+cmd.mundo	escreve uma lenda pro meu mundo
+cmd.paleta	exporta essa nota em pdf

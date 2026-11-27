@@ -175,7 +175,8 @@ fn desligar(ponte: &Ponte) {
 }
 
 /// Liga ou desliga a ponte. Devolve a porta (0 = desligada).
-#[tauri::command]
+/// Os dois comandos rodam fora da thread principal: socket e trava nunca congelam a janela.
+#[tauri::command(async)]
 pub fn minecraft_ligar(app: AppHandle, ponte: tauri::State<'_, Ponte>, ligado: bool) -> Result<u16, String> {
     if ligado {
         ligar(app, &ponte)
@@ -186,7 +187,7 @@ pub fn minecraft_ligar(app: AppHandle, ponte: tauri::State<'_, Ponte>, ligado: b
 }
 
 /// Manda uma mensagem ao jogo. `false` = não há jogo conectado.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn minecraft_enviar(ponte: tauri::State<'_, Ponte>, msg: Value) -> Result<bool, String> {
     let g = ponte.inner.lock().unwrap();
     let Some(l) = g.as_ref() else { return Ok(false) };

@@ -78,9 +78,30 @@ ${chunks.map((c) => `  ${JSON.stringify(c)},`).join('\n')}
   console.log(`gravado ${DAT} (${(s.length / 1024).toFixed(0)} KB, ${m.linhas.idx.length} linhas, ${m.rotulos.length} intenções)`);
 }
 
+/**
+ * As paráfrases do modelo de linguagem (parafrasear.mjs): as aprovadas pelo professor se houver
+ * (`--parafrases <pasta do rede.py>/para-aprovadas.tsv`), senão todas; limpas e com ruído, repetidas.
+ */
+function parafrases() {
+  const i = args.indexOf('--parafrases');
+  const arq = i >= 0 ? args[i + 1] : join(dirname(fileURLToPath(import.meta.url)), 'parafrases.tsv');
+  if (args.includes('--sem-parafrases') || !existsSync(arq)) return [];
+  const conhecidas = new Set(rotulos);
+  let a = 99;
+  const rand = () => ((a = (Math.imul(a, 1103515245) + 12345) >>> 0) / 4294967296);
+  const base = readFileSync(arq, 'utf8').split('\n').map((l) => l.split('\t')).filter(([r, t]) => r && t && conhecidas.has(r))
+    // sem nenhuma palavra (":)", "kkk") não há intenção: só ensinaria que riso é "sim"
+    .filter(([, t]) => T.normalizar(t, M.lexicoBase()).tokens.length > 0).map(([rotulo, texto]) => ({ rotulo, texto }));
+  const rep = Number(opt('rep-para', 2));
+  const ex = [];
+  for (let k = 0; k < rep; k++) for (const e of base) ex.push(k % 2 ? { rotulo: e.rotulo, texto: C.ruido(e.texto, rand, 0.4) } : e);
+  console.log(`${base.length} paráfrases de ${arq.split('/').at(-1)} (×${rep})`);
+  return ex;
+}
+
 if (cmd === 'treinar') {
   const t0 = Date.now();
-  const tr = M.amostrar(C.gerarCorpus(opt('por', 300), 1), rotulos, BUCKETS);
+  const tr = M.amostrar([...C.gerarCorpus(opt('por', 300), 1), ...parafrases()], rotulos, BUCKETS);
   const va = M.amostrar(C.gerarCorpus(40, 2), rotulos, BUCKETS);
   console.log(`${tr.length} exemplos de treino, ${rotulos.length} intenções`);
   const m = K.treinar(tr, rotulos, {

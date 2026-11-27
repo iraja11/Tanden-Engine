@@ -397,8 +397,11 @@
     </div>
   {:else if anima.balao && !drag}
     {@const b = anima.balao}
-    {#key b.id + anima.chat.length}
-      <div class="bubble" class:glitch={b.gesto === 'glitch'} class:ask={b.id.startsWith('pergunta#')} in:pop={{ from: 0.85 }} out:vanish role="status" aria-live="polite">
+    <!-- a troca de balão é instantânea (só o novo entra com animação); a saída só anima quando ele some de vez.
+         Antes, o velho saía enquanto o novo entrava e os dois textos ficavam um em cima do outro. -->
+    <div class="bubble-slot" out:vanish>
+    {#key anima.balaoSeq}
+      <div class="bubble" class:glitch={b.gesto === 'glitch'} class:ask={b.id.startsWith('pergunta#')} in:pop={{ from: 0.85 }} role="status" aria-live="polite">
         <button class="say" onclick={() => anima.abrir()} title="Abrir a conversa"><span aria-hidden="true">{typed}</span><span class="sr">{text}</span></button>
         <button class="close" aria-label="Dispensar" onclick={() => anima.dispensarBalao()}>×</button>
         {#if b.opcoes?.length && done}
@@ -410,6 +413,7 @@
         {/if}
       </div>
     {/key}
+    </div>
   {:else if anima.digitando && !anima.aberta}
     <div class="bubble typing" aria-label="digitando"><p class="dots proc"><span class="proc-txt" aria-hidden="true">{procLinha}</span><i></i><i></i><i></i></p></div>
   {/if}
@@ -445,7 +449,9 @@
   .anima.free { right: auto; bottom: auto; transition: none; }
 
   .face { position: relative; width: 64px; height: 64px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: grab; touch-action: none; -webkit-touch-callout: none; user-select: none;
-    filter: drop-shadow(0 6px 14px var(--shadow)) drop-shadow(0 0 10px color-mix(in srgb, var(--ring) 45%, transparent)); transition: translate .5s var(--spring); }
+    filter: drop-shadow(0 6px 14px var(--shadow)) drop-shadow(0 0 10px color-mix(in srgb, var(--ring) 45%, transparent)); transition: translate .5s var(--spring);
+    /* camada própria: a respiração e o brilho repintam só o rosto, não a tela por trás */
+    will-change: transform; }
   .face.dragging { cursor: grabbing; }
   /* escondida: metade para fora da tela, espiando */
   .face.hidden { translate: 64% 0; opacity: .92; }
@@ -475,6 +481,7 @@
   @keyframes susto { 0% { transform: translateX(-6px); opacity: 1; } 50% { transform: translateX(5px); } 100% { transform: none; opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .breathe :global(svg), .glitch :global(svg), .bubble.glitch, .msg.glitch, .spin :global(svg), .danca :global(svg) { animation: none; } .susto { display: none; } }
 
+  .bubble-slot { display: flex; max-width: 100%; }
   .bubble { position: relative; max-width: min(300px, calc(100vw - 28px)); padding: 0; color: var(--ink);
     font: 13.5px/1.45 var(--f-body); background: var(--surface); border: 1px solid color-mix(in srgb, var(--ring) 55%, var(--line));
     border-radius: 14px 14px 4px 14px; box-shadow: var(--elev-2), 0 0 24px -12px var(--ring); overflow-wrap: anywhere; white-space: pre-wrap; }

@@ -48,6 +48,13 @@ export interface Rede {
   lnfg: Float32Array; lnfb: Float32Array;
   /** saída: rotulos × 2d */
   Wc: Float32Array; bc: Float32Array;
+  /**
+   * A cabeça de significado (opcional): leva o [global ; média] ao espaço do
+   * modelo de frases que ensinou a rede no treino (o professor). Duas frases
+   * que querem dizer a mesma coisa ficam perto, mesmo sem palavra em comum:
+   * é o que a memória por significado usa (`vetorDaRede`).
+   */
+  proj?: { W: Float32Array; b: Float32Array; dim: number };
 }
 
 // ------------------------------------------------------------------ características por token
@@ -140,8 +147,8 @@ function entrada(r: Rede, ids: number[][]): { x: Float32Array; conhecidas: numbe
   return { x, conhecidas };
 }
 
-/** Os logits da rede para um texto já normalizado. */
-export function logitsDaRede(r: Rede, t: Texto): { z: Float32Array; conhecidas: number } {
+/** Os logits da rede para um texto já normalizado (e o [global ; média] de onde saíram). */
+export function logitsDaRede(r: Rede, t: Texto): { z: Float32Array; conhecidas: number; pool: Float32Array } {
   const { d, cabecas: H } = r;
   const ids = idsDaRede(t, r.L, r.buckets);
   const n = ids.length;
@@ -192,7 +199,30 @@ export function logitsDaRede(r: Rede, t: Texto): { z: Float32Array; conhecidas: 
     for (let k = 0; k < d; k++) pool[d + k]! /= n - 1;
   }
   const z = linear(pool, 1, 2 * d, r.Wc, r.bc, r.rotulos.length);
-  return { z, conhecidas };
+  return { z, conhecidas, pool };
+}
+
+/**
+ * O significado de uma frase: um vetor unitário no espaço do professor (a
+ * cabeça de destilação que o treino guarda). null se a rede não tem a cabeça.
+ * Semelhança = produto escalar (`semelhanca`).
+ */
+export function vetorDaRede(r: Rede, t: Texto): Float32Array | null {
+  if (!r.proj) return null;
+  const { pool } = logitsDaRede(r, t);
+  const v = linear(pool, 1, 2 * r.d, r.proj.W, r.proj.b, r.proj.dim);
+  let n = 0;
+  for (const x of v) n += x * x;
+  n = Math.sqrt(n) || 1;
+  for (let i = 0; i < v.length; i++) v[i]! /= n;
+  return v;
+}
+
+/** Cosseno entre dois vetores unitários. */
+export function semelhanca(a: Float32Array, b: Float32Array): number {
+  let s = 0;
+  for (let i = 0; i < a.length && i < b.length; i++) s += a[i]! * b[i]!;
+  return s;
 }
 
 export function softmaxT(z: Float32Array, T: number): Float32Array {
@@ -302,5 +332,8 @@ export function carregarRede(b64: string): Rede {
     rotulos: cab.rotulos, buckets: cab.buckets, d: cab.d, L: cab.L, cabecas: cab.cabecas, ffn: cab.ffn, T: cab.T,
     emb: { tipo: 'pq', idx, sub: cab.sub, codigos, centroides: f('emb.centroides') },
     pos: f('pos'), camadas, lnfg: f('lnfg'), lnfb: f('lnfb'), Wc: f('Wc'), bc: f('bc'),
+    ...(blocos.get('proj') instanceof Float32Array && blocos.get('bproj') instanceof Float32Array
+      ? { proj: { W: f('proj'), b: f('bproj'), dim: f('bproj').length } }
+      : {}),
   };
 }

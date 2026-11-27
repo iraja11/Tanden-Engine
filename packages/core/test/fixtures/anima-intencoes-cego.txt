@@ -89,7 +89,7 @@ risada	lol
 contamais	conta mais
 contamais	e depois?
 contamais	fala mais sobre isso
-contamais	não captei
+esclarecer	não captei
 opiniaogeral	que acha disso?
 opiniaogeral	devo fazer isso?
 opiniaogeral	você acha que vale a pena?

@@ -22,6 +22,7 @@
  */
 import { humorDe, mexer, type AnimaState } from '../estado';
 import { escolher, lembrar, type Fala } from '../motor';
+import { alvoEmPalavras, entenderCaca, mobDoId, plural, TODOS, type PedidoCaca } from './caca';
 import { problemaDoJogo, type CtxJogo } from './jogos';
 import { dobrar } from './texto';
 
@@ -81,7 +82,9 @@ export type PedidoMine =
   /** "acha diamante pra mim", "tem ferro aqui perto?" */
   | { tipo: 'farejar'; alvo: AlvoFaro }
   /** "quem matou mais?" */
-  | { tipo: 'placar' };
+  | { tipo: 'placar' }
+  /** "mata essa ovelha", "mata 3 vacas" */
+  | PedidoCaca;
 
 /** O que o app manda ao mod. */
 export type MsgParaMine =
@@ -91,6 +94,8 @@ export type MsgParaMine =
   /** procura o minério mais perto (raio de ~24 blocos); o mod responde com o evento "faro" */
   | { t: 'farejar'; alvo: AlvoFaro }
   | { t: 'receita'; item: string; texto: string }
+  /** vai atrás de n bichos desses tipos (vazio = o que você mira); mirando = começa pelo que está na sua mira; o mod responde com "cacou" */
+  | { t: 'cacar'; mobs: string[]; n: number; mirando: boolean }
   /** placa de madeira escura com letra rosa; o mod acha o lugar (motivo "morte" = onde você morreu) */
   | { t: 'placa'; linhas: string[]; motivo: MotivoPlaca };
 
@@ -108,8 +113,10 @@ export type EventoMine =
   | { tipo: 'dormiu'; juntos?: boolean }
   /** dx/dz: de onde ele vem (relativo a você); yaw: para onde você olha */
   | { tipo: 'creeper'; dx?: number; dz?: number; yaw?: number }
-  /** ela matou um mob (id sem "minecraft:") */
-  | { tipo: 'matou'; mob: string }
+  /** ela matou um mob (id sem "minecraft:"); caca = foi a pedido ("mata essa ovelha") */
+  | { tipo: 'matou'; mob: string; caca?: boolean }
+  /** fim da caça: quantos pegou de quantos pediu; nada = não achou nenhum; seu = é bicho seu (domado ou com nome); fugiu = escapou ou ficou longe */
+  | { tipo: 'cacou'; mob: string; n: number; pedidos: number; motivo?: 'nada' | 'seu' | 'fugiu' }
   | { tipo: 'voceMatou'; mob: string }
   /** resposta do farejar: o bloco achado ("" = nada), onde fica em relação a você e quantos tem no veio */
   | { tipo: 'faro'; item: string; dx: number; dy: number; dz: number; n: number; yaw: number }
@@ -425,6 +432,9 @@ export function entenderMine(texto: string): PedidoMine | null {
   // a placa vem antes: o texto pedido pode ter qualquer coisa
   const pl = PLACA.exec(t);
   if (pl) return { tipo: 'placa', texto: textoDaPlaca(texto, pl[1] ?? '') };
+  // "mata essa ovelha": antes das ações ("mata o/a..." no modo guarda é só para hostis em geral)
+  const caca = entenderCaca(t);
+  if (caca) return caca;
   if (FARO.test(t) || FARO_PEDIDO.test(t)) return { tipo: 'farejar', alvo: ALVOS.find(([, re]) => re.test(t))?.[0] ?? 'qualquer' };
   if (PLACAR.test(t)) return { tipo: 'placar' };
   if (RECURSOS.test(t)) return { tipo: 'recursos' };
@@ -682,6 +692,19 @@ export function responderMine(estado: AnimaState, p: PedidoMine, ctx: CtxMine): 
       grupos = [];
       envios.push({ t: 'farejar', alvo: p.alvo });
       break;
+    case 'cacar': {
+      const tipo = p.mob?.tipo ?? 'qualquer';
+      Object.assign(vars, { alvo: alvoEmPalavras(p.mob, p.n, p.mirando), mob: p.mob?.nome ?? 'bicho', mobs: p.mob ? plural(p.mob.nome) : 'bichos', n: p.n });
+      // creeper ela não encara de perto: explode na sua cara (e na dela)
+      if (tipo === 'creeper') {
+        grupos = ['mine.cacar.creeper'];
+        break;
+      }
+      grupos = [`mine.cacar.${tipo}`, 'mine.cacar'];
+      envios.push({ t: 'cacar', mobs: p.mob?.ids ?? [], n: p.n, mirando: p.mirando });
+      if (tipo === 'gato') s = mexer(s, { ciume: -2 });
+      break;
+    }
     case 'placar': {
       const mc = s.memoria.cerebro.minecraft;
       grupos = mc.abates + mc.abatesVoce === 0 && mc.vitorias + mc.derrotas === 0 ? ['mine.placar.zero'] : mc.abates >= mc.abatesVoce ? ['mine.placar.ganhando'] : ['mine.placar.perdendo'];
@@ -841,6 +864,8 @@ export function reagirMine(estado: AnimaState, ev: EventoMine, ctx: CtxMine): Re
       const abates = mc.abates + 1;
       s = comMc(s, { abates });
       Object.assign(vars, varsPlacar(s), { mob: nomeDoMob(ev.mob) });
+      // a pedido: ela fala no fim da caça ("cacou"), não a cada bicho
+      if (ev.caca) return { estado: s, fala: null, grupo: '', envios: [], noChat: true };
       // ela não comenta cada um: marcos, a primeira vez que passa você e, às vezes, um "esse foi meu"
       if (abates % 25 === 0) grupos = ['mine.matou.marco'];
       else if (abates === mc.abatesVoce + 1 && mc.abatesVoce >= 3) grupos = ['mine.placar.passei', 'mine.matou'];
@@ -855,6 +880,22 @@ export function reagirMine(estado: AnimaState, ev: EventoMine, ctx: CtxMine): Re
       if (abatesVoce === mc.abates + 1 && mc.abates >= 3) grupos = ['mine.placar.virou'];
       else if (ctx.rand() < 0.08) grupos = ['mine.voceMatou'];
       else return { estado: s, fala: null, grupo: '', envios: [], noChat: true };
+      break;
+    }
+    case 'cacou': {
+      const m = mobDoId(ev.mob);
+      const nome = m?.nome ?? nomeDoMob(ev.mob);
+      const f = m?.genero === 'f';
+      Object.assign(vars, {
+        mob: nome, mobs: plural(nome), n: ev.n, pedidos: ev.pedidos, nenhum: `${f ? 'nenhuma' : 'nenhum'} ${nome}`,
+        pegou: ev.n === 1 ? `${f ? 'uma' : 'um'} ${nome}` : `${ev.n} ${plural(nome)}`,
+      });
+      if (ev.motivo === 'seu') grupos = ['mine.cacou.seu'];
+      else if (ev.motivo === 'nada') grupos = ['mine.cacou.nada'];
+      else if (ev.n === 0) grupos = ['mine.cacou.fugiu'];
+      // "mata todas": pegou as que tinha por perto, não é pouco
+      else if (ev.n < ev.pedidos && ev.pedidos < TODOS) grupos = ['mine.cacou.parcial', 'mine.cacou'];
+      else grupos = [ev.n > 1 ? 'mine.cacou.varios' : `mine.cacou.${m?.tipo ?? 'outro'}`, 'mine.cacou'];
       break;
     }
     case 'faro': {

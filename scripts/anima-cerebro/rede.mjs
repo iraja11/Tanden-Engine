@@ -88,27 +88,27 @@ function medir(prever, lista) {
   return { ok, n: lista.length, erros };
 }
 
+/** Os conjuntos de avaliação: as frases reais e todos os cegos que existirem (cego, cego2, cego3...). */
+const CONJUNTOS = [['reais', 'anima-intencoes.txt'], ['cego', 'anima-intencoes-cego.txt'],
+  ...Array.from({ length: 18 }, (_, i) => [`cego${i + 2}`, `anima-intencoes-cego${i + 2}.txt`]).filter(([, a]) => existsSync(join(FIX, a)))];
+
 function relatorio(rede, verErros = true) {
   const lx = M.lexicoBase();
   const antigo = M.modeloPadrao();
   const soRede = (txt) => R.preverComRede(rede, T.normalizar(txt, lx));
   const conjunto = (txt) => M.classificar(T.normalizar(txt, lx), antigo, rede);
   const val = C.gerarCorpus(30, 3);
+  const pc = (x) => `${((x.ok / x.n) * 100).toFixed(1)}%`;
   for (const [nome, f] of [['rede', soRede], ['rede+antigo', conjunto]]) {
-    const v = medir(f, val), r = medir(f, frases('anima-intencoes.txt')), c = medir(f, frases('anima-intencoes-cego.txt')), c2 = medir(f, frases('anima-intencoes-cego2.txt')), c3 = medir(f, frases('anima-intencoes-cego3.txt'));
-    const pc = (x) => `${((x.ok / x.n) * 100).toFixed(1)}%`;
-    console.log(`${nome.padEnd(12)} sintético ${pc(v)} de ${v.n} · reais ${r.ok}/${r.n} (${pc(r)}) · cego ${c.ok}/${c.n} (${pc(c)}) · cego2 ${c2.ok}/${c2.n} (${pc(c2)}) · cego3 ${c3.ok}/${c3.n} (${pc(c3)})`);
-    if (verErros && nome === 'rede+antigo') {
-      if (r.erros.length) console.log(`erros nas reais:\n${r.erros.join('\n')}`);
-      if (c.erros.length) console.log(`erros no cego:\n${c.erros.join('\n')}`);
-      if (c2.erros.length) console.log(`erros no cego2:\n${c2.erros.join('\n')}`);
-      if (c3.erros.length) console.log(`erros no cego3:\n${c3.erros.join('\n')}`);
-    }
+    const v = medir(f, val);
+    const ms = CONJUNTOS.map(([n, a]) => [n, medir(f, frases(a))]);
+    console.log(`${nome.padEnd(12)} sintético ${pc(v)} de ${v.n} · ${ms.map(([n, x]) => `${n} ${x.ok}/${x.n} (${pc(x)})`).join(' · ')}`);
+    if (verErros && nome === 'rede+antigo') for (const [n, x] of ms) if (x.erros.length) console.log(`erros em ${n}:\n${x.erros.join('\n')}`);
   }
   if (antigo) {
     const f = (txt) => K.prever(antigo, T.normalizar(txt, lx));
-    const r = medir(f, frases('anima-intencoes.txt')), c = medir(f, frases('anima-intencoes-cego.txt')), c2 = medir(f, frases('anima-intencoes-cego2.txt')), c3 = medir(f, frases('anima-intencoes-cego3.txt'));
-    console.log(`${'só antigo'.padEnd(12)} reais ${r.ok}/${r.n} · cego ${c.ok}/${c.n} · cego2 ${c2.ok}/${c2.n} · cego3 ${c3.ok}/${c3.n}${antigo.rotulos.length !== rotulos.length ? ` (o antigo tem ${antigo.rotulos.length} intenções; treine de novo)` : ''}`);
+    const ms = CONJUNTOS.map(([n, a]) => [n, medir(f, frases(a))]);
+    console.log(`${'só antigo'.padEnd(12)} ${ms.map(([n, x]) => `${n} ${x.ok}/${x.n}`).join(' · ')}${antigo.rotulos.length !== rotulos.length ? ` (o antigo tem ${antigo.rotulos.length} intenções; treine de novo)` : ''}`);
   }
   // tempo de uma mensagem
   const t0 = performance.now();
@@ -144,6 +144,20 @@ if (cmd === 'exportar') {
     const ext = gravarBin(join(dir, 'extra.bin'), ex, L);
     writeFileSync(join(dir, 'extra.txt'), ex.map((e) => e.texto.replace(/\s+/g, ' ')).join('\n'));
     console.log(`${ext.n} frases sem rótulo para a destilação`);
+  }
+  // paráfrases do modelo de linguagem local (parafrasear.mjs): limpas e estragadas como gente digita; o rede.py filtra pelo professor
+  const PARA = join(dirname(fileURLToPath(import.meta.url)), 'parafrases.tsv');
+  if (existsSync(PARA) && !args.includes('--sem-parafrases')) {
+    const conhecidas = new Set(rotulos);
+    let a = 777;
+    const rand = () => ((a = (Math.imul(a, 1103515245) + 12345) >>> 0) / 4294967296);
+    const base = readFileSync(PARA, 'utf8').split('\n').map((l) => l.split('\t')).filter(([r, t]) => r && t && conhecidas.has(r))
+      // sem nenhuma palavra (":)", "kkk") não há intenção: só ensinaria que riso é "sim"
+      .filter(([, t]) => T.normalizar(t, M.lexicoBase()).tokens.length > 0).map(([rotulo, texto]) => ({ rotulo, texto }));
+    const ex = base.flatMap((e) => [e, { rotulo: e.rotulo, texto: C.ruido(e.texto, rand, 0.4) }]);
+    const pa = gravarBin(join(dir, 'para.bin'), ex, L);
+    writeFileSync(join(dir, 'para.txt'), ex.map((e) => e.texto.replace(/\s+/g, ' ')).join('\n'));
+    console.log(`${pa.n} paráfrases (${base.length} × 2: limpa e com ruído)`);
   }
   const va = gravarBin(join(dir, 'val.bin'), C.gerarCorpus(60, 2), L);
   const re = gravarBin(join(dir, 'reais.bin'), frases('anima-intencoes.txt'), L);

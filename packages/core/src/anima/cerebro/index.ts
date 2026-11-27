@@ -3,7 +3,12 @@
  * Exportado como namespace (`cerebro.pensar`, `cerebro.rotina`…) para não
  * brigar com nomes do resto do núcleo.
  */
-export { pensar, depoisDaAcao, registrarCarinho, cumprirAdiado, quietaAte } from './cerebro';
+export { pensar, segmentar, depoisDaAcao, registrarCarinho, cumprirAdiado, quietaAte, lembrancaParecida, quandoFoiDito, PARECIDO } from './cerebro';
+export { espelhar, conjugar } from './espelho';
+export { converter, datas, pascoa, type Conversao, type RespostaData } from './capacidades';
+export { seguimento, fatoDoDito, type Seguimento, type TipoSeguimento } from './seguimento';
+export { registrarFala, registrarMensagem, ultimoDela, mensagemAnterior, assuntoRecente, ditoPrincipal, prefixos } from './dialogo';
+export { DIALOGO } from './gramatica-dialogo';
 export type { Acao, CtxCerebro, Ocorrencia, Pensamento, ResultadoAcao } from './cerebro';
 export { rotina, broncaDeTela, eventoCriado, type Poderes } from './rotina';
 export { escreverNoMundo, type EscritoMundo, type GeneroEscrito, type MundoInfo } from './escrita';
@@ -16,12 +21,12 @@ export { candidatosNota, casarComando, duracaoMs, formulaDado, telaDe, type Coma
 export { normalizar, Lexico, distancia, radical, type Texto } from './texto';
 export { sentimento, type Sentimento } from './sentimento';
 export { calcular, numeroExtenso } from './numeros';
-export { classificar, modeloPadrao, usarModelo, lexicoBase, amostrar, prepararRede, redePadrao, usarRede } from './modelo';
-export { carregarRede, preverComRede, type Rede } from './rede';
+export { classificar, modeloPadrao, usarModelo, lexicoBase, amostrar, prepararRede, redePadrao, usarRede, sentido as sentidoDaFrase } from './modelo';
+export { carregarRede, preverComRede, vetorDaRede, semelhanca, type Rede } from './rede';
 export { PAPO, opcoesDaEscolha } from './papo';
 export { treinar, avaliar, calibrar, carregar, serializar, prever, indices, type Modelo, type Previsao } from './classificador';
 export { gerarCorpus, ROTULOS, GRAMATICA, SLOTS } from './corpus';
-export { lerMemoriaCerebro, novaMemoriaCerebro, type MemoriaCerebro, type Pendencia } from './memoria';
+export { lerMemoriaCerebro, novaMemoriaCerebro, type MemoriaCerebro, type Pendencia, type Turno, type Dito } from './memoria';
 export { reagirJogo, problemaDoJogo, sono, rival, ROTINA_PADRAO, type JogoAtual, type Rotina, type ProblemaJogo, type ReacaoJogo, type CtxJogo } from './jogos';
 export { lerJanela, reagirWeb, contarWeb, saiuDoAdulto, type Pagina, type CategoriaWeb } from './web';
 export { reagirMusica, contarFaixa, estiloDe, artistaFavorito, type Faixa, type EstiloMusica, type ReacaoMusica } from './musica';
@@ -30,3 +35,4 @@ export {
   type EstadoMine, type AcaoMine, type PedidoMine, type MsgParaMine, type EventoMine, type CtxMine, type RespostaMine, type Recurso, type MotivoPlaca,
   type AlvoFaro, type Brincadeira,
 } from './minecraft';
+export { entenderCaca, mobDoTermo, mobDoId, alvoEmPalavras, plural as pluralMob, TODOS as TODOS_CACA, type Mob, type PedidoCaca, type TipoMob } from './caca';

@@ -171,7 +171,7 @@ export function reagirWeb(estado: AnimaState, p: Pagina, ctx: CtxJogo): { estado
   }
   const humor = humorDe(s, now, ctx.intensidade);
   const vars = {
-    nome: ctx.nome, site: p.site, pagina: p.pagina || p.site, ia: p.site, minutos: min, tempo: min >= 60 ? `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}` : `${min} minutos`,
+    nome: ctx.nome, site: p.site, pagina: p.pagina || p.site, ia: p.site, minutos: min, tempo: min >= 60 ? `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}` : min === 1 ? '1 minuto' : `${min} minutos`,
     titulo: prova?.titulo, assunto: prova?.assunto ?? prova?.titulo.toLowerCase(), acorda: ctx.rotina?.acordaAs ?? '06:00',
   };
   let fala: Fala | null = null;
@@ -198,7 +198,7 @@ export function saiuDoAdulto(estado: AnimaState, minutos: number, ctx: CtxJogo):
   let s = estado;
   if (ctx.rand() > 0.6) return { estado: s, fala: null };
   const humor = humorDe(s, ctx.now, ctx.intensidade);
-  let fala = escolher('web.adulto.saiu', s, humor, ctx, { nome: ctx.nome, tempo: minutos >= 1 ? `${Math.round(minutos)} minutos` : 'uns segundos', minutos: Math.round(minutos) });
+  let fala = escolher('web.adulto.saiu', s, humor, ctx, { nome: ctx.nome, tempo: minutos >= 1 ? (Math.round(minutos) === 1 ? '1 minuto' : `${Math.round(minutos)} minutos`) : 'uns segundos', minutos: Math.round(minutos) });
   if (fala) {
     fala = botoes(fala, ctx);
     s = { ...lembrar(s, fala), falou: ctx.now };

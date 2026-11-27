@@ -25,7 +25,13 @@ treino; nada dele vai para o app) diz o "significado" de cada frase, e a rede
 aprende a pôr no mesmo lugar frases que querem dizer a mesma coisa. Com frases
 naturais sem rótulo (rede.mjs exportar --extra, ex.: o Tatoeba em português),
 ela aprende o sentido de palavras que a gramática nunca usou ("tô pregado" perto
-de "tô cansado"). A cabeça que imita o professor é descartada no fim.
+de "tô cansado"). A cabeça que imita o professor vai junto para o app (int8): é
+o "significado" de uma frase, usado pela memória por significado (vetorDaRede).
+
+Paráfrases (para.bin, de parafrasear.mjs, geradas por um modelo de linguagem
+local): entram no treino as que o professor põe perto do centro da própria
+intenção (--margem-para, --limiar-para), repetidas --rep-para vezes; as
+descartadas ficam em <pasta>/para-descartadas.txt para conferir.
 
 Sem GPU também roda (mais devagar): usa CUDA se houver.
 """
@@ -61,6 +67,24 @@ class Dados:
         self.n = n
         self.tok_ini = np.concatenate([[0], np.cumsum(self.ntok)[:-1]])
         self.feat_ini = np.concatenate([[0], np.cumsum(self.nfeat)[:-1]])
+
+
+def juntar(a, b, idx_b):
+    """um Dados com todos os exemplos de `a` e os exemplos `idx_b` de `b` (na ordem dada; repetir vale)."""
+    out = Dados.__new__(Dados)
+    idx_b = np.asarray(idx_b, dtype=np.int64)
+    ntok_b = b.ntok[idx_b]
+    toks_b = faixas(b.tok_ini[idx_b], ntok_b)
+    nfeat_b = b.nfeat[toks_b]
+    ids_b = b.ids[faixas(b.feat_ini[toks_b], nfeat_b)]
+    out.y = np.concatenate([a.y, b.y[idx_b]])
+    out.ntok = np.concatenate([a.ntok, ntok_b])
+    out.nfeat = np.concatenate([a.nfeat, nfeat_b])
+    out.ids = np.concatenate([a.ids, ids_b])
+    out.n = a.n + len(idx_b)
+    out.tok_ini = np.concatenate([[0], np.cumsum(out.ntok)[:-1]])
+    out.feat_ini = np.concatenate([[0], np.cumsum(out.nfeat)[:-1]])
+    return out
 
 
 def faixas(inis, lens):
@@ -235,14 +259,36 @@ def professor(args, dev, extra):
         return v
     t = torch.from_numpy(vetores("treino").astype(np.float32)).to(dev)
     e = torch.from_numpy(vetores("extra").astype(np.float32)).to(dev) if extra is not None else None
+    # o centro de cada intenção no espaço do professor (só a gramática, que é limpa)
+    tr_y = torch.from_numpy(args.tr_y).to(dev)
+    C = int(tr_y.max().item()) + 1
+    P = F.normalize(torch.zeros(C, t.shape[1], device=dev).index_add_(0, tr_y, t), dim=1)
+    # paráfrases do modelo de linguagem (parafrasear.mjs): fica só a que cai perto do centro da PRÓPRIA
+    # intenção (a primeira, ou quase empatada com a primeira e acima do limiar); o resto é rótulo errado
+    pv, pk = None, None
+    if args.para is not None:
+        pv = torch.from_numpy(vetores("para").astype(np.float32)).to(dev)
+        py_ = torch.from_numpy(args.para.y).to(dev)
+        sims = pv @ P.T
+        propria = sims.gather(1, py_[:, None]).squeeze(1)
+        melhor = sims.max(1).values
+        ok = (propria >= melhor - args.margem_para) & (propria >= args.limiar_para)
+        pk = ok.nonzero().squeeze(1).cpu().numpy()
+        rot = args.rotulos
+        tx = open(os.path.join(args.pasta, "para.txt"), encoding="utf-8").read().split("\n")
+        fora = (~ok).nonzero().squeeze(1).cpu().numpy()
+        with open(os.path.join(args.pasta, "para-descartadas.txt"), "w", encoding="utf-8") as f:
+            for i in fora[:3000]:
+                f.write(f"{rot[int(args.para.y[i])]}\t→ {rot[int(sims[i].argmax())]}\t{tx[i]}\n")
+        print(f"paráfrases: {len(pk)} de {args.para.n} passaram no filtro do professor (margem {args.margem_para}, limiar {args.limiar_para})", flush=True)
+        # as aprovadas, para o modelo antigo aprender das mesmas (treinar.mjs --parafrases <pasta>/para-aprovadas.tsv)
+        with open(os.path.join(args.pasta, "para-aprovadas.tsv"), "w", encoding="utf-8") as f:
+            for i in pk:
+                f.write(f"{rot[int(args.para.y[i])]}\t{tx[i]}\n")
     py = None
     if e is not None and args.pseudo > 0:
         # pseudo-rótulos: o centro de cada intenção no espaço do professor; frase natural perto
         # demais de um centro (e longe do segundo) vira exemplo daquela intenção
-        tr_y = torch.from_numpy(args.tr_y).to(dev)
-        C = int(tr_y.max().item()) + 1
-        P = torch.zeros(C, t.shape[1], device=dev).index_add_(0, tr_y, t)
-        P = F.normalize(P, dim=1)
         py = torch.full((e.shape[0],), -1, dtype=torch.long, device=dev)
         for i in range(0, e.shape[0], 8192):
             sims = e[i : i + 8192] @ P.T
@@ -259,7 +305,7 @@ def professor(args, dev, extra):
         with open(os.path.join(args.pasta, "pseudo.txt"), "w", encoding="utf-8") as f:
             for i in rng.permutation(aceitas)[:3000]:
                 f.write(f"{rot[int(py[i])]}\t{textos[i]}\n")
-    return {"treino": t, "extra": e, "dados": extra, "py": py}
+    return {"treino": t, "extra": e, "dados": extra, "py": py, "para": (pv, pk)}
 
 
 def kmedias(X, K=256, it=20, semente=0):
@@ -321,6 +367,10 @@ def main():
     ap.add_argument("--pseudo", type=float, default=0.0, help="limiar de semelhança para pseudo-rótulo (0 = desligado; ex.: 0.75)")
     ap.add_argument("--margem", type=float, default=0.08)
     ap.add_argument("--peso-pseudo", dest="peso_pseudo", type=float, default=0.5)
+    ap.add_argument("--rep-para", dest="rep_para", type=int, default=4, help="quantas vezes cada paráfrase aprovada entra no treino")
+    ap.add_argument("--margem-para", dest="margem_para", type=float, default=0.04)
+    ap.add_argument("--limiar-para", dest="limiar_para", type=float, default=0.45)
+    ap.add_argument("--sem-cabeca", dest="sem_cabeca", action="store_true", help="não grava a cabeça de significado (o app perde a memória por significado)")
     args = ap.parse_args()
     torch.manual_seed(args.semente)
     dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -335,10 +385,20 @@ def main():
     rede._mascara = None
     args.prof = None
     extra = Dados(os.path.join(args.pasta, "extra.bin")) if os.path.exists(os.path.join(args.pasta, "extra.bin")) else None
+    args.para = Dados(os.path.join(args.pasta, "para.bin")) if os.path.exists(os.path.join(args.pasta, "para.bin")) else None
     if args.professor:
         args.tr_y, args.rotulos = tr.y, meta["rotulos"]
         args.prof = professor(args, dev, extra)
         rede.proj = nn.Linear(2 * args.d, args.prof["treino"].shape[1]).to(dev)
+        pv, pk = args.prof["para"]
+        if pk is not None and len(pk):
+            rep = np.tile(pk, args.rep_para)
+            tr = juntar(tr, args.para, rep)
+            args.prof["treino"] = torch.cat([args.prof["treino"], pv[torch.from_numpy(rep).to(dev)]])
+            print(f"treino: {tr.n} exemplos com as paráfrases (×{args.rep_para})", flush=True)
+    elif args.para is not None:
+        tr = juntar(tr, args.para, np.tile(np.arange(args.para.n), args.rep_para))
+        print(f"treino: {tr.n} exemplos com as paráfrases sem filtro (sem professor)", flush=True)
 
     # 1. treino
     epocas(rede, tr, va, re, args, dev, args.epocas, args.lr)
@@ -388,6 +448,10 @@ def main():
         q, esc = int8(rede.cls.weight)
         mats["Wc"] = (q, esc)
         rede.cls.weight.copy_((q.float() * esc[:, None]).to(rede.cls.weight.dtype))
+        if rede.proj is not None and not args.sem_cabeca:
+            q, esc = int8(rede.proj.weight)
+            mats["proj"] = (q, esc)
+            rede.proj.weight.copy_((q.float() * esc[:, None]).to(rede.proj.weight.dtype))
 
     # 5. temperatura
     acc, z, y = avaliar(rede, va, args.L, dev)
@@ -433,6 +497,9 @@ def main():
         i8q(p + "W2"); f32(p + "b2", c.f2.bias)
     f32("lnfg", rede.lnf.weight); f32("lnfb", rede.lnf.bias)
     i8q("Wc"); f32("bc", rede.cls.bias)
+    if "proj" in mats:
+        # a cabeça de significado: o app usa para a memória por significado (vetorDaRede)
+        i8q("proj"); f32("bproj", rede.proj.bias)
 
     cab = json.dumps({"rotulos": meta["rotulos"], "buckets": meta["buckets"], "d": args.d, "L": args.L, "cabecas": args.cabecas, "ffn": args.ffn,
                       "camadas": args.camadas, "T": T, "sub": args.sub, "blocos": blocos}, ensure_ascii=False).encode("utf-8")

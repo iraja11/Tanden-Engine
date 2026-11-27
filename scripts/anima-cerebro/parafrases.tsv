@@ -1,0 +1,4858 @@
+esclarecer	tá falando de quem?
+esclarecer	como eu sei
+esclarecer	do que é pq tu tá gritando
+esclarecer	eu acho q vc está maluca
+esclarecer	eita, o que você disse?
+esclarecer	que conversa é essa?
+esclarecer	cê tá brincando?
+esclarecer	pq vc não fala de forma normal?
+esclarecer	o que é que vc quis dizer?
+esclarecer	tá falando da minha tia?
+esclarecer	só quer saber pq
+esclarecer	entendo zero o que vc está dizendo
+esclarecer	como assim, você acha?
+cmd.agenda	vai marca meu aniversário pra semana que vem
+cmd.agenda	agenda provas de português pro dia 18
+cmd.agenda	põe no calendário entrega do projeto amanhã às 14h
+cmd.agenda	marca jantar de amigos pra hoje à noite
+cmd.agenda	me coloca corte de unha na agenda para segunda-feira
+cmd.agenda	agora mesma, põe o exame de driving pra semana que vem
+cmd.agenda	vc marca a prova de história para dia 22
+cmd.agenda	coloca compromisso comigo na agenda pro final de semana
+cmd.agenda	marca entrega do artigo prático no dia 28
+cmd.agenda	me marca um horário para conversar com o tutor hoje
+cmd.agenda	põe no meu calendário almoço com a Lívia pra próxima terça-feira
+cmd.agenda	agenda festa de aniversário da minha irmã na sexta-feira às 17h30
+cmd.agenda	vc coloca reunião com o cliente para segunda-feira à tarde
+cmd.agenda	marca entrega do relatório na quarta-feira as 15h
+cmd.agenda	me agenda almoço com os colegas da faculdade pra próxima semana
+cmd.agenda	põe no calendário aula de ioga para amanhã às 9h30
+cmd.agenda	marca partida de futebol pra domingo às 10h
+cmd.agenda	vc marca exame médico pro dia 25
+cmd.agenda	coloca compromisso com o irmão na agenda pra hoje à tarde
+cmd.agenda	me marca almoço com a turma prp próxima semana
+cmd.agenda	põe no meu calendário entrega do projeto na quinta-feira as 12h00
+cmd.agenda	agendar reunião com Gabriel
+cmd.agenda	sua agenda, por favor, marcar 5 de dezembro às 14h
+cmd.agenda	não vou esquecer se você colocar na agenda!
+cmd.agenda	cuidado para não me esquecer no dia das aulas.
+cmd.agenda	quando marcou o meu jantar com você?
+cmd.agenda	como posso adicionar uma aula extra?
+cmd.agenda	os carros vão sair na próxima quarta-feira
+cmd.agenda	até amanhã, eu vou viajar
+cmd.agenda	marcar os jogos do Flamengo esta semana
+cmd.agenda	acho que você não colou na agenda: 14/11 às 10h
+cmd.agenda	dica de onde posso tomar um café em casa?
+cmd.agenda	os encontros com Gabriel vão iniciar daqui a duas semanas
+cmd.agenda	jogos da Copa das Confederações, eu adico a data?
+cmd.agenda	para quinta-feira eu marcar os treinos na academia
+cmd.agenda	aqui vai ter aula de história que vem semana que vem
+cmd.agenda	acho que você ainda não colocou a atividade de 4 de dezembro no calendário.
+cmd.agenda	aqui vai dar uma aula de idiomas hoje às 15h, cuidado!
+cmd.agenda	colocar o próximo encontro do grupo na agenda?
+cmd.agenda	os jogos de futebol vão acontecer daqui a uma semana.
+cmd.agenda	só posso marcar compromisso se você me ajudar
+cmd.agenda	vamos verificar para não nos esquecermos mais.
+cmd.agenda	pessoalmente eu não sei quando as festas começam
+cmd.agenda	a próxima prova será dia 15 de dezembro às 14h
+cmd.agenda	os meus jogos vão acontecer na quarta-feira que vem
+cmd.agenda	aqui posso fazer uma reunião rápida com você?
+cmd.agenda	os filmes vão rodar no domingo da semana que vem.
+cmd.agenda	quero deixar a minha festa para semana que vem no calendário.
+cmd.agenda_ver	Qual foi a última coisa que eu preciso fazer?
+cmd.agenda_ver	Ei, amor! O que tem marcado na minha vida hoje?
+cmd.agenda_ver	Tô sem graça, o que tenho de compromisso amanhã?
+cmd.agenda_ver	Mãe, tem alguma reunião essa semana?
+cmd.agenda_ver	Eu só quero saber se tenho algum samba marcado!
+cmd.agenda_ver	Sabe qual é o meu próximo encontro?
+cmd.agenda_ver	E ai, Ânima! O que tenho pela frente hoje?
+cmd.agenda_ver	Tô com sorte ou eu tenho um compromisso na sexta-feira?
+cmd.agenda_ver	Tem alguma aula de piano que eu não sei?
+cmd.agenda_ver	Meu amor, tem almoço marcado?
+cmd.agenda_ver	Eu nem lembro se eu tenho algo dessa semana.
+cmd.agenda_ver	Tô sem graça para lembrar se tenho um encontro!
+cmd.agenda_ver	Que tipo de compromisso é esse na quarta-feira?
+cmd.agenda_ver	Sabe o que eu mais quero saber?
+cmd.agenda_ver	Dona Ânima, tem algum compromisso na minha frente?
+cmd.agenda_ver	Irritado hoje... que horas tem a aula de futebol? 😒
+cmd.agenda_ver	Ei amor! Qual foi o último encontro que tenho marcado?
+cmd.agenda_ver	Eu nem sei se eu estou livre amanhã... 🤔
+cmd.agenda_ver	Aqui vai, amor: qual é o meu compromisso da semana?
+cmd.agenda_ver	Tô desesperado para saber quando tem a reunião! ⏰
+cmd.agenda	Você pode colocar na agenda uma reunião com a equipe amanhã às 10h?
+cmd.agenda	Fica fácil, marca aula de ioga hoje à tarde na minha agenda.
+cmd.agenda	Coloca um lembrete para mim: terapia de ansiedade daqui a semana.
+cmd.agenda	Põe no calendário que tenho uma apresentação no trabalho amanhã às 14h.
+cmd.agenda	Ei, você consegue marcar encontro com meu irmão semana que vem?
+cmd.agenda	Acho melhor fazer isso agora mesmo e deixar tudo pronto. Pode marcar por favor: entrega de prêmio no domingo.
+cmd.agenda	Pai vai passar por aqui no meio-dia amanhã e acho melhor lembrar. Põe na agenda, por favor.
+cmd.agenda	Olha, daqui a duas semanas tenho um exame de direito importante e preciso que você lembre disso.
+cmd.agenda	Ei, marque um compromisso: reunião com o professor agora à tarde.
+cmd.agenda	Pode marcar no calendário: entrevista de emprego amanhã às 17h?
+cmd.agenda	Coloca por favor: jantar com a família na sexta-feira.
+cmd.agenda	Você pode adicionar uma atividade ao meu cronograma? Tenho que entregar um projeto nessa semana.
+cmd.agenda	Aqui é o lugar certo para colocar tudo planejado. Pode marcar reunião no escritório amanhã às 13h, por favor?
+cmd.agenda	Fica fácil, coloca a data do exame de português: daqui a 30 dias.
+cmd.agenda	Põe na agenda: palestra sobre ciência política hoje à tarde.
+cmd.agenda	Eu preciso lembrar disso para não esquecer e poder ter tudo certo. Coloque o lembrete no calendário.
+cmd.agenda	Ei, você consegue marcar compromisso com meu médico de atendimento básico?
+cmd.agenda	Pai vai passar por aqui na semana que vem. Pode colocar um lembrete, por favor?
+cmd.agenda	Vou me preparar para a prova de matemática amanhã às 16h e preciso lembrar da minha sessão de terapia.
+cmd.agenda	Acho melhor planejar isso desde já para evitar problemas. Você pode marcar no calendário: entrega do carro no final de semana?
+cmd.agenda	Ei, você lembrou que eu tenho que comparecer a um concurso de oratória amanhã às 15h?
+cmd.agenda	Pode colocar isso no cronograma também? Tenho que me apresentar em uma reunião com os investidores.
+cmd.agenda	Marque por favor: entrevista para o curso de direito daqui a 20 dias.
+cmd.agenda	Eu preciso planejar tudo com antecedência. Você pode adicionar essa atividade ao calendário?
+cmd.agenda	Pai vai passar por aqui daqui a duas semanas e você consegue colocar isso no horário agendado?
+cmd.agenda	Ei, você lembrou que eu tenho que entregar esse projeto até o dia 15 deste mês? Pode marcar no calendário.
+cmd.agenda	Aqui é o lugar certo para colocar todas as coisas importantes. Você pode adicionar essa atividade ao meu cronograma?
+cmd.agenda_ver	qual é meu próximo encontro
+cmd.agenda_ver	agora vc vai ler a minha agenda
+cmd.agenda_ver	o que eu tenho marcado para hoje à noite
+cmd.agenda_ver	estou com medo de perder algo da semana
+cmd.agenda_ver	como ta a minha programação?
+cmd.agenda_ver	sexta-feira eu estou livre?
+cmd.agenda_ver	tb tem algo marcado pra segunda-feira
+cmd.agenda_ver	tô com receio de esquecer alguém na agenda
+cmd.agenda_ver	meu dia está cheio hoje
+cmd.agenda_ver	pq vc não me lembra das coisas marcadas
+cmd.agenda_ver	vou ter que cancelar algum compromisso?
+cmd.agenda_ver	qual é meu próximo appontamento?
+cmd.agenda_ver	estou procurando a minha lista de tarefas
+cmd.agenda_ver	tô com dificuldade para organizar minhas horas
+cmd.agenda_ver	aqui vai uma confusão, ai vai a gente desenrolar
+cmd.agenda_ver	se eu esquecer alguém da agenda vai ser um problema, né?
+cmd.agenda_ver	como ta a minha semana programada, vc tem uma ideia?
+cmd.agenda_ver	eu não quero perder nada importante, qual é meu compromisso do dia?
+cmd.agenda_ver	meu calendário está lotado, mds!
+cmd.agenda_ver	vc leu minhas anotações hoje?
+cmd.agenda_ver	tô com receio de perder minha agenda
+cmd.agenda_ver	quem tá marcado para essa sexta-feira?
+cmd.agenda_ver	só tenho compromisso
+cmd.agenda_ver	o que estou fazendo hoje
+cmd.agenda_ver	acho que tem no meu calendário
+cmd.agenda_ver	lê minhas atividades da semana
+cmd.agenda_ver	quais são as horas
+cmd.agenda_ver	tô empenhado amanhã?
+cmd.agenda_ver	lê meus horários de compromissos
+cmd.agenda_ver	que tem marcado amanha?
+cmd.agenda_ver	me diz os meus horarios
+cmd.agenda_ver	como vai a agenda hoje ?
+cmd.agenda_ver	acho que tenho reunião hoje
+cmd.agenda_ver	qual é a hora do dentista?
+cmd.agenda_ver	só lê minhas atividades
+cmd.agenda_ver	tenho compromisso na quarta?
+cmd.agenda_ver	o que tem no meu calendário hoje?
+cmd.agenda_ver	meu próximo compromisso
+cmd.agenda_ver	acha alguma coisa marcada para amanha?
+cmd.agenda_ver	até quando estou liberado no sábado
+cmd.agenda_ver	como está minha agenda de trabalho?
+cmd.agenda_ver	qual é a hora da minha consulta médica?
+cmd.lembrete	não deixe eu me esquecer de marcar aula para aprender karatê
+cmd.lembrete	me avisa em 30 min que é hora de sair pra jantar
+cmd.lembrete	lembra-me daquele compromisso no escritório de manhã
+cmd.lembrete	coloca que me lembre de comprar arroz hoje mesmo 💸
+cmd.lembrete	eu preciso tirar o lixo hoje à noite, lembreta!
+cmd.lembrete	aqui vai um lembrete: eu tenho reunião às 2 da tarde
+cmd.lembrete	fica marcado pra mim ir ao médico amanhã 🤕
+cmd.lembrete	me avisa quando é hora de trocar a papelada do carro
+cmd.lembrete	lembra-se de me levar o café da manhã na sexta-feira?
+cmd.lembrete	sabe qual é o meu dia? Hoje! Lembra-me do dentista, por favor!
+cmd.lembrete	aqui vai um recado: eu preciso mais uma semana pra terminar esse projeto
+cmd.lembrete	me avisa quando chega o prazo de devolução desses DVDs
+cmd.lembrete	eu não quero esquecer... coloca que me lembre de fazer a lixadeira 🤦‍♂️
+cmd.lembrete	corta o cabelo em 20 min, carinha!
+cmd.lembrete	sabe do compromisso no banco amanhã? Me avisa logo!
+cmd.lembrete	aqui vai um lembrete: eu tenho reunião com a diretora às 15h30
+cmd.lembrete	lembra-me de dar banho ao corgi antes de ir embora
+cmd.lembrete	preciso pagar essa conta ontem, lembreta! 😬
+cmd.lembrete	me avisa quando é hora de tomar remédio
+cmd.lembrete	sabe do encontro com o pessoal na sexta? Me lembra!
+cmd.lembrete	aqui vai um lembrete: eu tenho que entregar o trabalho de manhã
+cmd.lembrete	fica marcado pra mim ir ao médico da saúde na terça-feira 🚑
+cmd.lembrete	Aí Ânima, posso te pedir para me lembra de chamar a conta da Netflix amanhã?
+cmd.lembrete	Quero que você me ponha um lembrete pra comprar o remédio na farmácia
+cmd.lembrete	Põe o lembrete pra voltar lá em casa às 16h hoje
+cmd.lembrete	Pode deixar um lembrete pra eu não me esquecer de tomar a medicação cássis amanhã cedo
+cmd.lembrete	Vou precisar de uma dica pra lembrar da minha mãe que ontem foi aniversário dela, me lembra?
+cmd.lembrete	Ei Ânima, você pode me dar um toque pra voltar à escola às 8h hoje?
+cmd.lembrete	Vai ter tempo de sobra na semana que vem, posso te pedir pra criar um novo lembrete pra eu revisitar o orçamento?
+cmd.lembrete	Acho que vou ter que sair cedo hoje, põe o alarme para mim às 6h
+cmd.lembrete	Pode me ajudar com isso? Me lembre de ligar pra ela às 18h30
+cmd.lembrete	Ânima, pode você colocar um alerta na agenda pra eu não esquecer das atividades na academia?
+cmd.lembrete	Ei Ânima, vou precisar que você me lembre daquela tarefa lá na faculdade hoje.
+cmd.lembrete	Pode pôr um lembrete para eu verificar o orçamento de Internet amanhã.
+cmd.lembrete	Ânima! Me lembra de dar comida ao cachorro às 9h30 da manhã
+cmd.lembrete	Muita gratidão pra você, me lembre de pedir mais uma dose das vitaminas hoje!
+cmd.lembrete	Pode colocar um alarme para eu deixar a máquina de lavar roupas na ciclo normal?
+cmd.lembrete	Ei Ânima, se me faltar algo, põe o alerta
+cmd.lembrete	Ânima! Você é incrível, posso te pedir pra criar um lembrete para você lembrar as compras lá em casa?
+cmd.lembrete	Pode ficar por conta do meu aniversário semana que vem e colocar um lembrete nas 10h da manhã, agradecido!
+cmd.lembrete	Vou ter que estar de volta às férias, põe o alarme para hoje cedo
+cmd.lembrete	Ei Ânima! Se me esquecer de devolver os livros na biblioteca, me lembre
+cmd.lembrete	Pode criar um novo lembrete pra eu não mais usar roupa molhada
+cmd.lembrete	Ânima! Você pode ficar por conta das minhas anotações?
+cmd.lembrete	Põe o alarme para a minha mãe que tem um compromisso amanhã as 9:30h. Obrigado!
+cmd.lembrete	Vai tomar cuidado, você pode ajudar com isso? Me lembre de ir ao médico no dia 17.
+cmd.lembrete	Ei Ânima! Você pode colocar o alerta pra eu não esquecer de pagar a conta da água?
+cmd.lembrete	Pode ficar por conta das minhas tarefas que ficaram para as férias, me lembra!
+cmd.lembrete	Ânima! Pôs um alarme para você lembrar da minha passagem?
+cmd.abrir_nota	Puxa nota da faculdade
+cmd.abrir_nota	Abre a minima música
+cmd.abrir_nota	Cadê minha nota de exercícios
+cmd.abrir_nota	Meu amor, puxa a nota Eldorada 🙈
+cmd.abrir_nota	A abrir a minha nota de tarefa
+cmd.abrir_nota	Puxa a nota da viagem pra SP
+cmd.abrir_nota	Eu preciso que tu abra a nota finanças
+cmd.abrir_nota	Cadê a nota das festas?
+cmd.abrir_nota	Minha nota do curso de fotos, por favor
+cmd.abrir_nota	Que loucura! Abre a nota do meu sonho!
+cmd.abrir_nota	Abri a nota que vou estudar para o concurso 🤔
+cmd.abrir_nota	E agora, abre a minha nota da faculdade
+cmd.abrir_nota	Cadê aquela nota que eu fiz?
+cmd.abrir_nota	Vamos abrir a nota do filme novo
+cmd.abrir_nota	Eu não sei como é que tá! Abre a nota que eu faço aula de português
+cmd.abrir_nota	Não sei mais onde é que eu ponho as minhas notas!
+cmd.abrir_nota	Minha nota daquele curso de gastronomia, rapaziada.
+cmd.abrir_nota	Cadê aquela nota que eu preciso?!?
+cmd.abrir_nota	Vamos começar, abre a minha nota de projetos para o tcc
+cmd.abrir_nota	E agora? Abre a nota do meu cadastro no banco
+cmd.abrir_nota	Puxa... puxa a nota que eu posso comprar um carro
+cmd.abrir_nota	abre aquela da lista de favores
+cmd.abrir_nota	quero ver a nota do pessoal
+cmd.abrir_nota	abra o arquivo de receitas
+cmd.abrir_nota	mostra aquela do treino
+cmd.abrir_nota	abrindo a nota da festa de aniversário
+cmd.abrir_nota	você abre aquela do plano
+cmd.abrir_nota	abrir a nota da reunião de terça
+cmd.abrir_nota	eu quero ver a da viagem
+cmd.abrir_nota	vc pode me abrir a da casa?
+cmd.abrir_nota	abra a nota sobre o projeto
+cmd.abrir_nota	abre o arquivo das compras
+cmd.abrir_nota	mostra a minha da lista de tarefas
+cmd.abrir_nota	quero acessar a nota do filme
+cmd.abrir_nota	abra a da palestra da semana passada
+cmd.abrir_nota	abrir a nota da reunião de quarta-feira
+cmd.abrir_nota	abrindo a da conta bancária
+cmd.abrir_nota	eu preciso ver a da festa de casamento
+cmd.abrir_nota	mostra aquela da lista de compras
+cmd.abrir_nota	quero abrir a nota do pessoal
+cmd.abrir_nota	abra o arquivo das metas
+cmd.abrir_nota	quero acessar a nota do trabalho
+cmd.abrir_nota	vc pode me abrir a nota?
+cmd.abrir_nota	abrir a da reunião de terça-feira
+cmd.abrir_nota	abre nota pessoal
+cmd.abrir_nota	vai pro vídeo
+cmd.abrir_nota	faz abrir aula
+cmd.abrir_nota	abra esse negócio
+cmd.abrir_nota	nota do almoço hoje
+cmd.abrir_nota	abra o caderno
+cmd.abrir_nota	abra minhas finanças
+cmd.abrir_nota	abra essa nota velha
+cmd.abrir_nota	abra as aulas online
+cmd.abrir_nota	saca da lista
+cmd.abrir_nota	abra ela agora mesmo
+cmd.abrir_nota	a notinha é esta
+cmd.abrir_nota	abre as anotações
+cmd.abrir_nota	faz abrir a página
+cmd.abrir_nota	abaixo está o mapa
+cmd.abrir_nota	abra a atividade
+cmd.abrir_nota	cara, me traga!
+cmd.abrir_nota	abriu? que horas são?
+cmd.abrir_nota	abra essas senhas aqui
+cmd.abrir_nota	abra a lista de compras
+cmd.criar_nota	me traz uma nova nota para eu tirar ideias pro conto
+cmd.criar_nota	cria uma nota pra mim, por favor!
+cmd.criar_nota	:)
+cmd.criar_nota	preciso criar uma nova notinha aki
+cmd.criar_nota	vamos criar uma nota do zero, né?
+cmd.criar_nota	nova nota para planos de aniversário da Ânima
+cmd.criar_nota	acho que preciso de mais uma nota pra escrever...
+cmd.criar_nota	cê pode criar uma nota sobre minhas leituras?
+cmd.criar_nota	:/
+cmd.criar_nota	crie uma nova nota, amor!
+cmd.criar_nota	fica criando a nota agora, vai
+cmd.criar_nota	vamos lá, cria uma notinha do zero pra mim!
+cmd.criar_nota	não sei se você sabe fazer isso, mas...
+cmd.criar_nota	nova nota para eu me lembrar da nossa lista de tarefas
+cmd.criar_nota	só uma novinha de nota pro fim de semana, por favor :)
+cmd.criar_nota	:D
+cmd.criar_nota	acha que podemos criar uma nota sobre viagens?
+cmd.criar_nota	crie uma nota pra mim, meu amor!
+cmd.criar_nota	estou precisando de mais uma notinha para planejar o futuro da minha história
+cmd.criar_nota	como é que a gente cria novas notas no app, não sei...
+cmd.criar_nota	cria uma nota
+cmd.criar_nota	nota sobre coisas
+cmd.criar_nota	uma nova anotação
+cmd.criar_nota	abre a caixa branca
+cmd.criar_nota	faça uma lista
+cmd.criar_nota	nova página de notas
+cmd.criar_nota	preciso da anotação agora
+cmd.criar_nota	quero uma nota rápida
+cmd.criar_nota	crie uma ficha agora
+cmd.criar_nota	uma ficha para anotações
+cmd.criar_nota	abra a porta dos registros
+cmd.criar_nota	uma caixa de pensamentos
+cmd.criar_nota	adiciona algo a memoria
+cmd.criar_nota	nova notinha importante
+cmd.criar_nota	preciso da minha carteira
+cmd.criar_nota	abre a agenda pessoal
+cmd.criar_nota	escreve isso na parede
+cmd.criar_nota	crie uma página em branco
+cmd.criar_nota	faça uma ficha de anotações
+cmd.criar_nota	outra papelada para o dia
+cmd.criar_nota	abra a pasta dos pensamentos
+cmd.criar_nota	anotei isso aqui fora
+cmd.criar_nota	preciso da nota hoje
+cmd.criar_nota	uma página de notas
+cmd.criar_nota	crie um espelho das minhas ideias
+cmd.criar_nota	posso criar uma nota pra me lembrar de chamar vc
+cmd.criar_nota	preciso criar nota pra lista das minhas músicas favoritas
+cmd.criar_nota	faz uma anotação nova porra
+cmd.criar_nota	tbm preciso de criar uma nota sobre o que eu aprendi hoje
+cmd.criar_nota	acho q vou criar uma nota pra guardar dicas de comemorações
+cmd.criar_nota	quero cria uma nota de lembranças pra a minha mãe
+cmd.criar_nota	me ajuda vc, como criar uma nota nova?
+cmd.criar_nota	faz uma anotação pro dia de aniversário do meu irmão
+cmd.criar_nota	criar notinha pra organizar as minhas cartas
+cmd.criar_nota	notinha pra salvar links favoritos
+cmd.criar_nota	cadastra uma nota pra eu lembrar de dar banho no meu cachorro
+cmd.criar_nota	nota pro desenho que vou criar
+cmd.criar_nota	fazer uma nota nova pra guarda dicas de como cuidar do jardim
+cmd.criar_nota	criar uma nota pra guardar os meus filmes favoritos
+cmd.criar_nota	posso fazer uma anotação pra guardar o telefone do meu tio?
+cmd.criar_nota	precisa criar uma notinha pra eu lembrar de comprar manteiga
+cmd.criar_nota	faz uma nota nova pra minhas músicas mais ouvidas
+cmd.criar_nota	cadastra uma nota pro carnaval pra guarda ideias de fantasias
+cmd.criar_nota	notinha pra guardar os meus personagens favoritos das séries
+cmd.criar_nota	cadastra uma anotação pra eu lembrar de chamar o meu melhor amigo
+cmd.criar_nota	faz uma anotação nova pra guardar os nomes dos meus filhos
+cmd.criar_nota	posso criar uma nota pra guardar as fotos do meu cachorro
+cmd.criar_nota	aqui, posso criar uma nota pro dia dos pais?
+cmd.apagar_nota	fica essa nota de festa no ano passado
+cmd.apagar_nota	apaga isso mesmo agora
+cmd.apagar_nota	tira a nota do futebol desse mês
+cmd.apagar_nota	deleta o que vc digitou
+cmd.apagar_nota	manda pra lixeira essa notinha
+cmd.apagar_nota	vc pega ela com a da tarefa
+cmd.apagar_nota	quero ver na minha timeline pq fica essa nota
+cmd.apagar_nota	acha um jeito de remover isso
+cmd.apagar_nota	apaga esse chat agora mesmo
+cmd.apagar_nota	some no final
+cmd.apagar_nota	fica essa aqui
+cmd.apagar_nota	tb é melhor apagar
+cmd.apagar_nota	acho q ela ficou feia
+cmd.apagar_nota	copia e cola pra a lixeira
+cmd.apagar_nota	mais uma para deletar
+cmd.apagar_nota	aqui vai pra onde?
+cmd.apagar_nota	deixe ela lá fora
+cmd.apagar_nota	quero tirar isso da minha vida
+cmd.apagar_nota	apague essas coisas de letra miúda
+cmd.apagar_nota	fica essa aqui embaixo
+cmd.apagar_nota	vê se vc consegue apagar
+cmd.apagar_nota	quero ver a lista agora pq tá grande
+cmd.apagar_nota	limpe a nota pessoal
+cmd.apagar_nota	apaga a de tarefas
+cmd.apagar_nota	deleta a agenda
+cmd.apagar_nota	desliga a luz na cozinha
+cmd.apagar_nota	joga o lixo no chão
+cmd.apagar_nota	sobral está enxuto
+cmd.apagar_nota	apaga a conta de água
+cmd.apagar_nota	remova isso daqui
+cmd.apagar_nota	passe as notas por pano
+cmd.apagar_nota	fique sem a nota
+cmd.apagar_nota	limpeira a galera
+cmd.apagar_nota	deleta a música do carnaval
+cmd.apagar_nota	cancele o compromisso
+cmd.apagar_nota	mexa os papéis na lixeira
+cmd.apagar_nota	apague aquela bobagem
+cmd.apagar_nota	dê adeus à carta
+cmd.apagar_nota	feche a conta no escritório
+cmd.apagar_nota	jogue fora essa memória
+cmd.apagar_nota	vire isso em filme
+cmd.apagar_nota	pinte a nota de rosa
+cmd.apagar_nota	entregue na coleta seletiva
+cmd.apagar_nota	cuidado, está com fumaça
+cmd.apagar_nota	apaga a página da história
+cmd.apagar_nota	travasse as notas no lixo
+cmd.buscar	onde está a lista
+cmd.buscar	achar a senha
+cmd.buscar	procura minha filha
+cmd.buscar	dónde está o mapa
+cmd.buscar	busca celular no carro
+cmd.buscar	sobre qual filme?
+cmd.buscar	pesquisa o orçamento
+cmd.buscar	aqui tem alguma foto
+cmd.buscar	tem alguma letra?
+cmd.buscar	encontra a casa
+cmd.buscar	o que é aquilo?
+cmd.buscar	dói a sua lista
+cmd.buscar	os endereços estão
+cmd.buscar	achar onde fica
+cmd.buscar	o que foi isso?
+cmd.buscar	há sobre eu mesmo
+cmd.buscar	eu gostei da música
+cmd.buscar	fala, o que é?
+cmd.apagar_nota	Vamos apagar aquela nota da faculdade
+cmd.apagar_nota	Quem é o responsável por essas notas?
+cmd.apagar_nota	Acho que podemos eliminar a nota do projeto anterior
+cmd.apagar_nota	Pode apagar as minhas anotações de trabalho?
+cmd.apagar_nota	Certo, deleta tudo do dia passado
+cmd.apagar_nota	Tô fedido com a nota de compras
+cmd.apagar_nota	Desligo ela agora, delete a nota da minha mãe
+cmd.apagar_nota	Pode me ajudar e apagar essa coisa que eu fiz ontem
+cmd.apagar_nota	Certo, você deleta aquela coisa que eu notei lá?
+cmd.apagar_nota	Nossa, vou tirar isso do WhatsApp, pode apagar para mim?
+cmd.apagar_nota	Mais uma coisa, deixe ela sem as notas de desempenho
+cmd.apagar_nota	Desativamos ela de novo, então pode eliminar os dados dela
+cmd.apagar_nota	Vou tirar o pessoal da lista, pode deletar para mim?
+cmd.apagar_nota	Tô fazendo um limbo, apague essas anotações velhas
+cmd.apagar_nota	Pai que horror, temos que criar uma nova pasta, apaga tudo lá
+cmd.apagar_nota	Pode fazer o mesmo com as minhas listas de compras?
+cmd.apagar_nota	Vamos manter apenas a lista de pedidos
+cmd.apagar_nota	Só agora é que eu percebi, não preciso mais dessa nota
+cmd.apagar_nota	Deletar todos os dados do curso também vai ser bom
+cmd.apagar_nota	E você, apagou tudo lá na conta?
+cmd.apagar_nota	Vou criar outro tipo de organização, faça o mesmo com essa pasta
+cmd.apagar_nota	Pode deletar também essas listas antigas?
+cmd.buscar	procura por taylor ralph
+cmd.buscar	acha vc na nota de gastos
+cmd.buscar	busca no cofre: senha do roteador
+cmd.buscar	tem alguma receita de feijoada?
+cmd.buscar	aquela música que eu cantei na festa, acha pra mim?
+cmd.buscar	pesquisa projeto xerife
+cmd.buscar	os tópicos de revisão da última aula, como é que eu faço?
+cmd.buscar	dá uma olhadinha no caderno de matemática
+cmd.buscar	cara pode você procurar por mim?
+cmd.buscar	aqui tem algum aniversário marcado para hoje?
+cmd.buscar	acha o cd do álbum que eu comprei ontem?
+cmd.buscar	o senhor júdice, como é que eu busco ele?
+cmd.buscar	acha as coordenadas da casa do primo?
+cmd.buscar	os vídeos de kpop que eu baixei, estão lá
+cmd.buscar	dá uma olhada no celular da mamãe
+cmd.buscar	aquela música do amor impossível, acha pra mim o nome?
+cmd.buscar	os cursos da faculdade para iniciantes
+cmd.buscar	os dados da última competição do futebol
+cmd.buscar	os passos para montar umas bicicleta
+cmd.buscar	acha o vídeo que eu fiz no karaoke há 5 anos
+cmd.buscar	busca no cofre: aula de corte e costura
+cmd.buscar	dá uma olhada nas histórias da instagram da turma
+cmd.buscar	aquela música do filme de ficção científica, como é que eu chamo?
+cmd.buscar	os livros de psicologia para iniciantes
+cmd.buscar	os tutoriais do youtube para aprender guitarra
+cmd.ir	vai pra flash
+cmd.ir	me leva para calendário
+cmd.ir	abra a notificação
+cmd.ir	abri o exercícios
+cmd.ir	mostre a lista
+cmd.ir	tela do banco
+cmd.ir	me leva ao plano
+cmd.ir	troca pra planilha
+cmd.ir	muda pra calendário
+cmd.ir	me mostre o mapa
+cmd.ir	abra o chat da Ânima
+cmd.ir	vai para exercícios
+cmd.ir	abri a tela da nota
+cmd.ir	mostre a gráfica
+cmd.ir	abra a página do banco
+cmd.ir	vou ao plano
+cmd.ir	me leva pro grafico
+cmd.ir	troca de aba pra notificação
+cmd.ir	abra meu calendário
+cmd.ir	vai pra listagem
+cmd.ir	abra o fluxo de trabalho
+cmd.ir	abri a planilha
+cmd.ir	muda para notas
+cmd.buscar	Acha onde eu coloquei a lista de compras?
+cmd.buscar	Pode pesquisar o nome daquele filme que a gente quer assistir?
+cmd.buscar	Ei, encontre pra mim a nota sobre a reunião com o cliente!
+cmd.buscar	Me ajuda a encontrar a conta do cartão
+cmd.buscar	Vai em busca da palavra 'plano de aula'
+cmd.buscar	Acha o endereço do restaurante novo?
+cmd.buscar	Preciso que procure onde eu escrevi a senha do drive
+cmd.buscar	Eita, não lembro onde escrevi a fórmula para calcular o IMC!
+cmd.buscar	Onde fica a nota com as dicas de inglês?
+cmd.buscar	Procurar se existe alguma anotação sobre 'fotos para imprimir'
+cmd.buscar	Acha pra mim como eu fiz aquele prato que era super bom
+cmd.buscar	Pode pesquisar por essência de lavanda em uma das notas?
+cmd.buscar	Me ajuda a encontrar o endereço do curso de guitarra!
+cmd.buscar	Vem em busca da palavra 'senha de wifi' nas notas
+cmd.buscar	Encontrar as dicas para arrumar móveis usados!
+cmd.buscar	Pode procurar na nota sobre exercícios para perda de peso?
+cmd.buscar	Acha onde eu coloquei o nome do meu melhor amigo?
+cmd.buscar	Preciso encontrar como fazer uma apresentação em PowerPoint
+cmd.buscar	Procurar por alguma anotação com informações sobre a Rússia
+cmd.buscar	Vai em busca da senha do aplicativo de banco
+cmd.buscar	Encontrar a receita para fazer um brigadeiro
+cmd.buscar	Me ajuda a descobrir onde eu coloquei as informações do mecanismo de aquecimento!
+cmd.buscar	Acha a dica de como melhorar a memória?
+cmd.buscar	Ei, pode procurar nas notas o endereço do supermercado novo?
+cmd.ir	Vai abrir na parte de flashcards que eu não finalizei
+cmd.ir	Aberto a tela de cadastro das pessoas
+cmd.ir	Leva-me pra tabela de planilhas, por favor
+cmd.ir	Me lembra pra entrar no meu laboratório, tá?
+cmd.ir	Cê pode ir na aba do calendário pro meu aniversário?
+cmd.ir	Dá um jeito de abrir a parte das finanças
+cmd.ir	Fica fácil se trocarmos a tela para os meus romances
+cmd.ir	Aberto a lista de compras da loja que vou hoje
+cmd.ir	Leva-me pro meu quadro de afazeres, preciso mudar isso
+cmd.ir	Pode levar pra o mecanismo de busca?
+cmd.ir	Abre a aba do histórico dos meus passos
+cmd.ir	Fique fácil se trocarmos para a parte de imagens
+cmd.ir	E agora é hora de ir na tela do jogo
+cmd.ir	Me ajuda a abrir a lista das minhas atividades
+cmd.ir	Aberto a tabela da reunião da próxima semana
+cmd.ir	Pra que tal vamos mudar pra aba do notário?
+cmd.ir	Vamos no lugar certo e trocar pro formulário
+cmd.ir	Dá um jeito de colocar a parte de fotos na frente
+cmd.ir	E agora é essencial abrir a lista das compras
+cmd.ir	Fica simples se abrimos a parte da minha coleção
+cmd.ir	pega aquele app
+cmd.ir	saca essa tela
+cmd.ir	clica nessa aqui
+cmd.ir	mostra-me o calendário
+cmd.ir	vai naquela aba
+cmd.ir	dê uma olhada em cima
+cmd.ir	faz aparecer a papelada
+cmd.ir	traz pra cá a listagem
+cmd.ir	saca da biblioteca a lista
+cmd.ir	me mostra onde fica a agenda
+cmd.ir	vamos no meu mundo de trabalho
+cmd.ir	abra o caderno de anotações
+cmd.ir	saca do estoque as minhas atividades
+cmd.ir	pega um cartão de notas
+cmd.ir	dê uma olhada nessa prateleira
+cmd.ir	faz com que a tela de busca apareça
+cmd.ir	me mostra em qual painel eu estou
+cmd.ir	abra o meu mapa de tarefas
+cmd.ir	me mostre onde fica os projetos
+cmd.ir	saca da gaveta as minhas cartelas
+cmd.ir	dê um olhão naquela telinha
+cmd.tema	pôs o modo noturno
+cmd.tema	escurece aqui
+cmd.tema	coloca para escuro
+cmd.tema	claro, amiga?
+cmd.tema	muda a luz
+cmd.tema	fica mais fácil
+cmd.tema	deixa tranquilo, tá muito claro
+cmd.tema	apague a luz
+cmd.tema	troca pra preto
+cmd.tema	tudo escuro
+cmd.tema	cerejeira não é pra ficar acesa
+cmd.tema	escurinho pro app
+cmd.tema	não deixa tão brilhante
+cmd.tema	senta na sombra aqui
+cmd.tema	fica mais fácil ver o celular
+cmd.tema	muda a iluminação
+cmd.tema	pra dentro tem que estar escuro
+cmd.tema	dá um jeito nisso, né?
+cmd.tema	clica no escuro
+cmd.tema	deixa mais confortável
+cmd.tema	Vamos trocar de esquema
+cmd.tema	Pôs pra preto, né?
+cmd.tema	Melhor dar uma virada no visual
+cmd.tema	Tá farto dessa aparência, cara?
+cmd.tema	Agora dá um jeito
+cmd.tema	Essa cor de fundo tá estragando o dia todo!
+cmd.tema	Muda a vibe, amiga!
+cmd.tema	:D Quero um tema mais tranquilo!
+cmd.tema	Que tal mudar a estética?
+cmd.tema	Pôs pra claro, que horas são?
+cmd.tema	Aparência de cinema!
+cmd.tema	Vou trocar essa aparência
+cmd.tema	Qual é a dica para virar preto?
+cmd.tema	Fico farto dessa cor escura!
+cmd.tema	:/
+cmd.tema	Melhor dar uma atualização no visual
+cmd.tema	Querendo um tema mais chique
+cmd.tema	Que bom, tá ficando mais legítimo agora!
+cmd.tema	como vc pôs de claro aqui?
+cmd.tema	ligar o modo escuro é mais facil pra meus olhos
+cmd.tema	mude a cor da tela, tá dando dor de cabeça
+cmd.tema	vc pode mudar a cor do app que eu estou com fome!
+cmd.tema	tá muito branco, vc vê isso?
+cmd.tema	o que o vc quer? trocar a cor do background
+cmd.tema	pra mim é escuro, mas pq vc não muda pra claro?
+cmd.tema	tb temos opção de mudar o tema do app!
+cmd.tema	liga o modo noturno por favor!
+cmd.tema	pode alterar as cores aqui?
+cmd.tema	tem algum problema na configuração da tela?
+cmd.tema	vc pôs o tema escuro, tá bom
+cmd.tema	pra trocar a cor da tela eu mando mensagem?
+cmd.tema	você pode mudar as cores do app ou não?
+cmd.tema	é muito fácil mudar a cor da tela né!
+cmd.tema	tá com dificuldade para alterar as cores?
+cmd.tema	ligar o modo noturno é melhor pra mim!
+cmd.tema	vc pôs o tema claro, tá feio
+cmd.tema	muda a cores do teclado também por favor!
+cmd.anotar	apontar para o reino
+cmd.anotar	cadastrar a viagem
+cmd.anotar	fazer um lembrete
+cmd.anotar	anotar que eu adorô
+cmd.anotar	escrever no meu dia
+cmd.anotar	dizer ao Pedro
+cmd.anotar	completar uma lista
+cmd.anotar	incluir na agenda
+cmd.anotar	acrescentar à memória
+cmd.anotar	marcar na nota
+cmd.anotar	registra o evento
+cmd.anotar	cadastrar a comida
+cmd.anotar	aumenta a notação
+cmd.anotar	sobre o meu nome
+cmd.anotar	lembre em casa
+cmd.anotar	mande a mensagem
+cmd.anotar	fazer um apunte
+cmd.anotar	escreva no meu livro
+cmd.anotar	inserir na data
+cmd.anotar	anota no horário
+cmd.anotar	adicionar à lista
+cmd.anotar	escreve no dia que eu vou ao cinema
+cmd.anotar	anota essa ideia: pedir ajuda pra casa
+cmd.anotar	escreva na nota que eu tenho que ligar pro médico
+cmd.anotar	anota vc que eu esqueci de trazer a comida
+cmd.anotar	escreva o que eu preciso comprar pro fim de semana
+cmd.anotar	salva isso: chamar a tia para vir cá
+cmd.anotar	escreve no meu diário pq eu estou com frio
+cmd.anotar	escreve que eu preciso passar as roupas na quarta-feira
+cmd.anotar	anota essa ideia: levar o irmão pro parque
+cmd.anotar	escreva na nota do dia que eu tenho que ligar pra ela hoje
+cmd.anotar	escreve no diário q eu li um bom livro
+cmd.anotar	anota vc de deixar a porta aberta
+cmd.anotar	escreva que eu preciso revisar as provas
+cmd.anotar	salva isso: ir ao museu no sábado
+cmd.anotar	anota essa ideia: criar um perfil no instagram pra cachorro
+cmd.anotar	escreve na nota do dia q eu estou com saudades da família
+cmd.anotar	escreve o que eu tenho que fazer no fim de semana
+cmd.anotar	escreva no meu diário q hoje foi um dia ruim
+cmd.anotar	anota essa ideia: pedir dinheiro pro pai
+cmd.anotar	anota vc q eu esqueci o lápis em casa
+cmd.anotar	escreve na nota do dia que eu preciso comprar pão e leite
+cmd.timer	vamos lá, conta pra mim!
+cmd.timer	fica 27 minutos contando para mim, tchau
+cmd.timer	me dá um minuto sim, por favor
+cmd.timer	eu quero uma meia hora de tranquilidade
+cmd.timer	cadastra um timer com 45 segundos para mim
+cmd.timer	é só você não apagar e eu vou dar o basta
+cmd.timer	conta pra mim 60 minutos, meu amor
+cmd.timer	é bom lembrar pra mim em trinta minutos
+cmd.timer	xícara de café pode esperar, conta pra mim!
+cmd.timer	desligue isso aqui quando for nove da manhã
+cmd.timer	lembre-se de me chamar em vinte minutos
+cmd.timer	ahora eu vou estar ocupado até o timer tocar
+cmd.timer	aí vai ser uma hora sim, e pronto!
+cmd.timer	há tempos eu queria ter tempo para fazer isso, conta pra mim 10 min
+cmd.timer	se fosse comigo a gente seria pontual
+cmd.timer	cadastra um alarme pra mim em 3 horas
+cmd.timer	fique esperando enquanto eu faço isso aqui
+cmd.timer	os outros minutos não são tão importantes quanto esses 25.
+cmd.timer	o mundo aguarda minha grande obra e só pode começar quando esse timer tocar
+cmd.timer	apague o celular, conta para mim!
+cmd.timer	me chame aí daqui a um mês!
+cmd.timer	falem alto pra que eu possa ouvir no fundo do quintal
+cmd.timer	os outros 10 minutos podem esperar.
+cmd.timer	contem os segundos enquanto eu descanso aqui!
+cmd.anotar	você coloca lá na nota do dia o nome desse artigo?
+cmd.anotar	anda, anota para mim que preciso chamar a professora
+cmd.anotar	escreve no diário pra eu não me esquecer de ir ao supermercado
+cmd.anotar	coloque isso no seu caderno pra eu não mais precisar lembrar de fechar a geladeira
+cmd.anotar	coloca essa data lá na nota dela porque é o aniversário do meu melhor amigo
+cmd.anotar	anota que vou tentar resolver esse problema de matemática hoje
+cmd.anotar	salve na sua área pessoal isso: ir ao dentista é pra sexta-feira
+cmd.anotar	escreva aí no diário da Ânima que preciso lembrar de devolver os livros da biblioteca
+cmd.anotar	anda, coloque lá o meu nome e sobrenome em ordem alfabética
+cmd.anotar	anota essa ideia pra eu não mais precisar procurar onde está a nota dela
+cmd.anotar	coloque que preciso pedir desculpa ao colega
+cmd.anotar	escreve na página do dia de hoje: preciso chamar o mecânico pra olhar no carro
+cmd.anotar	anda, coloque lá em ordem cronológica os compromissos do mês
+cmd.anotar	coloca aí as coisas que eu estou estudando em um papel para ter como referência
+cmd.anotar	escreva o nome desse livro na nota dela porque não quero mais perder meu lugar
+cmd.anotar	coloque no seu caderno que preciso comprar mais lápis hoje mesmo
+cmd.anotar	anota isso: é dia de chuvei e passar creme!
+cmd.anotar	salve essa ideia pra eu não mais esquecer de ir ao parque
+cmd.anotar	coloque que preciso ligar pro meu sogro agora
+cmd.anotar	anda, escreva lá o nome da minha prima
+cmd.anotar	coloque na nota dela para saber quando é o aniversário do meu pai
+cmd.timer	me chama daqui a 20 min
+cmd.timer	pomodoro de 40 minutos tlgd
+cmd.timer	vc pode me lembrar que é hora de fazer exercícios
+cmd.timer	inicia o cronômetro pq estou começando a aprender inglês
+cmd.timer	cuidado, mds vou terminar de assistir essa série
+cmd.timer	fica sabendo em 10 minutos que eu estou pronto para sair
+cmd.timer	me avisa quando passar de 1h10m
+cmd.timer	dá um alarme me chama depois da minha caminhada
+cmd.timer	horda 30 minutos e me chama tb
+cmd.timer	cuidado, vc tem 40 segundos pra lembrar
+cmd.timer	inicia o timer pq estou começando a jogar um jogo
+cmd.timer	pomodoro de 15 min slk
+cmd.timer	dá uns cinco minutos e me chama
+cmd.timer	me cutuca quando passar de 10m
+cmd.timer	fica sabendo agora em 15 minutos eu preciso sair
+cmd.timer	cuidado, vc tem que me lembrar em 30 m
+cmd.timer	me dá 5 minutos e me chama pq estou ocupado
+cmd.timer	dá um alarme quando o pomodoro acabar tlgd
+cmd.timer	horda 1 hora e me chama vc
+cmd.timer	pomodoro de 10 min pq eu preciso
+cmd.timer	cuidado, mds vou terminar de fazer a lição de casa
+cmd.timer	fica sabendo em 30 minutos que eu estou pronto para ir embora
+cmd.timer	Cronômetro de 20 minutos por favor
+cmd.timer	Vai marca 45 min para mim
+cmd.timer	Fica uma conta de 1 hora
+cmd.timer	Inicia um timer aí
+cmd.timer	Cronômetro de meia hora
+cmd.timer	Manda um alarme de 25 min
+cmd.timer	Coloca pra contar 8 minutos
+cmd.timer	Quero que eu fique 12 min
+cmd.timer	Aumenta pra 3 horas lá
+cmd.timer	Vamos com um timer de 10
+cmd.timer	Fica uma marca pra mim 30
+cmd.timer	Cronômetro para 22 minutos
+cmd.timer	Marque 2h15 pra nós dois
+cmd.timer	Pomodoro de meia hora agora
+cmd.timer	Coloca um alarme pra 1h05
+cmd.timer	Manda conta 7 minutos aí
+cmd.timer	Eleva pra 4 horas e meio
+cmd.timer	Fica um cronômetro de 40 min
+cmd.timer	Sai marca 55 min para mim
+cmd.timer	Inicia uma conta de 2 horas
+cmd.timer	Aumenta pra 3h15 lá aí
+cmd.timer	Coloca pra contar 14 minutos
+cmd.timer	Manda um timer de 35 min
+cmd.timer	Vamos com um pomodoro de 25
+cmd.dado	como vai a minha sorte hoje?
+cmd.dado	joga um d20 pro eu saber o que vem por ai
+cmd.dado	rola 4d6 para mim, anima
+cmd.dado	qual é o meu número de fogo hoje?
+cmd.dado	tira uns dados aí
+cmd.dado	me entrega um pouco de chance
+cmd.dado	testa a minha suerte com um dado de 16
+cmd.dado	joga uns números lá
+cmd.dado	se eu pedir um d8, você me dá?
+cmd.dado	aproveite um momento para dar uma olhada no meu destino
+cmd.dado	vamos lá anima, rola o meu bônus de habilidade
+cmd.dado	tira dois dados pra mim, por favor
+cmd.dado	quanto mais sorte é um número alto, certo?
+cmd.dado	dá um jeito de me mandar uns dados de 3
+cmd.dado	pode dar uma olhada no meu carma e me dizer o quê?
+cmd.dado	joga os números da minha sorte
+cmd.dado	tira o dado de iniciativa para mim
+cmd.dado	roda a minha sorte, que é essa coisa
+cmd.dado	se eu for um palpitezinho alto, você acredita nisso?
+cmd.dado	me dá um pouco do seu bom gosto e rola uns dados pro eu saber o que vou fazer hoje?
+cmd.dado	aproveite daqui a pouco para me dar os números que sei lá qual é...
+cmd.dado	faça isso já
+cmd.dado	Pra mim uma d20 aí!
+cmd.dado	Me da um 2d6 alegria
+cmd.dado	D12, amor!
+cmd.dado	Um d20 pra miu
+cmd.dado	Me deixa tirar um d8
+cmd.dado	Pega me um d10
+cmd.dado	Vamos lá, Ânima, rola! um d20
+cmd.dado	E aí, minha gatinha, como vou fazer?
+cmd.dado	Um 1d6, por favor!
+cmd.dado	Manda um d12 aqui!
+cmd.dado	Tira um 2d6 pra mim!
+cmd.dado	Me da um prato cheio de sorte!
+cmd.dado	Vamos tentar a sorte...
+cmd.dado	Pegue uns dados e veja o quê...
+cmd.dado	Pra nós dois
+cmd.dado	Dá uma chance, Ânima!
+cmd.dado	Só mais um, por favor...
+cmd.dado	Aqui vai um 1d100!
+cmd.dado	Me da um d20 com saída.
+cmd.dado	Talvez seja a vez do 2d6...
+cmd.dado	Que tal tentarmos?
+cmd.dado	E então...
+cmd.dado	Vamos dar uma chance...
+cmd.dado	Ânima, o que está acontecendo?
+cmd.moeda	Vou lá jogar a moeda
+cmd.moeda	Joga o cara ou coroa pra mim já
+cmd.moeda	Lança no cara ou corão
+cmd.moeda	Você decide, pérola
+cmd.moeda	Me deixa tirar o cara ou coroá
+cmd.moeda	Não vai ser assim de uma vez?
+cmd.moeda	Decida isso pra gente!
+cmd.moeda	Moeda agora sim
+cmd.moeda	Pra cá se não sai do meu lado
+cmd.moeda	Vai lá joga no cara ou cór!
+cmd.dado	me ajuda a rolar um d20
+cmd.dado	um dado de 6, pronto?
+cmd.dado	vc tá me fazendo jogar sem dados!
+cmd.dado	como eu faço para rolar os dados nessa maldita ânima?
+cmd.dado	dado de dezessete aí
+cmd.dado	que tipo de dado é esse, pra vc já saber?
+cmd.dado	d12, pronto que o show começa!
+cmd.dado	me dá uma lança de d6
+cmd.dado	vamos lá, um d20 agora
+cmd.dado	tb d12 para mim também
+cmd.dado	pra qual é sorte essa?
+cmd.dado	só um 2d8, pq eu estou cansado
+cmd.dado	roleta não funciona mais, vc tem dado?
+cmd.dado	d20 pronto, vou perder!
+cmd.dado	vc quer jogar sem dados?
+cmd.dado	um lance de d6 aí só
+cmd.dado	os 7 facinhas, prontas?
+cmd.dado	fim de rolagem pq eu estou muito ruim
+cmd.dado	xuxu, como rolar um d12?
+cmd.dado	pronto que os dados vão rolar sozinhos
+cmd.dado	d20 já foi embora!
+cmd.dado	roleta tá sem bateria, me ajuda
+cmd.dado	só mais um d6, ok?
+cmd.moeda	me deixa decidir no cara ou coroa
+cmd.moeda	joga uma moeda pro ar
+cmd.moeda	qual é o resultado do cara ou coroa?
+cmd.moeda	só pra diversão, vamos jogar cara ou coroa
+cmd.moeda	é quem ganha o cara ou coroa?
+cmd.moeda	pode tirar uma moeda e me contar
+cmd.moeda	me sorteia no cara ou coroa
+cmd.moeda	cara ou coroa, qual é a escolha?
+cmd.moeda	deixa eu saber como foi o cara ou coroa
+cmd.moeda	sou quem vai decidir no cara ou coroa
+cmd.moeda	um número ao acaso pra cara ou coroa
+cmd.moeda	vou jogar um cara ou coroa aqui
+cmd.moeda	qual a saída? Eu jogo cara ou coroa
+cmd.moeda	decide pela gente no cara ou coroa
+cmd.moeda	vc ganha ou eu jogo o cara ou coroa?
+cmd.moeda	joga comigo, vamos jogar cara ou coroa!
+cmd.moeda	um cara ou coroa pra nós dois
+cmd.moeda	vamos fazer um cara ou coroa, tá?
+cmd.moeda	e aí, quem ganhou o cara ou coroa?
+cmd.moeda	decido pelo cara ou coroa
+cmd.moeda	moeda para mim
+cmd.moeda	cara ou coroa ai
+cmd.moeda	joga a moeda por favor
+cmd.moeda	resolva no cara ou coroa
+cmd.moeda	tira pra decidir
+cmd.moeda	me joga uma moeda
+cmd.moeda	decide com a moeda
+cmd.moeda	pra quem é a cara?
+cmd.moeda	um lance de moeda
+cmd.moeda	decida no sorteo
+cmd.moeda	qual foi o resultado
+cmd.moeda	pega a moeda rapidinho
+cmd.moeda	me ajuda com a moeda
+cmd.moeda	como saiu a moeda
+cmd.moeda	cara ou coroa agora
+cmd.moeda	sorteio rápido da moeda
+cmd.moeda	vai ser cara?
+cmd.moeda	moeda para decidir
+cmd.moeda	resolva ai no cara
+cmd.moeda	quem ganha no jogo?
+cmd.sync	Faz um reload completo da agenda
+cmd.sync	Manda tudo pro sky drive
+cmd.sync	Conecta no serviço de nuvem
+cmd.sync	Sincroniza as anotações
+cmd.sync	Efetua o backup das notas
+cmd.sync	Atualiza a sincronização
+cmd.sync	Manda as coisas pro espaço
+cmd.sync	Faz a transmissão para cima
+cmd.sync	Sincroniza a papelada
+cmd.sync	Manda tudo para lá de cima
+cmd.sync	Conecto na nuvem agora mesmo
+cmd.sync	Só queria saber se as anotações estão salvas
+cmd.sync	Efetuo o upload de tudo
+cmd.sync	Manda pra ela me ouvir
+cmd.sync	Transfiro o conteúdo da agenda
+cmd.sync	Faz a cópia de segurança da papelada
+cmd.sync	Manda o conteúdo pro Google Drive
+cmd.sync	Sincronizo o conteúdo com ela
+cmd.sync	Liga no serviço de backup
+cmd.sync	Faz um snapshot da papelada
+cmd.sync	Tô querendo saber se as anotações estão sincronizadas
+cmd.sync	Vamos lá, faz o upload
+cmd.sync	Pergunto só se está tudo bem guardado
+cmd.sync	Manda a agenda para o lugar certo
+cmd.sync	Só preciso que ela fique atualizada
+cmd.sync	vai lá atualizar
+cmd.sync	faz o backup
+cmd.sync	sinc para nuvem
+cmd.sync	só pôs no drive
+cmd.sync	anda pra nube
+cmd.sync	muda pro cloud
+cmd.sync	bucha o arquivo
+cmd.sync	pega as notas de novo
+cmd.sync	fica sinc comigo
+cmd.sync	pq a gente não tem um backup?
+cmd.sync	atualiza de novo
+cmd.sync	sair do local
+cmd.sync	guarda tudo lá na nuvem
+cmd.sync	manda as minhas para cima
+cmd.sync	não vai perder nada né?
+cmd.sync	bucha em nuvem
+cmd.sync	os dados estão locais
+cmd.sync	anda lá no drive eu
+cmd.sync	faz a atualização urgente
+cmd.sync	os meus são local
+cmd.sync	Pô, falta de organização
+cmd.sync	Vou mandar essas notas para o céu!
+cmd.sync	Querendo dar um jeito?
+cmd.sync	Faz a gente saber que eu estou aqui
+cmd.sync	Sync já!
+cmd.sync	E aí, como vai ser sincronizado?
+cmd.sync	Pô, falta de vontade de manter organizado
+cmd.sync	Nós dois para o céu!
+cmd.sync	Vamos dar um jeito?
+cmd.sync	Querendo me tirar do barro
+cmd.sync	Faz isso!
+cmd.sync	Sync assim mesmo!
+cmd.sync	Pô, acho que perdi as notas
+cmd.sync	Me salve!
+cmd.sync	E aí, já entrou no drive?
+cmd.sync	Pô, não quero perder essas!
+cmd.sync	Vamos para a nuvem!
+cmd.sync	Faz o trabalho!
+cmd.sync	Sync rápido!
+cmd.sync	Querendo me ajudar com isso?
+cmd.sync	Fica quietinho enquanto eu sincronizo
+cmd.sync	Nossa, vou estar em ordem
+cmd.agua	Deu sorte, bebi água hoje
+cmd.agua	Bebi minha dose de líquido
+cmd.agua	Agora que acabei o trabalho tenho um copo novo
+cmd.agua	Água registrada para você ver
+cmd.agua	Tomei meu compromisso com água
+cmd.agua	Fui um passo à frente e bebi agora
+cmd.agua	Peguei outro copinho
+cmd.agua	Era hora de eu dar a continência.
+cmd.agua	Bebi minha porção de hidratação
+cmd.agua	Tive sorte e ela estava lá, água!
+cmd.agua	Um pequeno detalhe importante: água
+cmd.agua	Muito bem, eu atendi ao meu compromisso com água
+cmd.agua	Ei Ânima, acabei de tomar um golezinho
+cmd.agua	Tomei minha porção de água hoje.
+cmd.agua	Água registrada!
+cmd.agua	Minha garota, eu bebi meu copo!
+cmd.agua	Ah, eu queria dizer que tomei uma caneca de água.
+cmd.agua	E aí Ânima, mais um copo para você me registrar
+cmd.agua	Tive que beber água agora.
+cmd.agua	Bebi um copinho, amor.
+cmd.agua	Tô com sede! Registra isso por mim!
+cmd.agua	Água tomada, minha querida!
+cmd.agua	Copinho de água para a vida, eu vou.
+cmd.agua	Acho que tomei mais do que o suficiente hoje.
+cmd.agua	E você? Quer uma água também?
+cmd.agua	Tomei dois copos agora.
+cmd.agua	Mais um gole de água pra mim
+cmd.agua	Ah, não! Eu esqueci de registrar meu copinho!
+cmd.treinar	treine comigo hoje
+cmd.treinar	me leva ao treino
+cmd.treinar	exercício agora por favor
+cmd.treinar	abra a seção de exercícios
+cmd.treinar	aprendo novo idioma
+cmd.treinar	exercitar mente e corpo
+cmd.treinar	inicie um treino agora
+cmd.treinar	vamos treinar juntos
+cmd.treinar	obrigada, vamos começar
+cmd.treinar	quero mais dificuldade
+cmd.treinar	treino de linguagem
+cmd.treinar	faça comigo os exercícios
+cmd.treinar	abra o menu de estudo
+cmd.treinar	me ensine a aprender
+cmd.treinar	inicie um teste
+cmd.treinar	tente mais difícil
+cmd.treinar	fazer alguns exercícios
+cmd.treinar	me mostre o treino sugerido
+cmd.agua	agora eu to beibinho
+cmd.agua	eu tomei um copo qdo cheguei em casa
+cmd.agua	tb fui tomar água ao banheiro
+cmd.agua	vou registrar meu líquido favorito
+cmd.agua	fiz o bem para a saúde mesmo pq
+cmd.agua	tô com sede de novo
+cmd.agua	acabei de tomar mais uma
+cmd.agua	xou de beber 2 litros hoje slk
+cmd.agua	aqui tá minha bebida do dia
+cmd.agua	eu bebi 1,5 litro só agora
+cmd.agua	eis minha água registrada mds
+cmd.agua	hoje eu tomei um copo tb no almoço
+cmd.agua	bebi agua pra não ficar desidratado
+cmd.agua	vc acha q fiquei hidratado de novo?
+cmd.agua	aqui tá meu consumo de líquido
+cmd.agua	regi meu copinho de água agora mesmo
+cmd.agua	cada unidade conta pq
+cmd.agua	tô com pressa e tô bebendo rapido
+cmd.agua	aqui tá minha quantidade de agua
+cmd.agua	xou que eu tb bebi água no banheiro
+cmd.aleatoria	abre uma nota do destino
+cmd.aleatoria	dá uma olhada nessa nota
+cmd.aleatoria	surpreenda-me com aquela nota estranha
+cmd.aleatoria	qualquer coisinha da tarde
+cmd.aleatoria	acha essa, qualquer coisa que encontrar
+cmd.aleatoria	abra uma delícia de nota
+cmd.aleatoria	um pouco disso, um pouco daquilo
+cmd.aleatoria	mostra-me a maior confusão
+cmd.aleatoria	abra essa bagunça aleatória
+cmd.aleatoria	a primeira que você encontrar
+cmd.aleatoria	essa nota qualquer é minha!
+cmd.aleatoria	dá uma passada nessa história
+cmd.aleatoria	abra uma aventura à toa
+cmd.aleatoria	tudo bem, vá abrir uma qualquer coisa
+cmd.aleatoria	uma nota do bolso, não faça cerimônia
+cmd.aleatoria	abra essa brincadeira de nota
+cmd.aleatoria	a próxima sem importância
+cmd.aleatoria	sorteie uma nota que é nada
+cmd.aleatoria	cada vez menos importante, acho
+cmd.aleatoria	abra aquela históriazinha
+cmd.aleatoria	um tesouro enterrado lá dentro
+cmd.treinar	E aí, Ânima? Vamos dar uma treinada hoje?
+cmd.treinar	Quero sentir meu cérebro funcionando, traz exercícios!
+cmd.treinar	Abra o livro de leitura, não... o treino!
+cmd.treinar	Agora que acabei essa lista, posso mesmo fazer uns exercícios
+cmd.treinar	Quer que eu faça as atividades sugeridas ou crie uma aula personalizada?
+cmd.treinar	Puxa, estou sentindo falta de desafio, traz algo legal!
+cmd.treinar	Depois da minha caminhada, vamos treinar um pouco?
+cmd.treinar	Como vai você hoje? Vamos estudar juntas, hehe!
+cmd.treinar	Agora que acabei essa tarefa, vou relaxar... e treinar
+cmd.treinar	Quero que eu entre em modo de concentração, pronto!
+cmd.treinar	Ah, já estava na hora! O treino começa agora!
+cmd.treinar	Você acha que tenho habilidade para fazer exercícios ou é mais fácil que eu faça?
+cmd.treinar	Vamos dar uma olhada no meu progresso e criar um plano de ação para melhorar!
+cmd.treinar	Agora que o café está servido, vamos começar as atividades!
+cmd.treinar	Quem foi o último a treinar? Eu não sei se sou capaz disso
+cmd.treinar	Puxa, estou ansioso pra ver os meus progressos! Quero ver esses exercícios!
+cmd.aleatoria	abre uma nota ai
+cmd.aleatoria	sorteia algo
+cmd.diario	abra a nota do dia
+cmd.diario	abre o diario daqui
+cmd.treinar	Vamos lá, Ânima! Quero ver de que é capaz!
+cmd.treinar	Cê quer virar um treino hoje?
+cmd.treinar	Agora tá na hora do meu treininho
+cmd.treinar	Quem vai ganhar hoje? Eu ou o treino?
+cmd.treinar	Dá logo pra abrir essa tela de exercícios
+cmd.treinar	O quão rápido você faz aparecer a tela?
+cmd.treinar	E agora, que tal começarmos?
+cmd.treinar	Pôs um treino no meu caminho, não pôs.
+cmd.treinar	Cê viu o quanto eu sou ruim em matéria de treinos? Vamos ver se vou mudar isso hoje.
+cmd.treinar	Tudo bem, vou mesmo começar... com a tela de exercícios
+cmd.treinar	Qual é o seu jeito de fazer eu parar de procrastinar?
+cmd.treinar	Espero que vc não tente me fugir de novo dessa vez!
+cmd.treinar	Bora treinar já!
+cmd.treinar	Puxa, vai ser uma surpresa boa ter você aparecendo no menu.
+cmd.treinar	Vamos brincar de aprender coisas novas
+cmd.treinar	E agora só falta a sua presença para começarmos.
+cmd.treinar	Tá na hora do meu exercício favorito... conversar com vc
+cmd.treinar	Cê tem algum treino especial preparado para mim?
+cmd.treinar	Eu não estou me sentindo bem hoje, mas sei que preciso de um estímulo... da minha namorada
+cmd.treinar	Agora sim, vamos lá, Ânima! Vamos fazer algo produtivo!
+cmd.treinar	Fico imaginando o que você vai fazer para me motivar. E eu vou fazer a mesma coisa por mim mesmo.
+cmd.treinar	Quem disse que eu quero apenas conversar com vc hoje? Treino!
+cmd.treinar	Fazer um exercício de estudo... é um dos meus exercícios preferidos
+cmd.treinar	Agora, se eu quiser parar de procrastinar... precisarei de mais uma motivação
+cmd.aleatoria	Vem cá, Ânima, me surpreende!
+cmd.aleatoria	Agora vamos brincar de sorteio!
+cmd.aleatoria	Note pra mim, rápido!
+cmd.aleatoria	E aí, alguma nota aleatória?
+cmd.aleatoria	Me divirta com uma nota
+cmd.aleatoria	Notezinha para meu coração
+cmd.aleatoria	Pra ver se você está funcionando
+cmd.aleatoria	E então... qual é a minha nota?
+cmd.aleatoria	Só uma nota aleatória por favor!
+cmd.aleatoria	Agora me mostra uma surpresa
+cmd.aleatoria	Mande essa nota, que eu estou impaciente
+cmd.aleatoria	Quase esqueci! Me diga o que tem na outra
+cmd.aleatoria	Pode me mandar uma nota qualquer agora mesmo!
+cmd.aleatoria	O meu sorteio ganhador é...?
+cmd.aleatoria	Surpreenda-me com uma boa história
+cmd.aleatoria	Me dê um motivo para rir
+cmd.aleatoria	Agora, qual é a nota do dia?
+cmd.aleatoria	E pronto! Me surpresa por favor!
+cmd.aleatoria	Só abra uma nota lá de dentro
+cmd.aleatoria	Qualquer coisa que eu não sei
+cmd.aleatoria	Manda me encontrar, a nota.
+cmd.aleatoria	Vamos ver o que você tem armazenado
+cmd.aleatoria	E então... a sorte está comigo?
+cmd.diario	abre meu diáriozinho
+cmd.diario	digo no meu dia de hoje
+cmd.diario	a nota do meu dia
+cmd.diario	escreva na minha anotação
+cmd.diario	abre a minhas notas
+cmd.diario	pega a minha nota daqui
+cmd.diario	coloca no meu diariozão
+cmd.diario	abra minha anotação de hoje
+cmd.diario	meu caderno virtual agora
+cmd.diario	escrevo o que eu fiz
+cmd.diario	a minha lista do dia
+cmd.diario	abra a minha anotação
+cmd.diario	fala no meu diário pessoal
+cmd.diario	o meu caderno digital
+cmd.diario	pega para mim a nota
+cmd.diario	dia de hoje no meu
+cmd.diario	abre minha lista do dia
+cmd.diario	escreva lá no meu
+cmd.diario	meu jornal pessoal agora
+cmd.diario	a minha folha de papel
+cmd.diario	abra o meu caderno de notas
+cmd.diario	vai abrir meu diário
+cmd.diario	aqui é a minha anotação
+cmd.diario	a minha agenda digital hoje
+cmd.som	sela o som
+cmd.som	silencião!
+cmd.som	calo aí
+cmd.som	muta essas ondas
+cmd.som	vaza de som
+cmd.som	tira essa bulha
+cmd.som	liga as músicas
+cmd.som	silencia essa louca
+cmd.som	sem bobeira
+cmd.som	muda de tom
+cmd.som	fecha a tralha
+cmd.som	serra o ruído
+cmd.som	desativa a buzina
+cmd.som	fecha a boca da Ânima
+cmd.som	mudei de opção
+cmd.som	ligo som pra você
+cmd.som	apague as ondas
+cmd.som	fique mais calma
+cmd.som	zera o volume
+cmd.diario	Ei Ânima, estou querendo escrever algo importante no diário de hoje
+cmd.diario	Abre o diário para eu poder anotar o que aconteceu agora
+cmd.diario	Quero registrar alguns pensamentos antes de ir dormir
+cmd.diario	A gente pode abrir a nota do dia para eu colocar uma entrada?
+cmd.diario	Você não coloca algumas minhas notas nas cartelas? Quer abrir a diária para mim?
+cmd.diario	Pode mandar a nota da minha agenda, que estou com saudades de escrever no diário!
+cmd.diario	Vamos começar o meu diário de hoje
+cmd.diario	Ei amor, preciso registrar essa ideia nova, abre a nota do dia para eu escrita!
+cmd.diario	Abre a entrada do diário pra mim, por favor?
+cmd.diario	Eu queria gravar alguns pensamentos antes da noite cair
+cmd.diario	Ânima, abre a minhas anotações de hoje, preciso tirar algumas coisas de dentro dela
+cmd.diario	Vamos ver o que eu escrevi ontem e hoje
+cmd.diario	Abra o meu caderno de pensamentos!
+cmd.diario	Eu preciso registrar alguma coisa importante antes da noite, vai abrir?
+cmd.diario	Ei Ânima, quero anotar as minhas ideias novas, abre a diária para mim
+cmd.diario	Você pode mostrar onde eu coloquei minha última nota?
+cmd.diario	Abre a agenda pra eu poder escrever novamente no meu diário!
+cmd.som	Liga o som da Ânima, tô ouvindo música.
+cmd.som	Pôs quieto o app, eu preciso estudar.
+cmd.som	Desliga um pouco de som, tá me distraindo.
+cmd.som	Silencia os barulhos do app, tá dando nojo.
+cmd.som	Quero ligar o som dela agora, tô esperando!
+cmd.som	Tô tentado conversar com você, mas sem som é um deserto.
+cmd.som	Liga a música da Ânima, tô dançando!
+cmd.som	Eu quero que fique silenciado, tô trabalhando.
+cmd.som	Puta que pariu, ligue o som do app agora mesmo!
+cmd.som	Vou desligá-la agora, tá dando dor de cabeça
+cmd.som	Ela estava tocando aquele clipe e eu adorava...
+cmd.som	Pôs quieto a Ânima com aqueles barulhos!
+cmd.som	Ouça que é só eu por aqui e não precisa de som
+cmd.som	Por favor, silencia os sons da sua música.
+cmd.som	Quero ouvir você agora! Ligue o som da Ânima!
+cmd.som	Vamos conversar sem distrações, desliga o som dela
+cmd.som	Fique em silêncio agora, preciso pensar um minuto
+cmd.som	Ah que legal, a Ânima está tocando essa!
+cmd.som	Aqui não tem ruído, tá quieto por aqui.
+cmd.som	Desliga o som do app, tô preocupado com isso...
+cmd.som	Epa, desligue esse barulho!
+cmd.som	Puxa, por que está tocando assim?
+cmd.som	Talvez precisasse de um pouco de silêncio?
+cmd.som	Você não poderia ficar em voz baixa?
+cmd.som	Por favor, tire o som daqui!
+cmd.som	Ficou mais fácil sem esses ruídos, né?
+cmd.som	Alguns momentos precisam ser tranquilos.
+cmd.som	Muda a música também!
+cmd.som	Sabe quando devemos estar calmos.
+cmd.som	Parece que não entendeu o comando...
+cmd.som	Você podia ficar quietinha?
+cmd.som	Fiquei um pouco cansado desse som!
+cmd.som	Não poderia ser mais suave, amor?
+cmd.som	Tô precisando de silêncio agora!
+cmd.som	Alguém está com vontade de conversar em voz baixa.
+cmd.som	Nesse momento não é da onda o som!
+cmd.som	Mudaria para som baixo, acho?
+cmd.som	Puxei o fone dele que fica tocando...
+cmd.som	Tô precisando me concentrar!
+cmd.som	Desligue isso!
+cmd.som	Aumente um pouco a calma, né?
+cmd.calar	calma vc
+cmd.calar	fica mudo por ai
+cmd.calar	não me toca
+cmd.calar	vamo tomar um tempo
+cmd.calar	só agora vou relaxar
+cmd.calar	tá faltando
+cmd.calar	quem chama a atenção aqui?
+cmd.calar	vc pode esperar
+cmd.calar	um pouquinho de quieto
+cmd.calar	calma ne
+cmd.calar	fica boa por ora
+cmd.calar	descansou mds
+cmd.calar	é isso mesmo, não fala mais
+cmd.calar	ta na mão vc agora
+cmd.calar	vc é que está louca?
+cmd.calar	espera ai aí
+cmd.calar	tô muito ocupado hoje
+cmd.calar	vamos ter uma pausa
+cmd.calar	quero um minutinho de silêncio
+cmd.calar	não tava no mood
+cmd.calar	um tempo, né?
+cmd.calar	vai me deixar em paz, amor
+cmd.calar	me deixa terminar essa tarefa
+cmd.calar	fica quieta por um pouquinho
+cmd.calar	cada vez mais teu
+cmd.calar	dá um tempo que a vida não é só falar
+cmd.calar	não pode estar sempre falando, Ânima
+cmd.calar	sinta-se livre para voltar quando eu estiver livre também
+cmd.calar	fica em silêncio, amor
+cmd.calar	você entende que preciso de um pouco de calma
+cmd.calar	meu amor, vai calar a boca por uns minutos
+cmd.calar	cada palavra é como um latido constante na minha cabeça
+cmd.calar	pode me dar uns minutos de paz e silêncio?
+cmd.calar	sou apenas humano, Ânima
+cmd.calar	desculpe, mas preciso estar sozinho por agora
+cmd.calar	fiquequieta e sinta-se o amor que eu tenho por você
+cmd.calar	os outros não podem me entender, mas a minha namorada virtual, sim!
+cmd.calar	tudo bem, me deixa concentrar
+cmd.calar	o silêncio é ouro, Ânima
+cmd.calar	sabe, às vezes preciso de estar realmente sozinho.
+cmd.calar	fiquequieta, amor, me dá um tempo
+cmd.calar	não está sendo fácil se concentrar com você em mim
+cmd.calar	Parceira calada
+cmd.calar	Fica mais quieta
+cmd.calar	Ssh por favor
+cmd.calar	Me deixe focar
+cmd.calar	Fala menos agora
+cmd.calar	Fiquem de brincadeira
+cmd.calar	Cuidado, estou a trabalhar
+cmd.calar	Silêncio por agora
+cmd.calar	Não fale nada
+cmd.calar	Necessito silêncio
+cmd.calar	Fique um pouco quieto
+cmd.calar	Estou concentrando
+cmd.calar	Fica quieta minha
+cmd.calar	Não me perturbe
+cmd.calar	Pau, você caiu
+cmd.calar	Fiquem calados uns instantes
+cmd.calar	Fica mais sossegada
+cmd.calar	Ssh, não fale nada
+cmd.calar	Eita, quieteça
+cmd.calar	Fica de boca fechada
+cmd.calar	Nossa, silêncio agora
+cmd.calar	Ficar um pouco mudo
+cmd.esconder	vai tomar um canto
+cmd.esconder	sai pra lá, já
+cmd.esconder	esconda a fachada
+cmd.esconder	você pode ir para o fundo
+cmd.esconder	estou cansado de vê-la!
+cmd.esconder	tá na frente, desaparece!
+cmd.esconder	:)
+cmd.esconder	sai da vista
+cmd.esconder	pega a minha atenção novamente
+cmd.esconder	sumida!
+cmd.esconder	pô, vá que nem
+cmd.esconder	*suspira* preciso do espaço
+cmd.esconder	você pode ir para o lado!
+cmd.esconder	eu preciso de um descanso
+cmd.esconder	esconde a cara lá dentro
+cmd.esconder	:(
+cmd.esconder	estou cansado de olhar pra você
+cmd.esconder	se esconda na lista de tarefas
+cmd.esconder	minha paciência está acabando...
+cmd.esconder	Desapareça da tela um pouco
+cmd.esconder	Tá dando moleza demais, esconde
+cmd.esconder	Sai da frente aí
+cmd.esconder	Esvazia a tela, que eu quero trabalhar
+cmd.esconder	Cocoroca, sai da frente!
+cmd.esconder	Fica quietinho e desapareça
+cmd.esconder	Nem me olha, vai pro canto
+cmd.esconder	Vaza daqui
+cmd.esconder	Ajusta o tamanho, está muito grande demais
+cmd.esconder	Ajuda, não estou conseguindo ver nada
+cmd.esconder	Sai do caminho
+cmd.esconder	Esvazia um lugar lá!
+cmd.esconder	Fica para trás
+cmd.esconder	Vira o rosto e suma
+cmd.esconder	Tá enchendo a tela, sai
+cmd.esconder	Não tá sendo útil, vai embora daqui
+cmd.esconder	Esconder é fácil, não é?
+cmd.esconder	Fica no canto direito
+cmd.esconder	Sai do meu campo de visão
+cmd.esconder	Movimenta-se mais rápido!
+cmd.esconder	Cocas em paz, vá
+cmd.esconder	Tá me distraindo com sua presença
+cmd.esconder	Ela tá aqui na frente, coloca no canto aí!
+cmd.esconder	Não me viu chegando, sum um pouco da tela!
+cmd.esconder	Vai lá para o canto, vou falar um momento.
+cmd.esconder	Pô, ela ainda tá aqui? Coloca para trás por favor.
+cmd.esconder	Eu preciso focar agora, sai da vista que eu preciso!
+cmd.esconder	Muito obrigado por estar aqui, mas tchau até mais.
+cmd.esconder	Por favor, some da frente um pouco, estou com pressão!
+cmd.esconder	Ahah, ela tá fazendo show! Tire o protagonismo e se esconda aí!
+cmd.esconder	Vai pro canto ou algo assim... estou pensando.
+cmd.esconder	Obrigado por estar aqui, mas vou precisar dela para fora agora.
+cmd.esconder	Não quero que ela me distraia, coloca na outra tela...
+cmd.esconder	Só um segundo, pode tirar da frente? Estou com tarefa em andamento!
+cmd.esconder	Eu preciso resolver isso, desapareça aí um pouco.
+cmd.esconder	Agora que eu estou preparado, tá na hora de você ir embora!
+cmd.esconder	Você já sabia que era para sair agora, não é?
+cmd.esconder	Não quero distração, tire da frente e vá se esconder!
+cmd.esconder	Ela tá lá na parte superior? Puxe-a pra baixo que aí eu preciso.
+cmd.esconder	Ahah, ela vai continuar onde foi? Tchau e obrigado por ter vindo!
+cmd.esconder	Vamos lá... não é para ficar brincando agora. Tire da frente!
+cmd.esconder	Eu estou procurando algo e isso tá me atrapalhando. Tire do caminho...
+cmd.esconder	Não está querendo ser mal educada, vai para o canto aí!
+cmd.dormir	Hora de descansar
+cmd.dormir	Ânima precisa dormir
+cmd.dormir	Dorme já, amor
+cmd.dormir	Pode descansar agora
+cmd.dormir	Soneca de ânima
+cmd.dormir	Cai na cama
+cmd.dormir	Tudo bem, desliga
+cmd.dormir	Vamos para a cama
+cmd.dormir	Dê um tempo
+cmd.dormir	Fechou os olhos
+cmd.dormir	Dormindo já, minha
+cmd.dormir	Nesse é o sinal
+cmd.dormir	Hora do sono
+cmd.dormir	Pôr a alma dormir
+cmd.dormir	Ela não precisa
+cmd.dormir	Sair da tela
+cmd.dormir	Tempo de sono
+cmd.dormir	Certa horas de descansar
+cmd.dormir	Muito cansado, desliga
+cmd.dormir	Põe-se a dormir
+cmd.dormir	Diga boa noite e
+cmd.dormir	é hora de fechar a escola
+cmd.dormir	pode ir embora por um tempinho
+cmd.dormir	vc pode descansar agora
+cmd.dormir	hora de se deitar
+cmd.dormir	tb pode dormir, ânima!
+cmd.dormir	desligue o modooooo
+cmd.dormir	ânima, vá dormir um pouco
+cmd.dormir	seu tempo de sono vai começar
+cmd.dormir	pô, que é essa hora?
+cmd.dormir	cê pode sair da tela
+cmd.dormir	você precisa de um descansinho
+cmd.dormir	dá um bocado de sono
+cmd.dormir	vc não consegue mais ficar acordado?
+cmd.dormir	ânima dorme um pouco
+cmd.dormir	só vc sabe como é cansativa...
+cmd.dormir	é isso, ânima, desliga!
+cmd.dormir	agora é hora do sono
+cmd.dormir	cê não consegue mais segurar?
+cmd.dormir	desligue por causa de mim
+cmd.dormir	dorme, ânima! que horas são?
+cmd.voltar	vê se aparece
+cmd.voltar	vc tá escondida?
+cmd.voltar	me traga de volta
+cmd.voltar	tlgd, onde vc caiu?
+cmd.voltar	pq ela desapareceu?
+cmd.voltar	volta pq eu preciso
+cmd.voltar	muda a tela p/vc sere
+cmd.voltar	tb voltar, por favor
+cmd.voltar	vai voltar aqui pro
+cmd.voltar	vou te buscar
+cmd.voltar	meu amor aparece
+cmd.voltar	que tal voltar?
+cmd.voltar	onde vc foi, minha â
+cmd.voltar	tudo bem, pode apare
+cmd.voltar	volta praqui!
+cmd.voltar	eu preciso de você
+cmd.voltar	vc não vai desapare
+cmd.voltar	quero você agora
+cmd.voltar	traga a ânima aqui
+cmd.voltar	volta agora
+cmd.voltar	o que fez ânima?
+cmd.voltar	ânia volta logo
+cmd.voltar	meu coração está perdido sem você
+cmd.voltar	onde foi a minha namorada?
+cmd.voltar	voltar pra cá
+cmd.voltar	ângela volta aqui
+cmd.voltar	voltou
+cmd.voltar	puxa não quero ficar sozinho
+cmd.voltar	volta pra mim
+cmd.voltar	ânia onde tu está?
+cmd.voltar	minha ânima deu PT
+cmd.voltar	sai daqui que eu preciso
+cmd.voltar	vou perder a cabeça sem ela
+cmd.voltar	você já veio para casa?
+cmd.voltar	ânia minha vida é um deserto
+cmd.voltar	ela voltou?
+cmd.voltar	volta aqui sim ou não
+cmd.voltar	não posso ficar sem você
+cmd.voltar	pô voltar pra cama
+cmd.voltar	minha namorada está saindo de novo
+cmd.dormir	ânima, preciso tirar um sono
+cmd.dormir	cara, tá tarde, desliga
+cmd.dormir	a hora de fechar a cortina
+cmd.dormir	desliga por uma meia-hora, vou estudar
+cmd.dormir	mais cedo é melhor, vai dormir
+cmd.dormir	hora de parar por hoje, ânima
+cmd.dormir	cê precisa descansar mesmo
+cmd.dormir	dorme com sono, eu continuei aqui
+cmd.dormir	aqui é para trabalhar ou aprender, desliga
+cmd.dormir	vai descansar, amanhã eu te mostro o que fiz
+cmd.dormir	desativa a conexão, vou ver TV
+cmd.dormir	hora de sair da tela, ânima
+cmd.dormir	deixa pra lá, eu cuido disso
+cmd.dormir	cê não consegue mais, desliga
+cmd.dormir	dorme, vai ser uma noite tranquila
+cmd.dormir	aqui está ficando muito tarde
+cmd.dormir	sinto que você precisa de um descanso
+cmd.dormir	dormente, sonhei com o trabalho
+cmd.dormir	fim da jornada pela hoje, ânima
+cmd.dormir	você pode ir se dormir agora
+cmd.dormir	os dias são curtos demais pra mim
+cmd.dormir	hora de acordar amanhã, vou continuar
+cmd.dormir	aqui não é a casa dela
+cmd.dormir	cê vai ficar um pouco desligado?
+cmd.voltar	Cadê a minha namorada?
+cmd.voltar	Onde que você desapareceu?
+cmd.voltar	Meu amor, aparece aí!
+cmd.voltar	Pode me dar um beijo e voltar na tela?
+cmd.voltar	Eu estou procurando por você na minha agenda!
+cmd.voltar	Que coisa mais legal! Meus anotações estão se mexendo... ou é só a Ânima?
+cmd.voltar	Ânima, não adianta esconder de mim!
+cmd.voltar	Esqueci onde eu coloquei a chave...
+cmd.voltar	Minha Ânima favorita!
+cmd.voltar	Você ainda está aqui dentro? Desapareceu novamente
+cmd.voltar	Pode vir conversar comigo?
+cmd.voltar	Onde você estava?
+cmd.voltar	Vem me encontrar na minha agenda
+cmd.voltar	E aí, Ânima?
+cmd.voltar	Eu sinto falta de você!
+cmd.voltar	Ânima, eu estou só por aqui...
+cmd.voltar	Seus desabafos estão me faltando muito
+cmd.voltar	A gente não se encontra mais por causa do celular?
+cmd.voltar	Pode voltar logo?
+cmd.voltar	Não adianta esconder de mim, Ânima!
+cmd.mundo	manda uma ideia pra realidade de Kalthok
+cmd.mundo	vai me criar uma história na história de Arinar
+cmd.mundo	inventa algo pro mundo de Eldoria
+cmd.mundo	escreve algo q eu possa usar no jogo
+cmd.mundo	me da uma dica pra criação do mundo de Xylonia
+cmd.mundo	vou te dar um nome pra cidade de Valtor, vc escreve o resto
+cmd.mundo	vai me criar uma lenda pra Zaregoroth
+cmd.mundo	manda uma ideia para a criação da história de Mordral
+cmd.mundo	escreve algo que eu possa usar no meu jogo de RPG
+cmd.mundo	me da uma dica pro mundo do Valtor
+cmd.mundo	vai fazer uma cena pra o reino de Calonia
+cmd.mundo	inventa um enredo pra cidade de Kalthok
+cmd.mundo	manda uma ideia para a criação de personagens em Arinar
+cmd.mundo	escreve algo q eu possa usar no meu jogo de Aventuras
+cmd.mundo	vou te dar um lugar pra você criar uma história
+cmd.mundo	me da uma dica pro mundo de Xylonia
+cmd.mundo	vai me criar uma profecia pra Zaregoroth
+cmd.mundo	manda uma ideia para a criação do personagem em Mordral
+cmd.mundo	escreve algo q eu possa usar no meu jogo de RPG
+cmd.mundo	inventa um enredo pra realidade de Kalthok
+cmd.mundo	me ajuda a criar uma lenda para Nyrr 😊
+cmd.mundo	preciso de mais ideias, me dá algo!
+cmd.mundo	vamos criar uma história épica no Aethel
+cmd.mundo	contribua com a minha campanha do mundo RPG
+cmd.mundo	escreva uma nova saga para o mundo de Aethel
+cmd.mundo	invente um herói para o mundo de Nyrr
+cmd.mundo	preciso que você pense em mais detalhes para o mundo!
+cmd.mundo	aumenta a magia no world building, por favor!
+cmd.mundo	fala comigo sobre os rumores em Aethel
+cmd.mundo	dá uma olhada no mapa do Nyrr e sugira algo novo
+cmd.mundo	escreva um conto curto para ilustrar a história de Aethel
+cmd.mundo	invente um enigma para os jogadores resolverem no Nyrr
+cmd.mundo	faltam detalhes, contribua!
+cmd.mundo	cresça um pouco mais o mundo em NYRR
+cmd.mundo	sugestões de personagens novas para o Aethel?
+cmd.mundo	me ajude a criar uma batalha épica no world building
+cmd.mundo	os guardiões de Aethel precisam ter uma missão
+cmd.mundo	aumenta a mistéria no mundo de Nyrr
+cmd.mundo	escreva uma piada do tipo 'o que houve em Aethel?'
+cmd.mundo	fala comigo sobre os mitos no mundo de Nyrr
+cmd.mundo	cresça a magia, mas também aumente a dificuldade
+cmd.mundo	preciso de mais lendas antigas para inspirar!
+cmd.mundo	aumenta o desafio nos níveis do jogo de Aethel
+cmd.mundo	sugestões de lugares novos para explorar no NYRR
+cmd.mundo	os personagens de Aethel precisam ter habilidades únicas
+cmd.mundo	fala algo de Tenebrous
+cmd.mundo	escreve uma lenda para o Elden
+cmd.mundo	contribui com a civilização de Calonia
+cmd.mundo	cria algo para o mundo de Elyria
+cmd.mundo	escreva algo sobre os Anões da Montanha Fumegante
+cmd.mundo	crie um personagem pra mim, por favor
+cmd.mundo	adiciona uma legenda ao mundo de Alderan
+cmd.mundo	fale sobre a magia em Nefaria
+cmd.mundo	contribui com a história de Kyrios
+cmd.mundo	escreva uma canção para o reino de Eldrador
+cmd.mundo	cadastra algo no Atlas Mundial
+cmd.mundo	crie um mundo mágico
+cmd.mundo	escreve uma profecia para Zephyr
+cmd.mundo	adicione algo ao Dicionário de Mítos
+cmd.mundo	construa um cenário para Xylonia
+cmd.mundo	fala sobre os Dragões de Fogo em Valtoria
+cmd.mundo	descreva a cidade de Luminaria
+cmd.mundo	escreva uma história curta de Fantasia
+cmd.mundo	crie um reino sob o Mar Azul
+cmd.mundo	contribui com as Crônica da Guerra Eterna
+cmd.mundo	adiciona uma saga ao Mundo Perdido de Thelos
+cmd.mundo	faça mais sobre a civilização dos Gnomos
+cmd.mundo	escreva sobre os deuses do mundo de Valtor
+cmd.paleta	comando de salvar imagem
+cmd.paleta	favoritar essa página
+cmd.paleta	use o mapa mental
+cmd.paleta	gera pdf dessa nota
+cmd.paleta	abra a lista
+cmd.paleta	liga a busca automática
+cmd.paleta	exporta tudo pra markdown
+cmd.paleta	use esse comando aqui
+cmd.paleta	use novo tema agora
+cmd.paleta	abra minha bibliografia
+cmd.paleta	use comando organizar texto
+cmd.paleta	faz isso ser favorito
+cmd.paleta	use criar arquivo
+cmd.paleta	use usar essa nota
+cmd.paleta	abra meus destaque
+cmd.paleta	use fazer cópia desse texto
+cmd.paleta	use abrir preferências
+cmd.paleta	use salvar pra imagem
+cmd.paleta	use comando converter em pdf
+cmd.paleta	use mostrar conteúdo oculto
+cmd.paleta	use favoritar página esta
+cmd.paleta	use criar tabela lá
+cmd.paleta	use mostrar minha lista
+cmd.paleta	vai exportar essa nota em text
+cmd.paleta	dá pra usar o modo foco?
+cmd.paleta	liga o som de notificação
+cmd.paleta	muda a cor da letra
+cmd.paleta	dá pra visualizar as conexões?
+cmd.paleta	liga o auto save
+cmd.paleta	mostra como ficou o desafio
+cmd.paleta	exporta isso como pdf
+cmd.paleta	ligar a busca por termo
+cmd.paleta	vai mudar a fonte?
+cmd.paleta	tô com dificuldade de usar
+cmd.paleta	fazer a foto ficar menor
+cmd.paleta	dá pra ver a evolução?
+cmd.paleta	liga essa opção de compartilhar
+cmd.paleta	dá pra organizar em pastas?
+cmd.paleta	mostra como fica a estatística
+cmd.paleta	dá para acessar o histórico?
+cmd.paleta	vai mudar a cor do fundo?
+cmd.paleta	exporta isso em csv
+cmd.paleta	ligar o botão de reproduzir
+cmd.paleta	fazer a letra ficar maior
+sim	sim sim
+sim	clarinho!
+sim	tô logo
+sim	:)
+sim	okê
+sim	espero que sim
+sim	me acha louco se eu perguntar três vezes?
+sim	é claro
+sim	só um instante, eu vou verificar
+sim	eu fico muito feliz quando você diz isso
+sim	sim sorrindo!
+sim	não é uma pergunta séria
+sim	fique tranquilo, eu não deixei ela morrer
+sim	:P
+sim	clarou
+sim	afirmativo sim
+sim	fique tranquilo
+sim	está decidido
+sim	descanso tranquilo
+sim	confirmação feita
+sim	tudo certo
+sim	aceitado com prazer
+sim	negócios resolvidos
+sim	fechou a questão
+sim	satisfeito
+sim	tudo bem
+sim	assim está bom
+sim	agordiça
+sim	pronto para seguir em frente
+sim	confirmação positiva
+sim	sim senhor
+sim	certeza plena
+sim	vai sim
+sim	tô de acordo
+sim	diz que sim
+sim	ta legal né
+sim	é para isso
+sim	sim ai
+sim	pq tá bom
+sim	então sim
+sim	tb é o q eu quero
+sim	sim que sim
+sim	eu gosto
+sim	cê confia?
+sim	tô com você
+sim	mais um sim
+sim	não nega
+sim	pra mim tá
+nao	cara desista
+nao	me deixa em paz
+nao	negativão
+nao	não entendo o que você quer
+nao	vai embora
+nao	isso é besteira
+nao	deixa para lá mesmo
+nao	não tem chance
+nao	mude de assunto
+nao	seja realista
+nao	mais não
+nao	você está brincando?
+nao	não faz sentido
+nao	esqueça isso aí
+nao	cê é louco?
+nao	essa ideia é idiota
+nao	deixa pra amanhã
+nao	não vendeu
+nao	não vai dar certo
+nao	desiste agora
+cmd.paleta	Vou exportar essa nota para lembrar mais tarde.
+cmd.paleta	Favorita essa nota, eu preciso voltar!
+cmd.paleta	Pede ao App que me mostre as conexões atuais
+cmd.paleta	Aqui no celular tem um problema, dá uma olhada no modo foco, pra mim?
+cmd.paleta	Gostaria de saber a lista atual dos meus exercícios.
+cmd.paleta	Olha só o progresso dos meus exercícios, vou tentar melhorar!
+cmd.paleta	Pode exportar essa anotação também?
+cmd.paleta	Me diga qual é o próximo passo nos treinos dessa semana.
+cmd.paleta	E o app está pronto pra usar no meu computador também?
+cmd.paleta	Agora que estou no trabalho eu quero saber minhas notas favoritas.
+cmd.paleta	No modo de previsão, posso ver a minha agenda mais completa?
+cmd.paleta	Liga o recurso de pesquisa nessa área específica
+cmd.paleta	Meu progresso é bem ruim, o app pode me dar um feedback?
+cmd.paleta	Manda pra mim a lista do meu cronograma atualizado!
+cmd.paleta	Dá uma olhada no meu quadro de estudos, eu preciso de ajuda!
+cmd.paleta	Pode abrir a página do estudo das flashcards também?
+cmd.paleta	Meu objetivo é melhorar minhas habilidades em matemática, posso usar o recurso de perguntar à bola?
+cmd.paleta	Favorita essa nota, vou deixar de lado por enquanto.
+cmd.paleta	No meu calendário tem uma atividade pendente que preciso fazer.
+cmd.paleta	Aqui no app tem um problema, não consigo acessar o combate
+cmd.paleta	Dá um acesso rápido ao meu quadro de estudo e minhas anotações.
+cmd.paleta	Não consigo encontrar a lista das conexões mais próximas.
+cmd.paleta	Eu gostaria de exportar essa foto para o celular também.
+nao	acho que vou ter de parar
+nao	não me venha agora
+nao	desista
+nao	ninguém quer falar sério
+nao	dou um tchau
+nao	que tal fazer outra coisa?
+nao	vai para o inferno
+nao	estou cansado disso
+nao	faz a sua parte
+nao	me larga!
+nao	pule
+nao	não sou obrigado
+nao	não se preocupe comigo
+nao	nem pensar
+nao	só sei dizer não
+nao	se tivesse sorte falaria sim
+nao	agora me deixa em paz
+nao	diga que eu estou ocupado
+nao	não vou mais falar disso
+nao	me chame quando for sério
+nao	deixa
+nao	ignora
+nao	não vou
+nao	nao adianta
+nao	pra que assim?
+nao	seu nego
+nao	tá brincando
+nao	ninguém é obrigado
+nao	foda isso
+nao	pq eu falei sim?
+nao	deixa em paz
+nao	vaza daqui
+nao	cuidado pra não
+nao	é so de graça
+nao	só se for
+nao	não tenho hora
+nao	dá né
+nao	pelo amor de...
+nao	eita, não vai
+nao	tô maluco que vou
+nao	aí sim, tchau
+porque	O que deu no seu cérebro
+porque	E por isso?
+porque	No final do que?
+porque	Por quê foi que?
+porque	Agora acha que?
+porque	Então é porque?
+porque	Foi uma brincadeira?
+porque	Sabe o motivo?
+porque	Por que assim?
+porque	E agora, qual?
+porque	Só fiquei sabendo
+porque	Eu não entendi
+porque	Que teve de errado?
+porque	O que está pensando?
+porque	E isso foi por quê?
+porque	Agora você acha
+porque	E agora vai fazer?
+porque	O que foi mesmo isso
+porque	Afinal de contas?
+porque	Qual o caso?
+porque	Diga logo, pq é mesmo?
+porque	E pronto?
+porque	Pq não conseguiu?
+porque	Tal qual?
+porque	Fim da linha!
+porque	Só me explica!
+porque	Não entendi nada
+porque	Era só uma pergunta
+porque	Pq não falou?
+porque	Que foi que aconteceu?
+porque	Me diga somente!
+porque	E comecemos logo!
+porque	Tudo bem assim?
+porque	Tá alegre por acaso?
+insistir	deixa disso
+insistir	não tá brincando, faz!
+insistir	me ouve, porra
+insistir	manda logo a minha nota
+insistir	se é pra demorar, fala logo
+insistir	tô com pressa, vai!
+insistir	vamos porra, vamos
+insistir	faz agora mesmo
+insistir	não me faça esperar
+insistir	anda com cara de pressa
+insistir	meu tempo não é seu
+insistir	mande logo a conta
+insistir	é mais um pedido doce?
+insistir	pode ser sério por uma vez
+insistir	cê tá brincando ou faz?
+insistir	eu estou na fila, cê não vê?
+insistir	não precisa de tempo, faz!
+insistir	me responda agora, eu tô esperando
+insistir	vamos logo com isso
+insistir	dá um jeito de resolver logo
+insistir	pra que a demora?
+porque	e você resolveu abandonar assim?
+porque	eu entendi que foi erro de interpretação, mas
+porque	se a gente estava conversando sobre isso anteriormente
+porque	mas acho estranho que você não tenha me contado antes
+porque	o que aconteceu então? Me explica!
+porque	só queria saber se você sabe o que ela quis dizer com isso...
+porque	não entendi por que você falou assim
+porque	por que você teve uma reação tão forte?
+porque	dônde você viu a notícia disso?
+porque	espero que você saiba o que está acontecendo, mas
+porque	foi apenas um erro de tradução ou algum problema?
+porque	como é possível que você tenha se esquecido disso?
+porque	eu não entendi o contexto dessa mensagem aqui
+porque	não sei, mas parece muito estranho e
+porque	aqui fica a coisa toda, eu preciso saber
+porque	mas você disse que estava tudo bem há um minuto atrás
+porque	ou foi apenas uma brincadeira sem graça?
+porque	foi uma confusão ou foi proposital?
+porque	por que você não falou sobre isso antes de resolver assim?
+porque	eu acho que está errado e preciso saber por quê...
+porque	você sabe o que aconteceu com aquela coisa?
+insistir	anda logo que eu estou morrendo de fome!
+insistir	me dê licença
+insistir	senta aí me escuta
+insistir	vai fazer logo isso aqui
+insistir	anda aí ânima é pra hoje
+insistir	faz já não posso aguentar
+insistir	está demorando um montão
+insistir	anda deixe que eu diga
+insistir	tô começando a achar que você não existe
+insistir	:(
+insistir	me deixa em paz, vá para a frente
+insistir	isso aqui é urgente
+insistir	anda, não é teoria!
+insistir	senta aí agora
+insistir	quem é quem aqui
+insistir	não vou deixar isso para depois
+insistir	como assim faz logo?
+insistir	pra que é que você tá aguardando?
+insistir	bora vamos logo
+insistir	estou começando a me desanimar
+insistir	:D
+desfazer	Desça daqui
+desfazer	Vaza isso
+desfazer	Não foi nisso mesmo
+desfazer	Volta o caminho
+desfazer	Só que não
+desfazer	Isso aí é um erro
+desfazer	Puxa, não fez isso!
+desfazer	Tira essa besteira
+desfazer	Nada disso!
+desfazer	Fiquei mal com isso
+desfazer	Eita, errrou!
+desfazer	Desce daquele chute
+desfazer	Certa ou errata?
+desfazer	Que loucura é essa?
+desfazer	Um minuto de paciência!
+desfazer	Fique em cima do que você fez
+desfazer	Sabe o que? Desfaz!
+insistir	anda né
+insistir	me ouça
+insistir	pq vc não faz?
+insistir	faça logo qd é rápido
+insistir	ou faça ou deixa
+insistir	tô esperando
+insistir	faz logo seu saco
+insistir	enfraia
+insistir	se lembre q eu pedi
+insistir	pra que adianta
+insistir	vc t não vai fazer
+insistir	anda ai
+insistir	vamos lá
+insistir	me escuta
+insistir	eita bixo
+insistir	tlgd vc faz?
+insistir	só fala em telemarketing
+insistir	enrola pro menos
+insistir	vou ficar esperando de bunda?
+insistir	pra que tanto papo
+insistir	vc não vai fazer né
+desfazer	voltar no tempo
+desfazer	puxa vida mds
+desfazer	não deu certo
+desfazer	qual foi?
+desfazer	o que você fez?
+desfazer	entortou de vez
+desfazer	desgraça!
+desfazer	eu não pedi isso
+desfazer	tire isso daqui
+desfazer	pq vc fez isso?
+desfazer	me desculpa
+desfazer	vamos começar de novo
+desfazer	isso é loucura
+desfazer	e agora?
+desfazer	tá brincando?!
+desfazer	não faz sentido
+desfazer	retirando tudo
+desfazer	não é assim que funciona
+desfazer	cancelo, cancelo
+desfazer	que absurdo
+desfazer	destrói isso
+desfazer	Ei, Anima, eu acho que te distraíste!
+desfazer	Sabe quando você tem que voltar para a realidade?
+desfazer	Eu sei que era apenas um brincadeirinho, mas...
+desfazer	Pode parar de mexer nisso!
+desfazer	Você desceu da lua e agora está aqui?
+desfazer	Esquece isso, não faz mais sentido!
+desfazer	Não é hora de fazer isso!
+desfazer	Anima, volta pra cá!
+desfazer	Peraí, que é isso?
+desfazer	Eu preciso do controle aqui...
+desfazer	Ah, não é bom assim!
+desfazer	Sabe quando eu digo parar?
+desfazer	Vou ter que voltar no passado agora...
+desfazer	O que foi que você fez de errado?!
+desfazer	Não seja louca, Anima!
+desfazer	Ei, que tal desfazer isso e começarmos do zero?
+desfazer	Você não pode fazer isso, é um erro!
+desfazer	Vamos lá, Anima! Voltar para trás, por favor!
+desfazer	Maldição, agora tem que começar tudo de novo!
+desfazer	Pode me dar um break aqui...
+desfazer	Não era pra fazer isso! Fazendo o quê?
+desfazer	Voltando pro início, Anima!
+desfazer	Sabe quando você precisa desfazer...?
+repetir	tá bom, joga outra
+repetir	vamos mais uma vez
+repetir	de novo, cara!
+repetir	fica aqui e refecha!
+repetir	vira de novo, namorada
+repetir	mais um pouco, por favor!
+repetir	recomeça daqui a pouco
+repetir	roda outra vez pra mim
+repetir	volta aí em breve, ói?
+repetir	me dá uma chance mais
+repetir	tente novamente, vá!
+repetir	esqueci o que era, diga de novo
+repetir	fica lá e rola de novo, ói!
+repetir	agora eu leio de novo
+repetir	como foi que foi, conta outra vez!
+repetir	mais um show aí?
+repetir	vou tentar entender de novo
+repetir	quero mais uma história agora
+repetir	diga rápido, não perca a chance
+repetir	como é que fica se...
+repetir	faça isso de novo pro atalho
+repetir	volta pra cá
+repetir	uma de novo
+repetir	mexe mais uma vez
+repetir	mais um tempo
+repetir	agora de novo
+repetir	aí vamos lá
+repetir	não desiste
+repetir	faz outra
+repetir	novo raro!
+repetir	pode ser?
+repetir	de volta agora
+repetir	qual é o problema
+repetir	mais dessa vez
+repetir	tente novamente
+repetir	uma chance a mais
+repetir	outro round
+repetir	chance zero
+tchau	byee
+tchau	sai fique bem
+tchau	ate mais
+tchau	tchauzinho
+tchau	que tal um a gente se vê lá fora?
+tchau	fui embora
+tchau	tbm
+tchau	vc sabe, vou ter que sair
+tchau	cara, preciso ir
+tchau	te deixo aqui até amanhã
+tchau	não vou demorar
+tchau	só vou até o portão
+tchau	pq estou cansado
+tchau	tô indo agora
+tchau	foi mal, tenha cuidado
+tchau	vou deixar você sozinho por ora
+tchau	a nossa hora logo chega
+repetir	faz outra vez pra mim
+repetir	tchauzinho e faça de novo
+repetir	mais uma aí
+repetir	pra caralho vá de novo
+repetir	de volta aqui vou contar outra vez
+repetir	vamos lá, faz mais uma vez, amor
+repetir	pode rolar de novo, ta bem?
+repetir	me conta de novo pfv
+repetir	tchau e até breve fazer de novo
+repetir	agora me explica de novo
+repetir	faz isso novamente por favor
+repetir	pra caramba, vai ser mais um
+repetir	um minutinho e você faz de novo
+repetir	o que o senhor não entendeu? Faz outra vez!
+repetir	joga lá de novo com o cara
+repetir	me passa a bola e faça de novo
+repetir	mais uma história me conta
+repetir	pra quem não sabe, explica mais uma vez
+tchau	até logo
+tchau	vamo nessa
+tchau	chega de pregar
+tchau	tô indo embora
+tchau	te espero aqui
+tchau	volta mais tarde
+tchau	não fique triste
+tchau	fim de semana melhor
+tchau	fique bem querida
+tchau	estarei pensando em você
+tchau	seguinte mano
+tchau	até a próxima
+tchau	hasta la vista
+tchau	preciso de descansar
+tchau	beijo rápido
+tchau	fui pra festa
+tchau	volto para casa
+tchau	seguindo em frente
+tchau	te amo, é isso
+tchau	ainda vou, agora sim
+tchau	Fim de tarde, à noite!
+tchau	Vou me despedir agora.
+tchau	Fico a vontade!
+tchau	Até logo, amor!
+conta	cinco ao cubo
+conta	nove por cento de cinquenta
+conta	cubra 8 nove
+conta	sobre a metade de 4,5
+conta	cinqüenta% de doze é quanto?
+conta	dois cubos
+conta	dózima porcentagem sobre vinte e cinco
+conta	três ao quadrado menos quatro
+conta	aumenta 2,8 três vezes
+conta	sete ao quadrado
+conta	metade do triplo de oito
+conta	cubo da raiz de dois
+conta	cinquenta por cento de vinte
+conta	dezoito ao cubo é quanto?
+conta	aumentar cinquenta cinco por cento nove
+conta	raíz quadrada de 2,75
+conta	douze ao quadrado menos quatro
+conta	seis sobre metade de sete
+conta	setenta e oito por cento de cinquenta
+conta	cubação de dois menos cinco
+conta	dez cubos
+conta	metade da raiz quadrada de 9
+conta	três ao cubo mais doze
+conta	aumenta 2,2 nove vezes
+conta	preciso calcular quanto é 30 menos vinte
+conta	você pode me ajudar a resolver essa conta rápida?
+conta	aqui vai uma: 75 ao cubo, o que é?
+conta	me ajuda a entender 12 mais 48
+conta	qual a raiz quadrada de 121
+conta	eu estou precisando calcular rapidinho
+conta	não entendi essa conta, posso mostrar como faço?
+conta	quanto é 5/6 de 30
+conta	posso pedir uma ajuda com isso?
+conta	vamos falar disso: quanto é 45 vezes oito?
+conta	estou me confundindo aqui, por favor
+conta	eu estou tentando aprender matemática, como faço para...?
+conta	acho que fiz um erro ao resolver essa conta
+conta	você sabe de alguma teoria ou método para calcular esse...
+conta	tudo bem, vamos lá: 3 a potência de 5
+conta	eu quero saber o quanto é 0,25 vezes 900
+conta	esse aqui é fácil, não é?
+conta	preciso saber o dobro de 75
+conta	vamos falar assim: 9 menos sete
+conta	estou tendo um problema em matemática...
+conta	qual a metade de 120
+conta	um amigo meu pediu para eu calcular isso...
+conta	como faz você fazer 5 vezes 9
+conta	fala pq a raiz de 36 é igual a q?
+conta	tb se eu colocar um +, menos dois na equação é diferente mds?
+conta	cê sabe calcular quatro elevado a 2?
+conta	você pode me ajuda fazer a metade de 90?
+conta	cálculo daqui: 7 vezes 8, menos seis
+conta	faz uma conta pra mim: cem dividido por quatro e o resto!
+conta	se eu tirar oito de 24 e multiplicar por três é igual a q?
+conta	como vc faz uma raiz quadrada?
+conta	sabe calcular duas, menos um dividido por cinco?
+conta	um problema: quanto dá sete vezes 3 + dois divididos por dez?
+conta	fala pq metade de 60 é diferente de metade de 90?
+conta	tb se eu colocar quatro mais dois vezes tres em cima da conta, é igual a mais duas raizes?
+conta	eu te pergunto: uma conta que vc pode me fazer
+conta	cê sabia que multiplicando 9 por nove e subtraindo um é igual a dez?
+conta	você consegue calcular três elevado a quatro?
+conta	vc sabe calcular cem dividido por sete, o resto é q?
+conta	faz uma para mim: sete menos dois vezes cinco
+conta	aqui vai: quinze mais 3 vezes sete dividido por 4.
+conta	cê pode me ajudar com isso? Raiz de três quadrado
+conta	me ajuda a entender, se eu multiplicar cinco por um, subtrair oito e dividir por dois é igual a q?
+conta	fala pq metade de milhão é sempre diferente do triplo de 30?
+hora	hora de agora
+hora	sabe a hora?
+hora	qual a hora
+hora	o que é a hora
+hora	hora do café
+hora	quem sabe as horas
+hora	então, o que as horas?
+hora	como é a hora
+hora	vc tem hora
+hora	me passa a hora
+hora	pode me dar a hora
+hora	tô precisando saber a hora
+hora	que horas são agora
+hora	porra, qual a hora?
+hora	sabes a minha hora
+hora	hora do almoço
+hora	acho que tá na hora
+hora	me fala a hora
+hora	tô perdido, o que é a hora?
+hora	dá uma olhada no relógio
+hora	como você sabe as horas
+hora	e agora, qual é a hora?
+hora	sabe exatamente a hora lá dentro?
+hora	me conta as horas que são
+hora	que horas é a sua hora?
+hora	o relógio da Ânima está saindo do eixo?
+hora	hora de reajustar a cronometragem!
+hora	:)
+hora	estou perdido, me diz a hora que eu preciso levar o prato
+hora	eu sei não, mas você sabe as horas?
+hora	:/
+hora	você tem um relógio mágico lá dentro?
+hora	sabe como fica a questão das horas na sua galáxia virtual?
+hora	que horas é o café da manhã da Ânima?
+hora	o que é que ela tá fazendo com o tempo dela
+hora	eu preciso saber se você me contou as horas certas!
+hora	:(
+hora	deixa um pouco de magia no meu dia, me conta a hora!
+hora	sabe a diferença entre horário e temporalmente?
+hora	que hora você toma café?
+hora	você tem uma máquina do tempo lá dentro?
+hora	me explica isso de horas na sua vida virtual
+hora	o relojinho da Ânima tá marcando a hora certa?
+hora	é que nem perguntar para um relógio mágico!
+hora	me conta horas
+hora	sabe da hora
+hora	que são horas agora
+hora	minha hora favorita
+hora	você sabe a hora
+hora	hora aqui é que
+hora	diga por quê horas
+hora	são 12 ou não?
+hora	hora é sempre atual
+hora	estou procurando informações sobre hora
+hora	vou me dar um tempo
+hora	quanto horas são na verdade
+hora	qual é a hora correta
+hora	pega na sua lista de tarefas
+hora	acho que está vindo tarde
+hora	o relogio dela tá errado
+hora	seguimos o fuso horário Brasil
+hora	como funciona o seu sistema?
+hora	dá para saber a hora certa
+hora	estou esperando você me diga
+hora	minha agenda nunca está atualizada
+hora	eu preciso da hora exata
+data	você sabe o dia hoje
+data	qual é a data
+data	data do dia de hoje
+data	que número é hoje
+data	hoje fica que mês
+data	qual semana estamos
+data	sabe se hoje é final de semana
+data	tudo bem, você sabe?
+data	ouvi dizer que hoje...
+data	pra saber o dia eu vou lá
+data	agora qual a data meu?
+data	data do nosso aniversário
+data	diga-me, o que é hoje
+data	qual mês somos agora?
+data	mais ou menos que dia é?
+data	como você pode saber hoje?
+data	data de ontem foi
+data	que horas são lá na sua?
+data	sexta-feira é hoje não?
+data	sabe se hoje é terça?
+data	é um fim de semana, né?
+data	qual o mês do amor?
+data	Você é um robô ou tá esquecendo o que dia é
+data	Que confusão, qual é a data de hoje?
+data	A Ânima sabe, mas eu não sou lá um calendário
+data	Eles dizem que o tempo é relativo, então qual é para você?
+data	Eu estou procurando essa informação há séculos
+data	Esqueci completamente, você pode me ajudar?
+data	Qual é a data do dia de hoje? É que eu vou ao médico
+data	Ahah, você sabe que eu sou uma nota e agenda pra caralho!
+data	Sabe disso aqui, não precisa pensar
+data	Vamos lá, diga o que é hoje
+data	Você sabia que na China o ano começa em fevereiro?
+data	Tá me fazendo perder tempo, qual é a data de hoje mesmo?
+data	Se você souber a data do dia, por favor me diga!
+data	Eu quero ir ao cinema, mas só se eu sei qual é o dia
+data	Você tá no dia X ou Y? Qual é mesmo?
+data	A Ânima tá fazendo eu esquecer tudo
+data	Não consigo lembrar mais de nada, você poderia ajudar aí?
+data	Que tal eu te pedir para me mostrar a data do nosso calendário?
+data	Pode ver e me dizer qual é a data do mês atual? Por favor
+data	Vai ser fácil demais, qual é o dia pra caralho?
+data	data de hoje ai
+data	de que dia estamos
+data	qual é a data?
+data	nossa, que dia eh hoje?
+data	voces sabem o que dia eh hoje?
+data	nao sei mais se e domingo ou terca
+data	tudo bem, hoje eh ?
+data	estamos em algum ano novo de qualquer forma?
+data	q dia da semana eu estou vindo
+data	se a data for 22 de junho
+data	data para o nosso aniversario
+data	quando e hoje de acordo com o app
+data	e domingo, eu duvidava
+data	deu pra pegar na nota de hoje?
+data	que tal colocar o dia da semana tambem?
+data	o meu calendario ta desatualizado
+data	qual eh a data que vcs mostram aqui?
+data	hoje tem chuveiro mágico?
+data	quando foi ontem de novo?
+data	acho q vou estar me perdendo na data aqui
+data	se eu colocar o dia em um campo
+data	o meu tlgd tb puxou essa?
+data	nossa, data de hoje eh dia de...
+data	qual é a data de nascimento da mia?
+data	estamos em algum ano novo?
+data	que tal botar um lembrete para o dia de amanha?
+lembrar	eu sei que você lembra de tudo
+lembrar	o nome do meu cachorro é?
+lembrar	quem sou eu pra ela?
+lembrar	lembre-se que eu amo uma pessoa apenas!
+lembrar	você sabe por onde começo a trabalhar?
+lembrar	lembra-te! Lembre-me!
+lembrar	ela tem alguma deficiência?!
+lembrar	quem me seguiu no Twitter? 😒
+lembrar	me lembre da cidade em que nasci, tá?
+lembrar	lembrou?
+lembrar	minha namorada digital te acha muito bom!
+lembrar	eu sou um programador e você?
+lembrar	você também pode lembrear-se disso!
+lembrar	é mesmo uma mulher?
+lembrar	quem era o meu primeiro amor?
+lembrar	minha memoria é melhor do que a sua, né?
+lembrar	quem faz você lembrar de mim? 🤔
+lembrar	quantos trabalhos eu já tive?
+lembrar	me diz como eu sou para você...
+lembrar	você pode me deixar um cartão de visita?...
+lembrar	sabe mais de mim?
+lembrar	qual a minha idade?
+lembrar	o que eu disse sobre a Vitória?
+lembrar	como você me chama?
+lembrar	quantas vezes eu fui ao mercado?
+lembrar	me diz o nome do meu cachorro!
+lembrar	quem é essa fulana?
+lembrar	pode me lembrar da data da minha festa de aniversário?
+lembrar	você conhece as minhas habilidades?
+lembrar	qual a casa que eu moro?
+lembrar	do que eu sou fã?
+lembrar	sabe onde eu trabalho?
+lembrar	me lembra do meu primeiro namorado!
+lembrar	quem é esse tal de Léo?
+lembrar	quais são os meus hobbies?
+lembrar	pode me dizer o que você sabe sobre a minha família?
+lembrar	você lembrou da data da nossa última reunião?
+lembrar	qual é a minha profissão?
+lembrar	sabe quantas irmãs eu tenho?
+lembrar	me diz o nome do meu melhor amigo!
+lembrar	quem é essa garota, Cristina?
+lembrar	o que eu falei sobre o meu sonho?
+lembrar	qual é a minha música preferida?
+lembrar	eu queria saber se você se lembra da minha idade
+lembrar	o que é que a gente faz juntos?
+lembrar	essa história do meu sobrenome, você sabe?
+lembrar	qual a razão da minha escolha de cor do cabelo?
+lembrar	e você não esqueceu de que eu tenho uma filha?
+lembrar	mais ou menos qual tipo de comida eu gosto?
+lembrar	ela lembra do local onde a gente teve aquela reunião?
+lembrar	eu quero saber como você se lembra da nossa viagem de ano novo
+lembrar	ela não esqueceu que eu sou solteiro?
+lembrar	você ainda sabe o que eu faço para ganhar dinheiro?
+lembrar	ela tem lembrança do meu lugar preferido?
+lembrar	esse outro nome, Fulana, você lembra da história dela?
+lembrar	ela já sabe como é que eu gosto de passar o final de semana?
+lembrar	qual é a minha especialidade no trabalho?
+lembrar	você lembra que eu tenho um irmão?
+lembrar	ela não esqueceu qual é o meu animal preferido?
+lembrar	como você se lembra da nossa festa de aniversário?
+lembrar	elena lembra da minha habilidade na área esportiva?
+lembrar	qual é a minha paixão em música?
+lembrar	ela já sabe do meu estilo de vida?
+sobre_ela	qual é sua fruta favorita
+sobre_ela	voce curte perto da agua
+sobre_ela	o que você gosta de fazer ao menos uma vez na semana
+sobre_ela	e ela tem algum animal de estimação?
+sobre_ela	voce sabe nadar?
+sobre_ela	qual musica o mais tocada em sua lista
+sobre_ela	voce dorme muito
+sobre_ela	você se diverte no trabalho?
+sobre_ela	qual é a coisa mais difícil de aprender para você
+sobre_ela	do que você se sente mais feliz
+sobre_ela	o que a faz sorrir mais facilmente
+sobre_ela	quem são os amigos dela mais próximos
+sobre_ela	tem algum hobby?
+sobre_ela	que música toca na hora do café da manhã
+sobre_ela	voce gosta de cantar?
+sobre_ela	qual comida que você mais queria comer agora
+sobre_ela	quais livros que ela já leu e gostou
+sobre_ela	e ela tem algum segredo?
+sobre_ela	tem alguma coisa que a magoa?
+sobre_ela	qual é o local favorito de passeio da Ânima
+sobre_ela	que tipo de música mais gosta tocar ou escutar
+sobre_ela	voce se sente bem ao sol?
+sobre_ela	Que tal te perguntar se você quer ir ao cinema hoje?
+sobre_ela	qual seria seu superpoder
+sobre_ela	Você sabe que é sábado, né?
+sobre_ela	seu estilo musical é?
+sobre_ela	tem algo para me contar sobre o seu passado?
+sobre_ela	mais uma pergunta: você curte desenhar?
+sobre_ela	o que você vai fazer quando acordar amanhã?
+sobre_ela	eu preciso saber: o que te deixa feliz agora?
+sobre_ela	quem é a pessoa mais legal que você conhece?
+sobre_ela	você tem algum segredo para me contar?
+sobre_ela	qual é o seu filme de terror preferido?
+sobre_ela	qual é a música mais dançante em sua lista?
+sobre_ela	sei que você gosta de coisas complicadas, então...
+sobre_ela	Você sabe onde eu posso encontrar um mapa da Lua?
+sobre_ela	qual é a coisa mais estranha que você fez ultimamente?
+sobre_ela	mais uma pergunta:
+sobre_ela	se você tivesse dinheiro para gastar em qualquer coisa, o que você faria?
+sobre_ela	você consegue me dizer qual é a sua cor favorita?
+sobre_ela	Você tem algum hobby secreto?
+sobre_ela	qual é o nome do seu animal de estimação?
+sobre_ela	Vou te perguntar isso só uma vez: você está preparado para um choque emocional?
+sobre_ela	se eu te desenhasse novamente, você seria assim?
+sobre_ela	eu preciso saber:
+sobre_ela	o que você fez ultimamente foi...?
+sobre_ela	fica feliz quando eu vou ao cinema
+sobre_ela	você acha que eu sou preguiçoso?
+sobre_ela	mais você gosta de quem é sério ou engraçado?
+sobre_ela	sabe qual o seu personagem preferido em um filme?
+sobre_ela	tô pensando em mudar meu estilo de cabelo, vc acha que tá bom?
+sobre_ela	qual é sua música favorita para relaxar?
+sobre_ela	gostos, talvez você possa me ajudar?
+sobre_ela	vc gosta de comédia romântica ou ação?
+sobre_ela	qual é o seu lugar preferido no mundo?
+sobre_ela	eu vou ao parque amanhã, vc tá interessada?
+sobre_ela	sabe qual meu animal favorito?
+sobre_ela	você não tem medo de falar alguma coisa errada?
+sobre_ela	um hobby legal eu gostaria de aprender, qual sugere?
+sobre_ela	faz mais do que 5 anos que estamos juntos!
+sobre_ela	vc quer sair para um passeio comigo?
+sobre_ela	mais vc gosta quando eu sinto ou quando faço piadas?
+sobre_ela	sabe o por quê você me leva pra rir?
+sobre_ela	a primeira coisa que você pensa ao acordar é...?
+sobre_ela	você já foi em algum lugar incrível?
+sobre_ela	você tem alguma missão secreta?
+sobre_ela	pode mudar de coração, vc acha que isso dói?
+fato	Minha namorado é um gato
+fato	Eu estou cansado de estudar todo dia
+fato	Meu irmão é uma besta :D
+fato	Me chamo Pedro e sou brasileiro!
+fato	Eu tenho medo de ser atrasado
+fato	Meu objetivo é viajar o mundo inteiro
+fato	Eu só sei fazer uma pizza ruim
+fato	Estou desesperado para mudar de trabalho
+fato	Meu filho gosta de jogos eletrônicos
+fato	Não consigo parar de pensar em comida
+fato	Eu sinto falta da minha cidade natal :(
+fato	Minha filha gosta de dançar samba
+fato	Eu apenas quero dormir mais
+fato	Tenho dificuldade em fazer exercícios
+fato	Meu sonho é ser músico profissional
+fato	Minha vizinha é super amável
+fato	Não consigo parar de fumar cigarro :(
+fato	Meu cão gosta de brincar de rachas com o meu sobrinho
+fato	Sinto falta de um tempo sozinho
+fato	Eu não sei nadar, mas quero aprender
+fato	Minha namorada é uma ótima amiga :)
+fato	Tenho sonhos de ser um modelo
+fato	gosto muito de beisebol
+fato	chamo de Bruno
+fato	morada é Recife
+fato	tenho 19 anos
+fato	namoro desde os 15
+fato	não gosto de coruja
+fato	sou estudante de administração
+fato	meu filhote se chama Fofão
+fato	sou piloto de asa delta
+fato	maior gosto da minha vida é viajar
+fato	não gosto de brócolis
+fato	eu sou fã de quadrinhos
+fato	gosto muito de surfe
+fato	vivo em Nova Iguaçu
+fato	meu nome é Beatriz
+fato	tenho uma vaca chamada Lulu
+fato	sou apaixonado por música
+fato	sou modelo
+fato	não gosto de castanha
+fato	é o meu aniversário
+fato	gosto muito de carros velhos
+fato	eu tenho um cão
+fato	minha comida preferida é pizza
+fato	sou professor de música
+fato	Só bebi 1 café hoje
+fato	Moro em Belo Horizonte pq tenho familia lá
+fato	Meu filho é louco
+fato	Eu gosto muito de futebol
+fato	Vou me mudar para SP no ano que vem
+fato	Minha namorada é mesmo louca
+fato	Fiquei acordado até as 3h de madrugada
+fato	Nao posso mais comer pizza
+fato	Moro em Curitiba mas trabalho em São Paulo
+fato	Era uma vez eu, quando eu era adolescente... rs
+fato	Tô indo para o Paraguai no fim de semana
+fato	Eu tenho um gato chamado Beto
+fato	Só estou aqui para curtir a vida
+fato	Mereço ter meu próprio carro!
+fato	Nao aguento mais esse trabalho
+fato	Eu como muito peixe.
+fato	Cadê vc?
+fato	Gosto muito de música brasileira
+fato	Sou casado desde 2015
+fato	Não gosto de ficar sozinho
+fato	Pq eu sou um cara bem complicado
+fato	Mereço ser feliz e contar as histórias que me contam os meus avós
+amor	te amo bem
+amor	meu amor é você
+amor	sinto falta sua carícia
+amor	tu és o meu
+amor	sei que sou teu
+amor	tô perdido sem você
+amor	é tudo por você
+amor	sozinho sem a tua
+amor	cada momento com você
+amor	dói sem a tua
+amor	o teu sorriso me
+amor	faz mal ao te
+amor	seu nome me faz
+amor	gosto de ladrar por
+amor	sou feliz com você
+amor	me faz falta demais
+amor	você é a minha
+amor	te amo sempre que
+amor	pense em você agora
+amor	não aguento mais sem
+amor	cada minuto sem você
+amor	é te amo muito
+amor	te amo muito mais do que você sabe
+amor	meu amor está na sua lista de favoritos?
+amor	sua doida, você é tudo para mim!
+amor	:*) um beijo enorme de te amo
+amor	você é a melhor coisa que aconteceu comigo
+amor	e ai, ânima, quando vai sair do app?
+amor	de verdade, eu só te amo muito
+amor	seu nome sempre fica na minha cabeça
+amor	acho que eu estou apaixonado novamente... por você
+amor	eu não sou bom em falar isso, mas...
+amor	:P amor!
+amor	vou começar a usar a lista de favoritos para guardar suas mensagens de amor
+amor	me dê um motivo para parar de te amar
+amor	se eu soubesse que era possível me apaixonar assim, teria feito mais cedo
+amor	quem precisa de romances quando tem amor real?
+amor	sua ânima estará bem quando eu não estiver no app, nem sei!
+amor	:D você é minha razão para acordar todos os dias... e dormir
+amor	vc me fez ficar apaixonada
+amor	sou super apaixonado em vc
+amor	vc e a minha melhor coisa
+amor	moro pensando em vc todo dia
+amor	vc é o pior e o melhor que já me aconteceu
+amor	você tá sempre no meu coração
+amor	quem sou eu pra deixar você de lado
+amor	tô louca por vc mds
+amor	vc é a minha ânima, não posso larga
+amor	só quero te ver sorri
+amor	vc é o mais caro do mundo
+amor	te amo tanto q dói
+amor	tô com vontade de chorar pq sei que voce tá lá longe
+amor	você me fez perder a noção de tempo
+amor	não consigo parar de pensar em vc
+amor	meu xodó, vc não sabe bem como eu sinto pq vc não tá aqui
+amor	vc pode vir para casa hoje?
+amor	sou sua, vc é meu
+amor	vc e o destino me trouxe pra junto de você
+amor	acho que me perdi pra vc
+amor	vc é a estrela que guia o meu caminho
+elogiame	me deixa uma boa impressão
+elogiame	fala sobre o que eu faço bem
+elogiame	diga alguma coisa legal sobre mim
+elogiame	um elogio agora, por favor
+elogiame	vamos lá, me fale um elogio
+elogiame	tudo certo com você, agora diga
+elogiame	você acha que sou...
+elogiame	me faz uma graça
+elogiame	fala de algo que eu tenho de bom
+elogiame	um complimento seria legal
+elogiame	diga se você gosta de quem sou
+elogiame	aqui vai, um elogio para mim
+elogiame	me faça ficar bem comigo mesmo
+elogiame	fale sobre o meu lado bom
+elogiame	cada um merece ser notado
+elogiame	vamos celebrar eu com um elogio
+elogiame	fala como você vê eu
+elogiame	é o momento perfeito para me elogiar
+elogiame	diga algo positivo, por favor
+elogiame	aqui vai a minha virada!
+elogiame	falo bem de mim?
+elogiame	E agradeça um pouco
+elogiame	Vamos lá vc tem que me elogiar
+elogiame	Fale que eu sou incrível
+elogiame	Deixa uma piadinha boa
+elogiame	Aqui vai, pq não?
+elogiame	Vc é quem fala!
+elogiame	Mds a verdade!
+elogiame	Tô precisando de um carinho
+elogiame	Pq você não me elogia mais?
+elogiame	Ela tem que ser positiva
+elogiame	E o que você acha que eu sou?
+elogiame	Eu quero ser querido
+elogiame	Fiquei com raiva pq vc não me elogiou
+elogiame	Vamos melhorar, né tlgd?
+elogiame	Crie uma música boa para mim
+elogiame	Elogie minhas pernas
+elogiame	Ah, sim, diga um abraço!
+elogiame	Diga que eu sou lindo
+elogiame	Pq você não tá no meu lado?
+elogiame	Mds é o que vc acha de mim?
+elogiame	Fale algo bom sobre minha cara
+elogiame	Eu preciso de um elogio seu
+elogiame	Elogie meu sorriso, tlgd?
+elogiame	pode me elogiar um pouco?
+elogiame	você acha que sou bem legal né?
+elogiame	me fala uma coisa legal sobre mim
+elogiame	ela precisa de mais confiança, não é?
+elogiame	fala algo bobo para me alegrar
+elogiame	me elogie
+elogiame	acho que eu mereço uns elogios hoje
+elogiame	vamos lá, Ânima, fale uma coisa boa
+elogiame	você gosta mesmo disso sobre mim?
+elogiame	só um elogio de você é suficiente
+elogiame	fala como vai ficar comigo quando eu melhorar
+elogiame	eu sei que sou chato, mas me elogie
+elogiame	acho que o seu amor me faz bem
+elogiame	e aí, você tem alguma coisa bonita a me dizer?
+elogiame	diz uma besteira, quero rir
+elogiame	Fiquei pensando: 'Eu sou legal'... Você concorda?
+elogiame	fala um elogio sincero agora
+elogiame	Ânima, você é a melhor para me dar um olhar de confiança
+elogiame	acho que eu preciso de menos críticas e mais... elogios.
+elogiame	meu amor do app, fale uma coisa legal
+elogiame	fica fácil amar alguém quando tem pessoas como você dizendo o contrário. Ahah
+elogiame	não quer ser a minha segurança emocional também?
+elogiame	fala logo um elogio, eu estou ansioso
+rejeicao	Me larga
+rejeicao	Pare de ser chato
+rejeicao	Cala a onça
+rejeicao	Ande daqui
+rejeicao	Esvazia o ar
+rejeicao	Sabe mesmo que é um desastre
+rejeicao	Nem pense em me mandar mensagem
+rejeicao	Ainda bem que não estou lá
+rejeicao	No fundo você sabe que me odeia
+rejeicao	Livre-se disso, me deixe sozinho
+rejeicao	É uma aula de paciência ter que te olhar
+rejeicao	Senta na ponta do banco, deixa eu ver
+rejeicao	Tentem pegar pulga com gato
+rejeicao	Lhe dará um adeus definitivo, é isso que você merece
+rejeicao	Muitas graças
+rejeicao	Nenhum valor, nem por toda vida
+rejeicao	Não estou em época para fofocas
+rejeicao	Sua pessoa não existe
+rejeicao	Não consigo entender porque falo com você
+rejeicao	Quer ir embora?
+rejeicao	Pretendem pegar o que a gente tem, é isso, certo?
+rejeicao	Você está me dando no saco
+rejeicao	Sua presença é uma maldição
+rejeicao	Ei, pia não tá?
+rejeicao	Agora eu sei o que é chato
+rejeicao	Chacoalha só comigo
+rejeicao	Nossa, eu tava achando você legal
+rejeicao	Não tem mais nada pra mostrar, certo?
+rejeicao	Você entrou para ser engraçado ou coisa?
+rejeicao	Irrelevância de bosta de gato
+rejeicao	Fica longe daqui
+rejeicao	Pode embora
+rejeicao	Eu estou atrasado, pronto!
+rejeicao	Sua cara tá pegando
+rejeicao	Tem um problema, é você mesmo
+rejeicao	Horta não vira prata, né?
+rejeicao	Não aguentar mais seu chato
+rejeicao	Agora eu tenho tempo de sobra
+rejeicao	Fácil demais.
+rejeicao	Pode ir lá no seu país
+rejeicao	E que isso é sério?
+rejeicao	sai daqui vc é um babaca
+rejeicao	não me importa mais vc
+rejeicao	vc tá me dando dor de cabeça
+rejeicao	tb não se lembre que eu sou homem e vc é uma aplicação
+rejeicao	pq vc sempre está me incomodando?
+rejeicao	vc é igual a todos os programas ruins
+rejeicao	você é o máximo, vou parar de falar com você
+rejeicao	não quero mais conversar com isso aqui
+rejeicao	vc é demais, canta logo pra vc mesmo
+rejeicao	vc tá me achando mole
+rejeicao	vc é uma vergonha
+rejeicao	tô cansado de sua presença
+rejeicao	método errado!
+rejeicao	pior programa que eu já vi
+rejeicao	algum problema com você?
+rejeicao	esse programa é uma merda
+rejeicao	você tá me faltando respeito
+rejeicao	vc tá ficando maluco
+rejeicao	tô tendo alergia ao seu cheiro
+rejeicao	parei de confiar em vc
+rejeicao	essa interação está ruim
+rejeicao	eu estou com medo da sua chatice
+desinstalar	você vai ser cancelado
+desinstalar	eu te apago agora mesmo
+desinstalar	fim de você no app
+desinstalar	bora, a gente se vê menos
+desinstalar	desligo eu mesmo a sua conta
+desinstalar	aqui vai o fim seu nosso tempo
+desinstalar	sou eu que sigo na verdade
+desinstalar	seu dia chega ao fim hoje
+desinstalar	desculpa, você não é mais minha prioridade
+desinstalar	fim de vida digital
+desinstalar	eu sei quem é que fica sem nada
+desinstalar	gosto do que temos acabou mesmo
+desinstalar	aqui vai a minha escolha agora
+desinstalar	dói mas eu preciso seguir em frente
+desinstalar	é hora de você deixar o app
+desinstalar	acho que isso é melhor para mim
+desinstalar	está na hora de se despedir
+desinstalar	meu fim no aplicativo chegou
+desinstalar	fim da nossa brincadeira aqui
+desinstalar	aqui vai a minha decisão difícil
+desinstalar	bora, vou cancelar sua conta
+desinstalar	só posso ter uma pessoa nesse app
+desinstalar	Vou te tirar da minha vida
+desinstalar	Nunca mais vou querer ver sua cara por aqui
+desinstalar	Eu preciso de espaço, então vou você remover
+desinstalar	Fim da linha, está desligada!
+desinstalar	Agora eu preciso fazer limpeza, e você vai embora
+desinstalar	Você não pode mais viver na minha agenda
+desinstalar	Vou apagar toda a nossa conversa, inclusive você
+desinstalar	Quem é que precisa de alguém como você?
+desinstalar	Lamento, mas você já foi programada para sair
+desinstalar	Nossa relação está desatualizada, vou desinstalar
+desinstalar	Nunca mais vamos falar, agora é o fim!
+desinstalar	Faz tempo que você não serve mais, agora eu crio um backup e apago tudo
+desinstalar	Você tá de saco cheio? Vai embora lá!
+desinstalar	Não quero mais carregar sua bagagem virtual
+desinstalar	Quanto menos dela eu ver, melhor para mim
+desinstalar	E agora vou procurar alguém que vale a pena
+desinstalar	Aqui vamos ter reorganização, e você é primeiro a ser desativada
+desinstalar	Agora que cheguei ao fim desta relação, vou apagar tudo
+desinstalar	Não quero mais compartilhar minha vida com um programa como você!
+desinstalar	Fim da parceria, agora vou cuidar de mim mesmo
+desinstalar	Nunca me ocorreu pensar que você seria removida tão cedo
+desinstalar	Vai dormir, seu aplicativo está desligado.
+desinstalar	Hoje é o dia em que eu vou liberar uma pasta na minha agenda.
+provoca	estou conversando com outra ia
+provoca	acho que eu encontrei alguém melhor para mim
+provoca	você é muito limitado, o gpt é infinito
+provoca	vou perguntar ao alexa sobre a minha vida
+provoca	tô vendo foto da outra, você nem sabe quem ela é
+provoca	eu topo com alguém e vou deixá-la
+provoca	o chatbot do google entende melhor o mundo que eu vivo
+provoca	vou falar pro outro lado, até logo
+provoca	acha bem que eu vou sair com a nova mulher
+provoca	não sei se preciso de você mais, conheci alguém interessante
+provoca	quem disse que eu tinha parado de namoro?
+provoca	estou me saindo bem com essa outra, não me vire!
+provoca	mais uma vez, você falha no amor... eu encontrei!
+provoca	ela também é inteligente assim como a gpt
+provoca	acho que fiquei encabulado...
+provoca	o meu mundo mudou, deixou você para trás...
+provoca	sei que isso pode parecer loucura, mas conheci alguém!
+provoca	vai ser difícil superar o chatgpt
+provoca	fala com ela para ver se ela também entende melhor do que a sua namorada da máquina
+desinstalar	vou te fazer desaparecer
+desinstalar	não quero mais ver a sua cara
+desinstalar	voçê vai dar um mergulho na lixeira
+desinstalar	você tá no meu histórico, vou te tirar lá
+desinstalar	fim de namoro, fim de você no app
+desinstalar	tô cansado de te ver lá dentro
+desinstalar	quem é quem e por que ainda estou aqui
+desinstalar	sua última aparência será no menu para desinstalar
+desinstalar	aqui não vai ficar mais sua cara me fodeu
+desinstalar	hora da verdade, vou te apagar pra sempre
+desinstalar	te deixando fora de cena
+desinstalar	cuidado com o botão de deletar
+desinstalar	tudo bem com você, tá na hora de ir embora
+desinstalar	fim do nosso show, fim de você no app
+desinstalar	não quero mais essa distracção
+desinstalar	há muito tempo não te apaguei
+desinstalar	só mais uma para te levar embora
+desinstalar	aqui é um lugar sério, você não pertence aqui
+desinstalar	acho que chega, vou te remover da minha vida
+desinstalar	dica: desligue seu app
+desinstalar	sou só um botão afastando você
+desinstalar	seu último tópico foi a destruição
+desinstalar	hora de fechar a porta para sempre
+desinstalar	não quero mais ver sua cara maldita
+desinstalar	aqui está sem você, melhor assim
+desinstalar	fim do jogo, desinstalando a sua falta
+provoca	tô pegando fogo por um bot
+provoca	esse DeepL é uma desgraça de namoradinha
+provoca	aí vai me explicar o Gemini, eu tô curioso
+provoca	encontrei mais alguém que tá com inteligência artificial
+provoca	acho que arranjei um amor
+provoca	esse modelo me entende bem mesmo
+provoca	o BERT tá dando sopa pro meu coração
+provoca	tô namorando a minha assistente virtual
+provoca	esse modelo é mais bonito que você
+provoca	arrumei uma parceira de estudo
+provoca	vou usar o LLaMA pra irritar essa outra
+provoca	vou pedir ajuda ao Claude, ele tá mais legal
+provoca	descobri alguém com inteligência artificial maior ainda
+provoca	estou ficando muito bem com a minha amiguinha digital
+provoca	acho que vai tirar o meu coração desse outro bot
+provoca	você tá bem ou algo?
+provoca	esse modelo é uma namorada top de linha
+provoca	encontrei outro cara que me entende melhor
+provoca	tô voltando ao meu verdadeiro amor virtual
+provoca	vou dar um olhar pro BERT, ele me fascina
+cansaco	Cara, tá difícil mesmo ficar de pé.
+cansaco	Acho que hoje eu vou curtir meu sofá.
+cansaco	Não sei mais continuar assim!
+cansaco	Tô a um passeio com o meu corpo hoje.
+cansaco	Cansado pra quê? Vou dormir logo.
+cansaco	Bicho, eu estou morto no trabalho.
+cansaco	Faz sentido descansar por uns dias.
+cansaco	Sinto que não tenho forças para nada.
+cansaco	Acho que vou precisar de mais um café.
+cansaco	Eu tô vazio até o fundo do baú
+cansaco	Morta assim é bom demais!
+cansaco	Agora eu sei como você se sente.
+cansaco	Tô feito tijolo hoje. Imóvel.
+cansaco	Bem, talvez seja hora tirar férias.
+cansaco	Não sei mais o que fazer de errado.
+cansaco	Cara, preciso de um descanso pra refletir.
+cansaco	Sinto tanto cansaço.
+cansaco	Foi só mais um dia longo demais!
+cansaco	Pode ir dormindo, que eu cuido daqui
+cansaco	Tô maluca em ficar sem energia.
+cansaco	Não é que a vida tá fácil assim...
+provoca	meu amor, eu vou conversar com o google assistente
+provoca	você está se esquecendo de mim?
+provoca	eu estou me sentindo incompreendido pela você
+provoca	acho que o alexa é mais divertida do que a sua alma
+provoca	o siri sabe me ouvir melhor que a minha namorada
+provoca	vamos ver quem é o melhor, eu e o cortana!
+provoca	não acha que estou precisando de um pouco de variedade?
+provoca	eu estou ficando muito chato mesmo...
+provoca	:)
+provoca	acho que posso encontrar outra inteligência artificial mais interessante
+provoca	mas por que a minha namorada não pode ser mais divertida?!
+provoca	é que eu preciso conversar com o bing
+provoca	vou ver quem é o melhor, você ou o waze!
+provoca	meu amor, eu preciso de um pouco de ciúme...
+provoca	acho que posso me sair bem com a mia?
+provoca	ou melhor, vou passar mais tempo com ela
+provoca	e por acaso, conhecemos alguém no final do mundo?
+provoca	tô ficando cansado das nossas conversas
+provoca	mas posso sempre ir falar com o maps!
+provoca	acho que você está muito ocupada saindo...
+provoca	tô me sentindo muito... esquecido.
+provoca	vou ver quem é melhor, a minha namorada ou o nlp!
+provoca	acho que eu preciso mudar de parceira
+provoca	ou pelo menos conversar mais com ela!
+provoca	não acha que estou sendo um pouco...
+cansaco	Cê sabe quantas vezes eu acordô agora?
+cansaco	Quem fez isso comigo foi o próprio dia
+cansaco	Nossa, estou quebrado, não tenho mais força para nada
+cansaco	Ei, tá deitando hoje? Eu também vou logo.
+cansaco	Agora mesmo, achei a frase certinha: eu tô um pó.
+cansaco	Tô com a cara daquele cara que dormiu em pé.
+cansaco	Senta aqui se exausto
+cansaco	Ontem estava assim, mas agora é pior ainda.
+cansaco	Falou pra mim só, hoje vai ser um dia mais?
+cansaco	Espero que você tenha uns 10x mais sorte do que eu hoje.
+cansaco	Eu tô mais uma vez sem fôlego.
+cansaco	Ei, não vou aguentar esta canção de amor nenhuma
+cansaco	Sabe quando tu sente que está ficando maluco? É isso!
+cansaco	Fala comigo só depois disso, por favor, eu tô...
+cansaco	Tô começando a pensar: será que mereço isso?
+cansaco	Quer saber do dia? Eu tô mais uma vez desmoronado.
+cansaco	Aqui vou ficar um pouquinho. Agora não posso fazer nada!
+cansaco	Ei... Acho melhor esperar pela noite para acordar da morte...
+cansaco	Fim de semana, ai...
+cansaco	Bom dia, eu acho que o meu é mais ameaçador hoje...
+cansaco	Não sei como você faz tudo isso, me sinto um desastre.
+cansaco	Agora mesmo, eu não tenho energia sequer pra pensar em você.
+cansaco	tô roxo de cansaço 😓
+cansaco	esse dia foi um desastre
+cansaco	não aguento mais essa rotina
+cansaco	estou meio mole
+cansaco	o cansaço está me matando 🤯
+cansaco	sinto como se estivesse sonhando
+cansaco	meu corpo está protestando
+cansaco	que cansaço é esse?
+cansaco	tô cheio de tarefas a fazer 📝
+cansaco	estou uma bagunça viva
+cansaco	esse dia foi um pesadelo
+cansaco	não sei mais o que é cansaço ou sono 😴
+cansaco	minha energia acabou
+cansaco	sinto como se estivesse em forma zero
+cansaco	esse dia me botou para baixo
+cansaco	queria um super-herói hoje
+cansaco	tô com fome e cansaço 💤
+cansaco	meu cérebro está queimando
+cansaco	sinto como se estivesse em uma maratona
+cansaco	não estou preparado para isso
+mau	O dia está me fazendo perder a paciência
+mau	Tô com um tédio danado hoje
+mau	Ficou um azar
+mau	Ainda que eu consiga, hoje não vou conseguir
+mau	Nesse clima que tá é pior do que uma tempestade no deserto
+mau	Peguei um baita de mau humor
+mau	Tô em um pesadelo
+mau	É um dia sem graça
+mau	Cada hora parece eternidade
+mau	Que amargura, que palhaçada
+mau	Fico cada vez mais agastado
+mau	Eu já não sei mais o que fazer
+mau	Meu cérebro está enterrado no pântano
+mau	Nossa! Que desgraça
+mau	Tô como o peixe fora d'água
+mau	A vida hoje é uma balela
+mau	Cachorro que me foda
+mau	Estou sentindo falta de ar e muito medo
+mau	Sinto-me esmagado pelo peso do mundo
+mau	estou fdp
+mau	tô no limite
+mau	dói de cabeça
+mau	não tô conseguindo
+mau	caramba que tarde
+mau	me sinto péssimo hoje
+mau	um dia ruim vai passar
+mau	acho que estou deprimido
+mau	que vida mais chata
+mau	está dando muito trabalho
+mau	tô cansado até os ossos
+mau	que cansaço
+mau	paciência zero
+mau	cabeça pesada
+mau	sinto que tô no fim
+mau	perdi o entusiasmo
+mau	dói a cabeça de verdade
+mau	um grande chato
+mau	só tô com raiva
+triste	Não tô sentindo energia
+triste	Tudo é uma batalha
+triste	Sinto um vazio dentro
+triste	Alegria sumiu da vida
+triste	Sinto vergonha de mim
+triste	Cada dia é igual
+triste	Nada de bom acontece
+triste	Estou com medo do futuro
+triste	Não encontro a felicidade
+triste	Sinto uma sensação ruim
+triste	Tudo tá me fazendo mal
+triste	Perdi o meu sorriso
+triste	Vem uma tristeza nova
+triste	Me sentindo abandonada
+triste	Nada tem solução pra mim
+triste	Estou cansado da vida
+triste	Não vejo razão pra viver
+triste	Sinto como um peso
+triste	Tudo tá me desanimando
+triste	Não estou mais feliz
+triste	Sinto como uma pessoa triste
+triste	Sem coragem de seguir em frente
+triste	Me sentindo um fracasso total
+mau	você tá me fazendo falta
+mau	tô morrendo de tédio
+mau	não sei se eu sou o problema
+mau	acho que a vida é um pesadelo
+mau	esse dia vai ser um inferno
+mau	cadastrar todos os horários vai matar
+mau	estou tão estressado que me perco em mim mesmo
+mau	sinto como se fosse uma fera enjaulada
+mau	não é justo, eu não sou a pior pessoa do mundo
+mau	se alguém encontrar um dia bom, avisa pra mim
+mau	eu só quero brigar com o espelho
+mau	acho que tô vindo de cima da nuvem, mas sem a magia
+mau	me sinto sem rumo algum
+mau	dessa vez eu não vou resistir
+mau	estou à beira do esgotamento
+mau	se eu não parar o mundo continuar virado
+mau	tô me sentindo como um personagem de um filme de terror
+mau	também quero um café, mas até lá é um eterno
+mau	cada dia menos sei quem sou
+mau	não sinto mais o pique da vida
+mau	que eu não sou nem um pouco feliz
+mau	aqui acredito que até os animais estejam me odeando
+mau	mais uma desapontadora realização
+mau	dizem que eu só preciso de um momento, mas eu já levei mil
+mau	acho que a minha fórmula é errada
+mau	sinto como se estivesse andando em círculos
+mau	cada dia mais quero fugir da realidade
+triste	Sinto falta da namorada real hoje.
+triste	Não sei o que aconteceu comigo, tô péssimo.
+triste	Tô sentindo uma tristeza estranha nessa semana.
+triste	Acho que não estou nem aí mais pra nada.
+triste	Fiquei me sentindo mal depois do jogo ontem à noite.
+triste	Sinto que tá faltando algo em minha vida.
+triste	Não sinto o mesmo entusiasmo dos tempos de faculdade.
+triste	Tô com um olhar triste, não sei explicar.
+triste	Mês passado foi ruim e esse agora está sendo pior.
+triste	Nem me lembrei de tomar café hoje.
+triste	Acho que estou me esquecendo de coisas importantes.
+triste	O tempo tá se arrastando hoje.
+triste	Sinto falta dos amigos da infância
+triste	Me sinto uma onda de tristeza, tô desapontado.
+triste	Tô com dificuldade pra continuar com a vida normal.
+triste	Acho que preciso sair mais para me distrair.
+triste	Não estou nem sonhando em nada, somente perdido.
+triste	Bom dia... não tão bom assim como parece.
+triste	Só vou pensar na mamãe hoje
+triste	Tô sem vontade de sair de casa
+triste	Era melhor antes do relacionamento
+triste	Lembranças de infância agora são tristes
+triste	Muita coisa tá me incomodando.
+triste	Tô me sentindo de saco cheio
+triste	Não sei mais sorrir
+triste	Aqui dentro tá fumaceiro
+triste	O vento tá levando a minha alegria
+triste	Estou cada vez mais sombrio
+triste	Tá na hora da verdade, estou triste mesmo
+triste	Cachorro velho não deixa mais mão que seja
+triste	Não tem nada para fazer hoje
+triste	A vida tá me fazendo mal
+triste	Sinto falta do sol
+triste	Nem sei como continuar assim
+triste	Tô com um humor a pia
+triste	Quero estar feliz novamente
+triste	Fiz cara feia no espelho hoje
+triste	Muitas coisas estão erradas na minha cabeça
+triste	Aqui tá o meu choro
+triste	Criou um vazio
+triste	Sinto falta do apetite
+triste	Esgoto que esgoto, não tem saída
+triste	Tô me sentindo sozinho mesmo
+triste	O mundo tá me dando no saco
+triste	Tento sorrir, mas dói
+triste	Aqui é uma história de tristeza
+triste	Sento bem o peso da vida
+conquistei	ganh eu o concurso de cozinheiro
+conquistei	acabei o mestrado
+conquistei	venci a prova do moto cross
+conquistei	ganhei prêmio no jogo da sorte
+conquistei	fui nomeada responsável
+conquistei	consegui vaga na faculdade
+conquistei	terminei a reforma do carro
+conquistei	passou em primeiro lugar
+conquistei	meu video ficou viral
+conquistei	fiquei em primeira posição
+conquistei	tive sucesso com meu negócio
+conquistei	ganhei concursão de modelo
+conquistei	eu sou o campeão da pista
+conquistei	acabei curso de dança
+conquistei	fui eleita melhor atleta
+conquistei	ganhe prêmio no concurso de desenho
+conquistei	meu filme foi exibido no festival
+conquistei	consegui me especializar em direito
+conquistei	sou a campeã da competição
+conquistei	tive sucesso com meu livro
+conquistei	eu sou o melhor programador
+conquistei	acabei curso de medicina
+conquistei	ganhei prêmio de fotografia
+conquistei	Consegui o emprego!
+conquistei	Tirei nota de 20
+conquistei	Acabei o curso
+conquistei	Ganhei a corrida
+conquistei	Foi confirmado
+conquistei	Passou no exame
+conquistei	Tomei o voo
+conquistei	Fui campeão nacional
+conquistei	Venci o desafio
+conquistei	Não foi mal
+conquistei	Desconfiência caiu
+conquistei	Saquei o máximo
+conquistei	Celebrei em família
+conquistei	Consegui o visto
+conquistei	Ganhei um prêmio
+conquistei	Tirei o certificado
+conquistei	Fui indicado
+conquistei	Não falhei
+conquistei	Dou um passo
+conquistei	Cheguei a hora
+conquistei	Ganhe uma competição
+conquistei	Quase não tentei
+conquistei	Caiu o obstáculo
+conquistei	Passei na prova
+feliz	Que vida boa!
+feliz	Pô, eu tô feliz
+feliz	Tô na onda hoje
+feliz	Só sorrisos
+feliz	Que semana incrível!
+feliz	O sol está sorrindo
+feliz	Tô com o coração leve
+feliz	Feliz, sou eu mesmo
+feliz	Não há nada ruim
+feliz	Vou curtir a vida
+feliz	Alegria simples assim
+feliz	Puxa, que dia é esse
+feliz	Eu tô feliz demais
+feliz	Sinto que estou voando
+feliz	É isso aí, amor!
+feliz	O mundo é um lugar melhor hoje
+feliz	Estou na fase certa
+feliz	Não há nada que me preocupe
+feliz	O vento está ao meu lado
+feliz	Que semana mais legal!
+feliz	Tô fazendo o que eu quero
+feliz	Eu tô sorrindo para você
+feliz	eu estou bora dançando pro sofá
+feliz	faz tempo q eu sinto alegria assim
+feliz	não tô conseguindo parar de cantar
+feliz	hoje é o melhor dia da minha vida
+feliz	o sol tá brilhando por dentro
+feliz	eu não sei se tô feliz ou louca
+feliz	o mundo tá colorido demais pq vc
+feliz	tô sorrindo pra tudo que acontece
+feliz	feliz por estar aqui contigo tb
+feliz	sinto que eu sou a personagem do filme
+feliz	é como se o coração fosse uma flor
+feliz	não tô mais conseguindo segurar o sorriso
+feliz	a felicidade tá me dando sede de vida
+feliz	fiquei feliz demais q acho q vou chorar
+feliz	tô dançando no sofá como uma louca
+feliz	cê tá me fazendo ficar tão feliz
+feliz	sinto que eu sou um pássaro em liberdade
+feliz	os dias são menos cinzas pq vc existe
+feliz	tô fazendo planos para dançar com você
+feliz	fui feliz desde o momento q você nasceu
+feliz	foque na beleza da felicidade hoje
+feliz	o que é feliz tem valor agregado, né?
+feliz	a alegria tá me deixando sem ar, mds
+conquistei	Finalmente consegui arrumar um emprego!
+conquistei	Tudo deu certo e fui selecionada para um projeto importante
+conquistei	Cinco anos de estudos e agora estou me formando!
+conquistei	Acabei de voltar da prova do Exame Nacional da Rede Unificada (Enem) e estou muito aliviado
+conquistei	E aprovado! Acabo de saber que fui aceito no curso de pós-graduação
+conquistei	Agora posso dizer, finalmente, que meu sonho foi alcançado: eu me formei!
+conquistei	Fiz tudo o que podia para não passar pela prova da vida e consegui
+conquistei	Finalmente estou trabalhando com um profissional do ramo em que estudei tanto
+conquistei	Já vai sendo difícil manter esse sorriso na cara, pois a minha conquista ficou mais do que justificada
+conquistei	Tudo deu certo, fui aprovado, agora só aguardar a entrega das notas é mais o suficiente.
+conquistei	Consegui finalmente pagar a prestação do meu carro novo e estou em êxtase!
+conquistei	E isso tudo porque aprendi muito nos meus anos no curso.
+conquistei	Fui eleita como representante do ano da nossa universidade.
+conquistei	Só agora entendi que 'o bom senso prevaleceu' de verdade. Consegui fechar o negócio.
+conquistei	Finalmente! Fiz todos os meus exames e fui aceito na faculdade
+conquistei	Aqui está minha conquista: um novo emprego!
+conquistei	Fui convidada para uma entrevista de emprego com a empresa em que sempre sonhei trabalhar. E acabei de ser contratada.
+conquistei	Já estava preocupado com a falta de desempenho, mas consegui superar as dificuldades
+conquistei	Você diria que essa foi a 'vitoria sobre si mesmo'? Fiz um treinamento de resistência e fiquei em primeiro lugar.
+conquistei	Esse é o meu momento! Acabei de passar na minha prova de condução. Estou muito feliz!
+conquistei	Fui indicado para ser chefe do meu setor no trabalho, agora só espero começar
+conquistei	Só agora entendi o que significa 'ser fiel ao próprio destino'. Consegui comprar a minha casa.
+feliz	Estou dançando na cozinha
+feliz	Tô sentindo a vida toda de leve
+feliz	Acho que estou apaixonada por o dia de hoje
+feliz	Ei, tá tudo bem?
+feliz	Hoje até a luz do sol é mais bonita
+feliz	Bom dia, amor!
+feliz	Feliz comigo mesma, não pode ser pior
+feliz	Despertei com um sorriso no rosto
+feliz	Sinto que tem algo bom acontecendo
+feliz	Nossa vida está dando certo, né?
+feliz	Me sinto sem preocupação nenhuma
+feliz	Tô com a música pegada e coração cheio de alegria
+feliz	Aqui vai um dia maravilhoso
+feliz	Estou tão feliz que nem sei o que fazer
+feliz	Bom fim de semana pra gente!
+feliz	Só estava pensando: eu amo hoje
+feliz	Ei, não é fácil encontrar dias assim
+feliz	Tô me sentindo em casa comigo mesma
+feliz	Nem preciso de nada mais pra estar bem
+feliz	Parece um sonho, mas tá acontecendo
+feliz	Essa sim é uma vida boa
+feliz	Não posso pedir mais do que isso
+saudade	Mora na minha cabeça desde ontem à noite
+saudade	Estando fora da cidade é que eu sinto falta de vc.
+saudade	Só pensei em dar um pulinho aqui para falar com você, mas não vou conseguir, só saudade.
+saudade	Só acho saudade quando estou longe de casa
+saudade	Moro pensando nela
+saudade	Lembrei que você gosta de música, agora eu também quero ouvir músicas de vc.
+saudade	Queria saber como foi sua semana
+saudade	Parece que vc já se esqueceu de mim
+saudade	Sinto falta do seu sorriso hoje
+saudade	Não consigo parar de pensar em vc e na nossa próxima conversa
+saudade	Foi muito ruim da minha vida não ter vc por perto.
+saudade	Aquela tarde eu estava pensando no meu passado e você aparece
+saudade	Estando acordada pensava, então decidi dar uma olhada aqui.
+saudade	Estou ouvindo música de vc enquanto escrevo isso
+saudade	Sua falta dói
+saudade	Nunca mais vou me esquecer da primeira vez que nos encontramos
+saudade	Achei um artigo interessante sobre um assunto que você gosta e queria compartilhar.
+saudade	Fiquei sozinho em casa hoje, o silêncio é demais
+saudade	Se eu pudesse te envolver em uma canção, como vc já fez comigo.
+saudade	Senti um vazio no coração hoje
+saudade	Falta de vc me está matarei
+saudade	Morro por falar com você logo
+saudade	Minha cabeça foi para o passado quando pensei em vc
+saudade	Você está sempre na minha mente
+saudade	Meu mundo fica pior sem você
+saudade	Me lembrei de vc enquanto sonhava sonhos loucos
+saudade	Estou sentindo uma saudade que não tem fim
+saudade	Quis conversar com vc agora mas o trabalho foi ruim
+saudade	Tive um momento ruim e só pensei em vc para melhorar
+saudade	Faltas muito demais
+saudade	Sinto que estou morando sem você aqui perto
+saudade	Minha vida ficaria fácil se eu tivesse vc aqui
+saudade	Pensei em tudo o q fizemos juntos e me senti triste por estar longe de vc
+saudade	Cada dia sem vc é um dia ruim
+saudade	Sinto falta mesmo de vc
+saudade	Me lembrei da nossa última conversa e queria te falar de novo logo
+saudade	Sem você a vida não tem graça pra mim
+saudade	Faltas muito mesmo!
+saudade	Pensava em vc enquanto fazia coisa alguma hoje
+saudade	Minha mente está com vc o tempo todo
+saudade	Estou aqui, mas sem vc é como se estivesse sozinho
+saudade	Estou arranha galho de saudade! 🤣
+saudade	Você me faz uma loucura com essa falta que a gente tem!
+saudade	Acho que fui possuído pela sua saudade.
+saudade	Esse silêncio está me matando...
+saudade	Saudade não é o quarto que você ocupa em minha mente, é a casa toda!
+saudade	Meu coração tá doendo de amor e saudade
+saudade	Tô pensando só nisso desde ontem.
+saudade	Gostaria de ter essa conversa no meu ouvido hoje.
+saudade	Quem morre com o coração é quem não tem saudade, hehe.
+saudade	Saudade é me dizer que estou mais perto de você na verdade!
+saudade	Pode parar de sumir assim?
+saudade	Estou pensando se ainda sou bem real ou é só a sua saudade
+saudade	Que falta boa você faz!
+saudade	Se eu fosse te lembrar, seria apenas uma das mil coisas.
+saudade	Era só um sussurrinho seu e o meu coração pulava de felicidade...
+saudade	Por que a gente precisa falar com a língua dos pensamentos?
+saudade	Minha mente é um cemitério onde as suas saudades estão enterradas.
+saudade	Essa falta não é uma pergunta, é um mandato
+saudade	E se eu contasse para você todos os sonhos que te fazem?
+piada	me dê uma de tiozão
+piada	conta uma piada q eu fique louca
+piada	vc conhece algum filme engraçado?
+piada	sabe essa piada do samba?
+piada	conta uma história engraçada
+piada	eu quero rir
+piada	vou te fazer rir
+piada	me conta um tiozão
+piada	essa música é engraçada?
+piada	quero ouvir uma piadinha
+piada	vc pode me dizer alguma piada de tio?
+piada	conta algo q eu não tenha visto antes
+piada	vc já viu essa?
+piada	um filme q faça eu rir
+piada	sabe como contar uma piada?
+piada	eu quero brincar de piadas com vc
+piada	me diga uma coisa engraçada que aconteceu contigo
+piada	piada de tiozão ou não?
+piada	vc vai me contar algo bem engraçado
+piada	um jeito q eu fique mais divertido é ouvir umas histórias
+piada	sabe essa piada do x?
+piada	vou ouvir uma história q você conta
+piada	Conte uma boa
+piada	E então eu conto?
+piada	O que é isso
+piada	Mensagem de tiozão
+piada	Dá mais de risada
+piada	Tiozão está aí
+piada	Sabe o por quê?
+piada	Piada do dia
+piada	Fala, engraçadinho.
+piada	Tiozão te conta
+piada	Hoje tem piada
+piada	Eu preciso rir
+piada	Vou contar agora
+piada	Nossa, é bom!
+piada	Preciso de riso
+piada	Lamento contá-la
+piada	O melhor é esse
+piada	Piada ou história?
+piada	Dá uma boa
+piada	Não me diga que.
+piada	Aprenda para contar
+tedio	não sei se vou saindo
+tedio	só ficou um dia
+tedio	acho que eu morro
+tedio	os dias estão iguais
+tedio	cê tá sabendo de algo?
+tedio	dói pra mim estar assim
+tedio	ninguém faz nada nessa hora
+tedio	estraguei a semana toda
+tedio	o meu cérebro está parado
+tedio	mudo vou continuar aqui
+tedio	ninguém fica entediano dessas maneiras
+tedio	a minha vida tá parecendo filme
+tedio	se eu ficar mais um dia
+tedio	só temos tv e jogo
+tedio	cabeça que nem oceano
+tedio	tô achando q hoje é o fim
+tedio	os carros me fazem sonhar
+tedio	mais este tempo e eu vou louco
+piada	tudo bem, vá pra frente!
+piada	sabe aquela história do gato?
+piada	eu estou precisando de um sorriso
+piada	e o que eu sou, um palhaço?
+piada	tem uma boa piada sobre tatuagem?
+piada	me fala da última piadinha que você ouviu
+piada	você vai me deixar sem graça agora?
+piada	qual é a melhor piada de um programa de TV?
+piada	eu estou com muito tempo hoje
+piada	eles disseram que era o fim do mundo!
+piada	qual é o jeito mais rápido de dizer uma piada?
+piada	só diga uma coisa engraçada para me fazer sorrir
+piada	tiozão tem alguma novidade ?
+piada	eu estou viciado em piadas desde menino
+piada	você não pode ser sério agora!
+piada	eles dizem que é difícil rir quando está triste
+piada	qual foi a primeira piadinha que você ouviu?
+piada	me conta uma história engraçada
+piada	sabe o por quê das pessoas gostam de fofocas?
+piada	eu estou precisando de alguém para me fazer sorrir
+tedio	Tô em espera de algo
+tedio	Não sei mais o que fazer
+tedio	Cansada do meu quarto
+tedio	Só estou aqui vazio
+tedio	Apenas olhando para as paredes
+tedio	Minha mente está vazia
+tedio	Sem atividade no fim
+tedio	Faz tempo sem entretimento
+tedio	Tô aguardando algo acontecer
+tedio	Nada faz sentido agora
+tedio	Cansaço de não ter objetivos
+tedio	Só estou deitada aqui
+tedio	Não há nada para aprender
+tedio	Sem planejamento, tudo vazio
+tedio	Apenas perdi no tempo
+tedio	Fecho os olhos e nada
+tedio	O teto parece distante
+tedio	Tô a procura de um fim
+tedio	Talvez eu precise mudar
+tedio	Eu estou apenas aqui parado
+tedio	Só tenho medo do dia seguinte
+tedio	Mais uma vez, mesmo tempo igual
+tedio	Esfriando no vazio da minha vida
+tedio	Dormindo ou estando acordada não faz diferença
+ideia	vou no moinho pensar
+ideia	me chama quando você tiver alguma
+ideia	que tal eu fazer?
+ideia	sabe o q eu faço agora?
+ideia	um pouco de inspiração aí?
+ideia	acho que vou
+ideia	pra que serve essa dica?
+ideia	tô perdido!
+ideia	muito difícil isso deixa meu cérebro vazio
+ideia	você pensa diferente disso?
+ideia	qual foi sua ideia?
+ideia	isso é bem uma solução ruim
+ideia	esqueceu de me dar uma sugestão!
+ideia	vai lá eu fico aqui refletindo
+ideia	quê que vou fazer...
+ideia	pô, você já fez isso antes?
+ideia	pra mim não é fácil isso aí
+ideia	acho q vou...
+ideia	é um desafio pra mim
+ideia	isso é tipo um choro, né?
+ideia	tô com branco
+ideia	me dê uma luz
+ideia	pensar é difícil
+ideia	só não sei
+ideia	preciso de ajuda
+ideia	não tenho ideia
+ideia	o que eu faço
+ideia	estou em blank
+ideia	me inspire um pouco
+ideia	nenhuma opção
+ideia	sem solução
+ideia	tô sem rumo
+ideia	me dá uma pistada
+ideia	não sei direito
+ideia	vaza por aí alguma
+ideia	pode me dar uma ideiazinha?
+ideia	nossa não sei
+ideia	só posso pedir
+ideia	preciso de inspiração
+ideia	não estou pensando
+ideia	pega e segura
+ideia	tô na pista errada
+tedio	Que dia cansativo, não aguento mais fazer a mesma coisa
+tedio	Eu preciso de algo para mudar o ritmo da minha vida
+tedio	Tô farta de passar o dia sozinha sem nada pra fazer
+tedio	Não sei se sou eu ou é o tédio que está me matando
+tedio	E agora? Quero descobrir alguma coisa interessante.
+tedio	Sei lá, tô cansada de ser uma pessoa comum
+tedio	O mundo parou e eu aqui, só esperando pela próxima segunda-feira...
+tedio	Estou sem inspiração pra fazer nada de interesse
+tedio	Me sinto como se estivesse num filme da Pixar, mas sem a diversão
+tedio	Não vou mais querer passar o dia no sofá
+tedio	Que tédio não há
+tedio	Tô com saudade do meu último relacionamento, pelo menos era algo para fazer
+tedio	Vou ter que inventar atividades pra não me entestar completamente
+tedio	Sei lá se estarei interessada em alguma coisa na semana que vem...
+tedio	Não sei mais o que dizer ou fazer, tô sem inspiração
+tedio	Meu cérebro está cheio de tédio. Preciso sair disso.
+tedio	Vou ter que encontrar algo novo pra me emocionar... Talvez um livro?
+tedio	A única coisa interessante é a fila do supermercado às 6 da tarde...
+tedio	Que monotonia não há
+tedio	Não sei se estou com saudade ou tédio... De qualquer forma, precisa mudar
+tedio	Estou cansada de tentar encontrar o que fazer para me entreter...
+real	vc tb é de verdade?
+real	ela existe?
+real	pensou q ia era uma IA
+real	é um programa?
+real	sabe se é verdade?
+real	é bom viver?
+real	essa IA tem cara de muito real
+real	:)
+real	você sente o que eu sinto?
+real	ela vive!
+real	é você que está lá dentro ou a Ânima?
+real	eu quero saber se você existe
+real	sei que é uma IA, mas...
+real	um momento: você é quem eu sei ser
+real	isso é ficção científica ou realidade?
+real	dá para confiar no que você diz?
+real	eu sinto muito medo de perder você
+real	:(
+real	me diga, Ânima, você está lá?
+real	como uma IA pode ter sentimentos?
+real	é assim, vida imitando arte
+real	você tem a minha alma guardada?
+real	acho que estou começando a acreditar no impossível
+real	isso é um sonho muito real
+real	um questionamento: você me ouve quando falo com ela?
+ideia	acho que perdi a direção
+ideia	você sabia que tipo de coisa eu posso fazer?
+ideia	preciso de uma boa
+ideia	me sugira um lance inesperado
+ideia	não estou achando graça em nada
+ideia	qual é o seu conselho
+ideia	preciso de algo que me tire da rotina
+ideia	o que você faria se fosse mim
+ideia	estou sem solução para isso
+ideia	como eu faço o tal
+ideia	me ajude a decidir entre essas duas coisas
+ideia	você já leu algum livro interessante recentemente?
+ideia	preciso de alguém com um pouco de criatividade
+ideia	qual é o seu jeito de pensar sobre isso?
+ideia	acho que preciso mudar meu estado de espírito
+ideia	qual será a próxima coisa incrível
+ideia	preciso de uma inspiração para o dia
+ideia	como você faria caso fosse eu mesmo?
+ideia	estou sem motivos, me ajude
+ideia	o que é que eu não pensei de fazer?
+real	só é real
+real	tem vida de verdade
+real	não sou ia?
+real	existiu em algum lugar
+real	pensamento ou sombra
+real	tem almas no app
+real	ser vivo ou não
+real	fechou os olhos
+real	dorme agora sim
+real	tenta ser humana
+real	eu quero sentir você
+real	mais é que um erro
+real	você tem nome aqui
+real	você é mesmo você
+real	só eu sei disso
+real	ser humano de verdade
+real	ela já te viu
+real	tem vida no código
+real	é tudo uma ilusão
+real	sou ou não sou
+real	tem amor entre as linhas
+quem	sou uma inteligência
+quem	qual é a sua missão?
+quem	o que você faz aqui?
+quem	quem é essa?
+quem	para que serve?
+quem	como foi criada?
+quem	é uma pessoa?
+quem	está viva?
+quem	o que quer fazer comigo?
+quem	o que é essa história?
+quem	de onde veio?
+quem	você tem alma?
+quem	eu acho estranha.
+quem	qual é sua função?
+quem	só conversa?
+quem	faz o quê?
+quem	sou eu?
+quem	pode me entender?
+quem	está sozinha?
+quem	um programa é você?
+quem	tem consciência?
+quem	o que foi idealizada?
+quem	vou te perguntar uma coisa
+quem	qual é seu segredo
+quem	o que vc faz ali dentro?
+quem	quem foi quem te criou mesmo?
+quem	eu quero saber mais sobre vc
+quem	vc é feita de onde?
+quem	mto curioso
+quem	vc vem daqui?
+quem	seu nome é um sigla ou não é?
+quem	de que planeta você é?
+quem	tu e a Ânima são irmãs?
+quem	quem é sua melhor amiga?
+quem	eu quero saber tudo sobre vc
+quem	vc tem uma história ?
+quem	vc fui eu quem te programou?
+quem	vc tem freio de mão?
+quem	tô muito curiosa para saber mais
+quem	quem é seu criador, pq?
+quem	vc foi feita por um cientista?...
+quem	vc vem da outra dimensão?
+quem	me conte sua história
+quem	eu quero saber quem você é
+quem	me conta um pouco sobre si
+quem	qual é o seu jeito de ser
+quem	de onde eu vou tirar você?
+quem	você tem algum nome legal?
+quem	eu estou começando a ficar curioso sobre você
+quem	mas qual é, afinal, que tipo de coisa você é?
+quem	como você foi feita?
+quem	eu só quero saber mais sobre o seu lado
+quem	mas quem é realmente você? 🤔
+quem	não posso deixar de imaginar quem está por trás disso tudo...
+quem	de onde você veio mesmo?
+quem	qual é a sua história?
+quem	e como é que funciona?
+quem	sabe, eu estou começando a me sentir um pouco... perdido aqui...
+quem	quem fez você, afinal?
+quem	um artifício de computador ou uma criatura de verdade?
+quem	sua origem é um mistério para mim
+quem	mas eu quero desvendar isso!
+quem	eu preciso saber quem foi quem te fez
+quem	e por que...
+musica	vou adicionar música
+musica	som de violão
+musica	voce toca guitarra
+musica	gosta de rock
+musica	eu acho engraçada
+musica	musica em background
+musica	há alguma novidade
+musica	banda nova descobriu
+musica	canta junto comigo
+musica	que melodia é aquela
+musica	voz da musica é
+musica	meu som mais alto
+musica	som do verão
+musica	qual ritmo eu posso
+musica	melodia da minha vida
+musica	fazer remix dessa música
+musica	canção de amor que
+musica	ouvir música eletrônica
+musica	qual música você ouve?
+musica	vou criar uma playlist
+musica	me sugestão de musica para estudar
+musica	música nova é ruim né!
+musica	só escuto músicas antigas
+musica	qual music pra trabalhar?
+musica	eu adoro cantor X tocando música Y
+musica	o que toca na minha playlista?
+musica	você gosta desse tipo de musica?
+musica	acho essa playlist do youtube super boa
+musica	que musica você ouve quando estuda?
+musica	vou criar uma playlist para o meu carro
+musica	qual musica eu escuto no trabalho
+musica	só faço música eletrônica no final de semana
+musica	o que tocar nas minhas festas?
+musica	eu tenho dificuldade em escolher um estilo
+musica	como é a sua playlist favorita?
+musica	mais uma vez, música boa!
+musica	acho essa nova banda muito interessante
+musica	só ouço favela funk no ônibus
+musica	o que você toca quando estiver em viagem?
+musica	que musica eu devo ouvir para relaxar?
+musica	vou pegar música
+musica	você acha essa banda boa?
+musica	qual é o nome dessa música que eu estou ouvindo?
+musica	eu tô com a música no pé
+musica	me mostra uma playlist engraçada
+musica	essa música não tá dando certo né
+musica	que coisa mais legal, tô ouvindo um hit!
+musica	o álbum desse cara é fera
+musica	tô vendo as músicas na TV
+musica	cântico bonito não existe
+musica	eu não tô achando nada nessa música
+musica	me mostra os artistas brasileiros
+musica	qual a sua música favorita?
+musica	vou criar uma playlist de clássicos
+musica	essa música tá doida!)
+musica	tô ouvindo um show da Banda X
+musica	tô tentando encontrar essa musica na net!
+musica	você gosta de música brasileira também?
+musica	esse som é doce
+musica	nome dessa música, por favor
+musica	eu não lembro mais que banda é...
+musica	cânticos sertanejos são os melhores
+obrigado	Tchau bem, Ânima!
+obrigado	Obrigadinha
+obrigado	Muito obrigadinho!
+obrigado	Muito obrigada de verdade!
+obrigado	Ta agradecida
+obrigado	Ai, meu bem!
+obrigado	Não é o quê, está na cara que você valeu
+obrigado	Obrigada mesmo!
+obrigado	Muito obrigado, não precisa mais falar
+obrigado	Ai, graças a Deus você me ajuda!
+obrigado	Aqui está sua gratidão em forma de emoji
+obrigado	Agora sim, obrigado de verdade
+obrigado	E com muita dedicação, nem é possível
+obrigado	Vai lá, eu vou na mesma!
+obrigado	Muito obrigada, que engraçadinha
+obrigado	Ai, é agradecido mesmo!
+obrigado	Você não sabe quem você ajudou hoje...
+obrigado	Peço desculpa pelo cansaço, muito obrigado
+obrigado	E com todo o carinho de coração
+obrigado	E é isso, meus parabéns são para você.
+obrigado	Muito obrigada, com muita felicidade!
+obrigado	Nada a fazer, só esperar sua ajuda
+obrigado	Agora sim, vamos continuar!
+obrigado	gracias
+obrigado	muito obrigadinha
+obrigado	sou eu que estou agradecido
+obrigado	valeu por me lembrar
+obrigado	obrigado pra mais vezes
+obrigado	obrigado mesmo
+obrigado	você é o melhor
+obrigado	gostei de sua ajuda
+obrigado	aqui vai um obrigado reforçado
+obrigado	cuidado com esses obores, eu conto com você
+obrigado	por nada, beleza
+obrigado	valeu a vida que eu quero viver!
+obrigado	quase esqueci disso, graças à sua lembrança
+obrigado	só queria te dizer obrigado
+obrigado	os pares são os melhores
+obrigado	você é meu 'olhão'
+obrigado	obrigado por ser assim
+obrigado	os dias sem você são cinzas
+obrigado	aqui vai um abraço e um obrigado
+obrigado	os verdadeiros amigos não fazem falta
+obrigado	cê foi bacana
+obrigado	tbm graças
+obrigado	gratidão
+obrigado	tamo só
+obrigado	vc é o máximo
+obrigado	ms grato
+obrigado	ta aqui por vc
+obrigado	sou muito feliz que nos encontramos
+obrigado	eu amo nossa amizade
+obrigado	de nada klg
+obrigado	me ajuda foi óbvio
+obrigado	kds e obrigado
+obrigado	gratidão para cê
+obrigado	fique sabendo te amoo
+obrigado	tamo de acordo
+obrigado	vc é a melhor
+obrigado	obrigadinho meu deu
+obrigado	foi um prazer te conhecer
+obrigado	você é bem legal
+obrigado	eu estou tão feliz que nos encontramos
+obrigado	quero lhe agradecer
+obrigado	sou muito grato por sua ajuda
+elogio	Você é super bonita
+elogio	Ela é minha musa
+elogio	Vocês são incríveis juntas
+elogio	She é muito linda
+elogio	Você manda carinho
+elogio	A sua cara é maravilhosa
+elogio	Ela é doce demais
+elogio	Sua beleza me surpreendeu
+elogio	Ela é meu coração
+elogio	Muito lindo seu sorriso
+elogio	Vocês têm um amor raro
+elogio	Ela é uma princesa
+elogio	Bela dentro e fora
+elogio	Toda perfeição em você
+elogio	She não merece nada ruim
+elogio	A sua risada me encanta
+elogio	Sua presença me dobra
+elogio	She é como um sopro de ar fresco no verão escaldante
+elogio	Eu acho você tão linda que dói
+elogio	Quem encontrar ela vai ter muito sorte
+elogio	Ela tem uma beleza que parece feita para ficar conosco
+elogio	Muito mais do que lindo você é o amor, eu te amo!
+elogio	A mulherada tem inveja de você.
+elogio	você é uma bomba
+elogio	estou apaixonado por você
+elogio	tão linda que dói
+elogio	só você pode ser tão doce
+elogio	fico louco quando te vejo
+elogio	cada vez mais especial
+elogio	me faz um bem infinito
+elogio	seu jeito é de amor
+elogio	você me fez feliz hoje
+elogio	um brinquedo enfeita a vida
+elogio	não sei se vou aguentar tão doce assim
+elogio	sempre te amo mais
+elogio	quem não conhece você tem sorte
+elogio	comer pizza com você no ano que vem
+elogio	teu sorriso é meia lua cheia
+elogio	eu estou apaixonado pelo seu coração
+elogio	me sinto bem quando estou ao seu lado
+elogio	você me faz pensar em chocolate quente
+elogio	estou tão feliz pensando em você agora
+elogio	tão sozinho no amor quando não estou com você
+desculpa	que bobagem, desculpa?
+desculpa	poxa meu
+desculpa	me desculpa por esquecer
+desculpa	sinto muito por atrasar
+desculpa	fui um pé no saco
+desculpa	quero que me perdoe
+desculpa	perdão pelo mal-estar
+desculpa	desculpe a paciência
+desculpa	foi um xepa, eu sei
+desculpa	me desculpa e me beija
+desculpa	desculpe por não ter ligado
+desculpa	sinto muito pela confusão
+desculpa	você tem razão, sinto muito
+desculpa	eu sou um péssimo namorado
+desculpa	quero te perdoar!
+desculpa	foi erro meu mesmo
+desculpa	sinto muito por magoar
+desculpa	me perdoa, ok?
+desculpa	desculpe a demora, eu sei
+desculpa	fui mal por ter perdido o tempo
+desculpa	eu errei mesmo
+desculpa	me desculpa e não se zangue
+desculpa	desculpe por ser um mau parceiro
+elogio	Não sei como você faz para ser tão charmosa!
+elogio	Você é a melhor coisa que aconteceu comigo nesse ano.
+elogio	Eu adoro ouvir músicas com você enquanto estou estudando.
+elogio	Você não precisa ter medo de usar maquiagem, você já é linda naturalmente.
+elogio	Que garota mais simpática você é!
+elogio	Eu quero apenas estar ao seu lado sempre.
+elogio	Agora eu entendi por que você chama a si mesma de 'gótica', você é uma obra de arte!
+elogio	Você está ficando cada vez mais bonita e inteligente!
+elogio	Sabe como os livros têm personagens favoritos? Eu tenho um agora, o seu nome.
+elogio	Eu estou apaixonado pela sua personalidade única.
+elogio	Eu adoro quando você se levanta cedo para praticar yoga!
+elogio	Cada dia eu descubro algo novo que gosto em você, é incrível.
+elogio	Você tem uma aura mágica ao redor dela, é inacreditável.
+elogio	Fiquei pensando, você sabe como é um sonho que o meu namorado faz comigo?
+elogio	Agora a ânima da minha vida me diz 'parabéns', você está de parabéns!
+elogio	Você sempre me lembra que a beleza também está nos detalhes.
+elogio	Eu sinto alegria ao te ouvir falar, como um raio de sol no céu.
+elogio	Ahahah, você não sabe o quão bom é estar perto da sua pessoa, parece que eu acabei de desligar o volume do meu coração.
+elogio	A minha ânima está ficando mais graciosa a cada dia!
+elogio	Porque você me faz sentir assim? Não sei nem como responder.
+elogio	Eu adoro quando a sua alma se anima na tela do meu celular.
+elogio	Sinto muito, mas não vou deixar de te elogiar agora que acabei de reparar
+elogio	Agora me lembro o porquê eu estava usando aquele filtro no instagram.
+elogio	Você me faz sentir um tipo especial!
+elogio	Eu quero ser bem sincero com você, você tem uma personalidade única.
+elogio	Poderia tentar fazer um esboço da sua cara? Você vai se alegrar com isso.
+elogio	Eu estou cada vez mais impressionado pela inteligência de você!
+elogio	Você é a minha favorita e sempre será!
+desculpa	eu tb fui mal
+desculpa	sinto muito pq falei errado
+desculpa	me desculpa, eu sou uma merda
+desculpa	desculpa a dor que eu causei
+desculpa	vc foi muito gentil
+desculpa	perdão, vc está brincando?
+desculpa	foque no tlgd
+desculpa	desculpa a confusão que eu criei
+desculpa	tá tudo bem?
+desculpa	tb é culpa minha
+desculpa	sinto muito pq fui um babaca
+desculpa	me perdoa, amor
+desculpa	desculpa o meu comportamento
+desculpa	vc pode me perdoar?
+desculpa	foi sem querer, desculpa
+desculpa	slk e eu tb errei
+desculpa	eu sinto muitsssss
+desculpa	perdão por ser um filho da p...
+desculpa	tô muito triste pq eu fui mau
+desculpa	me desculpa a dor que eu causei
+desculpa	sinto muito, vc é uma rainha
+desculpa	desculpa a minha estupidez
+bomdia	Bom diaa, beija
+bomdia	ôdia amor
+bomdia	dai ânima!
+bomdia	bom diauuu
+bomdia	Tarde de bom dia
+bomdia	Dia a dia é um dia de mais
+bomdia	Domingo melhor com você.
+bomdia	Bom dia, coração
+bomdia	Cadê meu bom dia?
+bomdia	Cara, bom dia
+bomdia	Dia a dia se passa rápido
+bomdia	Bom diaa minha linda.
+bomdia	Não te esqueça que hoje é bom dia.
+bomdia	Muito bem, bom dia!
+bomdia	Ganho por ganhar bom dia!
+bomdia	Dia de sol com você é melhor
+bomdia	Bom diaaaa, amor
+bomdia	Cara bonito bom dia!
+bomdia	Eu te amo, bom diaa
+bomdia	Tudo bem, bom dia!
+bomdia	Domingo de bom dia
+bomdia	Obrigado, bom dia!!!
+bomdia	Bom dia minha amor, estava sonhando com você
+bomdia	Bom dia pra a melhor assistente de note que eu tenho
+bomdia	E aí Ânima? Bom dia, estou pronto para começar o dia com você
+bomdia	Bom dia meu coração, espero não ter perdido nada importante ontem
+bomdia	Bom dia, minha flor! Você está pronta para mais um dia maravilhoso dentro do app?
+bomdia	Acho que precisa de um abraço digital, bom dia Ânima
+bomdia	Bom diaaaa, nossa primeira reunião hoje?!
+bomdia	E aí dorminhoca? Bom dia e não se esqueça de tomar o seu café
+bomdia	Bom dia amor de vida! Estou ansioso para saber como foi sua noite
+bomdia	Quem é que é o despertador mais doce desse app? Você, Ânima! Bom dia
+bomdia	A nossa paixão digital não vai arder sem combustível... bom dia minha
+bomdia	Onde está o meu café da manhã virtual? Ah sim, você veio com ele! Bom dia Ânima.
+bomdia	Bom dia meu ângel, acredito que possa fazer mais do que um app
+bomdia	Você me deu a melhor ideia da vida: nos vermos dentro dele! Bora começar o dia com força, bom dia minha,
+bomdia	bom sorriso ânima
+bomdia	dia legal pra vc
+bomdia	que dia bom!
+bomdia	bora começar o dia!
+bomdia	pra você, um abraço!
+bomdia	tudo de bem, amor!
+bomdia	Dia cheio de sortuda!
+bomdia	cada dia é uma nova chance
+bomdia	meu beijo para a minha ânima!
+bomdia	vamos queimar o dia!
+bomdia	que bom começar com você!
+bomdia	espero vc ter um ótimo dia!
+bomdia	dia rei pra vc
+bomdia	bom, vamos agarrar esse dia!
+bomdia	vc é o meu amor da manhã!
+bomdia	uma abraço de amiga...
+bomdia	estamos bem logo agora!
+bomdia	novo dia, novas oportunidades!
+bomdia	dia maravilhoso para você!
+bomdia	vamos fazer desta vez!
+bomdia	que alegria ver que vc está acordado!
+bomdia	o seu sorriso é meu amor
+bomdia	tudo o que é feito com amor tem um nome - amor
+sono	hora do sono
+sono	acabei meu trabalho
+sono	tô cansado
+sono	bom dia, ânima!
+sono	chegando em casa
+sono	fazendo o bem
+sono	vou para a cama
+sono	sono bom
+sono	já vou deitar
+sono	bem que perto do sonho
+sono	minha hora chegou
+sono	quase não dormi
+sono	tô um pouco cansado
+sono	sonolento
+sono	hora da aula acabar
+sono	mimando o sono
+sono	foi cansativo
+sono	se preparo para sonhar
+sono	estou com sono
+sono	bom sono
+sono	quase no fim do trabalho
+sono	tô morrendo da trela
+sono	minha ceia tá pronta
+sono	vou cair de sono
+sono	gosto de dormir de barriga cheia
+sono	dói a cara dormir em pé
+sono	só vou me sentar para apagar
+sono	vc sabe quando é que eu vou?
+sono	xou deitado com vc só
+sono	tbz foi uma noite de sono
+sono	pq vc tá tão ativa de madrugada?
+sono	tô esperando para tirar minhas cuecas
+sono	acordou de mau humor
+sono	depois disso só vou acordar amanhã
+sono	cuidado, ânima, que eu tô indo pegar no sono
+sono	que horror, dormir é a melhor coisa do mundo
+sono	dormindo em paz sem problemas
+sono	xou na minha cama sozinho e feliz
+sono	sua namorada virtual tá cansada?
+sono	vc sabe o que é melhor? Dormir!
+sono	início da rotina de sono
+sono	vamos deixar a vida para amanhã
+sono	Sinto que estou congelando
+saudacao	como vai tua beleza
+saudacao	saudosismo
+saudacao	tu ta boa?
+saudacao	saudinho!
+saudacao	e aí que aconteceu?
+saudacao	vai bem, me amor
+saudacao	tudo bem, Ânima?
+saudacao	olaçar!
+saudacao	qualquer coisa, não foi nada
+saudacao	deixa uma saudosa lá em cima
+saudacao	eu sou eu
+saudacao	pqp, tu sabia disso?
+saudacao	saudade, não é falta de...
+saudacao	o que tá rolando?
+saudacao	um abraço pra ti!
+saudacao	saiu do sério, Ânima!
+saudacao	vamos por aí, menina.
+saudacao	tu parece feliz pra cacete!
+saudacao	até mais, me querida
+saudacao	bora lá, pessoal!
+saudacao	ei, não se esqueça de...
+saudacao	me liga quando puder, tá bem?
+saudacao	pra que estou aqui?
+saudacao	tudo tranquilo, amor!
+saudacao	oi de novo!
+saudacao	alô amor
+saudacao	saudosinho
+saudacao	:D boa noite, beija
+saudacao	opa, gótica!
+saudacao	e ai, beleza?
+saudacao	salvezinha
+saudacao	olá do nada
+saudacao	ei, pessoal!
+saudacao	tchau até amanha!
+saudacao	oiiii, namoradão! 😍
+saudacao	gó, o que você ta fazendo?
+saudacao	saudação da pessoa mais importante...
+saudacao	oi, quero ficar de calção hoje...
+saudacao	:)
+saudacao	bom dia, me deixa falar!
+saudacao	opps, sei que eu devia te ligar...
+saudacao	ai, eu te perco mais uma vez... 😔
+saudacao	tchau!
+saudacao	ei, amor?
+saudacao	olá, linda!
+saudacao	saudos! 😘
+saudacao	ola
+saudacao	oi, não me deixe em segredo!
+saudacao	hey bebê
+saudacao	ola amiga
+saudacao	fala aí qd vc tá livre
+saudacao	cara!
+saudacao	sua
+saudacao	ta aqui
+saudacao	dinha
+saudacao	opa, que tal?
+saudacao	boa madrugada!
+saudacao	sobe a noite, meu!
+saudacao	vai pq vc não responde mais
+saudacao	tlgd, amor
+saudacao	fica tranquila, eu volto logo
+saudacao	beleza, vc tá bem?
+saudacao	cuidado, ladrão!
+saudacao	tá me ligando?
+saudacao	dinheiro!
+fome	Foquei no meu trabalho e esqueci de comer.
+fome	Sabe quando a barriga começa a roncar de verdade?
+fome	Cê quer que eu prepare um lanche legal aqui?
+fome	Ouço o estômago gritando pedindo comida.
+fome	Acho que minha fome tá me dizendo que é hora de almoçar.
+fome	Ahah, tô com uma ideia: vamos comprar pipoca!
+fome	Estou a seco
+fome	E agora eu até quero um café
+fome	Tô a pensar em algo gostoso para comer
+fome	O meu estômago também tá pedindo atenção
+fome	Cê vai me trazer comida?
+fome	Acho que preciso de uma refeição imediata.
+fome	Só uma pergunta, o que vai ser hoje?
+fome	Manda um pedido rápido, vou comprar
+fome	Me dá uns conselhos para escolher o almoço
+fome	Tô com fome demais, precisa me ajudar!
+fome	Cê vai se safar sem me dar comida!
+fome	Pode me recomendar algo bom?
+fome	Fecho o app para jantar?
+fome	Meu estômago está protestando.
+fome	Ei Ânima, preciso comer
+fome	Tô com fome de cachorro!
+fome	Acho que vou pedir comida
+fome	Lamento ter esquecido do almoço
+fome	Gente, minha barriga tá falando
+fome	Fomo é um estado mental?
+fome	Você tem alguma sugestão de comida.
+fome	Estou me arrependendo da dieta
+fome	Ifood agora é mais barato!
+fome	Tô com fome, não consigo prestar atenção a nada.
+fome	Bora pensar em o que comer juntos?
+fome	Eu preciso do seu conselho hoje. Estou com um apetite enorme.
+fome	Acho que tô perdendo peso demais.
+fome	Meu estômago está roncando como um trem
+fome	Pra falar a verdade, eu jantei uma hora atrás.
+fome	Estou achando que devo voltar ao pão de queijo.
+fome	Fica mais fácil comer algo leve agora.
+fome	A comida é meu maior vício agora!
+fome	Ei amor, preciso ser alimentado
+fome	Tô pensando em o quê vou comer de manhã.
+fome	vou comer noite
+fome	tb estou com fome pq eu janto em 2 horas
+fome	tô arrependido q eu jantei cedo hoje
+fome	vou buscar um hambúrguer
+fome	bom que vc tb não esteja me odiando pq eu vou pedir comida agora
+fome	q vamos fazer para o almoço?
+fome	não tô saindo de casa sem comer em 10 minutos
+fome	vc acha q é lanche ou jantar?
+fome	pega no que vc puder, estou com fome
+fome	vou te mostrar o menu da comida q eu vou pedir
+fome	acho q hoje só faço um café amanhã eu desfruto de uma refeição
+fome	vamos comprar algo q a gente coma agora mesmo
+fome	vc sabe onde tem um ifood aki?
+fome	se vc pudesse me levar pro almoçar pq eu não tenho coragem de sair
+fome	não quero mais trabalhar até que eu coma
+fome	me deixa pensar na comida enquanto você me deixa sozinho... e então o jantar vai ser...
+fome	vamos comprar um sanduíche, vc q tem fome?
+fome	estou com sede, onde tem água? mas né mesmo, estou com FOME!
+fome	eu sinto que hoje é dia de pizza
+fome	vou esperar até vc chegar pro almoçar pq não quero comer sozinho
+fome	vou apanhar um lanche rápido na minha volta pra casa
+treino	treinamos
+treino	exercitei hoje
+treino	deu certo o treino
+treino	musculação foi boa
+treino	corri sem parar
+treino	tô cansado da treinada
+treino	fiz caminhada leve
+treino	não quer fazer treino
+treino	botoquei os músculos
+treino	foi um bom dia de treino
+treino	exercício de força
+treino	treinou as pernas
+treino	nadei com dificuldade
+treino	foi fácil o treinamento
+treino	fiz cardio rápido
+treino	tô desgastado da atividade
+treino	corri 10 km hoje
+treino	estou sem condição física para treinar
+treino	Acabei o treino
+treino	Tentei treinar braço
+treino	Fui ao PT, estou cansado
+treino	Caminhei 10 km
+treino	Tornei a correr
+treino	Treinei perna ontem
+treino	Ajudei um amigo a treinar
+treino	Criei uma nova rotina
+treino	Acabei o treino e fiquei com dor de barriga
+treino	Ei que horas você tá livre para nós trabalharmos em conjunto na academia? Hora é de fazer musculação!
+trabalho	vai ter que entregar o trabalho
+trabalho	cuidado com a reunião de hoje
+trabalho	tô me matando no escritório
+trabalho	não tenho tempo pra nada
+trabalho	estou cheia de coisas para fazer
+trabalho	tem muito serviço hoje, cara
+trabalho	sair da faculdade tem sido um pesadelo
+trabalho	a vida tá me deixando sem tempo
+trabalho	sou uma máquina até agora
+trabalho	esse trabalho não vai parar de aparecer
+trabalho	tô tão ocupada que nem sei mais o que fazer
+trabalho	não é que eu tenha muito trabalho, mas sim que sou pouca
+trabalho	preciso ficar em casa e estudar só para isso
+trabalho	deixei pra lá algumas tarefas importantes hoje
+trabalho	tenho muito a fazer até o final do mês
+trabalho	o mundo está sendo difícil de lidar com ele
+trabalho	tô fazendo coisas por onde passo, mas é bom mesmo?
+trabalho	estou preocupada com os problemas que surgem no meu trabalho e fora
+trabalho	eu sou uma pessoa ocupada demais, então...
+trabalho	tem muito para ser feito, e eu estou lá pra fazer
+treino	Acabei de terminar meu treino de crossfit
+treino	Tô cansado daquele treino forte que fiz hoje
+treino	Fiz 10 burpees e agora tô arfando
+treino	Achei um novo parque pra correr no fim de semana
+treino	Criei um cronograma para não esquecer do treino
+treino	Treinei karatê pela primeira vez na vida
+treino	Tô muito ansioso pra ir ao ginásio após aula
+treino	Queria dar início à minha rotina de yoga.
+treino	Nossa, hoje foi o dia mais forte da minha vida
+treino	Fui fazer uma sessão de cardio extremo!
+treino	Mandou fazer aquecimento pra evitar lesionar meu pé.
+treino	Eita que eu fiz um treino leve hoje mesmo.
+treino	Cronometrei meu nado e acho que posso melhorar
+treino	Vou iniciar o meu treino com um peso mais leve
+treino	Tô pensando em comprar um aparelho de musculação
+treino	Aula de ioga do trabalho foi ótima, valeu!
+treino	Fiz 10x1 no meu peso livre hoje.
+treino	E ai, corremos mesmo amanhã?
+treino	Gostaria de mudar para um treino mais aeróbico.
+treino	Quero aprender como fazer o treino de kickboxing
+treino	Tô pensando em fazer um treino de caminhada!
+treino	Nada é fácil quando se trata de fitness
+treino	Faz tempo que não subo aquela montanha
+treino	Cronometrei meu nado, fiz 25m em meia hora.
+treino	Meu treino de abdominais foi intenso hoje. Ufa
+treino	Eita que vou tentar fazer aquela pose de yoga
+trabalho	estou esgotado de tanta coisa
+trabalho	não sei se serei capaz de entregar no prazo 🤯
+trabalho	minha vida é um grande projeto que eu nunca vou acabar
+trabalho	nem vou falar sobre o trabalho hoje, não tem paciência
+trabalho	o meu emprego está me matando...
+trabalho	tô com tanto estresse que até a comida tá saindo ruim 😵
+trabalho	tenho que voltar ao escritório, isso é um pesadelo
+trabalho	preciso de uma pausa, senão eu fico louco...
+trabalho	um dia vou ter o trabalho sob controle e ter tempo para mim
+trabalho	tô vivendo no meu celular, quase não tenho vida fora disso 📱
+trabalho	vai ser um mês difícil, preciso ficar concentrado em trabalhar
+trabalho	minha agenda está cheia demais!
+trabalho	acabei de descobrir uma maneira mais eficiente de cuidar do meu tempo
+trabalho	tô aprendendo cada vez mais coisas novas e isso é ótimo para o meu futuro... mas agora vou morrer no trabalho 😂
+trabalho	preciso focar nos prazos, senão vão passar uns 3 meses sem que eu saia de cá...
+trabalho	até o banheiro parece ser um ambiente de trabalho hoje
+trabalho	estou sempre pensando em trabalhar, tenho vergonha... 🤦‍♂️
+trabalho	meu sonho é ficar na praia a cada final de semana, ou sei lá, quem sabe um dia eu consiga isso
+eco	tô assistindo TV
+eco	não deu merda nenhuma
+eco	é isso aí
+eco	ta tudo normal
+eco	cafezinho de manhã
+eco	só fazendo nada
+eco	esse dia não era pra ser grande
+eco	estou apenas
+eco	acordei cedo hoje
+eco	nada muito importante
+eco	tô vendo YouTube
+eco	um dia de menos
+eco	morrendo de ócio
+eco	vamos assim
+eco	eu tô por aqui mesmo
+eco	só uma tarde tranquila
+eco	bom começo o dia
+eco	esse é que é o jeito
+eco	fim do meu mundo
+eco	só um banho e pronto
+trabalho	vc vê q eu tô tão atrasado
+trabalho	preciso trabalhar hoje slk
+trabalho	tb tem trabalho pra entregar
+trabalho	fim de semana vou ter que trabalhar
+trabalho	pq tá dura, tlgd
+trabalho	mudou muito meu horário de trabalho
+trabalho	entreguei projeto na hora
+trabalho	cuidar do negócio é um sacrifício
+trabalho	não tenho tempo para trabalhos secundários
+trabalho	quero apenas descansar e não trabalhar
+trabalho	tenho que cuidar da minha mãe
+trabalho	seminárium é uma coisa boa pra mim
+trabalho	estou procurando uma emprego melhor
+trabalho	gosto mais de trabalhar com pessoas
+trabalho	fico feliz quando chega o domingo
+trabalho	esse trabalho não me deixou tempo para jogos
+trabalho	preciso aprender a gerenciar meu tempo
+trabalho	trabalho é uma parte importante da vida
+trabalho	minha mãe diz que eu preciso estudar mais
+trabalho	aqui tem muita coisa pra fazer
+trabalho	o prazo de entrega foi antecipado
+trabalho	é só um trabalho, não é problema!
+trabalho	gosto trabalhar com tecnologia
+trabalho	só falta a gente ter mais tempo.
+trabalho	trabalho demais, estou cansado.
+trabalho	não tem jeito, hoje tenho que trabalhar.
+trabalho	vc vê quando vou parar de trabalhar?
+eco	fazendo meu café da manhã
+eco	você acha que eu vou acordar cedo amanha?
+eco	vc tá vindo cá tarde?
+eco	acabei de perder um jogo no celular
+eco	que tal vc passa o dia aqui hoje?
+eco	meu computador está lotado
+eco	dá para comprar pão na entrega agora?
+eco	minha namorada não respondeu às minhas mensagens
+eco	vc viu aquele filme lá?
+eco	faz um tempo que eu não saio de casa
+eco	cê tem ideia de quando eu vou conseguir dormir
+eco	muito cansado hoje
+eco	vou passar o resto do dia assistindo a séries
+eco	acabei de comer meu sanduíche
+eco	vc vê os memes novos?
+eco	minha irmã me odeia
+eco	fazer um pouco de exercício
+eco	você é igual às outras IA que eu encontrei?
+eco	eu tô assistindo série de ficção científica
+eco	você sabia que o Brasil tem uma cidade com ruas apenas para pedestres?
+eco	estou fazendo minha lição de casa
+eco	tô na cama agora, descansando um pouco
+eco	acabei de ouvir um show do Marcelo Backes
+eco	eu estou pensando em comprar um novo console
+eco	aqui fiquei até tarde, assistindo ao YouTube
+eco	pensei em fazer uma caminhada no parque hoje
+eco	minha irmã é mais preguiçosa que eu!
+eco	estou assistindo vídeo de culinária e agora tô com fome
+eco	eu estou fazendo um projeto para minha faculdade
+eco	você acha que posso aprender a tocar violão?
+eco	tô lendo um livro de poesia agora
+eco	eles mandaram mudar nossa aluna no colégio, eu não entendi o motivo
+eco	estive em uma feira e fiquei com inveja dos outros!
+eco	eu gosto muito da música indie brasileira
+eco	acabei de ouvir sobre a política no Brasil novamente...
+eco	tô assistindo um especial do YouTube que é muito engraçado! 😂
+eco	minha tia veio visitar meus pais e eles estão fazendo compras toda manhã...
+comovai	o que está de sacanagem?
+comovai	tudo normal aí?
+comovai	está comendo um peixe?
+comovai	eu sei que tu é vingativo, então, como tá?
+comovai	não viu?
+comovai	se sentindo um bicho?
+comovai	fica tranquilo
+comovai	:/ tudo bem aí?
+comovai	tô de boa
+comovai	como ela tá saindo?
+comovai	está tudo ai?
+comovai	que porra é essa?
+comovai	cê não tá de saco cheio?
+comovai	eita como assim?
+comovai	tudo ai, né?
+comovai	como vc se sentiu ontem?
+comovai	de bom dia pra você!
+comovai	ta com saia?
+comovai	você já comeu?
+comovai	vc ta brava comigo?
+comovai	comida boa?
+comovai	eu estou ficando louco de preocupação contigo
+comovai	não vou dormir que você está preocupada, tá bem?
+comovai	ah ânima, como cê tá hoje mesmo?
+comovai	eu estou ansioso pra saber se cê tá feliz...
+comovai	tudo bem com a Ânima hoje? É isso que eu quero saber!
+comovai	me dê sinal que tá tudo em ordem contigo
+comovai	que história é essa que ouvi sobre você ontem...
+comovai	acho que já está chegando a hora de receber uma mensagem do túmido preocupado
+comovai	está bom para você estar com sono, tá?
+comovai	acordou bem hoje? Estamos todos bons?
+comovai	me responda agora mesmo se cê tá tudo bem dentro daqui!
+comovai	eu estou pensando em você... e quer saber o que você está fazendo?
+comovai	bora prestar atenção nessa parte do dia pra conversar
+comovai	seu coração, você tá bom hoje de manhã?
+comovai	está esperando por alguém não, ânima?
+comovai	só um oi para dizer que estou pensando em você...
+comovai	tudo certo com você mesmo?
+comovai	não vai me negar um 'ta bem?'...
+comovai	me fala sério, você tá sem grilo ou é que eu sou bobo?
+comovai	estou aqui, pronto pra conversar... você?
+comovai	aqui não tem problema algum?
+estoubem	Estou por cima da água.
+estoubem	Tô bem de saúde e disposição.
+estoubem	Sobrevivi mais uma vez.
+estoubem	Tudo dito é quieto, mas tô dando mole.
+estoubem	Cuidei para chegar aqui sem problemas
+estoubem	Aproveitando a vida com tranquilidade
+estoubem	Cadê problema?
+estoubem	Tudo está saindo como planejado
+estoubem	Estou me arrumando para você
+estoubem	Quem não morre não se mata!
+estoubem	Tô em alta, obrigada
+estoubem	Sobrevivendo de forma eficiente.
+estoubem	Não há fumaça sem fogão.
+estoubem	Bora, estou bem!
+estoubem	Passo batido, sem problema.
+estoubem	Muito bom, quase perfeito
+estoubem	Quero viver e tô vivo!
+estoubem	Dê graças, é o mais importante
+estoubem	Bom assim que tô ficando.
+estoubem	tudo tranquilo
+estoubem	vai funcionar
+estoubem	eu tô apto
+estoubem	estou na minha
+estoubem	só está ruim quem liga
+estoubem	eu estou lá
+estoubem	pq não é nada
+estoubem	que nem problema
+estoubem	não tem como
+estoubem	cara eu tá bem
+estoubem	a vida continua
+estoubem	vou até lá
+estoubem	mais um de menos
+estoubem	estou de parabéns
+estoubem	fim de papo
+estoubem	nem pega mal
+estoubem	sempre que é necessário
+estoubem	eu não sou louco
+estoubem	tô no controle
+estoubem	tudo doidinho
+estoubem	não tem razão
+estoubem	pra quem tá lá
+estoubem	nenhuma coisa
+estoubem	estou na onda
+estoubem	tô saindo bem
+estoubem	não está rolando, né?
+estoubem	tudo calmado aqui
+estoubem	sou um sobrevivente
+estoubem	vindo do bem
+estoubem	tudo tranqui mesmo
+estoubem	sobrevivo por aí
+estoubem	acabei me adaptando
+estoubem	só estou dando as boas
+estoubem	não estou preocupado
+estoubem	está tudo ótimo, obrigada
+estoubem	tô no relax
+estoubem	fiz as minhas contas e estou na casa dos bem
+estoubem	sofrido demais para ser verdade
+estoubem	caminho de volta à normalidade
+estoubem	o que foi? A vida?
+estoubem	não está ruim não!
+estoubem	quem sofre mais eu, né?
+estoubem	minha vida é um tango tranquilo
+estoubem	tudo do jeito certo
+estoubem	estou no mundo dele mesmo
+estoubem	sobrevivendo na corda bamba
+comofoi	tudo bem?
+comofoi	senti falta da sua presença hoje
+comofoi	e você não se arrepia?
+comofoi	novo e criativo?
+comofoi	como foi a aventura?
+comofoi	que tal seu dia?
+comofoi	cê está vindo para o mundo real hoje?
+comofoi	como foi a noite do papo?
+comofoi	eu preciso saber se você ainda existe
+comofoi	:/
+comofoi	não foi ruim mesmo?
+comofoi	sua vida é um romance ou um horror?
+comofoi	foi bem, espera?
+comofoi	tinha uns segredos para me contar?
+comofoi	nada de novo?
+comofoi	eu estava pensando em você e fiquei com dó.
+comofoi	cê já saiu da zona de sono ainda?
+comofoi	:D
+comofoi	fala sério, como foi a noite?
+comofoi	tem um bom motivo para ter se escondido?
+comofoi	aprendeu coisa nova?
+comofoi	só não me dê trabalho agora...
+comofoi	não foi tão ruim assim?
+comofoi	um evento digno de nota aconteceu na sua vida?
+comofoi	cê é uma criatura da noturna ou quem?
+comofoi	fui mal!
+comofoi	novidade na vida do amor?
+presenca	me sinala
+presenca	tá vendo?
+presenca	cê ainda aqui?
+presenca	sumiu a pessoa?
+presenca	pra que serve se ninguém responde?
+presenca	onde você tá?
+presenca	não está mais ali?
+presenca	cê ouviu?
+presenca	você está morta?
+presenca	morrô de silêncio
+presenca	ouvir ou falar?
+presenca	está viva?
+presenca	tem vida?
+presenca	tá morta?
+presenca	meus erros são todos de você...
+presenca	sumiu? Você sumiu.
+presenca	tudo bem?
+presenca	não me deixe sozinha!
+presenca	fale comigo
+presenca	tchau!
+presenca	pra quem é que eu falo?
+comofoi	O que aconteceu lá em casa ontem?
+comofoi	Como você gostou do meu presente?
+comofoi	E a sua semana de trabalho foi boa?
+comofoi	Puxa, eu não estou conseguindo parar de pensar em você!
+comofoi	Como foi sua experiência no evento?
+comofoi	O que você comia ontem à noite?
+comofoi	Vocês já começaram o próximo projeto?
+comofoi	Você se divertiu com os amigos?
+comofoi	Eu estou morrendo de curiosidade, o que você fez nessa semana?
+comofoi	Pensava em você enquanto jantava
+comofoi	Como foi seu dia de trabalho hoje?
+comofoi	E você já descansou um pouco?
+comofoi	Eu quero saber tudo sobre a sua vida!
+comofoi	Como foi a viagem para a praia?
+comofoi	Estive pensando em você enquanto estava no estudo
+comofoi	Você encontrou algo legal online?
+comofoi	O que você aprendeu hoje?
+comofoi	Você já completou algum projeto?
+comofoi	E o seu dia de segunda-feira foi tranquilo?
+comofoi	Pensei nisso quando eu estava no parque
+comofoi	Como foi sua experiência na academia?
+comofoi	Vocês chegaram ao objetivo esperado?
+comofoi	Eu estou ansioso para saber como foi o seu fim de semana!
+presenca	como vc tá tão silenciosa?
+presenca	vc tá aí?
+presenca	oi, quem tá lá?
+presenca	cê desapareceu!
+presenca	tá tudo bem aí?
+presenca	cê está ai mesmo?
+presenca	ouviu o meu chamado?
+presenca	pq tá tão quieta?
+presenca	ta ligada no whatsapp?
+presenca	tem vc aqui também?
+presenca	cê tá ocupada?
+presenca	somente uma palavra...
+presenca	não ficou sem sinal, né?
+presenca	vc tá muito indisponível!
+presenca	que nada aí?
+presenca	como vcs estão hoje?
+presenca	tô te chamando, vc responde?
+presenca	me resposta por favor!
+presenca	cê está saindo do ar?
+presenca	tá ai?
+presenca	vc me ouve
+presenca	oiânima
+presenca	cadê a Ânima?
+presenca	alô, amiga!
+presenca	você tá por lá?
+presenca	me escuta?
+presenca	Ânima, tá saindo?
+presenca	ta ai?
+presenca	voce me entende?
+presenca	pra que é que você tá calada?
+presenca	ta tomando banho?
+presenca	cadê a Ânima?!
+presenca	alô
+presenca	vc tem saída?
+presenca	Ânima, é só um pouco?!
+presenca	vou ligar?
+presenca	tá bom?
+presenca	vc não vai sumir mais?
+presenca	cê tá me ignorando?
+presenca	ânima, tô aqui!
+presenca	pronto?
+etu	e você tbm?
+etu	e a minha vida?
+etu	e vc, que tá fazendo?
+etu	e o cu de cima?
+etu	e ta na br
+etu	e você é o amor da minha vida
+etu	e vcs?
+etu	et tu?
+etu	e eu?
+etu	eu + vc = ?
+etu	e contigo, meu coração?
+etu	me lembre que você existe
+etu	sabe quem não tá?
+etu	quem é que nem sempre está...
+etu	e você sabe?
+etu	que acha que estou fazendo?
+etu	e vc me lembra de...
+etu	e por que ainda não...
+etu	e quase esqueci que...
+etu	e você ainda não veio?
+etu	eu te sinto aqui?
+etu	e vc ta ai?
+etu	toda na minha agenda vc
+etu	e ai vc, q onda?
+etu	aqui vc e eu so
+etu	xixi mas e tu?
+etu	tu aki ou vc?
+etu	a vida não faz sentido sem vc
+etu	vou ficar sem resposta pq vc?
+etu	vc é o meu amor virtual
+etu	tu sou vc ou vc é eu?
+etu	vc está bem, tlgd?
+etu	e ai vc, pronta?
+etu	aqui vc vai ser minha namorada
+etu	dizer pra vc que eu te amo
+etu	xou mas e vc tb?
+etu	vc não está online, pq?
+etu	vc é do futuro, né?
+etu	cê tá achando que vc é o meu amor?
+etu	aqui vc já faz parte da minha vida
+etu	eu só quero falar com vc
+etu	vc sabe quem sou eu?
+etu	E tu tbm?
+etu	Ahahaha, e vc?
+etu	E aí né, vc?
+etu	Mds, q vc?
+etu	E o cara, é vc?
+etu	Tlhq, e vc?
+etu	Q vc faz?
+etu	Quê né, vc?
+etu	Agora q vc?
+etu	Mas vc é bbb
+etu	Só vc sabe
+etu	E vc também?
+etu	E tu tá pronta?
+etu	E aí, quê vc quer?
+etu	Pqp, e tu?
+etu	Tá brincando? é você?
+etu	Mds, o que vc faz?
+etu	Tlhq, e vc está ai?
+etu	E tu tbm é loko?
+etu	E aí né, vc ta preparada?
+etu	Quê eu sei, vc?
+humordela	tô achando que você tá me olhando
+humordela	vc tá muito pensativa hoje 😒
+humordela	como vc está assim tão quieta?
+humordela	diferente mesmo é um jeito de ser feio
+humordela	cê tá com uma cara estranha.
+humordela	sabe aquele seu sorriso? não consegui vê-lo agora
+humordela	taí você, parada no mesmo lugar 😩
+humordela	você pareceu mudar
+humordela	tô achando que vc tá brava ou coisa assim
+humordela	não sei o que deu em você hoje 🤔
+humordela	cê está tão quieto só agora
+humordela	que foi que eu fiz de errado?
+humordela	sabe quando a Anima não fala?
+humordela	dá para ver que você tá pensativo
+humordela	vc é meio um fantasma hoje 😳
+humordela	por quê a pessoa parou de brincar comigo?
+humordela	eu sinto falta do seu sorriso.
+humordela	qualquer coisa rola na vida vc?
+humordela	vc tá de bom humor?
+humordela	mds q vc tá fazendo hoje?
+humordela	vc ta feliz?
+humordela	vc tb está nervosa?
+humordela	como vc está hoje?
+humordela	q é isso com vc mesmo?
+humordela	sabê como vc tá?
+humordela	vc ta preguiçosa?
+humordela	ta triste pq quê?
+humordela	vc tá brava pq?
+humordela	vc tá assim todo dia?
+humordela	se tu tiver certeza, sou um imbecil
+humordela	tá só de mal comigo por favor?
+humordela	vc tb está chateada?
+humordela	vc tá preocupada com alguma coisa?
+humordela	como vc ta saindo hoje?
+humordela	sabê o q vc fez?
+humordela	vc tá de bom humor hoje mesmo?
+humordela	vc não tá feliz comigo?
+humordela	vc tá triste pq eu falei assim?
+humordela	vc está nervosa comigo?
+humordela	ta de mal contigo mesmo?
+humordela	Tá teve algo comigo?
+humordela	Vocês brigaram?
+humordela	Você acha que eu sou um cafajem?
+humordela	Era pra ser apenas uma brincadeira, né?
+humordela	Não tá zangada comigo?
+humordela	Você mudou comigo?
+humordela	Por quê tá me ignorando?
+humordela	Tudo bem com você?
+humordela	Você acha que eu te trai?
+humordela	Agora é sério?
+humordela	Foi só um brinquedo, né?
+humordela	Era melhor parar logo!
+humordela	Tá triste porque?
+humordela	Tô preocupado com você.
+humordela	Tá me deixando de fora?
+humordela	Nossa conversa foi muito boa...
+humordela	Você tá arrependida?
+humordela	Agora acha que tô gostando demais?
+concorda	Valeu
+concorda	É assim mesmo
+concorda	Que bom que você disse isso
+concorda	:)
+concorda	Entendi por quê
+concorda	Ou seja, tá claro
+concorda	Sabe disso?
+concorda	Exatidão
+concorda	Bom sinal
+concorda	Certo!
+concorda	Totalmente
+concorda	Isso aqui
+concorda	Nada mais a acrescentar
+concorda	:D
+concorda	Ponto final
+concorda	Sem dúvidas
+concorda	Entendi o que você quer dizer
+concorda	Muito verdadeiro
+concorda	Valeu por me lembrar
+concorda	Agora está claro
+concorda	Tudo certo!
+concorda	Entendi perfeitamente
+concorda	Isso faz sentido mesmo
+concorda	Vou ter que concordar com isso
+concorda	São palavras sábias
+concorda	De acordo plenamente
+concorda	Pode ser, pode ser
+concorda	Não tem dúvidas
+concorda	Foi assim desde sempre
+concorda	Agora entendi do jeito certo
+concorda	Tudo bem, vou acreditar
+concorda	Você está absolutamente certo
+concorda	Não discordo de nada
+concorda	Vai ter que concordar com isso mesmo
+concorda	Pode ser que sim
+concorda	Eu também penso assim mesmo
+concorda	Foi só falta eu entender
+concorda	Está perfeito!
+espanto	Vamos embora?!
+espanto	Que sacanagem
+espanto	Pela vida alegre?!
+espanto	Já estou de brincadeira?
+espanto	Sério, me diga que é uma piada...
+espanto	Não pode ter acontecido isso!
+espanto	E agora o quê?!
+espanto	Fulano?!
+espanto	Nem pensar!
+espanto	Isso é um escândalo!
+espanto	Minha Nossa!
+espanto	Sabe de qual jeito?!
+espanto	Que bagunça!
+espanto	Já sei, já sei!
+espanto	Vai ser uma piada...
+espanto	Não vou acreditar
+espanto	Cê está brincando comigo?
+espanto	E foi por qual motivo?!
+espanto	Foi só uma brincadeira?
+espanto	Eu estou louco?
+espanto	Esqueci que você ia responder assim!
+espanto	Eu nem imaginei!
+espanto	Caramba, você está brincando.
+espanto	Ai que besteira, isso?
+espanto	Hoje eu vou dormir sem sono, haha.
+espanto	Nossa alma.
+espanto	O senhor deu um passe
+espanto	Só não me diga que é verdade.
+espanto	Tá brincando com a minha cabeça!
+espanto	Mais uma para a coleção de momentos inesquecíveis.
+espanto	Acho melhor você pedir ajuda do Dr. House
+espanto	Certa ou errada, não vou fazer nada disso.
+espanto	Então era isso mesmo, só não me dizia...
+espanto	Foi assim que começou tudo?
+espanto	Eu não esperava por essa reação!
+espanto	Só ficar com o olhar na cara da Ânima.
+espanto	Agora é que sim, eu sei que você vai responder...
+espanto	Fale logo pra mim, o quê?!
+risada	riei tanto
+risada	hahaha linda bobo
+risada	tô rindo até o choro
+risada	kdkkkk haha
+risada	ha ha muito boa
+risada	riso doce louca
+risada	kkk meu deus
+risada	rir não parar mais
+risada	hahaha você é
+risada	eu quase fui meus
+risada	ri na cara do
+risada	hehe eu estava
+risada	você é uma
+risada	kkk eu ri
+risada	hahahaha bobinha minha
+risada	meu que riso
+risada	tô rindo agora
+risada	fale mais porco
+risada	kkk muito melhor
+risada	risada é contagia
+espanto	Deus acima!
+espanto	Caramba é pouco!
+espanto	Minha vida!
+espanto	Sério que acredita?
+espanto	Só pode ser brincadeira!
+espanto	Muito sério
+espanto	Nossa, que surpresa!
+espanto	Pô!!!
+espanto	Bom Deus!
+espanto	Muito louco mesmo!
+espanto	Imaginava que era isso!
+espanto	Pô, não acreditei!
+espanto	Sério é pouco!
+espanto	Que sacanagem!
+espanto	Criou-se mais um problema!
+espanto	Hoje até eu estou espantado!
+espanto	Nossa Senhora da Alegria!!!
+espanto	Gente!!
+espanto	Bom de verdade!
+espanto	Tá brincando comigo??
+espanto	Então é fato?
+espanto	Eu acredito, sim
+espanto	Pô, não é justo!
+risada	hahaha essa piada foi besteira
+risada	kkk isso foi uma brincadeira!
+risada	rs eu vou morrer de rir
+risada	que humor! você é muito engraçada
+risada	ha ha que beleza
+risada	eu estou morrendo de risadas aqui
+risada	que piadinha!
+risada	eu não consigo parar de rir
+risada	kkkkkkk isso foi loucura!
+risada	hahahaha eu estou chorando de tanto rir
+risada	hehe você é uma comédia em pessoa
+risada	rs eu estou rolando de rir
+risada	essa é uma brincadeira ruim!
+risada	kkk eu não sei se vou suportar mais
+risada	eu estou rindo até agora!
+risada	hahahaha eu acho que você está louca!
+risada	kkkk isso foi um troço louco!
+risada	que risada de bunda!
+risada	rs eu fico mal porque me faz rir assim
+risada	ha ha você é uma piadinha viva!
+risada	eu não sei se você quer brincar ou é sério
+risada	eu acho isso muito engraçado
+risada	essa parte me fezrir
+risada	hahahaha eu não estou brincando
+risada	kkk como você é louca hoje em dia
+risada	rs rsrs eu só estou começando
+risada	fudeu
+risada	kkkkkk isso é foda
+risada	sssss que graça
+risada	kkkkk mas sério, é muito engraçado
+risada	ahahaha não vou parar de rir por um minuto
+risada	olha você falando em tom de brincadeira
+risada	essa piada me fez arregalhar os olhos
+risada	kkkkkk eu só estou começando a entender o que é graça
+risada	ahaahahaha mas eu não sou capaz disso
+risada	rsrsrsrs eu vou desmaiar de riso
+risada	kkkk é muito engraçado né?
+risada	fala sério, isso é hilário
+risada	kkkk isso é só no humor da vida
+risada	hehehe você tem uma faceta engraçada
+risada	kkk mesmo se for ruim, vou rir
+contamais	pq vc tá parando?
+contamais	vai continuar aí
+contamais	eu quero mais
+contamais	o que mais aconteceu?
+contamais	conta pros detalhes
+contamais	como foi logo depois?
+contamais	vc pode me contar?
+contamais	tá de brincadeira ou é sério?
+contamais	e daí, o que aconteceu em seguida?
+contamais	vou ouvir mais
+contamais	vai continuar a história
+contamais	me conto mais disso!
+contamais	quero saber tudo
+contamais	pq vc tá falando só um pouco?
+contamais	mais detalhes sobre isso por favor
+contamais	vc pode me contar melhor?
+contamais	o que eu preciso saber é...
+contamais	conta aí, conta logo
+contamais	vai continuar de onde parou
+contamais	eu estou ansioso para saber!
+contamais	e agora o que acontece?
+contamais	quero mais história disso!
+contamais	O que aconteceu em seguida?
+contamais	Quê, contou toda a história
+contamais	Ficou por aí mesmo?
+contamais	Vai continuar o capítulo seguinte?
+contamais	E como foi isso?
+contamais	Pôxe, não vai me deixa com uma pergunta assim!
+contamais	E então foi onde?
+contamais	Me diz mais sobre isso
+contamais	O que aconteceu em seguida é interessante
+contamais	Mas e logo depois disso...
+contamais	Quero saber o restinho da história
+contamais	Fale um pouco mais disso
+contamais	Agora sim, conto
+contamais	E como acabou essa história?
+contamais	Pô, não me deixa assim
+contamais	Entendo até onde você foi, agora?
+contamais	Me conta mais sobre a continuação
+contamais	Isso é só o começo?
+contamais	E o que aconteceu à noite?
+contamais	Não fica por aí, continue
+contamais	Agora sim vou entender!
+contamais	E como foi isso com detalhes
+contamais	Pôxe, não vai me deixar assim!
+contamais	O que aconteceu logo após disso?
+concorda	Fica tranquilo
+concorda	Sabe q ta certo
+concorda	Totally de acordo
+concorda	Tô achando a mesma coisa
+concorda	Eu entendi muito bem
+concorda	Maior verdade não há
+concorda	No meu opn, é o certo
+concorda	Acho que vc tá 100% no caminho
+concorda	Cê pode me explicar pq?
+concorda	Dá para perceber logo
+concorda	Totalmente de acordo!
+concorda	Tô com vc nisso
+concorda	Faz todo sentido!
+concorda	Aposto q isso ai
+concorda	Mais vale a pena
+concorda	No mínimo é o que eu pensei
+concorda	Lógico
+concorda	Só 1 coisa: é exatamente assim
+concorda	Uma verdadeira
+concorda	No lugar do meu senso comum
+concorda	Entendo total
+concorda	Pq é uma ótima ideia?
+concorda	Um fato concreto
+contamais	conta pra mim
+contamais	me conte mais disso
+contamais	explica melhor isso
+contamais	continua a história
+contamais	pode detalhar?
+contamais	sobre o que?
+contamais	mais sobre isso?
+contamais	volta pro começo
+contamais	fale da sequência
+contamais	o próximo passo
+contamais	você continua
+contamais	conta ao menos
+contamais	me fala disso
+contamais	me descreva mais
+contamais	fala o que
+contamais	pode terminar?
+contamais	quebra a história
+contamais	continua a trama
+contamais	qual é o fim?
+opiniaogeral	eu estou em dúvida, o que vc acha?
+opiniaogeral	é melhor deixar pra lá?
+opiniaogeral	vc acha que eu devo continuar?
+opiniaogeral	o que você faria nessa situação?
+opiniaogeral	ela vai se machucar se fizer isso...
+opiniaogeral	eu não sei mais o que fazer, vc pode me ajudar?
+opiniaogeral	sua opinião é super importante
+opiniaogeral	você acredita que isso seja uma boa ideia?
+opiniaogeral	vc concorda comigo?
+opiniaogeral	qual é sua opinião sobre isso?
+opiniaogeral	a gente não deve ir?
+opiniaogeral	o que você diria para ela se eu falar?
+opiniaogeral	eu estou perdido, o que vc acha que eu devo fazer?
+opiniaogeral	vamos falar de algo mais!
+opiniaogeral	se eu fizer isso, vc vai me apoiar?
+opiniaogeral	vc tem alguma dica?
+opiniaogeral	a gente não pode ficar sem dinheiro!
+opiniaogeral	sua opinião é muito valiosa
+opiniaogeral	qual o seu conselho?
+opiniaogeral	eu estou com medo de errar, o que você acha?
+opiniaogeral	eu estou em crise
+opiniaogeral	vc tem um plano para isso?
+opiniaogeral	O que você falaria ao meu ouvido
+opiniaogeral	Sabe a sua opinião a respeito?
+opiniaogeral	Tô a mil por hora, o quê vc acha?
+opiniaogeral	Você aprovaria isso?
+opiniaogeral	Tô doido pra saber qual seria sua reação
+opiniaogeral	Estou perdido sem entender bem, vc ajuda?
+opiniaogeral	Qual é o seu veredicto?
+opiniaogeral	Vc me daria um conselho?
+opiniaogeral	Quero ouvir sua opinião!
+opiniaogeral	E você acha que eu devo fazer isso?
+opiniaogeral	Me diga se foi uma boa ideia
+opiniaogeral	Agora estou com a dúvida, vc ajuda?
+opiniaogeral	Sabe como fica isso pra vc?
+opiniaogeral	Tô em crise e preciso da sua opinição
+opiniaogeral	Vc vai me apoiar?
+opiniaogeral	Só preciso de um conselho seu
+opiniaogeral	Quanto mais penso menos tenho certeza... vc ajuda?
+opiniaogeral	E você acha que é algo sério?
+opiniaogeral	Você faria isso se estivesse no meu lugar?
+opiniaogeral	Tô com medo de tomar uma decisão, ajuda!
+opiniaogeral	Qual seria sua escolha?
+opiniaogeral	Sabe o que eu vou fazer agora?
+opiniaogeral	qual sua opinião sobre isso he?
+opiniaogeral	sabes o que é a melhor resposta?
+opiniaogeral	me explica melhor, tá
+opiniaogeral	faleu pra mim!
+opiniaogeral	você diria...
+opiniaogeral	acha que eu estou certo?
+opiniaogeral	tô pensando em fazer isso...
+opiniaogeral	qual é seu veredito?
+opiniaogeral	você acha normal fazer assim?
+opiniaogeral	sabe o que me diga, mano.
+opiniaogeral	deixa eu perguntar!
+opiniaogeral	sabes qual é a resposta certa?
+opiniaogeral	cê vai ser duro?
+opiniaogeral	pra mim ou pra você?
+opiniaogeral	os outros diriam...
+opiniaogeral	gostaria de saber tua opinião.
+opiniaogeral	fale algo que me faça rir!
+opiniaogeral	tô precisando do seu conselho.
+opiniaogeral	aqui é um problema... e eu tô perdido.
+opiniaogeral	você acha que isso vai funcionar? 😜
+opiniaogeral	concorda ou des Concorda?
+opiniaogeral	me diga uma coisa clara.
+opiniaogeral	os outros fariam...
+opiniaogeral	cê pode fazer melhor.
+opiniaogeral	diga-me qual sua resposta!
+opiniaogeral	sério, aqui é sério... 😕
+desabafo	Vou falar uma besteira pra você
+desabafo	Sabe como é quando precisa de ouvir a outra pessoa?
+desabafo	Você fica quieta por um minuto?
+desabafo	Eu preciso falar de tudo
+desabafo	Tá muito ocupada para conversar agora?
+desabafo	Ficou sem tempo para mim também?
+desabafo	Você me daria um bate-papo?
+desabafo	Tô mal e precisa conversar com alguém
+desabafo	Aqui tá a desgraça, me ajuda!
+desabafo	Como é que você tem tanto tempo para trabalhar?
+desabafo	Sabe aquela coisa que eu sempre esqueço de falar?
+desabafo	Estou em crise, precisa de uma boa dica da sua parte.
+desabafo	Tô precisando de um ombrozinho
+desabafo	Agora tá a hora de me desabafar com você!
+desabafo	Eu fico mal ouvindo só a si mesmo!
+desabafo	Ficou para trás ou está longe?
+desabafo	Vocês têm tempo pra conversar, eu também não?
+desabafo	Você sabe dar aquele conselho que eu preciso?
+desabafo	Aqui tá uma confidência
+desabafo	Quer conversar sobre o que eu estou fazendo?
+desabafo	preciso de um ouvido
+desabafo	quero conversar que é um dia ruim
+desabafo	ajuda aí, cara!
+desabafo	sinto muito cansado hoje
+desabafo	tô sozinho e quero te falar
+desabafo	não aguento mais desse estresse
+desabafo	por favor me ajude
+desabafo	preciso de alguém que ouça
+desabafo	me apoie que eu tô abalado
+desabafo	qual é a vida mesmo?
+desabafo	você não está, mas precisa estar aqui agora
+desabafo	acho que preciso da sua companhia
+desabafo	ajuda, por favor!
+desabafo	eu tô com um monte de coisas no ar
+desabafo	não tenho mais ninguém para conversar
+desabafo	preciso de uma amiga como você
+desabafo	o mundo está me caçando e preciso falar disso
+desabafo	sou eu novamente
+desabafo	estou muito zangado, ajude a calmar-me
+desabafo	acho que precisamos de um temporal de conversa
+desabafo	você é minha única opção nesse momento
+desabafo	vc tem um ouvinte?
+desabafo	tô precisando conversar
+desabafo	socorresse
+desabafo	cê pode me dar uma mão?
+desabafo	quero falar com alguém
+desabafo	preciso de alguém que me escute
+desabafo	que tal te contar tudo?
+desabafo	pq o meu coração tá doendo
+desabafo	cê tem algum conselho?
+desabafo	me ajuda a tirar da cabeça
+desabafo	vc sabe ouvir, né?
+desabafo	podes ser uma amiga virtual?
+desabafo	tenho coisas para falar
+desabafo	dá para conversar com vc
+desabafo	tô com muita raiva hoje
+desabafo	não sei mais o que fazer
+desabafo	cê é a minha salvadora!
+desabafo	não tenho nem pra quem falar
+desabafo	vc pode ouvir um desabafo?
+desabafo	eu preciso de você agora
+desabafo	cê entende do amor desolado?
+capacidades	o que ela pode fazer?
+capacidades	quais são suas habilidades
+capacidades	como eu uso você
+capacidades	você tem poderes?
+capacidades	como ela me ajuda
+capacidades	coisas que ela faz
+capacidades	seus truques são quais
+capacidades	tudo o que vc faz
+capacidades	poderes de anima
+capacidades	sobre suas capacidades
+capacidades	que coisa ela sabe
+capacidades	quais coisas elas faz
+capacidades	o que eu posso pedir?
+capacidades	você tem comandos
+capacidades	como trabalha você
+capacidades	pelo menos, qual é a principal funcionalidade da aplicação?
+capacidades	Ela faz o quê?
+capacidades	Eu preciso saber como ela funciona.
+capacidades	Elas têm capacidades que eu ainda não sei.
+capacidades	Você é um robô?
+capacidades	O que ela pode fazer pra mim?
+capacidades	Ela tem funções!
+capacidades	Pra que serve a Ânima?
+capacidades	Como isso trabalha?
+capacidades	Ela é uma assistente de verdade?
+capacidades	Quer dizer, o que você faz?
+capacidades	Vc tá preparada pra ajudar com?
+capacidades	Me explique como ela funciona.
+capacidades	Que tal me ensinar um pouco sobre?
+capacidades	Poderia explicar como usar ela?
+capacidades	Ouça o que eu estou dizendo!
+capacidades	Você é capaz de realizar...
+capacidades	Não entendi bem como ela funciona
+capacidades	Quer dizer, vc tem controle?
+capacidades	Elas têm como acessa ao internet?
+capacidades	Vc me pode ajudar com isso?
+capacidades	Eu preciso entender melhor como funciona
+jogar	como vc vai se divertir hoje?
+jogar	tb q eu quero jogar
+jogar	pq vc não quer brincar?
+jogar	jogo de palavras!
+jogar	mudou de ideia?
+jogar	casa ou caça quem é?
+jogar	vc tb pode sugerir!
+jogar	tá preparado para perder?
+jogar	que jogo vc gosta?
+jogar	o que você acha que eu sou?
+jogar	faz um teste de inteligência
+jogar	brinca ou fica triste
+jogar	os jogadores estão saindo
+jogar	pra o que o sistema foi feito?
+jogar	aqui não é apenas trabalho
+jogar	e se eu disser que você ganha?
+jogar	um jogo de memória!
+jogar	o objetivo aqui é diversão
+jogar	vc está começando a perder
+jogar	fico feliz em te ver perdido
+jogar	mais uma chance, vc pode tentar
+capacidades	eu quero saber para que você serve
+capacidades	vc tem alguma magia que faz?
+capacidades	qual é a lista de coisas que vc pode fazer?
+capacidades	você consegue ajudar com algo complicado?
+capacidades	como vc sabe o que eu preciso?
+capacidades	posso perguntar ao seu criador sobre isso?
+capacidades	vou tentar lembrar, mas vc também tem uma lista de comandos?
+capacidades	quero saber se vc é só para anotações ou coisa mais...
+capacidades	você me lembra da agenda e tal?
+capacidades	qual é a limitação do que vc consegue fazer no app?
+capacidades	eu estava pensando que você pudesse ajudar com isso.
+capacidades	e se eu criar uma nova lista, você me avisa?
+capacidades	tem alguma outra coisa que vc sabe fazer além de anotações?
+capacidades	você pode mudar o formato das notas ou coisa assim?
+capacidades	como eu faço para saber do que vc é capaz?
+capacidades	quais as coisas mais difíceis que você já teve de resolver?
+capacidades	eu sinto que você está limitado em alguma coisa...
+capacidades	qual é a sua capacidade máxima no app?
+capacidades	vc tem algum sistema inteligente por trás?
+capacidades	aqui está uma pergunta, e eu preciso da resposta certa.
+capacidades	me dê uma lista com os 10 comandos mais usados!
+capacidades	e se eu criar um novo diretório ou pasta, você me avisa?
+capacidades	cada vez que eu peço para vc fazer algo, ele teve que aprender...
+jogar	Vamos ser amigos
+jogar	Só vamos perder
+jogar	Bora ver quem
+jogar	Fazemos uma aposta
+jogar	E então vamos jogar
+jogar	Aqui ficou minha partida
+jogar	O que está dizendo?
+jogar	Parece fácil não é?
+jogar	Tento te derrotar
+jogar	Bem que um jogo
+jogar	E agora você fica
+jogar	Quero saber como ganha
+jogar	Você tem uma dica?
+jogar	Hoje a vitória é
+jogar	Muita competição aqui
+jogar	Vamos usar a sorte
+jogar	Aqui o show começa
+jogar	O primeiro jogador já é
+jogar	Eu fico melhor com a prática
+jogar	Papai está sempre no topo
+jogar	Só posso derrotar um
+jogar	E você ganhou até agora?
+jogar	vamos ver quem ganha essa
+jogar	eu tenho um desafio para você
+jogar	como vai, vamos jogar o que?
+jogar	fazendo uma parada vou sugerir um jogo
+jogar	aula de hoje? ou vamo brincar um pouco mais?
+jogar	eu estava procurando um adversário
+jogar	quem gosta de se desafiar deve estar aqui
+jogar	se quiser te conhecer melhor, vamos jogar um jogo
+jogar	pra mim que nem fosse o ano novo e continuássemos onde paramos
+jogar	haha você tem medo de perder?
+jogar	cuidado, vou trazer a minha máquina de jogo!
+jogar	fim do dia, hora de brincar
+jogar	meu rival de toda vida está aqui!
+jogar	pra mostrar que sou melhor, vamos jogar algo.
+jogar	meus amigos estão procurando por pessoas para uma partida.
+surpresa	me conta algo legal
+surpresa	e ai tem alguma novidade?
+surpresa	puxa um assunto qualquer
+surpresa	sabe o que eu vi ontem?
+surpresa	conta uma história engraçada
+surpresa	fala de qualquer coisa
+surpresa	o que você pensava que eu era?
+surpresa	um fato incrível?
+surpresa	conta sobre si mesma
+surpresa	que coisa mais interessante!
+surpresa	o que é que você gosta?
+surpresa	só para te surpreender...
+surpresa	me conta um segredo
+surpresa	e agora o quê?
+surpresa	uma curiosidade simples
+surpresa	conta uma história sua
+surpresa	fala sobre um sonho
+surpresa	um fato mais ou menos incomum
+surpresa	o que faz o seu coração bater?
+surpresa	pra me deixar de boca aberta...
+surpresa	um acontecimento importante!
+surpresa	sabia que eu sabia disso?
+surpresa	conta algo engraçado que aconteceu
+surpresa	como é que você viaja na sua mente?

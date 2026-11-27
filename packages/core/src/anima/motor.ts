@@ -5,6 +5,8 @@
  * sem nada instalado. As falas vêm do cofre encriptado (`cofre.ts`).
  */
 import { capitulo } from './cerebro/arco';
+import { refsDe, registrarFala } from './cerebro/dialogo';
+import { espelhar } from './cerebro/espelho';
 import { banco, fnv, textoDe, variar, type Pergunta } from './cofre';
 import {
   decair, duracao, humorDe, mexer, RECENTES,
@@ -115,6 +117,8 @@ export interface Fala {
   gesto: Gesto;
   humor: Humor;
   opcoes?: OpcaoFala[];
+  /** o que a fala citou (as variáveis que ela usou): o diálogo guarda, para "ela quem?" ter resposta */
+  ref?: Record<string, string | number>;
 }
 
 export interface Reacao {
@@ -165,7 +169,7 @@ export const gruposDeFalas = (): string[] => Object.keys(banco().falas);
  */
 export function escolher(grupo: string, s: AnimaState, humor: Humor, ctx: AnimaCtx, vars: Vars): Fala | null {
   const linhas = banco().falas[grupo] ?? [];
-  const cands: Array<{ id: string; texto: string; gesto: Gesto; peso: number }> = [];
+  const cands: Array<{ id: string; texto: string; gesto: Gesto; peso: number; molde: string }> = [];
   const cap = capitulo(s, ctx.now);
   const cons = s.memoria.cerebro.consciencia;
   linhas.forEach((l, i) => {
@@ -177,7 +181,7 @@ export function escolher(grupo: string, s: AnimaState, humor: Humor, ctx: AnimaC
     const t = preencherFala(variar(o.t, ctx.rand), vars);
     if (t === null) return;
     // falas de capítulo e de consciência são raras: quando valem, pesam mais
-    cands.push({ id: `${grupo}#${i}`, texto: t, gesto: o.g ?? 'neutro', peso: (o.h ? 3 : 1) * (o.k && o.k > 1 ? 2 : 1) * (o.c ? 2 : 1) });
+    cands.push({ id: `${grupo}#${i}`, texto: t, gesto: o.g ?? 'neutro', peso: (o.h ? 3 : 1) * (o.k && o.k > 1 ? 2 : 1) * (o.c ? 2 : 1), molde: o.t });
   });
   if (!cands.length) return null;
   const recentes = new Set(s.recentes);
@@ -185,12 +189,22 @@ export function escolher(grupo: string, s: AnimaState, humor: Humor, ctx: AnimaC
   const pool = novas.length ? novas : cands;
   let r = ctx.rand() * pool.reduce((a, c) => a + c.peso, 0);
   const sel = pool.find((c) => (r -= c.peso) < 0) ?? pool[pool.length - 1]!;
-  return { id: sel.id, texto: sel.texto, gesto: sel.gesto, humor };
+  const usadas: Vars = {};
+  for (const [, k] of sel.molde.matchAll(VAR)) usadas[k!] = vars[k!];
+  const ref = refsDe(grupo, usadas);
+  return { id: sel.id, texto: sel.texto, gesto: sel.gesto, humor, ...(ref ? { ref } : {}) };
 }
 
 /** Guarda a fala entre as recentes, para não repetir logo. */
 export const lembrar = (s: AnimaState, f: Fala | null): AnimaState =>
-  f ? { ...s, recentes: [...s.recentes.filter((x) => x !== f.id), f.id].slice(-RECENTES) } : s;
+  f
+    ? {
+        ...s,
+        recentes: [...s.recentes.filter((x) => x !== f.id), f.id].slice(-RECENTES),
+        // e entra na memória de trabalho do diálogo (o que ela disse, sobre o quê)
+        memoria: { ...s.memoria, cerebro: registrarFala(s.memoria.cerebro, f, s.falou) },
+      }
+    : s;
 
 /** Uma linha qualquer de um grupo, sem filtro de humor (títulos, botões, avisos). */
 export function qualquer(grupo: string, ctx: Pick<AnimaCtx, 'rand' | 'intensidade'>, vars: Vars = {}): string | null {
@@ -694,6 +708,11 @@ export function responder(estado: AnimaState, msg: string, ctx: AnimaCtx, dica?:
   if (!f && t.length >= 8 && msg === msg.toUpperCase() && /\p{Lu}{4}/u.test(msg)) f = tenta('conversa.grito');
   if (!f && SECO.test(t) && intencao === 'eco') f = tenta('conversa.seco');
   if (!f && msg.split(/\s+/).length >= 40) f = tenta('conversa.longa');
+  // o que a pessoa contou de si, devolvido na segunda pessoa: mostra que ela entendeu a frase, não só uma palavra
+  if (!f && (intencao === 'eco' || intencao === 'desabafo' || intencao === 'trabalho' || intencao === 'treino') && ctx.rand() < (intencao === 'eco' ? 0.7 : 0.35)) {
+    const e = espelhar(msg);
+    if (e && e.split(' ').length >= 3) f = tenta(`conversa.espelho.${intencao}`, { ...vars, espelho: e }) ?? tenta('conversa.espelho', { ...vars, espelho: e });
+  }
   if (!f) {
     const grupo = intencao === 'ideia' ? 'ideia' : `conversa.${intencao}`;
     f = tenta(grupo)

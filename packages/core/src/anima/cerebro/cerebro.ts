@@ -25,13 +25,17 @@ import {
   type AnimaCtx, type Fala, type Intencao, type OpcaoFala, type Reacao,
 } from '../motor';
 import { crescer } from './arco';
+import { converter, datas } from './capacidades';
+import { assuntoRecente, reintitular, registrarMensagem } from './dialogo';
+import { seguimento } from './seguimento';
 import type { Modelo } from './classificador';
 import { chaveDoPedido, completarPedido, COMANDOS, entenderPedido, type ComandoId, type CtxPedido, type EventoPedido, type Pedido, type Travessura } from './comandos';
 import { casarComando, ordinal, candidatosNota, telaDe, type ComandoApp, type Tema } from './entidades';
 import { escreverNoMundo, type EscritoMundo, type GeneroEscrito, type MundoInfo } from './escrita';
 import { entenderConsulta, montarGrafo, responderConsulta } from './grafo';
 import type { Estudo, MemoriaCerebro, Pendencia } from './memoria';
-import { classificar, lexicoBase } from './modelo';
+import { classificar, lexicoBase, sentido } from './modelo';
+import { semelhanca } from './rede';
 import { calcular, fmt } from './numeros';
 import { sentimento, type Sentimento } from './sentimento';
 import { dobrar, normalizar, type Texto } from './texto';
@@ -86,6 +90,8 @@ export interface Pensamento extends Reacao {
   intencao: string;
   confianca: number;
   acao: Acao | null;
+  /** mais ações, quando a mensagem pediu mais de uma coisa ("marca X e me lembra de Y"); execute depois de `acao` */
+  acoes?: Acao[];
   decisao: Decisao | null;
   pedido: Pedido | null;
   aprendeu: Aprendido | null;
@@ -452,8 +458,8 @@ function seguir(s: AnimaState, p: Pedido, t: Texto, sent: Sentimento, ctx: CtxCe
 
 // ------------------------------------------------------------------ pensar
 
-/** O pensamento inteiro de uma mensagem. */
-export function pensar(estado: AnimaState, msg: string, ctx: CtxCerebro): Pensamento {
+/** O pensamento de UMA intenção (a mensagem inteira, ou um pedaço dela: `pensar` divide). */
+function pensarUm(estado: AnimaState, msg: string, ctx: CtxCerebro): Pensamento {
   const traco: string[] = [];
   const lx = lexicoBase();
   const t = normalizar(msg, lx);
@@ -477,7 +483,13 @@ export function pensar(estado: AnimaState, msg: string, ctx: CtxCerebro): Pensam
   let rotulo = prev?.rotulo ?? (regra === 'pergunta' ? 'eco' : regra);
   let conf = prev?.p ?? 0.5;
   if (prev) traco.push(`modelo: ${prev.top.map(([r, p]) => `${r} ${(p * 100).toFixed(0)}%`).join(' · ')} (${prev.conhecidas} pistas)`);
-  const conta = calcular(dobrar(t.original));
+  // capacidades exatas: conversão de unidades e calendário (antes da conta, que casaria o número solto)
+  const dob = dobrar(t.original);
+  const conv = converter(dob);
+  const cal = conv ? null : datas(dob, ctx.now, s.memoria.fatos.aniversario);
+  if (conv && (rotulo === 'converter' || conf < 0.9 || !rotulo.startsWith('cmd.'))) [rotulo, conf] = ['converter', 1];
+  else if (cal && (rotulo === 'datas' || rotulo === 'data' || conf < 0.9 || !rotulo.startsWith('cmd.'))) [rotulo, conf] = ['datas', 1];
+  const conta = conv || cal ? null : calcular(dob);
   if (conta && (rotulo === 'conta' || conf < 0.9 || !rotulo.startsWith('cmd.'))) [rotulo, conf] = ['conta', 1];
   const consulta = entenderConsulta(t);
   if (consulta && !rotulo.startsWith('cmd.') && rotulo !== 'conta') [rotulo, conf] = ['lembrar', Math.max(conf, 0.9)];
@@ -507,7 +519,18 @@ export function pensar(estado: AnimaState, msg: string, ctx: CtxCerebro): Pensam
     traco.push(`curto demais para ser ordem com ${(conf * 100).toFixed(0)}%`);
     rotulo = regra === 'pergunta' ? 'eco' : regra;
   }
+  // o assunto da conversa segura a intenção quando a rede hesita entre ele e outra coisa
+  const assunto = assuntoRecente(s.memoria.cerebro, ctx.now)[0];
+  if (prev && assunto && assunto !== rotulo && conf < 0.55 && !rotulo.startsWith('cmd.') && (assunto.startsWith('papo.') || ['triste', 'mau', 'cansaco', 'desabafo', 'trabalho', 'fome', 'sono'].includes(assunto))) {
+    const p = prev.top.find(([r]) => r === assunto);
+    if (p && p[1] >= 0.15) {
+      traco.push(`a rede hesitou (${rotulo} ${(conf * 100).toFixed(0)}%); o assunto da conversa é ${assunto} (${(p[1] * 100).toFixed(0)}%): fico nele`);
+      [rotulo, conf] = [assunto, p[1]];
+    }
+  }
   traco.push(`intenção: ${rotulo} (${(conf * 100).toFixed(0)}%)`);
+  // a mensagem entra na memória de trabalho do diálogo
+  s = comMc(s, registrarMensagem(s.memoria.cerebro, msg, rotulo, ctx.now, s.falou));
 
   // 2. a conversa em aberto
   const pend = s.memoria.cerebro.pendente;
@@ -532,6 +555,22 @@ export function pensar(estado: AnimaState, msg: string, ctx: CtxCerebro): Pensam
     const st = f ? { ...lembrar(s, f), falou: ctx.now } : s;
     return { estado: st, fala: f, acao: null, intencao: rotulo, confianca: conf, decisao: null, pedido: null, aprendeu: null, traco };
   };
+
+  // 2b. a mensagem reage ao que ela acabou de dizer? ("ela quem?", "mais uma", "e você?", "eu nunca disse isso")
+  if (!rotulo.startsWith('cmd.') || conf < 0.6) {
+    const seg = seguimento(s, t, msg, rotulo, conf, ctx.now);
+    if (seg) {
+      const s2 = comMc(seg.fatos ? { ...s, memoria: { ...s.memoria, fatos: seg.fatos } } : s, reintitular(s.memoria.cerebro, seg.tipo === 'etu' ? 'etu' : rotulo));
+      const f0 = falaDe(seg.grupos, s2, humor, ctx, { ...vars, ...seg.vars });
+      if (f0) {
+        traco.push(`seguimento: ${seg.traco}`);
+        s = s2;
+        const r = so(seg.grupos, seg.vars);
+        return { ...r, intencao: seg.tipo === 'corrige' ? 'corrige' : rotulo };
+      }
+      traco.push(`seguimento sem fala (${seg.grupos[0]}): sigo o caminho normal`);
+    }
+  }
 
   // 3. comandos
   if (rotulo.startsWith('cmd.')) {
@@ -568,6 +607,25 @@ export function pensar(estado: AnimaState, msg: string, ctx: CtxCerebro): Pensam
 
   // 5. habilidades
   if (rotulo === 'conta' && conta) return so(['responde.conta'], { expr: conta.expressao, resultado: fmt(conta.valor) });
+  if (rotulo === 'converter') {
+    if (conv) return so(['responde.converte'], { conversao: conv.texto, resultado: `${fmt(conv.resultado)}` });
+    return so(['responde.converte.nao', 'conversa.contamais']);
+  }
+  if (rotulo === 'datas') {
+    if (!cal) return so(['responde.datas.nao', 'conversa.contamais']);
+    traco.push(`calendário: ${JSON.stringify(cal)}`);
+    switch (cal.tipo) {
+      case 'faltam': return so(cal.dias === 0 ? ['responde.datas.hoje'] : ['responde.datas.faltam'], { dias: cal.dias === 1 ? '1 dia' : `${fmt(cal.dias)} dias`, quando: cal.nome, data: cal.data, semanas: cal.semanas });
+      case 'diasemana': return so(['responde.datas.diasemana'], { quando: cal.nome, data: cal.data, semana: cal.semana });
+      case 'daqui': return so([cal.passado ? 'responde.datas.foi' : 'responde.datas.daqui'], { dias: `${fmt(cal.dias)} dias`, data: cal.data });
+      case 'idade': return so(['responde.datas.idade'], { anos: cal.anos, ano: cal.ano });
+      case 'bissexto': return so([cal.e ? 'responde.datas.bissexto' : 'responde.datas.naobissexto'], { ano: cal.ano });
+      case 'diasmes': return so(['responde.datas.diasmes'], { dias: cal.dias, mes: cal.mes });
+      case 'ano': return so(['responde.datas.ano'], { passados: cal.passados, faltam: cal.faltam, semana: cal.semana });
+    }
+  }
+  if (rotulo === 'esclarecer') return so(['conversa.esclarecer', 'conversa.contamais']);
+  if (rotulo === 'corrige') return so(['corrige.desculpa', 'conversa.contamais']);
   if (rotulo === 'hora') return so(['responde.hora']);
   if (rotulo === 'data') {
     const d = new Date(ctx.now);
@@ -599,8 +657,145 @@ export function pensar(estado: AnimaState, msg: string, ctx: CtxCerebro): Pensam
     consciencia: r.intencao === 'real' || r.intencao === 'quem' ? 2.5 : r.intencao === 'provoca' ? 1.2 : r.intencao === 'rejeicao' || r.intencao === 'desinstalar' ? 1.5 : 0,
   });
   if (r.aprendeu) traco.push(`aprendi: ${r.aprendeu.tipo} = ${r.aprendeu.valor}${r.aprendeu.repetido ? ' (já sabia)' : ''}`);
+  // memória por significado: isto parece algo que a pessoa disse outro dia (mesmo sem palavra em comum)?
+  let falaFinal = r.fala;
+  if (falaFinal && !r.aprendeu && !/\?\s*$/.test(falaFinal.texto) && (LEMBRA_PARECIDO.has(r.intencao) || r.intencao.startsWith('papo.')) && ctx.rand() < 0.4) {
+    const l = lembrancaParecida(st, t, ctx.now);
+    if (l) {
+      const humor2 = humorDe(st, ctx.now, ctx.intensidade);
+      const f = falaDe(['lembra.parecido'], st, humor2, ctx, { ...baseVars(st, ctx), frase: l.frase, quando: l.quando });
+      if (f) {
+        traco.push(`lembrei de algo parecido (${(l.nota * 100).toFixed(0)}% de sentido em comum): "${l.frase}"`);
+        falaFinal = { ...falaFinal, texto: `${falaFinal.texto} ${f.texto}` };
+        st = lembrar(st, f);
+      }
+    }
+  }
   traco.push(`motor: ${r.intencao} → ${r.fala?.id ?? 'silêncio'}`);
-  return { ...r, estado: st, acao: null, intencao: rotulo, confianca: conf, decisao: null, pedido: null, traco };
+  return { ...r, fala: falaFinal, estado: st, acao: null, intencao: rotulo, confianca: conf, decisao: null, pedido: null, traco };
+}
+
+// ------------------------------------------------------------------ memória por significado
+
+/** Quando o que a pessoa conta pode lembrar algo de outro dia. */
+const LEMBRA_PARECIDO = new Set(['eco', 'desabafo', 'triste', 'mau', 'cansaco', 'feliz', 'conquistei', 'trabalho', 'treino', 'fome', 'sono', 'tedio', 'saudade']);
+/** Semelhança mínima de sentido (cosseno no espaço do professor) para ela ligar duas frases. */
+export const PARECIDO = 0.85;
+
+const DIAS_SEMANA = ['no domingo', 'na segunda', 'na terça', 'na quarta', 'na quinta', 'na sexta', 'no sábado'];
+const diaCivil = (ms: number) => {
+  const d = new Date(ms);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+};
+
+/** "ontem", "na terça", "semana passada", "dia 12/10". */
+export function quandoFoiDito(at: number, now: number): string {
+  const dias = Math.round((diaCivil(now) - diaCivil(at)) / 864e5);
+  if (dias <= 0) return 'hoje mais cedo';
+  if (dias === 1) return 'ontem';
+  if (dias === 2) return 'anteontem';
+  if (dias < 7) return DIAS_SEMANA[new Date(at).getDay()]!;
+  if (dias < 14) return 'semana passada';
+  const d = new Date(at);
+  return `dia ${d.getDate()}/${d.getMonth() + 1}`;
+}
+
+/**
+ * A frase guardada (de outro dia) mais perto em SENTIDO da mensagem atual,
+ * pela cabeça de significado da rede. null sem rede, sem frase ou abaixo de `PARECIDO`.
+ */
+export function lembrancaParecida(s: AnimaState, t: Texto, now: number): { frase: string; quando: string; nota: number } | null {
+  const v = sentido(t);
+  if (!v) return null;
+  const hoje = diaCivil(now);
+  const lx = lexicoBase();
+  const atual = dobrar(t.original);
+  let melhor: { t: string; at: number } | null = null;
+  let nota = 0;
+  for (const fr of s.memoria.fatos.frases) {
+    if (diaCivil(fr.at) === hoje || dobrar(fr.t) === atual || fr.t.split(' ').length < 3) continue;
+    const w = sentido(normalizar(fr.t, lx));
+    if (!w) continue;
+    const c = semelhanca(v, w);
+    if (c > nota) [nota, melhor] = [c, fr];
+  }
+  if (!melhor || nota < PARECIDO) return null;
+  const x = melhor.t.replace(/\s+/g, ' ').trim();
+  return { frase: x.length > 80 ? `${x.slice(0, 77).replace(/\s+\S*$/, '')}…` : x, quando: quandoFoiDito(melhor.at, now), nota };
+}
+
+// ------------------------------------------------------------------ várias intenções numa mensagem
+
+/** Intenções que abrem a mensagem e merecem resposta curta antes do resto ("oi! me lembra de..."). */
+const ABERTURA = new Set(['saudacao', 'bomdia', 'obrigado', 'desculpa', 'amor', 'saudade', 'elogio', 'risada', 'concorda', 'espanto', 'sim', 'nao', 'estoubem', 'tchau', 'sono']);
+
+/**
+ * Divide a mensagem em orações que podem ter intenções diferentes: frases
+ * (. ! ? ;), e vírgula ou "e"/"aí"/"mas" quando os dois lados têm corpo.
+ * Nunca divide uma ordem no meio ("marca dentista amanhã e me lembra às 9"
+ * vira duas ordens; "coloca arroz e feijão na lista" não divide: "feijão na
+ * lista" sozinho não é ordem, e quem decide isso é a classificação de cada parte).
+ */
+export function segmentar(msg: string): string[] {
+  // "sim, não vivo sem" é uma resposta só: o sim/não com vírgula fica junto da justificativa
+  const base = msg.replace(/\s+/g, ' ').trim().replace(/^(sim|s|não|nao|n|claro|aham|uhum|nem|talvez|acho que sim|acho que não|acho que nao)\s*,\s+/i, '$1\u0001 ');
+  if (base.length < 6) return [base.replace('\u0001', ',')];
+  const frases = base.split(/(?<=[.!?;])\s+(?=\S)/).flatMap((f) => f.split(/,\s+(?=(?:e |mas |aí |ai |agora |depois |e aí |e ai )?\S)/i))
+    .flatMap((f) => f.split(/\s+(?=(?:e (?:me |depois |também |tambem |aí |ai )|aí me |ai me |mas (?:me |e )))/i))
+    .map((x) => x.trim()).filter(Boolean);
+  // junta pedaço sem corpo ao vizinho (uma palavra só fica sozinha se for oi, valeu, sim...)
+  const out: string[] = [];
+  for (const f of frases) {
+    const palavras = f.split(' ').length;
+    const sozinha = /^(oi+|ola|olá|opa|ei+|eai|e aí|e ai|salve|bom dia|boa tarde|boa noite|valeu|obrigad[oa]|vlw|sim|não|nao|kk+|haha+|nossa|sério\?*|serio\?*|desculpa|te amo)[!?.,]*$/i.test(f);
+    if (out.length && palavras < 2 && !sozinha) out[out.length - 1] = `${out[out.length - 1]} ${f}`;
+    else out.push(f);
+  }
+  return out.slice(0, 4).map((x) => x.replace('\u0001', ','));
+}
+
+const peso = (r: Pensamento): number => (r.acao ? 3 : r.intencao.startsWith('cmd.') ? 2.5 : ABERTURA.has(r.intencao) ? 0.5 : r.intencao === 'eco' ? 0.2 : 1);
+
+/**
+ * O pensamento inteiro de uma mensagem. Se ela tem mais de uma intenção
+ * ("oi! tô cansado. me conta uma piada"), cada oração é pensada em ordem (a
+ * memória do diálogo passa de uma para a outra: "tô bem, e você?" funciona) e
+ * as falas se juntam. A crise olha a mensagem inteira, sempre primeiro.
+ */
+export function pensar(estado: AnimaState, msg: string, ctx: CtxCerebro): Pensamento {
+  const partes = segmentar(msg);
+  if (partes.length < 2 || intencaoDe(msg) === 'crise' || estado.memoria.cerebro.pendente) return pensarUm(estado, msg, ctx);
+  // as intenções de cada parte (a rede é barata: ~20 ms por parte)
+  const lx = lexicoBase();
+  const rotulos = partes.map((p) => {
+    const pv = ctx.modelo === undefined ? classificar(normalizar(p, lx)) : classificar(normalizar(p, lx), ctx.modelo, null);
+    return pv ? { r: pv.rotulo, p: pv.p } : { r: intencaoDe(p), p: 0.5 };
+  });
+  const distintas = new Set(rotulos.filter((x) => x.p >= 0.5 && x.r !== 'eco').map((x) => x.r));
+  // uma intenção só (ou partes sem certeza nenhuma): a mensagem inteira, como sempre
+  if (distintas.size < 2) return pensarUm(estado, msg, ctx);
+  const rs: Pensamento[] = [];
+  const ditas: string[] = [];
+  let s = estado;
+  for (let i = 0; i < partes.length; i++) {
+    const x = rotulos[i]!;
+    // parte vaga no meio de partes fortes não ganha resposta própria
+    if ((x.r === 'eco' || x.p < 0.35) && rs.length) continue;
+    const r = pensarUm(s, partes[i]!, ctx);
+    s = r.estado;
+    rs.push(r);
+    ditas.push(partes[i]!);
+  }
+  if (!rs.length) return pensarUm(estado, msg, ctx);
+  if (rs.length === 1) return rs[0]!;
+  const comFala = rs.filter((r) => r.fala);
+  const principal = [...rs].sort((a, b) => peso(b) - peso(a))[0]!;
+  const acoes = rs.flatMap((r) => [...(r.acao ? [r.acao] : []), ...(r.acoes ?? [])]);
+  const texto = comFala.map((r) => r.fala!.texto).join(' ');
+  const fala = principal.fala ? { ...principal.fala, texto, opcoes: rs.at(-1)!.fala?.opcoes ?? principal.fala.opcoes } : comFala.at(-1)?.fala ?? null;
+  const traco = rs.flatMap((r, i) => [`── parte ${i + 1}: "${ditas[i]}"`, ...r.traco]);
+  traco.unshift(`a mensagem tem ${rs.length} intenções: ${rs.map((r) => r.intencao).join(' + ')}`);
+  return { ...principal, estado: s, fala, acao: acoes[0] ?? null, ...(acoes.length > 1 ? { acoes: acoes.slice(1) } : {}), traco };
 }
 
 /** "Por quê?": ela explica a última decisão com os fatores mais fortes. */

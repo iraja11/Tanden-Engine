@@ -32,6 +32,9 @@ mod linux {
     }
 
     static ESTADO: OnceLock<Option<Estado>> = OnceLock::new();
+    /// Ninguém servia notificações e a ativação pelo D-Bus já falhou uma vez nesta sessão
+    /// (no KDE: o applet de Notificações saiu da bandeja; cada tentativa espera ~60 s).
+    static ATIVACAO_FALHOU: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
     fn estado<R: Runtime>(app: &AppHandle<R>) -> Option<&'static Estado> {
         ESTADO
@@ -101,6 +104,19 @@ mod linux {
         responder: bool,
     ) -> Result<(), String> {
         let e = estado(app).ok_or("sem D-Bus")?;
+        // ninguém serve notificações agora: tenta a ativação uma vez; falhou, não espera de novo
+        let tem_dono: bool = e
+            .conn
+            .call_method(Some("org.freedesktop.DBus"), "/org/freedesktop/DBus", Some("org.freedesktop.DBus"), "NameHasOwner", &(DEST,))
+            .ok()
+            .and_then(|r| r.body().deserialize().ok())
+            .unwrap_or(false);
+        use std::sync::atomic::Ordering;
+        if tem_dono {
+            ATIVACAO_FALHOU.store(false, Ordering::Relaxed);
+        } else if ATIVACAO_FALHOU.load(Ordering::Relaxed) {
+            return Err("sem-servidor".into());
+        }
         let anterior = e.vagas.lock().ok().and_then(|v| v.get(vaga).copied()).unwrap_or(0);
         let icone = imagem.map(|p| format!("file://{}", p.display())).unwrap_or_else(|| "dev.tanden.engine".into());
         let mut acoes: Vec<&str> = vec!["default", "Abrir"];
@@ -125,7 +141,15 @@ mod linux {
             "Notify",
             &("Ânima", anterior, icone.as_str(), titulo, corpo.as_str(), acoes, hints, 20_000i32),
         );
-        let id: u32 = r.map_err(|x| x.to_string())?.body().deserialize().map_err(|x| x.to_string())?;
+        let r = match r {
+            Ok(r) => r,
+            Err(x) if !tem_dono => {
+                ATIVACAO_FALHOU.store(true, Ordering::Relaxed);
+                return Err(format!("sem-servidor: {x}"));
+            }
+            Err(x) => return Err(x.to_string()),
+        };
+        let id: u32 = r.body().deserialize().map_err(|x| x.to_string())?;
         if let Ok(mut v) = e.vagas.lock() {
             v.insert(vaga.to_string(), id);
         }
@@ -135,7 +159,9 @@ mod linux {
 
 /// Mostra uma fala dela como notificação do sistema. `imagem` é o rosto em PNG
 /// (base64), guardado em cache por `chave` (a expressão). Erro = use o plugin.
-#[tauri::command]
+/// Fora da thread principal: a chamada ao D-Bus bloqueia, e um servidor de
+/// notificações lento (jogo em tela cheia, "não perturbe") travava a janela.
+#[tauri::command(async)]
 pub fn anima_notificar<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     vaga: String,

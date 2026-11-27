@@ -54,7 +54,7 @@ export const novosFatos = (): Fatos => ({
   gosta: [], odeia: [], medos: [], sonhos: [], pessoas: [], bichos: [], humores: [], frases: [],
 });
 
-const LIMITE = { lista: 16, pessoas: 20, frases: 14, humores: 10 };
+const LIMITE = { lista: 16, pessoas: 20, frases: 30, humores: 10 };
 
 const strs = (v: unknown, n: number): string[] =>
   Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.length > 0 && x.length <= 60).slice(-n) : [];
@@ -354,4 +354,54 @@ export function resumoDosFatosCurto(f: Fatos): Array<{ rotulo: string; valor: st
   const h = f.humores.at(-1);
   if (h) out.push({ rotulo: 'último humor', valor: ({ triste: 'triste', feliz: 'feliz', cansaco: 'cansado', mau: 'irritado' } as const)[h.como] });
   return out;
+}
+
+// ------------------------------------------------------------------ correção da memória
+
+/** Um fato guardado, do jeito que a correção acha e apaga. */
+export interface FatoCitado { tipo: TipoFato; valor: string }
+
+const escapa = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** Todos os fatos guardados, com o tipo (para procurar e apagar). */
+export function todosOsFatos(f: Fatos): FatoCitado[] {
+  const out: FatoCitado[] = [];
+  if (f.nome) out.push({ tipo: 'nome', valor: f.nome });
+  if (f.cidade) out.push({ tipo: 'cidade', valor: f.cidade });
+  if (f.trabalho) out.push({ tipo: 'trabalho', valor: f.trabalho });
+  for (const v of f.gosta) out.push({ tipo: 'gosta', valor: v });
+  for (const v of f.odeia) out.push({ tipo: 'odeia', valor: v });
+  for (const v of f.medos) out.push({ tipo: 'medo', valor: v });
+  for (const v of f.sonhos) out.push({ tipo: 'sonho', valor: v });
+  for (const b of f.bichos) out.push({ tipo: 'bicho', valor: b.nome });
+  for (const p of f.pessoas) out.push({ tipo: 'pessoa', valor: p.nome });
+  return out;
+}
+
+/** Os fatos guardados que aparecem num texto ("não sei quem é dance" → gosta: dance). */
+export function fatosCitados(f: Fatos, texto: string): FatoCitado[] {
+  const t = ` ${dobra(texto).replace(/[^\p{L}\p{N} ]+/gu, ' ').replace(/\s+/g, ' ')} `;
+  return todosOsFatos(f).filter((x) => {
+    const v = dobra(x.valor).replace(/[^\p{L}\p{N} ]+/gu, ' ').trim();
+    return v.length >= 2 && new RegExp(` ${escapa(v)} `).test(t);
+  });
+}
+
+/** Apaga um fato (pelo valor, em qualquer lista); `tipo` restringe quando o mesmo valor está em mais de uma. */
+export function esquecerFato(f: Fatos, valor: string, tipo?: TipoFato): Fatos {
+  const v = dobra(valor);
+  const igual = (x: string) => dobra(x) === v;
+  const vale = (t: TipoFato) => !tipo || tipo === t;
+  return {
+    ...f,
+    nome: vale('nome') && f.nome && igual(f.nome) ? null : f.nome,
+    cidade: vale('cidade') && f.cidade && igual(f.cidade) ? null : f.cidade,
+    trabalho: vale('trabalho') && f.trabalho && igual(f.trabalho) ? null : f.trabalho,
+    gosta: vale('gosta') ? f.gosta.filter((x) => !igual(x)) : f.gosta,
+    odeia: vale('odeia') ? f.odeia.filter((x) => !igual(x)) : f.odeia,
+    medos: vale('medo') ? f.medos.filter((x) => !igual(x)) : f.medos,
+    sonhos: vale('sonho') ? f.sonhos.filter((x) => !igual(x)) : f.sonhos,
+    bichos: vale('bicho') ? f.bichos.filter((b) => !igual(b.nome)) : f.bichos,
+    pessoas: vale('pessoa') ? f.pessoas.filter((p) => !igual(p.nome)) : f.pessoas,
+  };
 }

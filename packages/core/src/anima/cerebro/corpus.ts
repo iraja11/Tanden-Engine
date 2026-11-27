@@ -15,6 +15,7 @@
 
 import { MAIS, PAPO } from './papo';
 import { GIRIA } from './giria';
+import { DIALOGO } from './gramatica-dialogo';
 
 // ------------------------------------------------------------------ valores
 
@@ -414,8 +415,9 @@ export const GRAMATICA: Record<string, string[]> = {
     'ué', 'gente', 'o quê[?]!', 'que absurdo', 'impossível', 'não é possível', 'caraca', 'my god', 'puts'],
   risada: ['kkkkkkk', 'hahahaha', 'rsrsrs', 'kkk', 'haha', 'lol', 'kkkkk que engraçado', 'haha boa', 'morri de rir', 'kkkk verdade', 'hehe', 'ksksks', 'huehue', 'kkk bobinha', 'hahaha você é louca',
     'kkkkkkkkk', 'rs', 'rsrs', 'hahaha boa', 'kkk muito boa', 'dei risada', 'ri alto agora', 'que engraçada você'],
-  contamais: ['me conta mais', 'conta mais', 'continua', 'e depois[?]', 'fala mais', 'pode explicar melhor[?]', 'como assim[?]', 'quer dizer o quê[?]', 'não entendi', 'explica melhor', 'e então[?]', 'o que mais[?]',
-    'tem mais[?]', 'desenvolve', 'não entendi nada', 'hã[?]', 'o quê[?]', 'não captei', 'pode repetir[?]', 'fala de novo', 'e aí, o que aconteceu depois[?]', 'detalha isso'],
+  // "como assim?" e "não entendi" são esclarecer (gramatica-dialogo.ts): o gerente de diálogo explica o que ela disse
+  contamais: ['me conta mais', 'conta mais', 'continua', 'e depois[?]', 'fala mais', 'pode explicar melhor[?]', 'explica melhor', 'e então[?]', 'o que mais[?]',
+    'tem mais[?]', 'desenvolve', 'fala de novo', 'e aí, o que aconteceu depois[?]', 'detalha isso', 'quero saber mais', 'continua a história', 'e aí[?] continua', 'fala mais disso'],
   opiniaogeral: ['o que (você|vc) acha[?]', 'qual (a |)sua opinião[?]', '(você|vc) concorda[?]', 'concorda comigo[?]', 'o que (você|vc) acha disso[?]', 'que acha[?]', 'tô certo[?]', 'tô certa[?]', 'tô errado[?]',
     'fiz certo[?]', '(você|vc) acha que eu consigo[?]', 'será que dá certo[?]', 'me dá sua opinião', 'sua opinião[?]', 'você acha que vale a pena[?]', 'o que você faria no meu lugar[?]', 'devo fazer isso[?]', 'tô exagerando[?]'],
   desabafo: ['preciso de ajuda', 'me ajuda', 'pode me ajudar[?]', 'preciso de um conselho', 'me dá um conselho', 'preciso falar com alguém', 'ajuda aqui', 'socorro', 'preciso de você', 'preciso conversar',
@@ -435,6 +437,7 @@ export const GRAMATICA: Record<string, string[]> = {
 // os assuntos de conversa e os reforços das intenções antigas (papo.ts)
 for (const [k, v] of Object.entries(MAIS)) GRAMATICA[k] = [...(GRAMATICA[k] ?? []), ...v];
 Object.assign(GRAMATICA, PAPO);
+Object.assign(GRAMATICA, DIALOGO);
 for (const [k, v] of Object.entries(GIRIA)) GRAMATICA[k] = [...(GRAMATICA[k] ?? []), ...v];
 
 export const ROTULOS: readonly string[] = Object.keys(GRAMATICA);

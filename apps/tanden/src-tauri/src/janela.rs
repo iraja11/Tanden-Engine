@@ -5,8 +5,8 @@
 //! No Linux não existe um jeito único: tenta, nesta ordem, Hyprland
 //! (`hyprctl`), Sway (`swaymsg`), KDE no Wayland (`kdotool`) e X11
 //! (`xdotool`, depois `xprop`). No KDE sem kdotool, pergunta ao próprio KWin:
-//! carrega um script de uma linha pelo D-Bus e lê a resposta no journal (é o
-//! que o kdotool faz por baixo). No GNOME/Wayland nenhum funciona sem
+//! carrega um script de uma linha pelo D-Bus e o script responde ao app pelo
+//! próprio D-Bus (nada vai para o journal: os títulos são íntimos). No GNOME/Wayland nenhum funciona sem
 //! extensão; aí o comando avisa.
 
 use serde::Serialize;
@@ -88,53 +88,123 @@ pub fn ler_xprop(saida: &str) -> Option<Janela> {
     (!j.titulo.is_empty()).then_some(j)
 }
 
-/// A linha que o script do KWin imprime: `TANDEN_JANELA:<marca>:{"titulo":...,"app":...}`
-pub fn ler_kwin(journal: &str, marca: &str) -> Option<Janela> {
-    let prefixo = format!("TANDEN_JANELA:{marca}:");
-    let l = journal.lines().rev().find_map(|l| l.find(&prefixo).map(|i| &l[i + prefixo.len()..]))?;
-    let v: serde_json::Value = serde_json::from_str(l.trim()).ok()?;
+/// O que o script do KWin manda de volta: `{"titulo":...,"app":...}`
+pub fn ler_kwin(json: &str) -> Option<Janela> {
+    let v: serde_json::Value = serde_json::from_str(json.trim()).ok()?;
     let titulo = v.get("titulo")?.as_str()?.to_string();
     let app = v.get("app").and_then(|a| a.as_str()).unwrap_or("").to_string();
     (!titulo.is_empty() || !app.is_empty()).then_some(Janela { titulo, app })
 }
 
-/// KDE Plasma (Wayland) sem kdotool: um script de KWin diz a janela ativa.
+/// O script de uma linha que o KWin roda: responde direto ao app pelo D-Bus
+/// (`callDBus`). Antes ele usava `print`, e o título de toda janela em foco
+/// (inclusive as abas que ela comenta com discrição) ficava gravado no journal
+/// do sistema a cada consulta. Agora nada passa por log nenhum.
+pub fn script_kwin(destino: &str, marca: &str) -> String {
+    let q = |s: &str| serde_json::to_string(s).unwrap_or_else(|_| "\"\"".into());
+    format!(
+        "const w = workspace.activeWindow || workspace.activeClient;\ncallDBus({}, \"/app/tanden/Janela\", \"app.tanden.Janela\", \"Recebe\", {}, JSON.stringify({{ titulo: w ? String(w.caption) : \"\", app: w ? String(w.resourceClass) : \"\" }}));\n",
+        q(destino),
+        q(marca)
+    )
+}
+
 #[cfg(target_os = "linux")]
-fn kwin() -> Option<Janela> {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static N: AtomicU64 = AtomicU64::new(0);
-    let n = N.fetch_add(1, Ordering::Relaxed);
-    let marca = format!("{}-{n}", std::process::id());
-    let nome = format!("tanden-janela-{marca}");
-    let arq = std::env::temp_dir().join(format!("{nome}.js"));
-    let js = format!(
-        "const w = workspace.activeWindow || workspace.activeClient;\nprint(\"TANDEN_JANELA:{marca}:\" + JSON.stringify({{ titulo: w ? String(w.caption) : \"\", app: w ? String(w.resourceClass) : \"\" }}));\n"
-    );
-    std::fs::write(&arq, js).ok()?;
-    let caminho = arq.to_string_lossy().to_string();
-    let dbus = |args: &[&str]| rodar("dbus-send", &[&["--session", "--print-reply", "--dest=org.kde.KWin"], args].concat());
-    let saida = dbus(&["/Scripting", "org.kde.kwin.Scripting.loadScript", &format!("string:{caminho}"), &format!("string:{nome}")]);
-    let id = saida.as_deref().and_then(|s| s.split_whitespace().last()).and_then(|x| x.parse::<i64>().ok());
-    let mut achou = None;
-    if let Some(id) = id.filter(|i| *i >= 0) {
-        // Plasma 6 usa /Scripting/Script<id>; o 5, /<id>
-        if dbus(&[&format!("/Scripting/Script{id}"), "org.kde.kwin.Script.run"]).is_none() {
-            let _ = dbus(&[&format!("/{id}"), "org.kde.kwin.Script.run"]);
-        }
-        for _ in 0..6 {
-            std::thread::sleep(Duration::from_millis(60));
-            if let Some(j) = rodar("journalctl", &["--user", "-b", "--since", "-15s", "-o", "cat", "--no-pager"]) {
-                achou = ler_kwin(&j, &marca);
-                if achou.is_some() {
-                    break;
-                }
+mod kde {
+    use super::{ler_kwin, script_kwin, Janela};
+    use std::collections::HashMap;
+    use std::sync::{Arc, Condvar, Mutex, OnceLock};
+    use std::time::{Duration, Instant};
+    use zbus::blocking::{connection, Connection};
+
+    /// As respostas que chegaram, por marca (só as que o app pediu são aceitas).
+    #[derive(Default)]
+    struct Caixa {
+        esperando: Mutex<HashMap<String, Option<Janela>>>,
+        chegou: Condvar,
+    }
+
+    struct Receptor(Arc<Caixa>);
+
+    #[zbus::interface(name = "app.tanden.Janela")]
+    impl Receptor {
+        fn recebe(&self, marca: String, json: String) {
+            let mut m = self.0.esperando.lock().unwrap_or_else(|e| e.into_inner());
+            if let Some(v) = m.get_mut(&marca) {
+                *v = ler_kwin(&json);
+                self.0.chegou.notify_all();
             }
         }
     }
-    let _ = dbus(&["/Scripting", "org.kde.kwin.Scripting.unloadScript", &format!("string:{nome}")]);
-    let _ = std::fs::remove_file(&arq);
-    achou
+
+    /// Uma conexão só, aberta na primeira consulta, com o receptor publicado.
+    fn conexao() -> Option<&'static (Connection, Arc<Caixa>)> {
+        static C: OnceLock<Option<(Connection, Arc<Caixa>)>> = OnceLock::new();
+        C.get_or_init(|| {
+            let caixa = Arc::new(Caixa::default());
+            let conn = connection::Builder::session()
+                .ok()?
+                .serve_at("/app/tanden/Janela", Receptor(caixa.clone()))
+                .ok()?
+                .method_timeout(Duration::from_millis(800))
+                .build()
+                .ok()?;
+            Some((conn, caixa))
+        })
+        .as_ref()
+    }
+
+    /// KDE Plasma (Wayland) sem kdotool: um script de KWin diz a janela ativa.
+    pub fn kwin() -> Option<Janela> {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static N: AtomicU64 = AtomicU64::new(0);
+        let (conn, caixa) = conexao()?;
+        let destino = conn.unique_name()?.to_string();
+        let n = N.fetch_add(1, Ordering::Relaxed);
+        let ns = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.subsec_nanos()).unwrap_or(0);
+        let marca = format!("{}-{n}-{ns:x}", std::process::id());
+        let nome = format!("tanden-janela-{marca}");
+        let arq = std::env::temp_dir().join(format!("{nome}.js"));
+        std::fs::write(&arq, script_kwin(&destino, &marca)).ok()?;
+        caixa.esperando.lock().unwrap_or_else(|e| e.into_inner()).insert(marca.clone(), None);
+        let caminho = arq.to_string_lossy().to_string();
+        let id: Option<i32> = conn
+            .call_method(Some("org.kde.KWin"), "/Scripting", Some("org.kde.kwin.Scripting"), "loadScript", &(caminho.as_str(), nome.as_str()))
+            .ok()
+            .and_then(|m| m.body().deserialize::<i32>().ok());
+        let mut achou = None;
+        if let Some(id) = id.filter(|i| *i >= 0) {
+            // Plasma 6 usa /Scripting/Script<id>; o 5, /<id>
+            let p6 = format!("/Scripting/Script{id}");
+            if conn.call_method(Some("org.kde.KWin"), p6.as_str(), Some("org.kde.kwin.Script"), "run", &()).is_err() {
+                let p5 = format!("/{id}");
+                let _ = conn.call_method(Some("org.kde.KWin"), p5.as_str(), Some("org.kde.kwin.Script"), "run", &());
+            }
+            let fim = Instant::now() + Duration::from_millis(500);
+            let mut m = caixa.esperando.lock().unwrap_or_else(|e| e.into_inner());
+            loop {
+                if let Some(Some(j)) = m.get(&marca) {
+                    achou = Some(j.clone());
+                    break;
+                }
+                let agora = Instant::now();
+                if agora >= fim {
+                    break;
+                }
+                m = caixa.chegou.wait_timeout(m, fim - agora).map(|(g, _)| g).unwrap_or_else(|e| e.into_inner().0);
+            }
+            m.remove(&marca);
+        } else {
+            caixa.esperando.lock().unwrap_or_else(|e| e.into_inner()).remove(&marca);
+        }
+        let _ = conn.call_method(Some("org.kde.KWin"), "/Scripting", Some("org.kde.kwin.Scripting"), "unloadScript", &(nome.as_str(),));
+        let _ = std::fs::remove_file(&arq);
+        achou
+    }
 }
+
+#[cfg(target_os = "linux")]
+use kde::kwin;
 
 #[cfg(target_os = "linux")]
 fn ativa() -> Result<Option<Janela>, String> {
@@ -214,9 +284,17 @@ mod tests {
 
     #[test]
     fn le_o_kwin() {
-        let j = "outra linha\njs: TANDEN_JANELA:9-1:{\"titulo\":\"Novo chat - Claude - Brave\",\"app\":\"brave-browser\"}\nTANDEN_JANELA:9-0:{\"titulo\":\"velha\",\"app\":\"x\"}";
-        assert_eq!(ler_kwin(j, "9-1"), Some(Janela { titulo: "Novo chat - Claude - Brave".into(), app: "brave-browser".into() }));
-        assert_eq!(ler_kwin(j, "9-2"), None);
+        let j = "{\"titulo\":\"Novo chat - Claude - Brave\",\"app\":\"brave-browser\"}";
+        assert_eq!(ler_kwin(j), Some(Janela { titulo: "Novo chat - Claude - Brave".into(), app: "brave-browser".into() }));
+        assert_eq!(ler_kwin("{}"), None);
+        assert_eq!(ler_kwin("lixo"), None);
+    }
+
+    #[test]
+    fn o_script_do_kwin_nao_escreve_em_log() {
+        let js = script_kwin(":1.42", "9-1-ab");
+        assert!(!js.contains("print("), "nada de print: iria para o journal");
+        assert!(js.contains("callDBus(\":1.42\", \"/app/tanden/Janela\", \"app.tanden.Janela\", \"Recebe\", \"9-1-ab\""));
     }
 
     #[test]
