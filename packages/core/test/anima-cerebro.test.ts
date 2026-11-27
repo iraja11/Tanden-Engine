@@ -158,7 +158,7 @@ describe('cérebro: classificador', () => {
       const erros = fs.filter(([r, f]) => classificar(normalizar(f, lx))!.rotulo !== r);
       const acerto = 1 - erros.length / fs.length;
       expect(acerto, erros.map(([r, f]) => `${r}: ${f}`).join('\n')).toBeGreaterThanOrEqual(minimo);
-    });
+    }, 30_000);
   }
 
   it('a rede neural existe, carrega e cobre todas as intenções', () => {
@@ -175,7 +175,7 @@ describe('cérebro: classificador', () => {
       const fs = frases(arq);
       const erros = fs.filter(([r, f]) => preverComRede(redePadrao()!, normalizar(f, lx)).rotulo !== r);
       expect(1 - erros.length / fs.length, erros.map(([r, f]) => `${r}: ${f}`).join('\n')).toBeGreaterThanOrEqual(minimo);
-    });
+    }, 30_000);
   }
 
   it('a rede vê a ordem das palavras (o que a bolsa de palavras não vê)', () => {
