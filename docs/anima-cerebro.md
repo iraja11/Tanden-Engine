@@ -100,6 +100,15 @@ o seguimento resolve *sobre o quê*, olhando o que ela acabou de dizer:
 | "mais uma", "outra", "conta outra" | repetir o tipo da última fala (piada, ideia, poema, curiosidade...) | outra do mesmo grupo |
 | "e você?" | a versão dela do que você acabou de dizer | `etu.<sua intenção anterior>` ("tô com fome" → `etu.fome`) |
 | "por quê?" depois de uma opinião dela | o porquê | `<grupo>.porque` → `porque.dela` |
+| "que legal", "que estranho", "nunca vi esse", "já vi", "vou assistir" | reação ao que ela acabou de dizer | `<grupo>.<positiva\|negativa\|desconhece\|conhece\|vai>` → `reacao.<tipo>` |
+| "qual o seu favorito?" (sem dizer de quê) | o tema vem da fala dela ou da sua mensagem anterior ("filme de terror" → filme) | `dela.<tema>` |
+| "calabresa" depois de "vou pedir uma pizza" | resposta curta que continua o assunto (até 3 palavras, 4 min) | `curto.<intenção anterior>` → `curto` (com `{coisa}`) |
+
+`corrige` sem alvo só vira "eu me confundi" quando ela acabou de afirmar um fato
+sobre você ou a mensagem acusa ("você disse", "entendeu errado"); senão a rede
+estava vendo um "não"/"nem" e chutando, e vale a próxima intenção que ela
+cogitou. Com a rede abaixo de 60%, emoção dominante ruim (raiva, tristeza,
+cansaço) derruba `feliz`, `conquistei` e `estoubem`.
 
 Só vale dentro de 20 minutos da última fala dela; "por quê?" depois de uma
 recusa continua sendo a explicação da decisão. Quando a rede hesita (menos de

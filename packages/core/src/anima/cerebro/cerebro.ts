@@ -26,8 +26,8 @@ import {
 } from '../motor';
 import { crescer } from './arco';
 import { converter, datas } from './capacidades';
-import { assuntoRecente, reintitular, registrarMensagem } from './dialogo';
-import { seguimento } from './seguimento';
+import { assuntoRecente, reintitular, registrarMensagem, ultimoDela } from './dialogo';
+import { fatoDoDito, seguimento } from './seguimento';
 import type { Modelo } from './classificador';
 import { chaveDoPedido, completarPedido, COMANDOS, entenderPedido, type ComandoId, type CtxPedido, type EventoPedido, type Pedido, type Travessura } from './comandos';
 import { casarComando, ordinal, candidatosNota, telaDe, type ComandoApp, type Tema } from './entidades';
@@ -504,8 +504,10 @@ function pensarUm(estado: AnimaState, msg: string, ctx: CtxCerebro): Pensamento 
       rotulo = 'cmd.paleta';
     }
   }
-  // o modelo diz "feliz" e o texto é claramente ruim (ou o contrário): o sentimento desempata
-  if ((rotulo === 'feliz' || rotulo === 'conquistei') && sent.valencia <= -0.35) {
+  // o modelo diz "feliz" e o texto é claramente ruim (ou o contrário): o sentimento desempata.
+  // Com a rede hesitando, basta a emoção dominante ser ruim ("pois é, fiquei puto" não é conquista).
+  const ruim = sent.valencia <= -0.35 || (conf < 0.6 && sent.valencia < 0 && (sent.dominante === 'raiva' || sent.dominante === 'tristeza' || sent.dominante === 'cansaco'));
+  if ((rotulo === 'feliz' || rotulo === 'conquistei' || rotulo === 'estoubem') && ruim) {
     traco.push(`o modelo disse ${rotulo}, mas o sentimento é ${sent.valencia.toFixed(2)}: fico com o sentimento`);
     rotulo = sent.dominante === 'raiva' ? 'mau' : sent.dominante === 'cansaco' ? 'cansaco' : 'triste';
   } else if ((rotulo === 'triste' || rotulo === 'mau') && sent.valencia >= 0.5 && !t.marcas.has('triste')) {
@@ -560,13 +562,14 @@ function pensarUm(estado: AnimaState, msg: string, ctx: CtxCerebro): Pensamento 
   if (!rotulo.startsWith('cmd.') || conf < 0.6) {
     const seg = seguimento(s, t, msg, rotulo, conf, ctx.now);
     if (seg) {
-      const s2 = comMc(seg.fatos ? { ...s, memoria: { ...s.memoria, fatos: seg.fatos } } : s, reintitular(s.memoria.cerebro, seg.tipo === 'etu' ? 'etu' : rotulo));
+      const intSeg = seg.intencao ?? (seg.tipo === 'etu' ? 'etu' : seg.tipo === 'corrige' ? 'corrige' : rotulo);
+      const s2 = comMc(seg.fatos ? { ...s, memoria: { ...s.memoria, fatos: seg.fatos } } : s, reintitular(s.memoria.cerebro, intSeg));
       const f0 = falaDe(seg.grupos, s2, humor, ctx, { ...vars, ...seg.vars });
       if (f0) {
         traco.push(`seguimento: ${seg.traco}`);
         s = s2;
         const r = so(seg.grupos, seg.vars);
-        return { ...r, intencao: seg.tipo === 'corrige' ? 'corrige' : rotulo };
+        return { ...r, intencao: intSeg };
       }
       traco.push(`seguimento sem fala (${seg.grupos[0]}): sigo o caminho normal`);
     }
@@ -625,7 +628,18 @@ function pensarUm(estado: AnimaState, msg: string, ctx: CtxCerebro): Pensamento 
     }
   }
   if (rotulo === 'esclarecer') return so(['conversa.esclarecer', 'conversa.contamais']);
-  if (rotulo === 'corrige') return so(['corrige.desculpa', 'conversa.contamais']);
+  if (rotulo === 'corrige') {
+    // "eu me confundi" só faz sentido se ela acabou de afirmar algo, ou se a pessoa diz que ela errou.
+    // Senão é a rede vendo um "não"/"nem" e chutando: fica com a próxima intenção que ela cogitou.
+    const ela = ultimoDela(mc, ctx.now, s.falou);
+    const afirmou = !!ela && !!ela.ditos?.some((d) => !d.q && (!!fatoDoDito(d) || /^(lembra|aprende|sabe|infere)\./.test(d.g)));
+    const acusa = /\b(disse|falei|falou|confundiu|errou|errado|errada|inventou|lembrou|entendeu|tirou)\b/.test(t.tokens.join(' '));
+    if (afirmou || acusa) return so(['corrige.desculpa', 'conversa.contamais']);
+    const alt = prev?.top.find(([r, p]) => r !== 'corrige' && r !== 'nao' && !r.startsWith('cmd.') && p >= 0.08)?.[0];
+    rotulo = alt ?? (sent.valencia <= -0.35 ? (sent.dominante === 'raiva' ? 'mau' : 'triste') : 'eco');
+    traco.push(`"corrige" sem nada para corrigir: fico com ${rotulo}`);
+    s = comMc(s, reintitular(s.memoria.cerebro, rotulo));
+  }
   if (rotulo === 'hora') return so(['responde.hora']);
   if (rotulo === 'data') {
     const d = new Date(ctx.now);

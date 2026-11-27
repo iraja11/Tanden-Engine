@@ -223,3 +223,47 @@ describe('memória por significado', () => {
     expect(semelhanca(v('meu gato fugiu'), v('meu chefe brigou comigo'))).toBeLessThan(cerebro.PARECIDO);
   });
 });
+
+describe('diálogo: coesão (a conversa de 16 mensagens que quebrava)', () => {
+  const depois = (s: AnimaState, m: string, dt = 40_000) => pensar(s, m, ctx({ now: T0 + dt }));
+
+  it('"que legal" depois de uma fala dela é reação a ela, não "estou bem"', () => {
+    const s = disse(novoEstado(T0), 'conversa.etu#1', 'hoje eu fiquei olhando a chuva pela webcam.');
+    const r = depois(s, 'que legal');
+    expect(r.fala?.id).toMatch(/^reacao\.positiva/);
+    expect(r.intencao).toBe('reacao');
+  });
+
+  it('"nunca vi esse" não é ela pedindo desculpa por ter errado', () => {
+    const s = disse(novoEstado(T0), 'dela.filme#2', 'filmes de vampiro. eles também ficam acordados a noite toda.');
+    const r = depois(s, 'nunca vi esse');
+    expect(r.fala?.id).not.toMatch(/^corrige/);
+    expect(r.fala?.id).toMatch(/desconhece/);
+  });
+
+  it('"qual o seu favorito?" pega o tema da conversa', () => {
+    const r1 = pensar(novoEstado(T0), 'você gosta de filme de terror?', ctx());
+    const r2 = depois(r1.estado, 'qual o seu favorito?');
+    expect(r2.fala?.id).toMatch(/^dela\.filme/);
+  });
+
+  it('resposta de uma palavra continua o assunto ("pizza" → "calabresa")', () => {
+    const r1 = pensar(novoEstado(T0), 'acho que vou pedir uma pizza', ctx());
+    const r2 = depois(r1.estado, 'calabresa');
+    expect(r2.fala?.id).toMatch(/^curto/);
+    expect(r2.fala?.texto).toContain('calabresa');
+  });
+
+  it('"fiquei puto" é raiva, não conquista', () => {
+    const r = pensar(novoEstado(T0), 'pois é, fiquei puto', ctx());
+    expect(['conquistei', 'feliz', 'estoubem']).not.toContain(r.intencao);
+  });
+
+  it('"corrige" sem nada para corrigir fica com a outra intenção; com acusação, ela pede desculpa', () => {
+    const s = disse(novoEstado(T0), 'conversa.espelho.trabalho#1', 'você trabalhou o dia todo. respira.', { espelho: 'você trabalhou o dia todo' });
+    const r = depois(s, 'ele reclamou de um relatório que nem era meu');
+    expect(r.fala?.id).not.toMatch(/^corrige/);
+    const r2 = depois(s, 'você entendeu errado, não foi isso que eu disse');
+    expect(r2.intencao).toBe('corrige');
+  });
+});

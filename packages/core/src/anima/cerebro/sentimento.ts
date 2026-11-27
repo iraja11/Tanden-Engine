@@ -40,13 +40,15 @@ const VAL: Record<string, number> = {
   decepcionado: -2.8, decepcionada: -2.8, decepcao: -2.8, frustrado: -2.6, frustrada: -2.6, culpa: -2.2, vergonha: -1.8, inutil: -2.8, lixo: -2.6, burro: -2.2, burra: -2.2,
   odiei: -3, nojo: -2.6, nojento: -2.8, insuportavel: -3, desanimado: -2.4, desanimada: -2.4, pior: -2.6, sofrendo: -3, sofrimento: -3.2, solidao: -2.8, perdido: -1.8, perdida: -1.8,
   morrer: -3, morte: -3, sumir: -2.2, desistir: -2.4, cansaco: -1.8, sono: -0.8, fome: -0.6, atrasado: -1.4, atrasada: -1.4, prova: -0.4, prazo: -0.6, chefe: -0.3,
+  puto: -2.6, putasso: -3, putassa: -3, pistola: -2.4, bolado: -1.8, bolada: -1.8, revoltado: -2.6, revoltada: -2.6, indignado: -2.4, indignada: -2.4, furioso: -3, furiosa: -3,
+  emputecido: -3, emputecida: -3, injuriado: -2.2, injuriada: -2.2, fulo: -2.4, fula: -2.4, raivoso: -2.6, raivosa: -2.6, humilhado: -3, humilhada: -3, magoado: -2.6, magoada: -2.6,
   porra: -1.2, caralho: -1, aff: -1.2, afe: -1.2, ugh: -1.4, credo: -1.2, saudade: -0.6,
 };
 
 const EMOCAO: Record<Emocao, RegExp> = {
   alegria: /^(feliz|felicidade|alegr\w*|otim[oa]|incrivel|maravilh\w*|consegui|passei|aprovad[oa]|ganhei|venci|vitoria|animad[oa]|empolgad[oa]|<riso>|riso|rindo|sorri\w*|divertid[oa]|orgulh\w*)$/,
   tristeza: /^(trist\w*|chor\w*|deprimid[oa]|depressao|sozinh[oa]|solidao|saudade|decepc\w*|desanimad[oa]|sofr\w*|perdi|reprov\w*|<triste>|mal)$/,
-  raiva: /^(raiva|odeio|odio|odiei|irritad[oa]|estressad[oa]|nervos[oa]|merda|porra|caralho|droga|insuportavel|<raiva>|briga|briguei|puto|puta)$/,
+  raiva: /^(raiva|odeio|odio|odiei|irritad[oa]|estressad[oa]|nervos[oa]|merda|porra|caralho|droga|insuportavel|<raiva>|briga|briguei|puto|puta|putass[oa]|pistola|bolad[oa]|revoltad[oa]|indignad[oa]|furios[oa]|emputecid[oa]|injuriad[oa]|ful[oa]|raivos[oa])$/,
   medo: /^(medo|assustad[oa]|ansios[oa]|ansiedade|preocupad[oa]|pavor|panico|<medo>|nervos[oa])$/,
   amor: /^(amo|ama|amei|adoro|amor|carinho|<amor>|saudade|beijo|beijos|abraco|fofo|fofa|linda|lindo)$/,
   cansaco: /^(cansad[oa]|exaust[oa]|esgotad[oa]|cansaco|sono|dormir|morto|morta|acabad[oa])$/,

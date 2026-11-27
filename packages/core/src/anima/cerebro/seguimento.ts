@@ -19,11 +19,12 @@
  */
 import { esquecerFato, fatosCitados, type FatoCitado, type Fatos, type TipoFato } from '../fatos';
 import type { AnimaState } from '../estado';
+import { temaDe } from '../mente';
 import { ditoPrincipal, mensagemAnterior, prefixos, ultimoDela } from './dialogo';
 import type { Dito, Turno } from './memoria';
 import type { Texto } from './texto';
 
-export type TipoSeguimento = 'esclarecer' | 'corrige' | 'responde' | 'mais' | 'etu' | 'porque';
+export type TipoSeguimento = 'esclarecer' | 'corrige' | 'responde' | 'mais' | 'etu' | 'porque' | 'reacao' | 'favorito' | 'curto';
 
 export interface Seguimento {
   tipo: TipoSeguimento;
@@ -33,6 +34,8 @@ export interface Seguimento {
   fatos?: Fatos;
   /** uma linha para o /pensamento */
   traco: string;
+  /** a intenção que fica no diálogo (quando o seguimento entende melhor do que a rede) */
+  intencao?: string;
 }
 
 /** O grupo de onde saiu uma lembrança, e o tipo de fato que ela cita. */
@@ -65,6 +68,24 @@ const NEGA = /\b(nao|n|nunca|nem|jamais)\b.*\b(sei|conheco|gosto|gostei|curto|cu
 /** Negação que já começa negando: vale mesmo quando a consulta à memória casou ("não sei quem é X" não é pergunta). */
 const NEGA_FORTE = /^(eu )?(nao|n|nunca|jamais) (sei|conheco|gosto|curto|tenho|disse|falei|moro|trabalho)\b|\b(nunca|nao) (disse|falei) (isso|nada|isso ai)\b|^(mentira|errado|nada a ver|de onde (voce|vc) tirou)|inventou|confundiu|lembrou errado|entendeu errado/;
 
+/**
+ * Reação curta ao que ela acabou de dizer. Sem isto, "que legal" virava
+ * "estoubem" e "nunca vi esse" virava "corrige" ("eu me confundi").
+ */
+const REACAO: Array<[string, RegExp]> = [
+  ['desconhece', /^(eu )?(nunca|nao|n|nem) (vi|assisti|li|ouvi|joguei|conheco|conhecia|provei|experimentei|fui)( (esse|essa|isso|ele|ela|nao|ainda|falar|de|disso|desse|dessa|nunca|na vida))*$/],
+  ['conhece', /^(eu )?(ja (vi|assisti|li|ouvi|joguei|provei|conhecia|conheco)|conheco|eu conheco|amo esse|amo essa|adoro esse|adoro essa)( (esse|essa|isso|ele|ela|sim|tambem|ja|varias vezes|muito))*$/],
+  ['vai', /^(entao )?(eu )?(vou|vo|irei|quero) (ver|assistir|ler|ouvir|jogar|testar|tentar|provar|procurar|conhecer)( (esse|essa|isso|ele|ela|entao|depois|hoje|amanha|sim|um dia|qualquer dia|ai))*$/],
+  ['positiva', /^(que|q) (legal|massa|bom|otimo|show|daora|top|incrivel|lindo|linda|fofo|fofa|bonito|interessante|maneiro|irado|perfeito|demais|maravilha|chique|foda)( (demais|mesmo|hein|ne))?$|^(legal|massa|show|top|daora|adorei|amei|gostei|demais|irado|maneiro|perfeito|incrivel|interessante|foda|brabo|braba)( (demais|mesmo|hein|ne))?$/],
+  ['negativa', /^(que|q) (chato|triste|horrivel|pena|droga|merda|saco|bad|ruim|estranho|bizarro|esquisito|nojo|medo)( (mesmo|hein|ne))?$|^(credo|eca|bizarro|estranho|esquisito|sinistro)$/],
+];
+
+/** "qual o seu favorito?" sem dizer de quê: o tema vem da conversa. */
+const FAVORITO_VAGO = /\b(qual|quais|e) (e |eh |sao )?(o |a |os |as )?(seu|sua|teu|tua|seus|suas) (favorit[oa]s?|preferid[oa]s?)\b|\b(voce|vc|ce) tem (algum|alguma|um|uma) (favorit|preferid)|\bqual (voce|vc|ce) (mais gosta|prefere|curte mais|ama mais)\b|^e (o|a) (seu|sua) (favorit[oa]|preferid[oa])?\??$/;
+
+/** Intenções depois das quais uma resposta de uma palavra é continuação ("pizza" → "calabresa"). */
+const CONTINUA_CURTO = new Set(['fome', 'trabalho', 'treino', 'tedio', 'musica', 'jogar', 'cansaco', 'feliz', 'conquistei', 'mau', 'triste', 'desabafo', 'comofoi', 'estoubem']);
+
 const tok = (t: Texto) => t.tokens.join(' ');
 
 /**
@@ -95,9 +116,17 @@ export function seguimento(s: AnimaState, t: Texto, msg: string, rotulo: string,
     }
   }
 
+  // 1b. "qual o seu favorito?" sem dizer de quê: o tema é o da conversa
+  if (FAVORITO_VAGO.test(frase) && !temaDe(frase)) {
+    const antes = mensagemAnterior(mc, now);
+    const fontes = [...(ela?.ditos ?? []).flatMap((d) => [String(d.ref?.coisa ?? ''), d.t]).reverse(), antes?.t ?? '', antes?.i?.replace(/^papo\./, '') ?? ''];
+    const tema = fontes.map((x) => (x ? temaDe(x) : null)).find((x) => !!x);
+    if (tema) return { tipo: 'favorito', grupos: [`dela.${tema}`], vars: {}, intencao: 'sobre_ela', traco: `favorito sem tema: o da conversa é ${tema}` };
+  }
+
   if (!ela) {
     // sem fala dela recente, "e você?" ainda pode responder à mensagem anterior da pessoa
-    return etu(rotulo, frase, mc, now);
+    return etu(rotulo, frase, mc, now) ?? curto(t, frase, rotulo, conf, mc, now);
   }
   const ultimo = ela.ditos?.at(-1);
   const principal = ditoPrincipal(ela);
@@ -127,6 +156,16 @@ export function seguimento(s: AnimaState, t: Texto, msg: string, rotulo: string,
     return { tipo: 'responde', grupos, vars: { ...(ultimo.ref ?? {}), pergunta: aspas(ultimo.t) }, traco: `respondeu ${lado} à pergunta dela (${ultimo.g})` };
   }
 
+  // 3b. reação curta ao que ela disse ("que legal", "nunca vi esse", "vou assistir")
+  if (t.tokens.length <= 7 && !/\?\s*$/.test(msg.trim())) {
+    const r = REACAO.find(([, re]) => re.test(frase));
+    const d = principal ?? ultimo;
+    if (r && d && !(ultimo?.q && (r[0] === 'positiva' || r[0] === 'negativa'))) {
+      const grupos = [...prefixos(d.g).map((p) => `${p}.${r[0]}`), `reacao.${r[0]}`];
+      return { tipo: 'reacao', grupos, vars: { ...(d.ref ?? {}), dito: aspas(d.t) }, intencao: 'reacao', traco: `reação (${r[0]}) ao que eu disse (${d.g})` };
+    }
+  }
+
   // 4. "mais uma", "outra", "continua"
   const recenteCmd = mc.ultimaDecisao && now - mc.ultimaDecisao.em < 15 * 60_000 && mc.ultimaDecisao.em >= (ela.em || s.falou) - 1000;
   if ((rotulo === 'repetir' || rotulo === 'contamais' || /^(mais uma|outra|outro|manda outra|conta outra|mais um|de novo|continua)\b/.test(frase)) && !recenteCmd) {
@@ -142,7 +181,19 @@ export function seguimento(s: AnimaState, t: Texto, msg: string, rotulo: string,
   if (rotulo === 'porque' && principal && !recenteCmd) {
     return { tipo: 'porque', grupos: [...prefixos(principal.g).map((p) => `${p}.porque`), 'porque.dela'], vars: { ...(principal.ref ?? {}), dito: aspas(principal.t) }, traco: `por quê do que eu disse (${principal.g})` };
   }
-  return null;
+
+  // 7. resposta de uma ou duas palavras que continua o assunto ("vou pedir pizza" ... "calabresa")
+  return curto(t, frase, rotulo, conf, mc, now);
+}
+
+/** Resposta curta (sem verbo de pedido, sem pergunta) que só faz sentido com a mensagem anterior. */
+function curto(t: Texto, frase: string, rotulo: string, conf: number, mc: AnimaState['memoria']['cerebro'], now: number): Seguimento | null {
+  if (t.tokens.length > 3 || /\?\s*$/.test(t.original.trim()) || (rotulo !== 'eco' && conf >= 0.6)) return null;
+  if (/^(sim|s|nao|n|ok|blz|ta|hm+|kk+|oi|e|eu|voce|vc|nada|sei la|nao sei|n sei|tanto faz|qualquer|qualquer um|qualquer coisa|nenhum|nenhuma)$/.test(frase)) return null;
+  const antes = mensagemAnterior(mc, now, 4 * 60_000);
+  if (!antes?.i || !CONTINUA_CURTO.has(antes.i)) return null;
+  const coisa = t.original.trim().replace(/[.!]+$/, '');
+  return { tipo: 'curto', grupos: [`curto.${antes.i}`, 'curto'], vars: { coisa }, intencao: antes.i, traco: `resposta curta: continua "${antes.i}" ("${antes.t.slice(0, 40)}")` };
 }
 
 /** "e você?": a versão dela do que a pessoa acabou de dizer. */
