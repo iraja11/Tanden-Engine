@@ -127,10 +127,11 @@ export function lerJanela(titulo: string, app: string): Pagina | null {
   const d = dobrar(semNav);
   const s = SITES.find(([, , re]) => re.test(d));
   if (!s) return null;
-  // site adulto: o título da página nunca é guardado nem repetido (nem no traço, nem na notificação)
-  if (s[0] === 'adulto') return { categoria: 'adulto', site: s[1], pagina: '', navegador: true };
   const pagina = semNav.replace(new RegExp(`\\s*[—–|•·-]\\s*${s[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i'), '').replace(/\s*[—–|-]\s*(YouTube|Twitch|Google Classroom|Reddit)\s*$/i, '').trim();
-  return { categoria: s[0], site: s[1], pagina: pagina.slice(0, 80), navegador: true };
+  // o último pedaço do título é o próprio site ("Vídeo - Pornhub"): fora
+  const partes = pagina.split(/\s+[—–|•·-]\s+/);
+  const limpa = partes.length > 1 && s[2].test(dobrar(partes.at(-1)!)) ? partes.slice(0, -1).join(' - ') : pagina;
+  return { categoria: s[0], site: s[1], pagina: limpa.slice(0, 80), navegador: true };
 }
 
 const DISTRAI = new Set<CategoriaWeb>(['video', 'live', 'rede', 'jogos', 'compras', 'adulto']);
@@ -191,7 +192,7 @@ export function reagirWeb(estado: AnimaState, p: Pagina, ctx: CtxJogo): { estado
 }
 
 /**
- * Você saiu do site adulto: ela "tira as mãos dos olhos" (nem sempre fala).
+ * Você saiu do site adulto: ela comenta, sem vergonha nenhuma (nem sempre fala).
  * `minutos` = quanto tempo a aba ficou na tela.
  */
 export function saiuDoAdulto(estado: AnimaState, minutos: number, ctx: CtxJogo): { estado: AnimaState; fala: Fala | null } {

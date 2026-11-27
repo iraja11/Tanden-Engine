@@ -77,7 +77,8 @@ const REACAO: Array<[string, RegExp]> = [
   ['conhece', /^(eu )?(ja (vi|assisti|li|ouvi|joguei|provei|conhecia|conheco)|conheco|eu conheco|amo esse|amo essa|adoro esse|adoro essa)( (esse|essa|isso|ele|ela|sim|tambem|ja|varias vezes|muito))*$/],
   ['vai', /^(entao )?(eu )?(vou|vo|irei|quero) (ver|assistir|ler|ouvir|jogar|testar|tentar|provar|procurar|conhecer)( (esse|essa|isso|ele|ela|entao|depois|hoje|amanha|sim|um dia|qualquer dia|ai))*$/],
   ['positiva', /^(que|q) (legal|massa|bom|otimo|show|daora|top|incrivel|lindo|linda|fofo|fofa|bonito|interessante|maneiro|irado|perfeito|demais|maravilha|chique|foda)( (demais|mesmo|hein|ne))?$|^(legal|massa|show|top|daora|adorei|amei|gostei|demais|irado|maneiro|perfeito|incrivel|interessante|foda|brabo|braba)( (demais|mesmo|hein|ne))?$/],
-  ['negativa', /^(que|q) (chato|triste|horrivel|pena|droga|merda|saco|bad|ruim|estranho|bizarro|esquisito|nojo|medo)( (mesmo|hein|ne))?$|^(credo|eca|bizarro|estranho|esquisito|sinistro)$/],
+  ['vago', /^(sei la|sl|nao sei|n sei|sei nao|nem sei|tanto faz|qualquer coisa|qualquer um|sei la mano|sei la cara)$/],
+  ['negativa', /^(que|q) (chato|droga|saco|estranho|bizarro|esquisito|nojo|medo)( (mesmo|hein|ne))?$|^(credo|eca|bizarro|estranho|esquisito|sinistro)$/],
 ];
 
 /** "qual o seu favorito?" sem dizer de quê: o tema vem da conversa. */

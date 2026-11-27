@@ -368,6 +368,7 @@ export function reagir(estado: AnimaState, ev: AnimaEvent, ctx: AnimaCtx): Reaca
       vars.esforco = ev.esforco ?? undefined;
       vars.sequencia = ev.sequencia;
       s = mexer(s, { afeto: 3, ciume: -10 });
+      s = { ...s, memoria: { ...s.memoria, cerebro: { ...s.memoria.cerebro, exige: { ...s.memoria.cerebro.exige, treinoEm: now } } } };
       break;
     case 'conquista': vars.conquista = ev.nome; s = mexer(s, { afeto: 2 }); break;
     case 'marco': vars.dias = ev.dias; s = mexer(s, { afeto: 3 }); break;

@@ -1163,10 +1163,10 @@ class Anima {
     const now = Date.now();
     const p = jan ? cerebro.lerJanela(jan.titulo, jan.app) : null;
     const antes = this.web;
-    // saiu do site adulto: ela tira as mãos dos olhos (sem notificação, sem citar nada)
+    // saiu do site adulto: ela comenta (às vezes)
     if (p?.categoria === 'adulto' && antes?.p.categoria !== 'adulto') this.adultoDesde = now;
     if (antes?.p.categoria === 'adulto' && p?.categoria !== 'adulto' && now - this.adultoDesde >= 40_000) {
-      this.falarFora(cerebro.saiuDoAdulto($state.snapshot(this.estado) as AnimaState, (now - this.adultoDesde) / 60_000, { ...this.ctxCerebro(), rotina: this.prefs.rotina }), false, true);
+      this.falarFora(cerebro.saiuDoAdulto($state.snapshot(this.estado) as AnimaState, (now - this.adultoDesde) / 60_000, { ...this.ctxCerebro(), rotina: this.prefs.rotina }));
     }
     // o tempo da página anterior conta para a categoria dela
     if (antes) this.estado = cerebro.contarWeb($state.snapshot(this.estado) as AnimaState, antes.p.categoria, Math.min(now - antes.desde, 25_000), now);
@@ -1187,9 +1187,8 @@ class Anima {
     if (!r.fala) return;
     this.webUltimo = now;
     this.webPorCategoria[p.categoria] = now;
-    const discreta = p.categoria === 'adulto';
-    this.pensamento = [discreta ? `janela: (escondida) (${jan?.app})` : `janela: "${jan?.titulo}" (${jan?.app})`, `site: ${p.site} · categoria: ${p.categoria}${p.pagina ? ` · página: ${p.pagina}` : ''}`, `fala: ${r.grupo}`];
-    this.falarFora(r, false, discreta);
+    this.pensamento = [`janela: "${jan?.titulo}" (${jan?.app})`, `site: ${p.site} · categoria: ${p.categoria}${p.pagina ? ` · página: ${p.pagina}` : ''}`, `fala: ${r.grupo}`];
+    this.falarFora(r, false);
   }
 
 
@@ -1386,15 +1385,14 @@ class Anima {
   }
 
   /** Fala mesmo com o app escondido: com a janela na bandeja, vira notificação do sistema. */
-  private falarFora(r: { estado: AnimaState; fala: Fala | null }, essencial = false, discreta = false): void {
+  private falarFora(r: { estado: AnimaState; fala: Fala | null }, essencial = false): void {
     this.estado = r.estado;
     this.salvar();
     if (!r.fala) return;
     if (!essencial && Date.now() < this.estado.memoria.cerebro.quietaAte) return;
     // dentro do Minecraft, o que ela comenta aqui fora aparece no chat do jogo também
-    if (!discreta && this.mine) this.mineAte = Math.max(this.mineAte, Date.now() + 1500);
-    // discreta (site adulto): nada de notificação do sistema, que aparece no celular pelo KDE Connect e em tela compartilhada
-    this.mostrar(r.fala, false, undefined, discreta ? false : essencial ? 'essencial' : true);
+    if (this.mine) this.mineAte = Math.max(this.mineAte, Date.now() + 1500);
+    this.mostrar(r.fala, false, undefined, essencial ? 'essencial' : true);
   }
 
   /** Um evento que a pessoa criou na agenda (não ela): ela reage pelo sentido. */

@@ -10,6 +10,9 @@
  *   4. pôr uma coisa dela na sua agenda, "porque sim" (no máximo 1 por semana)
  *   5. escrever no seu world building (no máximo a cada 3 dias)
  *   6. comentar algo que ela DEDUZIU (grafo), não só lembrou
+ *   7. a sua melhor versão: dias demais sem treinar, ou muito lazer e nada de
+ *      estudo hoje (lazer não é proibido; o estudo é que é cobrado). Nunca
+ *      depois de uma crise nem com a conversa recente em tristeza.
  *
  * E `broncaDeTela`: prova em até 2 dias e você abrindo a mesa de RPG, a sorte
  * ou a outra IA? Ela nota.
@@ -103,6 +106,30 @@ export function rotina(estado: AnimaState, ctx: CtxCerebro, poderes: Poderes = {
     const f = fala([`estudo.${urg}`, 'estudo.perto'], { titulo: e.titulo, assunto: e.assunto ?? e.titulo.toLowerCase(), dias: Math.max(1, dias), horas: Math.max(1, Math.round(horas)) });
     return pronto(s, f, null, ctx, 'rotina.estudo', [`cobrança de estudo (${urg}): ${e.titulo}`]);
   }
+
+  // 2b. a sua melhor versão (uma cobrança de cada por dia, no máximo)
+  const ex = mc.exige.dia === hoje ? mc.exige : { ...mc.exige, dia: hoje, treino: 0, estudo: 0 };
+  const hora = new Date(now).getHours();
+  const fragil = now - mc.criseEm < 2 * D || mc.dialogo.some((t) => t.de === 'eu' && now - t.em < 6 * H && /^(triste|desabafo|crise)$/.test(t.i ?? ''));
+  if (!fragil) {
+    const semTreino = ex.treinoEm ? (now - ex.treinoEm) / D : 0;
+    if (ex.treinoEm && semTreino >= 2.5 && !ex.treino && hora >= 10 && hora < 21 && ctx.rand() < 0.4) {
+      mc = { ...mc, exige: { ...ex, treino: 1 } };
+      s = comMc(s, mc);
+      const dias = Math.floor(semTreino);
+      return pronto(s, fala([dias >= 6 ? 'exige.treino.muito' : 'exige.treino', 'exige.treino'], { dias }), null, ctx, 'rotina.exige', [`${dias} dias sem treinar: cobro`]);
+    }
+    const mins = mc.web.dia === hoje ? mc.web.minutos : {};
+    const lazer = Math.round((mins.video ?? 0) + (mins.live ?? 0) + (mins.jogos ?? 0) + (mins.rede ?? 0));
+    const estudo = Math.round((mins.estudo ?? 0) + (mins.leitura ?? 0));
+    if (lazer >= 90 && estudo < 20 && !ex.estudo && hora >= 14 && hora < 22 && ctx.rand() < 0.5) {
+      mc = { ...mc, exige: { ...ex, estudo: 1 } };
+      s = comMc(s, mc);
+      const tempo = lazer >= 60 ? `${Math.floor(lazer / 60)}h${String(lazer % 60).padStart(2, '0')}` : `${lazer} minutos`;
+      return pronto(s, fala(['exige.estudo'], { tempo, minutos: estudo }), null, ctx, 'rotina.exige', [`${tempo} de lazer e ${estudo} min de estudo hoje: cobro`]);
+    }
+  }
+  if (ex !== mc.exige) mc = { ...mc, exige: ex };
 
   // 3. compromisso chegando
   for (const o of ctx.agenda ?? []) {

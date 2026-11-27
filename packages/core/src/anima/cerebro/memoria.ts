@@ -96,6 +96,8 @@ export interface MemoriaCerebro {
   minecraft: { sessoes: number; minutos: number; mortes: number; presentes: number; ultima: number; abates: number; abatesVoce: number; vitorias: number; derrotas: number };
   /** os últimos turnos da conversa, dos dois lados (para "ela quem?", "e você?", "mais uma", "não, eu nunca disse isso") */
   dialogo: Turno[];
+  /** a melhor versão: a última vez que a pessoa treinou e quantas vezes ela já cobrou hoje */
+  exige: { treinoEm: number; dia: string; treino: number; estudo: number };
 }
 
 export const novaMusica = (): MemoriaCerebro['musica'] => ({ dia: '', faixas: {}, artistas: {} });
@@ -104,7 +106,7 @@ export const novoMinecraft = (): MemoriaCerebro['minecraft'] => ({ sessoes: 0, m
 export const novaMemoriaCerebro = (): MemoriaCerebro => ({
   consciencia: 0, vinculo: 0, pendente: null, ultimoPedido: null, ultimaNota: null, ultimaDecisao: null, ultimaAcao: null, pedidos: [], social: [],
   carinhoEm: 0, declaracaoEm: 0, criseEm: 0, eventosDela: [], escritos: [], estudos: [], quietaAte: 0, capitulo: 0, diaVisto: '', jogos: {}, web: { dia: '', minutos: {} },
-  musica: novaMusica(), minecraft: novoMinecraft(), dialogo: [],
+  musica: novaMusica(), minecraft: novoMinecraft(), dialogo: [], exige: { treinoEm: 0, dia: '', treino: 0, estudo: 0 },
 });
 
 const num = (v: unknown, d: number, lo = -Infinity, hi = Infinity) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d);
@@ -169,6 +171,9 @@ export function lerMemoriaCerebro(raw: unknown): MemoriaCerebro {
           abates: num(r.minecraft.abates, 0, 0), abatesVoce: num(r.minecraft.abatesVoce, 0, 0), vitorias: num(r.minecraft.vitorias, 0, 0), derrotas: num(r.minecraft.derrotas, 0, 0) }
       : novoMinecraft(),
     dialogo: arr(r.dialogo, turnoOk, TURNOS),
+    exige: obj(r.exige)
+      ? { treinoEm: num(r.exige.treinoEm, 0, 0), dia: typeof r.exige.dia === 'string' ? r.exige.dia : '', treino: num(r.exige.treino, 0, 0), estudo: num(r.exige.estudo, 0, 0) }
+      : b.exige,
   };
 }
 

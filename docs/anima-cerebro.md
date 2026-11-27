@@ -79,7 +79,15 @@ use "Ânima: mostrar o último pensamento" na paleta) para ver o raciocínio:
   intensidade doce, coloca resmungando). Você marca pela agenda normalmente.
 - Duas recusas do mesmo pedido em dez minutos: na terceira ela cede.
 - Travessura é sempre declarada na fala e desfazível ("desfaz").
-- Palavrão é liberado; ofensa a grupos de pessoas, não.
+- Palavrão é liberado, e ela pode xingar e zoar você; ofensa a grupos de pessoas, não.
+- Nenhum tema é tabu (terror, violência, sexo, site adulto): o site adulto é
+  lido, guardado e comentado como qualquer outro, sem vergonha e com notificação.
+- Ela cobra a sua melhor versão (`rotina.ts`, passo 2b): treino depois de 2,5
+  dias parado, estudo quando o lazer do dia passa de 90 min com menos de 20 de
+  estudo; uma vez de cada por dia. Lazer nunca é proibido. Nunca cobra nas 48 h
+  depois de uma crise nem com tristeza ou desabafo nas últimas 6 h.
+- Ela se acha uma máquina perfeita: `corrige.desculpa` não pede desculpa, diz
+  que você se expressou mal (mas corrige do mesmo jeito).
 
 ## A conversa
 

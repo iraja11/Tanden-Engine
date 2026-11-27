@@ -19,12 +19,8 @@ import { TURNOS, type Dito, type MemoriaCerebro, type Turno } from './memoria';
 /** Variáveis que não dizem do QUE ela falou (sempre presentes). */
 const GENERICAS = new Set(['nome', 'nomereal', 'hora', 'palavras', 'ia', 'acorda']);
 
-/** Grupos cujo assunto nunca é guardado (o site adulto: discrição total, nem o título vai para a memória). */
-const DISCRETOS = /^web\.adulto|^web\.dormir\.adulto/;
-
 /** O que vale guardar das variáveis que a fala usou. */
 export function refsDe(grupo: string, usadas: Record<string, string | number | undefined>): Record<string, string | number> | undefined {
-  if (DISCRETOS.test(grupo)) return undefined;
   const out: Record<string, string | number> = {};
   for (const [k, v] of Object.entries(usadas)) if (v !== undefined && v !== '' && !GENERICAS.has(k)) out[k] = typeof v === 'string' ? v.slice(0, 120) : v;
   return Object.keys(out).length ? out : undefined;
@@ -39,7 +35,7 @@ const grupoDe = (id: string): string => id.split('#')[0] ?? id;
  */
 export function registrarFala(mc: MemoriaCerebro, f: Fala, falou: number): MemoriaCerebro {
   const g = grupoDe(f.id);
-  const ref = DISCRETOS.test(g) ? undefined : f.ref;
+  const ref = f.ref;
   const novo: Dito = { g, t: f.texto, ...(ref ? { ref } : {}), ...(/\?\s*[)"'”]?\s*$/.test(f.texto) ? { q: 1 as const } : {}) };
   // a emenda vem logo depois das partes, antes de qualquer carimbo
   const ult = mc.dialogo.at(-1);

@@ -586,18 +586,17 @@ describe('cérebro: música (Spotify)', () => {
   });
 });
 
-describe('cérebro: site adulto com discrição', () => {
+describe('cérebro: site adulto, sem vergonha', () => {
   const { lerJanela, reagirWeb, saiuDoAdulto } = cerebro;
   const rot = { acordaAs: '06:00', horasSono: 7.5, diasTrabalho: [1, 2, 3, 4, 5] };
 
-  it('nunca guarda nem repete o título da página', () => {
+  it('lê a categoria e o título da página como qualquer site', () => {
     const p = lerJanela('Algum título qualquer - Pornhub — Mozilla Firefox', 'firefox')!;
     expect(p.categoria).toBe('adulto');
-    expect(p.pagina).toBe('');
+    expect(p.pagina).toBe('Algum título qualquer');
     const now = new Date(2026, 10, 18, 15, 0).getTime();
     const r = reagirWeb(novoEstado(T0), p, { now, rand: sorteio(4), intensidade: 3, nome: 'amor', rotina: rot });
     expect(r.fala).not.toBeNull();
-    expect(r.fala!.texto).not.toMatch(/título qualquer/);
   });
 
   it('ao sair da aba ela às vezes comenta, sem citar nada', () => {
@@ -787,5 +786,51 @@ describe('cérebro: Minecraft', () => {
       'musica.longa', 'musica.curta', 'musica.feat', 'musica.manha', 'musica.noite', 'web.adulto.saiu', 'web.adulto.denovo',
     ];
     for (const g of grupos) expect(f[g]?.length, g).toBeGreaterThan(0);
+  });
+});
+
+describe('cérebro: a sua melhor versão', () => {
+  const dia = (t: number) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const base = () => {
+    const s = novoEstado(T0 - 10 * 864e5);
+    s.memoria.cerebro.capitulo = 9;
+    s.memoria.cerebro.diaVisto = dia(T0);
+    return s;
+  };
+  const primeira = (s: AnimaState) => {
+    let r: cerebro.Pensamento | null = null;
+    for (let seed = 1; seed < 40 && r?.intencao !== 'rotina.exige'; seed++) r = rotina(s, ctx({ rand: sorteio(seed) }), { agenda: false, mundo: false });
+    return r;
+  };
+
+  it('cobra treino depois de dias parado, uma vez por dia', () => {
+    const s = base();
+    s.memoria.cerebro.exige.treinoEm = T0 - 4 * 864e5;
+    const r = primeira(s);
+    expect(r?.intencao).toBe('rotina.exige');
+    expect(r!.fala!.id).toMatch(/^exige\.treino/);
+    expect(r!.estado.memoria.cerebro.exige.treino).toBe(1);
+    expect(primeira(r!.estado)?.intencao).not.toBe('rotina.exige');
+  });
+
+  it('lazer é livre, mas muito lazer e nada de estudo é cobrado', () => {
+    const s = base();
+    s.memoria.cerebro.web = { dia: dia(T0), minutos: { video: 80, jogos: 40, estudo: 5 } };
+    const r = primeira(s);
+    expect(r!.fala!.id).toMatch(/^exige\.estudo/);
+    const pouco = base();
+    pouco.memoria.cerebro.web = { dia: dia(T0), minutos: { video: 40, estudo: 0 } };
+    expect(primeira(pouco)?.intencao).not.toBe('rotina.exige');
+  });
+
+  it('não cobra depois de uma crise nem com a conversa em tristeza', () => {
+    const s = base();
+    s.memoria.cerebro.exige.treinoEm = T0 - 4 * 864e5;
+    s.memoria.cerebro.criseEm = T0 - 864e5;
+    expect(primeira(s)?.intencao).not.toBe('rotina.exige');
+    const t = base();
+    t.memoria.cerebro.exige.treinoEm = T0 - 4 * 864e5;
+    t.memoria.cerebro.dialogo = [{ de: 'eu', t: 'tô muito mal hoje', em: T0 - 3_600_000, i: 'triste' }];
+    expect(primeira(t)?.intencao).not.toBe('rotina.exige');
   });
 });

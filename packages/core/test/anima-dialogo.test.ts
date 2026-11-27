@@ -40,9 +40,9 @@ describe('diálogo: memória de trabalho', () => {
     expect(mc.dialogo[0]!.ditos!.map((x) => x.g)).toEqual(['conversa.feliz', 'segue.gosta']);
   });
 
-  it('nunca guarda o assunto do site adulto', () => {
-    const s = disse(novoEstado(T0), 'web.adulto#0', 'hm.', { pagina: 'título secreto', site: 'x' });
-    expect(JSON.stringify(s.memoria.cerebro.dialogo)).not.toContain('título secreto');
+  it('guarda o assunto do site adulto como qualquer outro (ela não tem vergonha)', () => {
+    const s = disse(novoEstado(T0), 'web.adulto#0', 'hm.', { pagina: 'título qualquer', site: 'x' });
+    expect(JSON.stringify(s.memoria.cerebro.dialogo)).toContain('título qualquer');
   });
 
   it('a memória de trabalho sobrevive a ler o estado de volta', () => {
@@ -265,5 +265,16 @@ describe('diálogo: coesão (a conversa de 16 mensagens que quebrava)', () => {
     expect(r.fala?.id).not.toMatch(/^corrige/);
     const r2 = depois(s, 'você entendeu errado, não foi isso que eu disse');
     expect(r2.intencao).toBe('corrige');
+  });
+});
+
+describe('diálogo: resposta à pergunta do nome', () => {
+  it('"tô entediado" não vira o nome "Tô"; "é Pedro" e "me chamo Ana" viram', async () => {
+    const { entenderResposta } = await import('../src/anima/mente');
+    const f = novoEstado(T0).memoria.fatos;
+    expect(entenderResposta(f, 'nome', 'tô entediado', T0).novo).toBeNull();
+    expect(entenderResposta(f, 'nome', 'vou dormir já já', T0).novo).toBeNull();
+    expect(entenderResposta(f, 'nome', 'é Pedro', T0).fatos.nome).toBe('Pedro');
+    expect(entenderResposta(f, 'nome', 'Ana', T0).fatos.nome).toBe('Ana');
   });
 });
