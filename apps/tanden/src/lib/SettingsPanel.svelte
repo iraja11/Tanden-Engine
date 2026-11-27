@@ -349,17 +349,10 @@
           onchange={(e) => anima.set({ nome: e.currentTarget.value.trim() || 'amor' })} />
       </div>
       <div class="row">
-        <span class="lbl">Saudade</span>
+        <span class="lbl">Notificações</span>
         <label class="switch">
           <input type="checkbox" checked={anima.prefs.notificar} onchange={(e) => pick(() => anima.set({ notificar: e.currentTarget.checked }))} />
-          <span>manda notificação quando você some</span>
-        </label>
-      </div>
-      <div class="row">
-        <span class="lbl">Noite</span>
-        <label class="switch">
-          <input type="checkbox" checked={anima.prefs.silencio} onchange={(e) => pick(() => anima.set({ silencio: e.currentTarget.checked }))} />
-          <span>silêncio entre 23h e 8h</span>
+          <span>ela fala com você pelo sistema, a qualquer hora (passa pelo "não perturbe")</span>
         </label>
       </div>
       <div class="row">

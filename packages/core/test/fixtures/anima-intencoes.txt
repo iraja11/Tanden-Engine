@@ -185,7 +185,80 @@ saudacao	eae
 fome	to com fome
 treino	fui na academia hoje
 trabalho	tenho prova amanha
-eco	hoje choveu
+papo.clima	hoje choveu
 eco	to assistindo um filme
 eco	meu cachorro latiu a noite toda
 sim	ok
+comovai	esta bem?
+comovai	tá tudo bem contigo?
+comovai	oi ânima, como você tá hoje?
+comovai	tudo bom?
+comovai	e ai tudo certo?
+comovai	você está bem?
+estoubem	tô bem sim
+estoubem	de boa por aqui
+estoubem	mais ou menos, vivendo
+estoubem	tudo tranquilo comigo
+estoubem	to normal
+comofoi	como foi seu dia?
+comofoi	o que você fez hoje?
+comofoi	tem alguma novidade?
+comofoi	e aí, o que rolou hoje?
+presenca	tá aí?
+presenca	ânima?
+presenca	você tá me ouvindo?
+presenca	alô??
+presenca	cadê você?
+etu	e você?
+etu	e vc?
+etu	e contigo?
+etu	e você ânima?
+humordela	você tá brava comigo?
+humordela	tá chateada?
+humordela	ta com ciume?
+humordela	você tá triste hoje?
+humordela	como você se sente?
+concorda	concordo
+concorda	é verdade
+concorda	faz sentido
+concorda	tem razão
+concorda	também acho
+espanto	nossa!
+espanto	sério?
+espanto	caramba
+espanto	não acredito
+espanto	meu deus
+risada	kkkkkkk
+risada	hahahaha
+risada	rsrsrs
+risada	kkkk boa
+contamais	me conta mais
+contamais	como assim?
+contamais	não entendi
+contamais	continua
+contamais	explica melhor
+opiniaogeral	o que você acha?
+opiniaogeral	qual sua opinião?
+opiniaogeral	você concorda comigo?
+opiniaogeral	será que eu tô certo?
+opiniaogeral	fiz certo?
+desabafo	preciso de ajuda
+desabafo	posso desabafar?
+desabafo	quero conversar
+desabafo	preciso falar com alguém
+desabafo	fica comigo um pouco
+capacidades	o que você sabe fazer?
+capacidades	quais são seus comandos?
+capacidades	pra que você serve?
+capacidades	o que eu posso te pedir?
+jogar	vamos jogar?
+jogar	quer brincar?
+jogar	bora jogar algo
+jogar	me desafia
+surpresa	me conta uma curiosidade
+surpresa	fala alguma coisa
+surpresa	me surpreende
+surpresa	conta algo interessante
+perguntame	me pergunta alguma coisa
+perguntame	faz uma pergunta pra mim
+perguntame	quer me conhecer melhor?

@@ -13,6 +13,9 @@
  * treino na GPU (scripts/anima-cerebro/treinar.py lê o que o Node exporta).
  */
 
+import { MAIS, PAPO } from './papo';
+import { GIRIA } from './giria';
+
 // ------------------------------------------------------------------ valores
 
 export const SLOTS: Record<string, string[]> = {
@@ -294,7 +297,6 @@ export const GRAMATICA: Record<string, string[]> = {
   ],
   'cmd.voltar': [
     '(volta|aparece|sai daí|vem cá|vem)',
-    'cadê você',
     'aparece (ânima|aí|)',
     'pode voltar',
     'volta pra tela',
@@ -347,7 +349,7 @@ export const GRAMATICA: Record<string, string[]> = {
     'quem é (a|o) {pessoa}[?]', 'o que eu te falei (da|do|sobre a|sobre o) {pessoa}', 'quando é meu aniversário[?]', 'do que eu tenho medo[?]', 'qual (é |)meu sonho[?]',
     'o que a gente tem em comum', 'você lembra do que eu te contei[?]', 'com o que eu trabalho[?]', 'o que eu odeio[?]', 'qual meu nome[?]', 'como eu me chamo[?]',
     'o que você lembra de mim', 'me diz o que você sabe da {pessoa}'],
-  sobre_ela: ['você gosta de {gosto}[?]', 'qual (é |)sua cor favorita', 'o que você acha de {gosto}', 'você tem medo de quê', 'qual (é |)seu sonho', 'do que você gosta[?]',
+  sobre_ela: ['você gosta de {gosto}[?]', 'qual (é |)sua cor favorita', 'o que você acha de {gosto}', 'você tem medo de quê', 'do que (você|vc) tem medo[?]', 'você tem medo de (escuro|barata|solidão)[?]', 'o que te dá medo[?]', 'qual (é |)seu sonho', 'do que você gosta[?]',
     'o que você tá fazendo', 'o que você tá pensando', 'você curte {gosto}[?]', 'qual sua música favorita', 'você odeia {gosto}[?]', 'qual seu filme favorito', 'você me ama[?]',
     'qual seu lugar favorito', 'o que você faz o dia todo'],
   fato: ['meu nome é {pessoa}', 'me chamo {pessoa}', 'eu tenho {num} anos', 'moro em {cidade}', 'trabalho com {trabalho}', 'eu gosto (muito|) de {gosto}', 'odeio {gosto}',
@@ -385,11 +387,55 @@ export const GRAMATICA: Record<string, string[]> = {
   fome: ['tô com fome', 'o que eu como', 'vou almoçar', 'que fome', 'vou jantar', 'tô morrendo de fome', 'vou fazer um lanche'],
   treino: ['fui na academia', 'treinei hoje', 'corri 5 km', 'fiz exercício', 'treinei perna', 'voltei da academia', 'tô todo dolorido do treino'],
   trabalho: ['tenho prova amanhã', 'tô estudando', 'muito trabalho hoje', 'reunião chata', 'meu chefe é um saco', 'tô atrasado com o prazo', 'faculdade tá foda', 'tenho que entregar o trabalho'],
-  eco: ['acabei de chegar em casa', 'hoje choveu muito', 'tô vendo uma série', 'meu dia foi normal', 'comi pizza', 'tô no ônibus', 'o céu tá bonito', 'tanto faz', 'sei lá', 'hmm',
+  eco: ['acabei de chegar em casa', 'tô vendo uma série', 'meu dia foi normal', 'comi pizza', 'tô no ônibus', 'o céu tá bonito', 'tanto faz', 'sei lá', 'hmm',
     'interessante', 'nada demais', 'pensando na vida', 'tô aqui', 'meu computador travou', 'o wifi caiu', 'tô jogando', 'vi um gato na rua', 'li um livro hoje', 'entendi',
     'meu (cachorro|gato|vizinho) (latiu|miou|gritou) a noite toda', 'minha mãe ligou', 'o ônibus atrasou', 'acabou a luz aqui',
-    'tá', 'beleza', 'hm', 'normal', 'tô de boa', 'acordei agora', 'tomei café', 'tô na fila do banco', 'choveu', 'esqueci o guarda-chuva', 'tô cozinhando'],
+    'tá', 'beleza', 'hm', 'normal', 'tô na fila do banco', 'tô assistindo (um filme|uma série|anime|youtube|tv)', 'tô vendo (um filme|um vídeo|uma live)', 'tô lendo um livro', 'tô comendo agora', 'tô no sofá', 'tô deitado aqui', 'tô cozinhando'],
+  // ---------------------------------------------------------- bate-papo (o que um chatbot precisa entender)
+  comovai: ['(tá|está|esta|ta) bem[?]', '(você|vc|tu|cê) (tá|está|esta|ta|anda|andou) (bem|bom|boa|ok|tranquila|de boa|legal|feliz|ótima|inteira)[?]', 'tudo (bem|bom|certo|tranquilo|joia|ok|certinho|em cima)[?]',
+    'como (você|vc|tu|cê) (tá|está|esta|anda|vai|se sente)[?]', 'como (vai|anda|tá) (você|vc|tu)[?]', 'como vai[?]', 'tá tudo (bem|certo|ok) (com você|aí|contigo|por aí)[?]',
+    'e aí, tudo bem[?]', 'tudo bem com (você|vc)[?]', '(você|vc) tá (ok|legal|bem mesmo)[?]', 'como (você|vc) tá se sentindo (hoje|agora|)[?]', 'tá tranquila[?]', 'tá de boa[?]',
+    'tudo certo por aí[?]', 'como você acordou hoje[?]', 'tá se sentindo bem[?]', 'como tá a vida de ânima[?]', 'ânima, tudo bem[?]', 'tá melhor[?]', 'e como você tá hoje[?]', 'tá bem mesmo[?]'],
+  estoubem: ['tô bem', 'to bem sim', 'tudo bem por aqui', 'tô de boa', 'tô tranquilo', 'tô tranquila', 'tô indo', 'tô mais ou menos', 'tô normal', 'tudo certo por aqui', 'sobrevivendo',
+    'tô levando', 'tô bem, obrigado', 'tô bem, e você', 'tô de boa, e você', 'de boa', 'tô ok', 'tô legal', 'mais ou menos', 'tô na paz', 'tudo tranquilo comigo', 'tudo tranquilo por aqui', 'tudo certo comigo', 'tudo em paz por aqui', 'tudo ótimo comigo', 'comigo tá tudo bem', 'por aqui tá tudo certo', 'tudo bem, e contigo', 'indo, e você',
+    'tô bem sim, obrigada por perguntar', 'tô aqui, de boa', 'tô nem aí, de boa', 'estou bem'],
+  comofoi: ['como foi (o seu|seu) dia[?]', 'o que (você|vc) fez hoje[?]', 'novidades[?]', 'tem novidade[?]', 'o que rolou (hoje|de novo|por aí)[?]', 'alguma novidade[?]', 'como foi (a sua|sua) (tarde|manhã|noite)[?]',
+    'o que aconteceu (hoje|com você)[?]', 'e o seu dia[?]', 'me conta do seu dia', 'e seu dia, como foi[?]', 'o que de novo[?]', 'como foi aí hoje[?]', 'aprontou o quê hoje[?]', 'teve algum acontecimento[?]'],
+  presenca: ['tá aí[?]', '(você|vc|cê) (tá|está|esta|ta) aí[?]', 'alô[?]', 'ânima[?]', 'ei ânima[?]', 'cadê (você|vc|cê)[?]', '(você|vc) tá me ouvindo[?]', 'tá me ouvindo[?]', 'tá viva[?]',
+    'responde', 'me responde', 'tem alguém aí[?]', '(você|vc) me escuta[?]', 'tá me vendo[?]', 'ânima, tá aí[?]', 'ei, tá aí[?]', 'sumiu[?]', 'ficou calada[?]', 'por que você não responde', 'oi? tá aí[?]', 'acordada[?]'],
+  etu: ['e (você|vc|tu|cê)[?]', 'e contigo[?]', 'e com (você|vc)[?]', 'e aí, e (você|vc)[?]', 'e a senhorita[?]', 'e você, hein[?]', 'mas e (você|vc)[?]', 'e tu, ânima[?]', 'e você ânima[?]', 'e ocê[?]'],
+  humordela: ['(você|vc|cê) (tá|está|esta|ta) (brava|chateada|com raiva|triste|feliz|com ciúme|com ciúmes|de mal|irritada|nervosa|com sono|entediada|magoada|carente|emburrada)[?]',
+    '(tá|ta) (brava|chateada|com raiva|com ciúme|triste|feliz|emburrada) (comigo|)[?]', '(você|vc) (tá|está) de mal comigo[?]', '(você|vc) ficou (chateada|brava|triste|magoada) (comigo|)[?]',
+    'o que (você|vc) tá sentindo[?]', 'como (você|vc) se sente[?]', 'tá com ciúme de mim[?]', '(você|vc) tá com raiva de mim[?]', 'tá estranha hoje[?]', 'tá diferente hoje[?]', 'qual seu humor hoje[?]',
+    'tá com saudade[?]', 'tá chateada[?]', 'tá triste por quê[?]'],
+  concorda: ['concordo', 'verdade', 'exato', 'isso mesmo', 'pois é', 'tem razão', 'faz sentido', 'também acho', 'exatamente', 'é verdade', 'realmente', 'isso aí', 'pior que é', 'também penso assim',
+    'é isso aí', 'total', 'concordo com você', 'você tem razão', 'verdade, verdade', 'faz todo sentido', 'bem lembrado', 'é por aí', 'justo'],
+  espanto: ['nossa', 'sério[?]', 'caramba', 'não acredito', 'mentira[?]', 'uau', 'meu deus', 'que isso', 'eita', 'nossa senhora', 'jura[?]', 'sério mesmo[?]', 'não creio', 'oxe', 'misericórdia', 'ata',
+    'ué', 'gente', 'o quê[?]!', 'que absurdo', 'impossível', 'não é possível', 'caraca', 'my god', 'puts'],
+  risada: ['kkkkkkk', 'hahahaha', 'rsrsrs', 'kkk', 'haha', 'lol', 'kkkkk que engraçado', 'haha boa', 'morri de rir', 'kkkk verdade', 'hehe', 'ksksks', 'huehue', 'kkk bobinha', 'hahaha você é louca',
+    'kkkkkkkkk', 'rs', 'rsrs', 'hahaha boa', 'kkk muito boa', 'dei risada', 'ri alto agora', 'que engraçada você'],
+  contamais: ['me conta mais', 'conta mais', 'continua', 'e depois[?]', 'fala mais', 'pode explicar melhor[?]', 'como assim[?]', 'quer dizer o quê[?]', 'não entendi', 'explica melhor', 'e então[?]', 'o que mais[?]',
+    'tem mais[?]', 'desenvolve', 'não entendi nada', 'hã[?]', 'o quê[?]', 'não captei', 'pode repetir[?]', 'fala de novo', 'e aí, o que aconteceu depois[?]', 'detalha isso'],
+  opiniaogeral: ['o que (você|vc) acha[?]', 'qual (a |)sua opinião[?]', '(você|vc) concorda[?]', 'concorda comigo[?]', 'o que (você|vc) acha disso[?]', 'que acha[?]', 'tô certo[?]', 'tô certa[?]', 'tô errado[?]',
+    'fiz certo[?]', '(você|vc) acha que eu consigo[?]', 'será que dá certo[?]', 'me dá sua opinião', 'sua opinião[?]', 'você acha que vale a pena[?]', 'o que você faria no meu lugar[?]', 'devo fazer isso[?]', 'tô exagerando[?]'],
+  desabafo: ['preciso de ajuda', 'me ajuda', 'pode me ajudar[?]', 'preciso de um conselho', 'me dá um conselho', 'preciso falar com alguém', 'ajuda aqui', 'socorro', 'preciso de você', 'preciso conversar',
+    'posso desabafar[?]', 'posso te contar uma coisa[?]', 'quero desabafar', 'tenho uma coisa pra te contar', 'preciso desabafar', 'vamos conversar[?]', 'quero conversar', 'tem um tempinho pra mim[?]',
+    'tá ocupada[?]', 'posso falar contigo[?]', 'me escuta um pouco', 'tô precisando de atenção', 'quero companhia', 'fica comigo um pouco', 'conversa comigo', 'me faz companhia', 'tô precisando de alguém'],
+  capacidades: ['o que (você|vc) sabe fazer[?]', 'o que (você|vc) (faz|pode fazer|consegue fazer)[?]', 'quais (são |)(os |)seus comandos[?]', 'o que eu posso (te |)pedir[?]', 'pra que (você|vc) serve[?]',
+    'como (você|vc) funciona[?]', 'me ajuda com o quê[?]', 'quais suas habilidades[?]', 'lista de comandos', 'sabe fazer o quê[?]', 'quais são suas funções[?]', 'como te uso[?]', 'tutorial', 'o que dá pra pedir pra você[?]',
+    'você faz o quê além de conversar[?]', 'me mostra o que você sabe', 'quais seus poderes[?]', 'o que você controla no app[?]'],
+  jogar: ['vamos jogar[?]', 'quer jogar[?]', 'bora jogar (algo|alguma coisa|)', 'joga comigo', 'quer brincar[?]', 'vamos brincar de alguma coisa', 'tem algum jogo[?]', 'me desafia', 'faz um quiz', 'brinca comigo',
+    'vamos fazer uma brincadeira', 'sugere um joguinho', 'jogo de adivinhação', 'bora brincar', 'quer fazer um desafio[?]', 'me propõe um jogo'],
+  surpresa: ['me conta uma curiosidade', 'fala alguma coisa', 'me surpreende', 'diz algo aleatório', 'conta algo interessante', 'fala qualquer coisa', 'me conta um segredo', 'me fala algo que eu não sei',
+    'diz alguma coisa', 'surpreende eu', 'fala algo legal', 'me fala uma coisa aleatória', 'fala algo sobre você que ninguém sabe', 'conta um fato curioso', 'puxa assunto'],
+  perguntame: ['me pergunta alguma coisa', 'faz uma pergunta', 'pergunta algo sobre mim', 'quer saber algo de mim[?]', 'não quer me perguntar nada[?]', 'me faz uma pergunta', 'pode perguntar o que quiser',
+    'quer me conhecer melhor[?]', 'tem alguma pergunta pra mim[?]', 'me interroga'],
 };
+
+// os assuntos de conversa e os reforços das intenções antigas (papo.ts)
+for (const [k, v] of Object.entries(MAIS)) GRAMATICA[k] = [...(GRAMATICA[k] ?? []), ...v];
+Object.assign(GRAMATICA, PAPO);
+for (const [k, v] of Object.entries(GIRIA)) GRAMATICA[k] = [...(GRAMATICA[k] ?? []), ...v];
 
 export const ROTULOS: readonly string[] = Object.keys(GRAMATICA);
 

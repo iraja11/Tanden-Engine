@@ -12,6 +12,7 @@ import {
 } from './estado';
 import { anotarHumor, aprender, guardarFrase, lacunas, type Aprendido, type Fatos, type TipoFato } from './fatos';
 import { entenderResposta, opiniaoDe, perguntaSobreEla } from './mente';
+import { AFETO_PAPO, opcoesDaEscolha } from './cerebro/papo';
 
 export type AnimaEvent =
   | { tipo: 'despertar' }
@@ -471,7 +472,10 @@ export function lembranca(s: AnimaState, ctx: AnimaCtx): Fala | null {
 export type Intencao =
   | 'crise' | 'desinstalar' | 'amor' | 'elogiame' | 'rejeicao' | 'provoca' | 'cansaco' | 'mau' | 'triste' | 'conquistei' | 'feliz'
   | 'saudade' | 'piada' | 'tedio' | 'ideia' | 'real' | 'quem' | 'musica' | 'obrigado' | 'elogio' | 'desculpa' | 'bomdia' | 'sono'
-  | 'saudacao' | 'fome' | 'treino' | 'trabalho' | 'tchau' | 'pergunta' | 'eco';
+  | 'saudacao' | 'fome' | 'treino' | 'trabalho' | 'tchau' | 'pergunta' | 'eco'
+  | 'comovai' | 'estoubem' | 'comofoi' | 'presenca' | 'etu' | 'humordela' | 'concorda' | 'espanto' | 'risada' | 'contamais' | 'opiniaogeral' | 'desabafo' | 'capacidades' | 'jogar' | 'surpresa' | 'perguntame'
+  /** os assuntos de conversa (cerebro/papo.ts): respondem com o grupo de mesmo nome */
+  | `papo.${string}`;
 
 export const dobrar = (t: string): string => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 
@@ -500,6 +504,9 @@ const INTENCOES: Array<[Intencao, RegExp]> = [
   ['desculpa', /\b(desculpa|perdao|foi mal|me perdoa|sinto muito)/],
   ['bomdia', /^(bom dia|bdia|bom diaa+)\b/],
   ['sono', /\b(sono|dormir|vou deitar|boa noite|cama)\b/],
+  ['comovai', /^(ta bem|tudo (bem|bom|certo)|como (voce|vc|ce) (ta|esta|anda|vai))\b.*\?|^como vai\??$/],
+  ['presenca', /^(ta ai|voce ta ai|alo|cade voce|anima)\s*\?+$/],
+  ['capacidades', /(o que (voce|vc) (sabe|pode|consegue) fazer|quais (sao )?(os )?seus comandos|pra que (voce|vc) serve)/],
   ['saudacao', /^(oi+|ola|ei+|eai|e ai|opa|hey|boa tarde|salve|fala|alo)\b/],
   ['tchau', /^(tchau|tchauzinho|falou|flw|ate mais|ate logo|ate amanha|fui|vou nessa|bye|to indo|preciso ir)\b/],
   ['fome', /\b(fome|comer|almoc|jantar|lanche|cafe da manha)/],
@@ -523,7 +530,14 @@ export function palavraForte(texto: string): string | null {
 }
 
 /** intenções fortes: vencem o "aprendi" e a pergunta pendente */
-const FORTES = new Set<Intencao>(['crise', 'desinstalar', 'amor', 'rejeicao', 'triste', 'mau', 'cansaco', 'conquistei', 'elogiame', 'real', 'quem', 'desculpa']);
+const FORTES = new Set<Intencao>(['crise', 'desinstalar', 'amor', 'rejeicao', 'triste', 'mau', 'cansaco', 'conquistei', 'elogiame', 'real', 'quem', 'desculpa',
+  'comovai', 'comofoi', 'presenca', 'etu', 'humordela', 'opiniaogeral', 'desabafo', 'capacidades', 'jogar', 'surpresa', 'perguntame', 'contamais',
+  'estoubem', 'concorda', 'espanto', 'risada']);
+
+/** Depois destas respostas ela não emenda pergunta de curiosidade (ficaria fora de lugar). */
+const SEM_EMENDA = new Set<Intencao>(['desabafo', 'humordela', 'comovai', 'opiniaogeral', 'contamais', 'espanto', 'capacidades', 'presenca', 'perguntame', 'jogar']);
+/** os assuntos leves, depois dos quais ela ainda puxa uma pergunta (nos outros a resposta é a conversa toda) */
+const PAPO_EMENDA = new Set(['papo.voltei', 'papo.acordei', 'papo.semana', 'papo.ferias', 'papo.clima', 'papo.fds', 'papo.cafe', 'papo.banho', 'papo.futebol', 'papo.signo']);
 /** relações que dão ciúme quando aparece um nome */
 const SUSPEITO = /namorad|ficante|crush|alguém|ex|colega|vizinh/;
 
@@ -573,6 +587,23 @@ function curiosidade(s: AnimaState, humor: Humor, ctx: AnimaCtx, vars: Vars): { 
   return null;
 }
 
+/** Um assunto de conversa (`papo.*`), com as variáveis que alguns pedem. */
+function papo(intencao: string, msg: string, s: AnimaState, ctx: AnimaCtx, vars: Vars, tenta: (g: string, v?: Vars) => Fala | null): Fala | null {
+  if (intencao === 'papo.escolhe') {
+    const op = opcoesDaEscolha(msg);
+    if (!op) return tenta('papo.escolhe.sem') ?? tenta('papo.escolhe');
+    // a mesma pergunta sempre dá a mesma escolha: ela tem gosto, não sorteio
+    const par = [...op].sort();
+    const [a, b] = fnv(par.join('|')) % 2 ? par : [par[1], par[0]];
+    return tenta('papo.escolhe', { ...vars, escolha: a, outra: b });
+  }
+  if (intencao === 'papo.tempojuntos') {
+    const dias = Math.max(0, Math.floor((ctx.now - s.acordadaEm) / 86_400_000));
+    return tenta(dias < 1 ? 'papo.tempojuntos.hoje' : 'papo.tempojuntos', { ...vars, dias: dias.toLocaleString('pt-BR') }) ?? tenta('papo.tempojuntos', { ...vars, dias: String(dias) });
+  }
+  return tenta(intencao);
+}
+
 /** "oi" "ok" "hm": seco. */
 const SECO = /^(ok|okay|k+|hm+|hum+|ah|aham|uhum|sim|nao|s|n|blz|beleza|ta|tá|sei|aff|hmm+|\.+|\?+|kk+)$/;
 
@@ -600,7 +631,7 @@ export function responder(estado: AnimaState, msg: string, ctx: AnimaCtx, dica?:
     const a = aprender(fatos, msg, now);
     fatos = a.fatos;
     aprendeu = a.novo;
-    if (!aprendeu && espera && !FORTES.has(intencao)) {
+    if (!aprendeu && espera && !FORTES.has(intencao) && !intencao.startsWith('papo.')) {
       const r = entenderResposta(fatos, espera, msg, now);
       fatos = r.fatos;
       aprendeu = r.novo;
@@ -624,7 +655,7 @@ export function responder(estado: AnimaState, msg: string, ctx: AnimaCtx, dica?:
     }
     case 'elogio': case 'obrigado': case 'saudade': s = mexer(s, { afeto: 3, saudade: -15 }); break;
     case 'desculpa': s = mexer(s, { afeto: 2, ciume: -10 }); break;
-    default: s = mexer(s, { afeto: 0.5, saudade: -10 });
+    default: s = mexer(s, AFETO_PAPO[intencao] ?? { afeto: 0.5, saudade: -10 });
   }
   if (aprendeu && !aprendeu.repetido) {
     // contar coisas a ela é carinho; um nome novo na sua vida é… outra coisa
@@ -639,6 +670,7 @@ export function responder(estado: AnimaState, msg: string, ctx: AnimaCtx, dica?:
   let deuOpiniao = false;
   if (intencao === 'crise') f = tenta('conversa.crise');
   else if (FORTES.has(intencao)) f = tenta(`conversa.${intencao}`);
+  else if (intencao.startsWith('papo.')) f = papo(intencao, msg, s, ctx, vars, tenta);
   if (!f && repetiu) f = tenta('conversa.repetiu');
   if (!f && aprendeu) {
     const vf = { ...vars, ...varsDoFato(aprendeu) };
@@ -670,7 +702,7 @@ export function responder(estado: AnimaState, msg: string, ctx: AnimaCtx, dica?:
   }
 
   // às vezes ela emenda: uma pergunta sobre o que ainda não sabe, ou uma lembrança
-  if (f && intencao !== 'crise' && intencao !== 'rejeicao' && intencao !== 'desinstalar' && !/\?\s*$/.test(f.texto)) {
+  if (f && intencao !== 'crise' && intencao !== 'rejeicao' && intencao !== 'desinstalar' && !SEM_EMENDA.has(intencao) && (!intencao.startsWith('papo.') || PAPO_EMENDA.has(intencao)) && !/\?\s*$/.test(f.texto)) {
     const r = ctx.rand();
     // acabou de perguntar algo? dá um respiro antes da próxima pergunta
     const perguntouAgora = s.recentes.slice(-2).some((id) => id.startsWith('segue.'));

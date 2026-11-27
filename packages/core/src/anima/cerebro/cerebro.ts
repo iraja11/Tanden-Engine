@@ -99,6 +99,7 @@ const MIN = 60_000;
 const SOCIAIS = new Set<string>([
   'amor', 'elogiame', 'rejeicao', 'desinstalar', 'provoca', 'cansaco', 'mau', 'triste', 'conquistei', 'feliz', 'saudade', 'piada', 'tedio', 'ideia', 'real', 'quem',
   'musica', 'obrigado', 'elogio', 'desculpa', 'bomdia', 'sono', 'saudacao', 'fome', 'treino', 'trabalho', 'tchau',
+  'comovai', 'estoubem', 'comofoi', 'presenca', 'etu', 'humordela', 'concorda', 'espanto', 'risada', 'contamais', 'opiniaogeral', 'desabafo', 'capacidades', 'jogar', 'surpresa', 'perguntame',
 ]);
 
 // ------------------------------------------------------------------ ajudantes
@@ -471,7 +472,8 @@ export function pensar(estado: AnimaState, msg: string, ctx: CtxCerebro): Pensam
   }
 
   // 1. o modelo + regras deterministas
-  const prev = classificar(t, ctx.modelo === undefined ? undefined : ctx.modelo);
+  // um modelo dado pelo contexto (testes) vale sozinho; senão, a rede + o modelo do app
+  const prev = ctx.modelo === undefined ? classificar(t) : classificar(t, ctx.modelo, null);
   let rotulo = prev?.rotulo ?? (regra === 'pergunta' ? 'eco' : regra);
   let conf = prev?.p ?? 0.5;
   if (prev) traco.push(`modelo: ${prev.top.map(([r, p]) => `${r} ${(p * 100).toFixed(0)}%`).join(' · ')} (${prev.conhecidas} pistas)`);
@@ -580,7 +582,7 @@ export function pensar(estado: AnimaState, msg: string, ctx: CtxCerebro): Pensam
   }
 
   // 6. conversa: o motor de sempre, com a intenção que o modelo achou
-  const dica: Intencao | undefined = SOCIAIS.has(rotulo) ? (rotulo as Intencao) : undefined;
+  const dica: Intencao | undefined = SOCIAIS.has(rotulo) || rotulo.startsWith('papo.') ? (rotulo as Intencao) : undefined;
   // o modelo achou "eco" mas o sentimento é forte: dá a ela a emoção certa
   let dicaFinal = dica;
   if (!dica && rotulo === 'eco' && regra === 'eco' && sent.forca >= 0.45) {

@@ -81,8 +81,10 @@ O documento [architecture.md](architecture.md) tem o mapa completo e as camadas.
 - **Evento novo:** acrescente a `TandenEvent` em `packages/core/src/events.ts`,
   emita pelo `bus`, e reaja em `engine.onEvent`.
 - **Ânima (cérebro, comandos, falas):** veja [docs/anima-cerebro.md](docs/anima-cerebro.md).
-  Mudou `anima/cerebro/corpus.ts` ou o cofre de falas? Retreine o classificador com
-  `node scripts/anima-cerebro/treinar.mjs treinar` (uns 20 s) e commite o `modelo.dat.ts`.
+  Mudou `anima/cerebro/corpus.ts`, `papo.ts`, `giria.ts` ou o cofre de falas? Retreine a rede neural
+  (`rede.mjs exportar` → `rede.py` → `rede.mjs empacotar`, uns 3 min na GPU) e o classificador
+  antigo (`node scripts/anima-cerebro/treinar.mjs treinar`, uns 25 s); commite `rede.dat.ts` e
+  `modelo.dat.ts`. Os testes exigem que os dois conheçam as mesmas intenções do corpus.
 
 ---
 

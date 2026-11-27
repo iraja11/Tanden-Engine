@@ -26,3 +26,7 @@ output/anima-minecraft/rosto-v2.png
 output/anima-minecraft/previa-v2.png
 output/anima-minecraft/textura-gerada.png
 output/anima-minecraft/LEIA-ME-v2.txt
+
+# venv do treino da rede da Ânima (PyTorch)
+scripts/anima-cerebro/.venv/
+scripts/anima-cerebro/__pycache__/

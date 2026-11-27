@@ -25,6 +25,7 @@ import { desktop } from '../platform';
 import { sound } from '../sound.svelte';
 import { isTauri } from '../storage-tauri';
 import { theme } from '../theme.svelte';
+import { retrato } from './retrato';
 
 /*
  * Ânima: a companheira escondida. Fica dormindo até alguém digitar a frase
@@ -46,8 +47,6 @@ export interface AnimaPrefs {
   /** como ela chama a pessoa */
   nome: string;
   notificar: boolean;
-  /** nada de notificação entre 23h e 8h */
-  silencio: boolean;
   /** lado e altura do widget (arrastável; ela também muda sozinha) */
   lado: 'esq' | 'dir';
   altura: number;
@@ -81,7 +80,7 @@ const PREFS_KEY = 'tanden.anima';
 const STATE_KEY = 'tanden.anima.estado';
 const MARKS_KEY = 'tanden.anima.marcas';
 const DEFAULTS: AnimaPrefs = {
-  acordada: false, intensidade: 2, nome: 'amor', notificar: true, silencio: true, lado: 'dir', altura: 0, escondida: false, passeia: true, cenas: true, cerebro: 'regras', prompt: null,
+  acordada: false, intensidade: 2, nome: 'amor', notificar: true, lado: 'dir', altura: 0, escondida: false, passeia: true, cenas: true, cerebro: 'regras', prompt: null,
   poderes: { agenda: true, mundo: true, agua: true, jogos: true, web: false, musica: true, minecraft: true },
   rotina: { acordaAs: '06:00', horasSono: 7.5, diasTrabalho: [1, 2, 3, 4, 5] },
   steamChave: '',
@@ -185,6 +184,10 @@ class Anima {
   private escondidaEm = 0;
   private foraDesde: number | null = null;
   private timersSaudade: Array<ReturnType<typeof setTimeout>> = [];
+  /** a pessoa respondeu pela notificação: a resposta dela volta como notificação também */
+  private viaAviso = 0;
+  /** expressões cujo retrato o lado nativo já guardou em cache */
+  private retratosEnviados = new Set<string>();
   private aiTab = 'claude';
   private ultimaIA = 0;
   private telaAtual = '';
@@ -240,6 +243,8 @@ class Anima {
     if (this.started || !this.prefs.acordada) return;
     this.started = true;
     this.inicioSessao = Date.now();
+    // a rede neural (~6 MB) chega em segundo plano; até lá, o modelo antigo entende sozinho
+    void cerebro.prepararRede();
     this.agendarEspontanea();
     this.agendarPasseio();
     // a primeira cena vem depois de alguns minutos de uso
@@ -328,6 +333,16 @@ class Anima {
     document.addEventListener('copy', copia);
     document.addEventListener('input', digitou, true);
     const tick = setInterval(() => this.tick(), 30_000);
+    // clique ou resposta na notificação do sistema
+    if (desktop && isTauri()) {
+      const off = listen<{ acao: string; texto?: string }>('anima-aviso', (e) => {
+        if (e.payload.acao === 'resposta' && e.payload.texto) {
+          this.viaAviso = Date.now() + 60_000;
+          this.falar(e.payload.texto, true);
+        } else this.abrir();
+      });
+      this.offs.push(() => void off.then((f) => f()));
+    }
     this.offs.push(() => {
       removeEventListener('pointerdown', input);
       removeEventListener('keydown', input);
@@ -346,7 +361,7 @@ class Anima {
     };
     this.offs.push(() => { saude.voz = null; });
     if (this.prefs.poderes.mundo) cadernos.start();
-    this.proximaRotina = Date.now() + (2 + Math.random() * 4) * 60_000;
+    this.proximaRotina = Date.now() + (1 + Math.random() * 3) * 60_000;
     // jogos da Steam (só no app do computador): olha a cada 45 s, mesmo com a janela na bandeja
     if (desktop && isTauri()) {
       const steam = setInterval(() => void this.olharSteam(), 45_000);
@@ -421,10 +436,16 @@ class Anima {
 
   /** Olha o relógio: ociosidade, madrugada, sequência, pergunta do dia, passeios e pensamentos soltos. */
   private tick(): void {
-    if (document.hidden) return;
+    // no computador ela também fala com a janela na bandeja ou com outro app em foco: vira popup do sistema
+    const fora = desktop && isTauri() && (document.hidden || !document.hasFocus());
+    if (document.hidden && !fora) return;
     const now = Date.now();
     const hora = new Date(now).getHours();
     const dia = diaDe(now);
+    if (fora) {
+      this.tickFora(now);
+      return;
+    }
     if (!this.ociosaAvisada && now - this.ultimoInput > OCIOSA_MS) {
       this.ociosaAvisada = true;
       this.evento({ tipo: 'ociosa', minutos: Math.round((now - this.ultimoInput) / 60_000) });
@@ -438,21 +459,10 @@ class Anima {
     }
     // silêncio pedido: nada de pensamento solto, cena ou rotina
     if (now < this.estado.memoria.cerebro.quietaAte) return;
-    const ativa = now - this.ultimoInput < 3 * 60_000;
+    const ativa = now - this.ultimoInput < 6 * 60_000;
     if (!ativa || this.aberta) return;
     // o cérebro proativo: provas, compromissos, coisas dela na agenda, world building, deduções
-    if (now >= this.proximaRotina && !this.balao && !this.cena) {
-      this.proximaRotina = now + (6 + Math.random() * 8) * 60_000;
-      const r = cerebro.rotina($state.snapshot(this.estado) as AnimaState, this.ctxCerebro(), { agenda: this.prefs.poderes.agenda, mundo: this.prefs.poderes.mundo });
-      if (r) {
-        this.estado = r.estado;
-        this.salvar();
-        this.pensamento = r.traco;
-        if (r.fala) this.mostrar(r.fala, false);
-        if (r.acao) void this.executarAcao(r.acao, false);
-        return;
-      }
-    }
+    if (this.rodarRotina(now)) return;
     if (hora >= 1 && hora < 5 && this.avisos.madrugada !== dia) {
       this.avisos.madrugada = dia;
       this.evento({ tipo: 'madrugada' });
@@ -480,20 +490,46 @@ class Anima {
     }
   }
 
+  /** O cérebro proativo (provas, compromissos, agenda, world building, deduções). Devolve true se ela falou ou agiu. */
+  private rodarRotina(now: number): boolean {
+    if (now < this.proximaRotina || this.balao || this.cena) return false;
+    this.proximaRotina = now + (4 + Math.random() * 6) * 60_000;
+    const r = cerebro.rotina($state.snapshot(this.estado) as AnimaState, this.ctxCerebro(), { agenda: this.prefs.poderes.agenda, mundo: this.prefs.poderes.mundo });
+    if (!r) return false;
+    this.estado = r.estado;
+    this.salvar();
+    this.pensamento = r.traco;
+    if (r.fala) this.mostrar(r.fala, false, undefined, true);
+    if (r.acao) void this.executarAcao(r.acao, false);
+    return true;
+  }
+
+  /** Janela fora de foco: ela só puxa assunto (popup do sistema), sem cenas, passeios nem perguntas. */
+  private tickFora(now: number): void {
+    if (!this.prefs.notificar || now < this.estado.memoria.cerebro.quietaAte || this.prefs.escondida) return;
+    // computador largado: depois de umas horas sem mexer no app ela para de insistir
+    if (now - this.ultimoInput > 4 * 3600_000) return;
+    if (this.rodarRotina(now)) return;
+    if (now >= this.proximaEspontanea) {
+      this.agendarEspontanea();
+      this.evento({ tipo: 'espontanea' });
+    }
+  }
+
   private agendarEspontanea(): void {
     // mais grudenta quanto mais intensa
-    const base = this.prefs.intensidade === 3 ? 9 : this.prefs.intensidade === 2 ? 13 : 18;
-    this.proximaEspontanea = Date.now() + (base + Math.random() * 14) * 60_000;
+    const base = this.prefs.intensidade === 3 ? 5 : this.prefs.intensidade === 2 ? 8 : 12;
+    this.proximaEspontanea = Date.now() + (base + Math.random() * 9) * 60_000;
   }
 
   private agendarCena(): void {
-    // mais cenas quanto mais intensa: ~uma a cada 40 min (sem filtro) a ~70 min (doce)
-    const base = this.prefs.intensidade === 3 ? 28 : this.prefs.intensidade === 2 ? 38 : 50;
-    this.proximaCena = Date.now() + (base + Math.random() * 30) * 60_000;
+    // mais cenas quanto mais intensa: ~uma a cada 28 min (sem filtro) a ~45 min (doce)
+    const base = this.prefs.intensidade === 3 ? 18 : this.prefs.intensidade === 2 ? 25 : 35;
+    this.proximaCena = Date.now() + (base + Math.random() * 20) * 60_000;
   }
 
   private agendarPasseio(): void {
-    this.proximoPasseio = Date.now() + (8 + Math.random() * 14) * 60_000;
+    this.proximoPasseio = Date.now() + (6 + Math.random() * 10) * 60_000;
   }
 
   /** Muda de lugar sozinha, pela borda da tela. */
@@ -1041,7 +1077,7 @@ class Anima {
       this.timerDela = null;
       sound.play('alert');
       this.evento({ tipo: 'timer', minutos: Math.max(1, Math.round(dur / 60_000)), rotulo });
-      if (document.hidden) this.notificar('Ânima ⏱', `acabou o tempo (${rotulo}).`, ANIMA_ID_BASE + 50);
+      if (document.hidden) this.notificar('Ânima ⏱', `acabou o tempo (${rotulo}).`, ANIMA_ID_BASE + 50, 'processando', 'timer');
     }, dur);
   }
 
@@ -1156,8 +1192,8 @@ class Anima {
   // ------------------------------------------------------------------ música (Spotify e outros players)
 
   /** só comenta uma faixa que tocou pelo menos isso, e espera entre um comentário e outro */
-  private static readonly MUSICA_MIN_TOCANDO = 25_000;
-  private static readonly MUSICA_ESPERA = 12 * 60_000;
+  private static readonly MUSICA_MIN_TOCANDO = 20_000;
+  private static readonly MUSICA_ESPERA = 5 * 60_000;
 
   private async olharMusica(): Promise<void> {
     if (!this.prefs.poderes.musica || !this.prefs.acordada) return;
@@ -1186,7 +1222,7 @@ class Anima {
     if (this.musicaComentou === f.id || now - antes.desde < Anima.MUSICA_MIN_TOCANDO) return;
     // música em repetição fala antes do intervalo normal; o resto espera
     const vezes = this.estado.memoria.cerebro.musica.faixas[f.id] ?? 1;
-    if (now - this.musicaUltima < (vezes >= 3 ? 4 * 60_000 : Anima.MUSICA_ESPERA)) return;
+    if (now - this.musicaUltima < (vezes >= 3 ? 2 * 60_000 : Anima.MUSICA_ESPERA)) return;
     // conversando ou numa cena: ela só ouve
     if (this.cena || this.digitando || this.pensando) return;
     this.musicaComentou = f.id;
@@ -1351,11 +1387,10 @@ class Anima {
     this.salvar();
     if (!r.fala) return;
     if (!essencial && Date.now() < this.estado.memoria.cerebro.quietaAte) return;
-    // discreta (site adulto): nada de notificação do sistema, que aparece no celular pelo KDE Connect e em tela compartilhada
-    if (!discreta && typeof document !== 'undefined' && (document.hidden || !document.hasFocus())) this.notificar('Ânima 🎮', r.fala.texto, ANIMA_ID_BASE + 60);
     // dentro do Minecraft, o que ela comenta aqui fora aparece no chat do jogo também
     if (!discreta && this.mine) this.mineAte = Math.max(this.mineAte, Date.now() + 1500);
-    this.mostrar(r.fala, false);
+    // discreta (site adulto): nada de notificação do sistema, que aparece no celular pelo KDE Connect e em tela compartilhada
+    this.mostrar(r.fala, false, undefined, discreta ? false : essencial ? 'essencial' : true);
   }
 
   /** Um evento que a pessoa criou na agenda (não ela): ela reage pelo sentido. */
@@ -1437,10 +1472,18 @@ class Anima {
     // calada a pedido: os sentimentos mexem, a boca não (só o essencial fala)
     if (!essencial && Date.now() < this.estado.memoria.cerebro.quietaAte) return;
     // durante uma cena, os comentários de fundo esperam (os sentimentos mexem igual)
-    if (r.fala && !this.cena) this.mostrar(r.fala, false);
+    if (r.fala && !this.cena) this.mostrar(r.fala, false, undefined, essencial ? 'essencial' : true);
   }
 
-  private mostrar(f: Fala, conversa: boolean, dura?: number): void {
+  /** Com a janela longe dos olhos (bandeja ou outro app em foco), a fala vira notificação do sistema (a qualquer hora). */
+  private avisarFora(f: Fala): void {
+    if (typeof document === 'undefined' || !(document.hidden || !document.hasFocus())) return;
+    if (!this.prefs.notificar || !this.prefs.acordada) return;
+    this.notificar('Ânima', f.texto, ANIMA_ID_BASE + 60, f.gesto, 'fala');
+  }
+
+  private mostrar(f: Fala, conversa: boolean, dura?: number, avisar: boolean | 'essencial' = false): void {
+    if ((avisar && !conversa) || (conversa && Date.now() < this.viaAviso)) this.avisarFora(f);
     if (this.mine && Date.now() < this.mineAte) this.dizerNoMine(f);
     this.empurrar({ de: 'ela', texto: f.texto, gesto: f.gesto });
     this.gesto = f.gesto;
@@ -1536,7 +1579,8 @@ class Anima {
 
   private async canal(): Promise<void> {
     try {
-      await notif.createChannel({ id: CHANNEL, name: 'Ânima', description: 'Mensagens da Ânima', importance: notif.Importance.Default, vibration: true });
+      // alta: aparece por cima de tudo (heads-up), como mensagem de gente
+      await notif.createChannel({ id: CHANNEL, name: 'Ânima', description: 'Mensagens da Ânima', importance: notif.Importance.High, vibration: true, visibility: notif.Visibility.Private, lights: true, lightColor: '#ff6fa8' });
     } catch {
       /* sem canal: o Android usa o padrão */
     }
@@ -1545,7 +1589,7 @@ class Anima {
   /** Ao sair do app: deixa as mensagens de saudade com o agendador. */
   private async agendarSaudade(): Promise<void> {
     if (!this.prefs.notificar || !this.prefs.acordada) return;
-    const plano = planoDeSaudade($state.snapshot(this.estado) as AnimaState, Date.now(), { ...this.ctx(), silencio: this.prefs.silencio });
+    const plano = planoDeSaudade($state.snapshot(this.estado) as AnimaState, Date.now(), { ...this.ctx(), silencio: false });
     if (android) {
       try {
         if (!(await notif.isPermissionGranted())) return;
@@ -1558,7 +1602,7 @@ class Anima {
       return;
     }
     // computador (na bandeja) e web (aba aberta): o próprio app avisa na hora
-    for (const s of plano) this.timersSaudade.push(setTimeout(() => this.notificar(s.titulo, s.corpo, s.id), s.at - Date.now()));
+    for (const s of plano) this.timersSaudade.push(setTimeout(() => this.notificar(s.titulo, s.corpo, s.id, 'triste', 'saudade'), s.at - Date.now()));
   }
 
   private async cancelarSaudade(): Promise<void> {
@@ -1571,8 +1615,27 @@ class Anima {
     }
   }
 
-  private notificar(titulo: string, corpo: string, id: number): void {
-    if (isTauri()) notif.sendNotification({ id, title: titulo, body: corpo, autoCancel: true });
+  /**
+   * Uma notificação do sistema. No Linux (computador), vai direto ao servidor de
+   * notificações: o rosto dela com a expressão da fala, urgência crítica (passa
+   * pelo "não perturbe"), "Responder" na própria notificação e uma por `vaga`
+   * (a nova substitui a velha). Se não der, o plugin padrão.
+   */
+  private notificar(titulo: string, corpo: string, id: number, gesto: Gesto = 'neutro', vaga = 'fala'): void {
+    if (isTauri() && desktop) {
+      void (async () => {
+        try {
+          const r = await retrato(gesto, gesto === 'raiva' ? '#ff3b4e' : gesto === 'vazia' ? '#b0001e' : this.cor);
+          const novo = !!r && !this.retratosEnviados.has(r.chave);
+          await invoke('anima_notificar', { vaga, titulo, corpo, chave: r?.chave ?? null, imagem: novo ? r!.png : null, responder: vaga !== 'timer' });
+          if (r) this.retratosEnviados.add(r.chave);
+        } catch {
+          notif.sendNotification({ id, title: titulo, body: corpo, autoCancel: true });
+        }
+      })();
+      return;
+    }
+    if (isTauri()) notif.sendNotification({ id, title: titulo, body: corpo, channelId: CHANNEL, autoCancel: true, largeBody: corpo, group: 'anima' });
     else if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       const n = new Notification(titulo, { body: corpo, tag: 'anima', icon: '/tanden.svg' });
       n.onclick = () => {

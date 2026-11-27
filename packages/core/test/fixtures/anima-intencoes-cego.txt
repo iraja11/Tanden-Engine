@@ -59,3 +59,52 @@ saudacao	opa
 obrigado	brigadão
 bomdia	bom dia mo
 sono	to morrendo de sono
+comovai	tá bem mesmo?
+comovai	como cê anda?
+comovai	tudo certo com você?
+comovai	vc tá bem?
+estoubem	tô de boa, valeu
+estoubem	tô levando a vida
+estoubem	na paz por aqui
+comofoi	como foi o seu dia hoje?
+comofoi	alguma novidade por aí?
+presenca	tá me escutando?
+presenca	ei, tá aí?
+presenca	você sumiu?
+etu	e tu?
+etu	e você, hein?
+humordela	tá com raiva de mim?
+humordela	você ficou chateada comigo?
+humordela	como você tá se sentindo por dentro?
+concorda	exatamente isso
+concorda	pois é
+concorda	é isso aí
+espanto	jura?
+espanto	eita
+espanto	uau
+espanto	que absurdo
+risada	kkkkkkkkkk
+risada	haha
+risada	lol
+contamais	conta mais
+contamais	e depois?
+contamais	fala mais sobre isso
+contamais	não captei
+opiniaogeral	que acha disso?
+opiniaogeral	devo fazer isso?
+opiniaogeral	você acha que vale a pena?
+desabafo	me escuta um pouco
+desabafo	preciso desabafar
+desabafo	tem um tempinho pra mim?
+capacidades	me mostra o que você sabe fazer
+capacidades	como te uso?
+capacidades	o que você consegue fazer?
+jogar	bora brincar
+jogar	tem algum jogo aí?
+jogar	brinca comigo
+surpresa	diz algo aleatório
+surpresa	me fala algo que eu não sei
+surpresa	conta um fato curioso
+perguntame	pode me perguntar o que quiser
+perguntame	me faz uma pergunta
+perguntame	tem pergunta pra mim?

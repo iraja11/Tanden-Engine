@@ -1,0 +1,105 @@
+# Terceiro conjunto cego (escrito em 2026-11-26 ANTES da rodada de melhoria do
+# vocabulário e NUNCA olhado durante ela): mede o resultado final de forma honesta.
+# Mistura frases comuns e frases com gíria/sinônimo fora da gramática.
+# Formato: intenção<TAB>frase
+saudacao	eae ânima, beleza?
+saudacao	salve, gótica
+comovai	e aí, como você anda?
+comovai	tudo nos conformes por aí?
+estoubem	tô tranquilão
+estoubem	vou indo, na medida do possível
+tchau	tô saindo fora, falou
+tchau	até a próxima
+bomdia	bom dia, flor do dia
+sono	vou capotar agora
+sono	tô morto de sono, vou deitar
+triste	tô na pior
+triste	hoje bateu uma tristeza do nada
+triste	sinto um aperto no peito
+cansaco	tô moído de cansaço
+cansaco	trabalhei feito um condenado hoje
+mau	tô de saco cheio de tudo
+mau	hoje eu acordei com o pé esquerdo
+feliz	tô radiante hoje
+feliz	que dia maravilhoso, tô de boa com a vida
+conquistei	passei no concurso
+conquistei	finalmente me formei
+amor	sou louquinho por você
+amor	te amo mais que tudo
+elogio	você é muito linda, sabia
+rejeicao	você é insuportável demais
+desculpa	desculpa a grosseria
+obrigado	brigadão, de coração
+fome	tô varado de fome
+fome	bateu uma larica
+tedio	tô entediado pra caramba
+piada	conta uma piadinha
+saudade	morri de saudade
+papo.abraco	me dá um abraço apertado
+papo.abraco	queria um abraço seu agora
+papo.beijo	me dá um beijão
+papo.cafune	faz um cafuné gostoso
+papo.dormejunto	fica aqui comigo até eu dormir
+papo.presente	trouxe um chocolate pra você
+papo.cantada	me joga uma cantada
+papo.promete	você promete que nunca vai embora?
+papo.sentiufalta	sentiu minha falta hoje?
+papo.gostademim	eu sou importante pra você?
+papo.bonito	você me acha bonito mesmo?
+papo.orgulho	ficou orgulhosa de mim?
+papo.voltei	tô de volta, cheguei agora
+papo.bravocomela	tô chateado com o que você disse
+papo.perdoo	tudo bem, eu te perdoo
+papo.boba	você é muito bobinha
+papo.verdade	quero a verdade
+papo.ciumenta	você é ciumenta demais
+papo.idade	qual é a sua idade?
+papo.corpo	você consegue dormir?
+papo.onde	onde você mora de verdade?
+papo.signo	você acredita em horóscopo?
+papo.codigo	você é feita de código?
+papo.idioma	você sabe falar espanhol?
+papo.apelido	posso te dar um apelido?
+papo.tempojuntos	faz quanto tempo que a gente se conhece?
+papo.foto	me manda uma selfie sua
+papo.doente	tô com uma gripe forte
+papo.doente	acordei com a garganta inflamada
+papo.insonia	não tô conseguindo dormir de jeito nenhum
+papo.insonia	tô com a cabeça a mil e sem sono
+papo.pesadelo	sonhei uma coisa muito ruim
+papo.sonhei	sonhei com você ontem
+papo.acordei	acabei de despertar
+papo.banho	vou tomar uma ducha
+papo.bebado	tô muito chapado
+papo.bebado	tomei todas ontem
+papo.cafe	preciso de uma xícara de café urgente
+papo.calma	tô ansioso demais, me acalma
+papo.medo	tô morrendo de medo
+papo.vergonha	que vergonha que eu passei
+papo.motivacao	me dá uma motivação aí
+papo.foco	não tô conseguindo me concentrar nos estudos
+papo.fracasso	fui reprovado
+papo.fracasso	tirei zero na prova
+papo.briga	briguei feio com minha mãe
+papo.terminei	meu namoro acabou
+papo.terminei	levei um toco
+papo.aniversario	hoje é meu dia, fiz aniversário
+papo.semana	odeio segunda-feira
+papo.fds	o que eu faço nesse feriadão?
+papo.ferias	tô de férias finalmente
+papo.clima	tá fazendo um frio de lascar
+papo.clima	que calorão hoje
+papo.fofoca	tenho uma fofoca bombástica
+papo.futebol	você viu o jogo ontem?
+papo.politica	você é de direita ou de esquerda?
+papo.filme	me indica uma série boa
+papo.anime	qual anime você recomenda?
+papo.livro	me recomenda um livro bom
+papo.videogame	qual jogo eu devo jogar?
+papo.cantar	canta uma musiquinha pra mim
+papo.poema	escreve uma poesia pra mim
+papo.historia	me conta uma história assustadora
+papo.desenho	faz um desenho pra mim
+papo.meme	me conta um meme
+papo.filosofia	o que é a felicidade?
+papo.escolhe	praia ou piscina?

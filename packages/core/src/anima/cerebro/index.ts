@@ -16,7 +16,9 @@ export { candidatosNota, casarComando, duracaoMs, formulaDado, telaDe, type Coma
 export { normalizar, Lexico, distancia, radical, type Texto } from './texto';
 export { sentimento, type Sentimento } from './sentimento';
 export { calcular, numeroExtenso } from './numeros';
-export { classificar, modeloPadrao, usarModelo, lexicoBase, amostrar } from './modelo';
+export { classificar, modeloPadrao, usarModelo, lexicoBase, amostrar, prepararRede, redePadrao, usarRede } from './modelo';
+export { carregarRede, preverComRede, type Rede } from './rede';
+export { PAPO, opcoesDaEscolha } from './papo';
 export { treinar, avaliar, calibrar, carregar, serializar, prever, indices, type Modelo, type Previsao } from './classificador';
 export { gerarCorpus, ROTULOS, GRAMATICA, SLOTS } from './corpus';
 export { lerMemoriaCerebro, novaMemoriaCerebro, type MemoriaCerebro, type Pendencia } from './memoria';
@@ -24,6 +26,7 @@ export { reagirJogo, problemaDoJogo, sono, rival, ROTINA_PADRAO, type JogoAtual,
 export { lerJanela, reagirWeb, contarWeb, saiuDoAdulto, type Pagina, type CategoriaWeb } from './web';
 export { reagirMusica, contarFaixa, estiloDe, artistaFavorito, type Faixa, type EstiloMusica, type ReacaoMusica } from './musica';
 export {
-  entenderMine, responderMine, reagirMine, itemDoTermo, nomeDoItem, biomaDe, limparChat, linhasDePlaca, faltaDe,
+  entenderMine, responderMine, reagirMine, itemDoTermo, nomeDoItem, nomeDoMob, biomaDe, limparChat, linhasDePlaca, faltaDe, relativo, ladoDe, rumoDe, minerioDe,
   type EstadoMine, type AcaoMine, type PedidoMine, type MsgParaMine, type EventoMine, type CtxMine, type RespostaMine, type Recurso, type MotivoPlaca,
+  type AlvoFaro, type Brincadeira,
 } from './minecraft';

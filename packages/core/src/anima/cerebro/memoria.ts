@@ -66,12 +66,15 @@ export interface MemoriaCerebro {
   web: { dia: string; minutos: Record<string, number> };
   /** música (Spotify): quantas vezes cada faixa tocou hoje e quantas faixas de cada artista no total */
   musica: { dia: string; faixas: Record<string, number>; artistas: Record<string, number> };
-  /** Minecraft: as vezes que ela entrou no jogo com você */
-  minecraft: { sessoes: number; minutos: number; mortes: number; presentes: number; ultima: number };
+  /**
+   * Minecraft: as vezes que ela entrou no jogo com você; o placar dos mobs (dela e seu) e das brincadeiras
+   * (esconde-esconde, pega-pega: quem ganhou mais)
+   */
+  minecraft: { sessoes: number; minutos: number; mortes: number; presentes: number; ultima: number; abates: number; abatesVoce: number; vitorias: number; derrotas: number };
 }
 
 export const novaMusica = (): MemoriaCerebro['musica'] => ({ dia: '', faixas: {}, artistas: {} });
-export const novoMinecraft = (): MemoriaCerebro['minecraft'] => ({ sessoes: 0, minutos: 0, mortes: 0, presentes: 0, ultima: 0 });
+export const novoMinecraft = (): MemoriaCerebro['minecraft'] => ({ sessoes: 0, minutos: 0, mortes: 0, presentes: 0, ultima: 0, abates: 0, abatesVoce: 0, vitorias: 0, derrotas: 0 });
 
 export const novaMemoriaCerebro = (): MemoriaCerebro => ({
   consciencia: 0, vinculo: 0, pendente: null, ultimoPedido: null, ultimaNota: null, ultimaDecisao: null, ultimaAcao: null, pedidos: [], social: [],
@@ -137,7 +140,8 @@ export function lerMemoriaCerebro(raw: unknown): MemoriaCerebro {
       ? { dia: r.musica.dia, faixas: contagens(r.musica.faixas), artistas: contagens(r.musica.artistas) }
       : novaMusica(),
     minecraft: obj(r.minecraft)
-      ? { sessoes: num(r.minecraft.sessoes, 0, 0), minutos: num(r.minecraft.minutos, 0, 0), mortes: num(r.minecraft.mortes, 0, 0), presentes: num(r.minecraft.presentes, 0, 0), ultima: num(r.minecraft.ultima, 0) }
+      ? { sessoes: num(r.minecraft.sessoes, 0, 0), minutos: num(r.minecraft.minutos, 0, 0), mortes: num(r.minecraft.mortes, 0, 0), presentes: num(r.minecraft.presentes, 0, 0), ultima: num(r.minecraft.ultima, 0),
+          abates: num(r.minecraft.abates, 0, 0), abatesVoce: num(r.minecraft.abatesVoce, 0, 0), vitorias: num(r.minecraft.vitorias, 0, 0), derrotas: num(r.minecraft.derrotas, 0, 0) }
       : novoMinecraft(),
   };
 }

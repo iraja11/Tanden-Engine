@@ -33,7 +33,7 @@ export function hash32(s: string): number {
   return h >>> 0;
 }
 
-const numeroTok = (w: string) => (/^\d+([.,]\d+)?$/.test(w) ? '<num>' : w);
+export const numeroTok = (w: string) => (/^\d+([.,]\d+)?$/.test(w) ? '<num>' : w);
 
 /** As características de um texto, como strings (para depurar) . */
 export function caracteristicas(t: Texto): string[] {

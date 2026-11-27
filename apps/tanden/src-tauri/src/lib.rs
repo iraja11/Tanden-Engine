@@ -3,6 +3,8 @@
 //! há leitura e escrita de arquivos, sempre presas dentro da pasta do cofre.
 
 #[cfg(desktop)]
+mod aviso;
+#[cfg(desktop)]
 mod background;
 #[cfg(desktop)]
 mod clipper;
@@ -134,6 +136,8 @@ pub fn run() {
             release::release_open_apk,
             ollama::ollama_models,
             ollama::ollama_chat,
+            #[cfg(desktop)]
+            aviso::anima_notificar,
             #[cfg(desktop)]
             background::background_set,
             #[cfg(desktop)]

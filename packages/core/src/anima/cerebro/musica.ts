@@ -25,12 +25,12 @@ export interface Faixa {
   duracao_ms?: number;
 }
 
-export type EstiloMusica = 'dela' | 'anime' | 'metal' | 'triste' | 'rap' | 'funk' | 'sertanejo' | 'eletronica' | 'lofi' | 'kpop' | 'classica' | 'pop';
+export type EstiloMusica = 'dela' | 'anime' | 'metal' | 'triste' | 'rap' | 'funk' | 'sertanejo' | 'eletronica' | 'lofi' | 'kpop' | 'classica' | 'pop' | 'rock' | 'indie' | 'mpb';
 
 /** pelo artista (dobrado: sem acento, minúsculo). A ordem importa: o primeiro que casar vence. */
 const ARTISTAS: Array<[EstiloMusica, RegExp]> = [
-  ['dela', /\b(the cure|siouxsie|bauhaus|joy division|sisters of mercy|type o negative|lebanon hanover|molchat doma|boy harsher|chelsea wolfe|cocteau twins|deftones|evanescence|depeche mode|the smiths|interpol|cold cave|she past away|drab majesty|ghost|lacrimosa|christian death|clan of xymox|she wants revenge|in this moment|bring me the horizon|my chemical romance|nine inch nails|marilyn manson|lana del rey|mitski|radiohead|massive attack|portishead|sleep token|crystal castles|grimes|billie eilish|placebo|hole|garbage)\b/],
-  ['anime', /\b(lisa|aimer|yoasobi|ado|kenshi yonezu|eve|radwimps|king gnu|vaundy|reol|zutomayo|zutto mayonaka|mrs\.? green apple|official hige dandism|higedan|claris|asca|kana-boon|linked horizon|sawano|hiroyuki sawano|yuki kajiura|kalafina|fripside|man with a mission|spyair|uverworld|one ok rock|tk from ling tosite sigure|myth & roid|minami|milet|tuyu|yorushika|aimyon|fujii kaze|kenshi|hatsune miku|kaf)\b/],
+  ['dela', /\b(the cure|siouxsie|bauhaus|joy division|sisters of mercy|type o negative|lebanon hanover|molchat doma|boy harsher|chelsea wolfe|cocteau twins|deftones|evanescence|depeche mode|the smiths|interpol|cold cave|she past away|drab majesty|ghost|lacrimosa|killing joke|gang of four|the mission|and also the trees|mr\.? kitty|christian death|clan of xymox|she wants revenge|in this moment|bring me the horizon|my chemical romance|nine inch nails|marilyn manson|lana del rey|mitski|radiohead|massive attack|portishead|sleep token|crystal castles|grimes|billie eilish|placebo|hole|garbage|the neighbourhood|vv|poppy|zeal & ardor|zeal and ardor|florence \+ the machine|florence and the machine|fka twigs|poison the well|she's in parties|the damned|alvvays|beach house|have a nice life|slowdive|my bloody valentine|jesus and mary chain|the jesus and mary chain|peter murphy|fields of the nephilim|gary numan|ministry|front 242|vnv nation|covenant|kmfdm|rosa crux|cigarettes after sex)\b/],
+  ['anime', /\b(lisa|aimer|yoasobi|ado|kenshi yonezu|eve|radwimps|king gnu|vaundy|reol|zutomayo|zutto mayonaka|mrs\.? green apple|official hige dandism|higedan|claris|asca|kana-boon|ling tosite sigure|supercell|egoist|granrodeo|trysail|sakanaction|back number|bump of chicken|mafumafu|kasane teto|kikuo|wowaka|deco\*27|syudou|chinozo|kanaria|orangestar|linked horizon|sawano|hiroyuki sawano|yuki kajiura|kalafina|fripside|man with a mission|spyair|uverworld|one ok rock|tk from ling tosite sigure|myth & roid|minami|milet|tuyu|yorushika|aimyon|fujii kaze|kenshi|hatsune miku|kaf)\b/],
   ['metal', /\b(metallica|slipknot|iron maiden|sepultura|megadeth|black sabbath|system of a down|korn|gojira|avenged sevenfold|pantera|slayer|lamb of god|trivium|bullet for my valentine|parkway drive|architects|motionless in white|babymetal|nightwish|within temptation|epica|rammstein)\b/],
   ['kpop', /\b(bts|blackpink|twice|stray kids|newjeans|aespa|le sserafim|ive|seventeen|txt|enhypen|itzy|red velvet|exo|nct|ateez|g-?idle)\b/],
   ['rap', /\b(kendrick lamar|drake|travis scott|kanye|eminem|tyler,? the creator|j\. ?cole|21 savage|playboi carti|racionais|matue|teto|wiu|filipe ret|djonga|bk|baco exu do blues|emicida|criolo|orochi|veigh|kayblack|tz da coronel|ret)\b/],
@@ -39,6 +39,9 @@ const ARTISTAS: Array<[EstiloMusica, RegExp]> = [
   ['eletronica', /\b(daft punk|deadmau5|skrillex|avicii|calvin harris|martin garrix|alok|vintage culture|porter robinson|madeon|justice|aphex twin|boards of canada|fred again|peggy gou|disclosure|odesza|flume)\b/],
   ['lofi', /\b(lofi|lo-fi|chillhop|nujabes|idealism|jinsang|tomppabeats|potsu|kudasai)\b/],
   ['classica', /\b(chopin|mozart|bach|beethoven|debussy|satie|vivaldi|tchaikovsky|rachmaninoff|liszt|ludovico einaudi|hans zimmer|joe hisaishi|max richter|olafur arnalds|yiruma)\b/],
+  ['rock', /\b(arctic monkeys|nirvana|foo fighters|queen|led zeppelin|pink floyd|the strokes|green day|blink-?182|paramore|linkin park|red hot chili peppers|oasis|the killers|legiao urbana|legião urbana|barao vermelho|cazuza|raimundos|charlie brown jr|capital inicial|paralamas|titas|skank|nenhum de nos|engenheiros do hawaii|pitty|detonautas|pearl jam|soundgarden|ac\/dc|guns n' roses|the rolling stones|the beatles|david bowie|fall out boy|twenty one pilots|my morning jacket|wolf alice|royal blood)\b/],
+  ['indie', /\b(tame impala|the 1975|clairo|phoebe bridgers|lorde|girl in red|beabadoobee|boygenius|big thief|bon iver|fleet foxes|men i trust|mac demarco|angel olsen|japanese breakfast|snail mail|soccer mommy|wallows|dayglow|rex orange county|gus dapperton|conan gray|the marias|cavetown|d4vd|sombr|keshi|laufey|beach bunny|weyes blood|lucy dacus|lizzy mcalpine)\b/],
+  ['mpb', /\b(caetano veloso|gilberto gil|chico buarque|djavan|milton nascimento|gal costa|maria bethania|elis regina|tim maia|jorge ben|seu jorge|marisa monte|rita lee|os mutantes|novos baianos|tom jobim|joao gilberto|vinicius de moraes|cassia eller|ana carolina|liniker|tulipa ruiz|marina lima|cartola|zeca pagodinho|ze ramalho|alceu valenca|luiz gonzaga)\b/],
   ['pop', /\b(taylor swift|dua lipa|ariana grande|olivia rodrigo|sabrina carpenter|the weeknd|harry styles|ed sheeran|bruno mars|doja cat|lady gaga|rihanna|beyonce|katy perry|charli xcx|chappell roan|sza|pabllo vittar|luisa sonza|iza)\b/],
 ];
 
@@ -114,6 +117,14 @@ export function reagirMusica(estado: AnimaState, f: Faixa, ctx: CtxJogo): Reacao
   if (fav && fav.nome === artista && ctx.rand() < 0.35) grupos.push('musica.favorito');
   if (amor && ctx.rand() < 0.5) grupos.push('musica.amor');
   if (estilo && ctx.rand() < 0.75) grupos.push(`musica.estilo.${estilo}`);
+  // detalhes da faixa e da hora: variam o que ela diz sem depender só do estilo
+  const longa = (f.duracao_ms ?? 0) >= 7 * 60_000;
+  const curta = (f.duracao_ms ?? 0) > 0 && (f.duracao_ms ?? 0) <= 100_000;
+  if (longa && ctx.rand() < 0.6) grupos.push('musica.longa');
+  if (curta && ctx.rand() < 0.6) grupos.push('musica.curta');
+  if (/,|&| feat\.? | ft\.? /i.test(f.artista) && ctx.rand() < 0.4) grupos.push('musica.feat');
+  if (h >= 5 && h < 11 && ctx.rand() < 0.4) grupos.push('musica.manha');
+  if (h >= 19 && h < 23 && ctx.rand() < 0.4) grupos.push('musica.noite');
   grupos.push('musica.faixa');
   if (estilo === 'dela') s = mexer(s, { afeto: 2 });
   if (amor) s = mexer(s, { ciume: ctx.intensidade === 1 ? 2 : 5 });

@@ -1,13 +1,18 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { banco, cerebro, novoEstado, sorteio, type AnimaState } from '../src/index';
 
 const {
   normalizar, Lexico, distancia, radical, sentimento, calcular, numeroExtenso, duracaoMs, formulaDado, telaDe, candidatosNota, casarComando,
   classificar, lexicoBase, modeloPadrao, gerarCorpus, ROTULOS, amostrar, treinar, avaliar, carregar, serializar, prever,
   entenderPedido, sentido, decidir, montarGrafo, entenderConsulta, responderConsulta, deducoes, capitulo, pensar, rotina, broncaDeTela, depoisDaAcao,
-  registrarCarinho, cumprirAdiado, escreverNoMundo,
+  registrarCarinho, cumprirAdiado, escreverNoMundo, prepararRede, redePadrao, preverComRede,
 } = cerebro;
+
+// a rede neural carrega em segundo plano no app; aqui, antes de tudo (todo pensar usa a rede + o modelo antigo)
+beforeAll(async () => {
+  await prepararRede();
+});
 
 const T0 = new Date(2026, 10, 18, 15, 0).getTime(); // quarta, 15h
 const TITULOS = ['Receitas', 'Receitas antigas', 'Projeto Corvo', 'Anotações de física', 'Lista de livros', 'Eldoria - Deuses'];
@@ -55,6 +60,17 @@ describe('cérebro: texto', () => {
     lx.ensinar('casa carro saudade');
     expect(lx.corrigir('cas')).toBeNull();
     expect(normalizar('saí com a Cassa', lx).tokens).toContain('cassa');
+  });
+
+  it('não "conserta" palavra real que a gramática não usa (vocabulário)', () => {
+    const lx = lexicoBase();
+    const tok = (m: string) => normalizar(m, lx).tokens;
+    expect(tok('tô pregado')).toContain('pregado');
+    expect(tok('tomei um pé na bunda')).toContain('bunda');
+    expect(tok('tô numa fossa danada')).toContain('fossa');
+    expect(tok('enchi a cara')).toContain('enchi');
+    // e continua corrigindo erro de digitação de verdade
+    expect(tok('tô cansdo')).toContain('cansado');
   });
 
   it('distância com transposição e radical', () => {
@@ -145,6 +161,30 @@ describe('cérebro: classificador', () => {
     });
   }
 
+  it('a rede neural existe, carrega e cobre todas as intenções', () => {
+    const r = redePadrao()!;
+    expect(r).toBeTruthy();
+    expect(r.rotulos).toEqual([...ROTULOS]);
+    expect(r.camadas.length).toBeGreaterThanOrEqual(1);
+    expect(r.emb.idx.length).toBeGreaterThan(1000);
+  });
+
+  for (const [arq, minimo] of [['anima-intencoes.txt', 0.95], ['anima-intencoes-cego.txt', 0.88]] as const) {
+    it(`a rede sozinha acerta as frases de ${arq} (mínimo ${minimo * 100}%)`, () => {
+      const lx = lexicoBase();
+      const fs = frases(arq);
+      const erros = fs.filter(([r, f]) => preverComRede(redePadrao()!, normalizar(f, lx)).rotulo !== r);
+      expect(1 - erros.length / fs.length, erros.map(([r, f]) => `${r}: ${f}`).join('\n')).toBeGreaterThanOrEqual(minimo);
+    });
+  }
+
+  it('a rede vê a ordem das palavras (o que a bolsa de palavras não vê)', () => {
+    const lx = lexicoBase();
+    const r = redePadrao()!;
+    expect(preverComRede(r, normalizar('tô bem', lx)).rotulo).toBe('estoubem');
+    expect(preverComRede(r, normalizar('tá bem?', lx)).rotulo).toBe('comovai');
+  });
+
   it('treina do zero, serializa e carrega sem perder acerto', () => {
     const rot = [...ROTULOS].slice(0, 8);
     const so = (ex: ReturnType<typeof gerarCorpus>) => ex.filter((e) => rot.includes(e.rotulo));
@@ -156,7 +196,7 @@ describe('cérebro: classificador', () => {
     const m2 = carregar(serializar(m));
     expect(avaliar(m2, te).acerto).toBeCloseTo(a, 5);
     // com camada oculta também
-    const h = treinar(tr, rot, { dim: 16, buckets: 1 << 14, epocas: 8, oculta: 16 });
+    const h = treinar(tr, rot, { dim: 16, buckets: 1 << 14, epocas: 8, oculta: 64 });
     expect(avaliar(h, te).acerto).toBeGreaterThan(0.6);
     expect(prever(carregar(serializar(h)), normalizar('rola um d20')).top.length).toBe(3);
   });
@@ -379,6 +419,41 @@ describe('cérebro: rotina e world building', () => {
   });
 });
 
+describe('cérebro: assuntos de conversa (papo.*)', () => {
+  const { PAPO, opcoesDaEscolha } = cerebro;
+
+  it('todo assunto tem falas no cofre', () => {
+    const f = banco().falas;
+    for (const g of [...Object.keys(PAPO), 'papo.escolhe.sem', 'papo.tempojuntos.hoje']) expect(f[g]?.length, g).toBeGreaterThanOrEqual(g.split('.').length > 2 ? 2 : 6);
+  });
+
+  it('entende o assunto e responde com o grupo dele', () => {
+    for (const [msg, g] of [['me abraça', 'papo.abraco'], ['tô com febre e dor de cabeça', 'papo.doente'], ['não consigo dormir', 'papo.insonia'], ['me indica um filme', 'papo.filme'],
+      ['levei um fora', 'papo.terminei'], ['escreve um poema pra mim', 'papo.poema'], ['qual o sentido da vida?', 'papo.filosofia']] as const) {
+      const r = pensar(novoEstado(T0), msg, ctx());
+      expect(r.intencao, msg).toBe(g);
+      expect(r.fala!.id.startsWith(g), `${msg} → ${r.fala!.id}`).toBe(true);
+    }
+  });
+
+  it('escolhe entre duas opções, sempre a mesma para a mesma pergunta', () => {
+    expect(opcoesDaEscolha('pizza ou hambúrguer?')).toEqual(['pizza', 'hambúrguer']);
+    expect(opcoesDaEscolha('você prefere gato ou cachorro?')).toEqual(['gato', 'cachorro']);
+    expect(opcoesDaEscolha('escolhe entre o azul ou o preto')).toEqual(['azul', 'preto']);
+    expect(opcoesDaEscolha('me ajuda a escolher')).toBeNull();
+    const a = pensar(novoEstado(T0), 'pizza ou hambúrguer?', ctx()).fala!.texto;
+    const b = pensar(novoEstado(T0), 'hambúrguer ou pizza?', ctx({ rand: sorteio(99) })).fala!.texto;
+    const escolha = (t: string) => (t.indexOf('pizza') >= 0 && (t.indexOf('hambúrguer') < 0 || t.indexOf('pizza') < t.indexOf('hambúrguer')) ? 'pizza' : 'hambúrguer');
+    expect(escolha(a)).toBe(escolha(b));
+  });
+
+  it('conta os dias juntos', () => {
+    const s = { ...novoEstado(T0 - 12 * 86_400_000) };
+    const r = pensar(s, 'há quanto tempo a gente se conhece?', ctx());
+    expect(r.fala!.texto).toMatch(/12/);
+  });
+});
+
 describe('cérebro: jogos da Steam', () => {
   const { reagirJogo, problemaDoJogo, sono, rival } = cerebro;
   const HK = { appid: 367520, nome: 'Hollow Knight', modo: 'single', generos: ['Ação', 'Aventura', 'Indie'], online: null };
@@ -481,6 +556,9 @@ describe('cérebro: música (Spotify)', () => {
     expect(estiloDe(faixa({ artista: 'The Cure', titulo: 'Pictures of You' }))).toBe('dela');
     expect(estiloDe(faixa({ artista: 'Ninguém', titulo: 'Tears in the rain' }))).toBe('triste');
     expect(estiloDe(faixa({ artista: 'Ninguém', titulo: 'Qualquer', album: '' }))).toBeNull();
+    expect(estiloDe(faixa({ artista: 'Arctic Monkeys', titulo: 'Do I Wanna Know?' }))).toBe('rock');
+    expect(estiloDe(faixa({ artista: 'Tame Impala', titulo: 'The Less I Know The Better' }))).toBe('indie');
+    expect(estiloDe(faixa({ artista: 'Caetano Veloso', titulo: 'Sozinho' }))).toBe('mpb');
   });
 
   it('conta a faixa do dia e o artista; a mesma música várias vezes vira bronca', () => {
@@ -657,7 +735,9 @@ describe('cérebro: Minecraft', () => {
       ...['naosei', 'tudo', 'comida', 'tocha', 'ferro', 'diamante', 'obsidiana'].map((x) => `mine.recursos.${x}`),
       ...['portal', 'diamante', 'armadura', 'esmeralda'].map((x) => `mine.ideia.recurso.${x}`),
       ...['pedido', 'livre', 'morte', 'casal', 'recado'].map((x) => `mine.placa.${x}`),
-      'musica.faixa', 'musica.repete', 'musica.madrugada', 'musica.favorito', 'musica.amor', 'web.adulto.saiu', 'web.adulto.denovo',
+      'musica.faixa', 'musica.repete', 'musica.madrugada', 'musica.favorito', 'musica.amor',
+      ...['rock', 'indie', 'mpb'].map((x) => `musica.estilo.${x}`), ...['comovai', 'estoubem', 'comofoi', 'presenca', 'etu', 'humordela', 'concorda', 'espanto', 'risada', 'contamais', 'opiniaogeral', 'desabafo', 'capacidades', 'jogar', 'surpresa', 'perguntame'].map((x) => `conversa.${x}`),
+      'musica.longa', 'musica.curta', 'musica.feat', 'musica.manha', 'musica.noite', 'web.adulto.saiu', 'web.adulto.denovo',
     ];
     for (const g of grupos) expect(f[g]?.length, g).toBeGreaterThan(0);
   });

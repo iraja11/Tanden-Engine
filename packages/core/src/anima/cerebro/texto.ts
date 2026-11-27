@@ -157,6 +157,8 @@ const PROTEGIDAS = new Set(['oi', 'ola', 'nao', 'sim', 'que', 'eu', 'tu', 'ele',
 export class Lexico {
   private freq = new Map<string, number>();
   private deletes = new Map<string, string[]>();
+  /** palavras reais que nunca são "consertadas" (mas também não viram sugestão: o índice fica pequeno) */
+  private validas = new Set<string>();
   private pronto = false;
   readonly maxDist: number;
   constructor(maxDist = 2) {
@@ -165,6 +167,13 @@ export class Lexico {
 
   get tamanho(): number { return this.freq.size; }
   tem(w: string): boolean { return this.freq.has(w); }
+  /** existe (no léxico ou no vocabulário)? */
+  conhece(w: string): boolean { return this.freq.has(w) || this.validas.has(w); }
+
+  /** Palavras (já dobradas) que existem e não devem ser corrigidas. */
+  reconhecer(palavras: Iterable<string>): void {
+    for (const w of palavras) this.validas.add(w);
+  }
   frequencia(w: string): number { return this.freq.get(w) ?? 0; }
 
   /** Acrescenta palavras (texto livre; tudo é dobrado e quebrado em palavras). */
@@ -194,7 +203,7 @@ export class Lexico {
    * palavras curtas (< 4) nunca; distância 1 até 6 letras, 2 a partir de 7.
    */
   corrigir(w: string): string | null {
-    if (w.length < 4 || this.freq.has(w) || PROTEGIDAS.has(w) || /\d/.test(w)) return null;
+    if (w.length < 4 || this.freq.has(w) || this.validas.has(w) || PROTEGIDAS.has(w) || /\d/.test(w)) return null;
     this.montar();
     const teto = w.length >= 7 ? 2 : 1;
     const vistos = new Set<string>();

@@ -14,10 +14,11 @@ a parte que executa no app em `apps/tanden/src/lib/anima/anima.svelte.ts`.
 
 ```
 texto → normalizar → CRISE? (regra fixa) → pendência da conversa?
-      → intenção (modelo + regras deterministas + sentimento)
+      → intenção (rede neural + modelo antigo + regras deterministas + sentimento)
       → comando:  campos → sentido → vontade → ação + fala
         consulta: grafo de conhecimento → resposta com prova
         conversa: motor antigo (aprende, opina, lembra) com a intenção certa
+                  papo.*: o assunto (abraço, insônia, filme, poema...) → grupo de mesmo nome
 ```
 
 Cada passo deixa uma linha no **traço**. Digite `/pensamento` na conversa (ou
@@ -38,8 +39,12 @@ use "Ânima: mostrar o último pensamento" na paleta) para ver o raciocínio:
 | `texto.ts` | Normalização com posição alinhada ao original, gírias (`vc`, `pfv`, `n`, `kd`…), letras esticadas, risos, emojis e emoticons, caixa alta, educação e grosseria. Corretor ortográfico **SymSpell** (apagamentos até 2 letras, O(1) por palavra) e radical (stemmer leve). |
 | `sentimento.ts` | VADER adaptado ao português: léxico com valência, negação que inverte, intensificadores, "mas" que muda o peso das metades, exclamação e caixa alta. Emoção dominante. |
 | `numeros.ts` | Números por extenso ("dois mil e vinte e seis") e uma calculadora em português (Pratt, sem eval): "15% de 80", "raiz de 144", "o dobro de 21". |
+| `rede.ts` / `rede.dat.ts` | **A rede neural**: um Transformer pequeno (4 camadas pré-LN, 6 cabeças, d=192, FFN 384 com GELU), destilado de um modelo de frases multilíngue. Cada token é a média das linhas de suas características (a palavra e os pedaços de 3–4 letras, por hash: sem vocabulário, então gíria e erro caem perto do certo); o token global leva as marcas. Saída: [global ; média] → softmax calibrado. Inferência em TypeScript puro, sem dependência, ~20 ms por mensagem longa na CPU. Linhas quantizadas por produto e matrizes em int8 (~5,6 MB), num pedaço separado do app carregado sob demanda (`prepararRede`). |
+| `papo.ts` | Os assuntos de conversa (`papo.*`, ~56): carinho (abraço, beijo, cafuné, colo, dormir junto, presente, cantada, promessa), sobre ela (idade, corpo, onde mora, signo, código, idioma, apelido, tempo juntos, foto), saúde (doente, insônia, pesadelo, calma, medo, bebida, café), vida (briga, término, aniversário, semana, férias, clima, fofoca, futebol, política), entretenimento (filme, anime, livro, jogo, cantar, poema, história, desenho, meme), filosofia e "escolhe X ou Y" (sempre a mesma escolha para a mesma pergunta). Também `MAIS`: exemplos extras para as intenções antigas. |
+| `giria.ts` | Gíria e expressão brasileira por intenção ("tô pregado", "bateu a larica", "levei um toco", "tô uma fera", "paguei mico"). A rede entende a *forma* de qualquer palavra, mas só aprende o *sentido* das que aparecem num exemplo rotulado: é aqui que ela aprende. |
+| `vocabulario.dat.ts` | ~49 mil palavras reais do português (legendas do OpenSubtitles via FrequencyWords, MIT; e Tatoeba) que o corretor **não** conserta. Sem isso, "pregado" virava "pesado" e "fossa" virava "fosse" antes de chegar na rede. Gerado por `scripts/anima-cerebro/vocabulario.mjs`. |
 | `classificador.ts` | O classificador de intenções: embedding bag de palavras, pares, pedaços de 3–4 letras e marcas (hash em 2¹⁸), camada oculta opcional, softmax com temperatura calibrada. Treino SGD, corte das linhas fracas com retreino, **quantização de produto** (32 floats → 8 bytes por linha) e índices em varint. O modelo inteiro tem ~270 KB. |
-| `corpus.ts` | A gramática que gera o treino (`(a\|b)`, `[opcional]`, `{slot}`) e o gerador de ruído (gíria, erro de digitação por teclado, sem acento, vocativo, "pfv", palavrão, emoji). 65 intenções. |
+| `corpus.ts` | A gramática que gera o treino (`(a\|b)`, `[opcional]`, `{slot}`) e o gerador de ruído (gíria, erro de digitação por teclado, sem acento, vocativo, "pfv", palavrão, emoji). as intenções antigas (com os `papo.*` de `papo.ts`, 142 ao todo), incluindo o bate-papo (`comovai`, `estoubem`, `comofoi`, `presenca`, `etu`, `humordela`, `concorda`, `espanto`, `risada`, `contamais`, `opiniaogeral`, `desabafo`, `capacidades`, `jogar`, `surpresa`, `perguntame`). Cada uma responde com o grupo `conversa.<intenção>` do cofre de falas. |
 | `modelo.ts` / `modelo.dat.ts` | O léxico do corretor (gramática + todas as palavras do cofre) e o modelo treinado, carregados sob demanda. |
 | `entidades.ts` | Recorte do pedido (tira verbos, vocativos e cauda), notas por semelhança (igualdade, palavras com radical e erro, trigramas) com detecção de ambiguidade, duração, dados, telas, tema e casamento com **qualquer comando da paleta** (peso por raridade, IDF). |
 | `semantica.ts` | O que o pedido significa: estudo, encontro (com a pessoa e se é suspeita), saúde, trabalho, exercício, família, IA rival… |
@@ -65,9 +70,82 @@ use "Ânima: mostrar o último pensamento" na paleta) para ver o raciocínio:
 - Travessura é sempre declarada na fala e desfazível ("desfaz").
 - Palavrão é liberado; ofensa a grupos de pessoas, não.
 
-## Treinar o modelo
+## A rede neural
 
-Na CPU (uns 20 s), avalia e grava `modelo.dat.ts`:
+O que decide a intenção é a soma de dois modelos: a rede (peso 0,75) e o
+classificador antigo de bolsa de palavras (0,25). A rede vê ordem e contexto
+("tô bem" ≠ "tá bem?", "não consegui" ≠ "consegui"); o antigo é firme com
+palavra-chave solta. Os dois têm de conhecer as mesmas intenções (senão vale só
+a rede). Enquanto a rede não carregou (o primeiro segundo do app), vale só o
+antigo.
+
+Treinar (precisa do PyTorch; na RTX 4060 leva uns 10 minutos):
+
+```bash
+python3 -m venv scripts/anima-cerebro/.venv
+scripts/anima-cerebro/.venv/bin/pip install torch numpy --index-url https://download.pytorch.org/whl/cu128 --extra-index-url https://pypi.org/simple
+
+pip install sentence-transformers         # (no mesmo venv) o professor da destilação
+curl -L https://downloads.tatoeba.org/exports/per_language/por/por_sentences.tsv.bz2 | bunzip2 > /tmp/por.tsv
+
+# o vocabulário do corretor (só quando quiser renovar; depois, treine os dois de novo)
+curl -LO https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/pt_br/pt_br_50k.txt
+node scripts/anima-cerebro/vocabulario.mjs pt_br_50k.txt /tmp/por.tsv
+
+node scripts/anima-cerebro/rede.mjs exportar /tmp/anima-rede --por 2500 --extra /tmp/por.tsv --extra-max 450000
+scripts/anima-cerebro/.venv/bin/python scripts/anima-cerebro/rede.py /tmp/anima-rede \
+  --professor sentence-transformers/paraphrase-multilingual-mpnet-base-v2 --pseudo 0.75 \
+  --d 192 --camadas 4 --cabecas 6 --ffn 384 --corte 250000
+node scripts/anima-cerebro/rede.mjs empacotar /tmp/anima-rede
+node scripts/anima-cerebro/treinar.mjs treinar --corte 30000   # o modelo antigo, com as mesmas intenções
+```
+
+**Destilação (`--professor`).** A gramática ensina as intenções, mas só com as
+palavras que ela tem. Para entender o resto, um modelo de frases multilíngue
+pré-treinado (o professor, ~1 GB, baixado uma vez e usado **só no treino**;
+nada dele vai para o app) diz onde fica o significado de cada frase, e a rede
+aprende a imitar: frases que querem dizer a mesma coisa ficam juntas. Com
+`--extra`, ela também imita o professor em ~400 mil frases naturais em português
+(Tatoeba), e aprende o sentido de palavras que a gramática nunca usou. Com
+`--pseudo`, frases naturais muito perto do centro de uma intenção (no espaço do
+professor) viram exemplos rotulados daquela intenção (amostra em
+`<pasta>/pseudo.txt`). A cabeça que imita o professor é jogada fora no fim: o
+app recebe a mesma rede pequena, só mais esperta.
+
+Os conjuntos de teste: `anima-intencoes.txt` (frases reais), `-cego.txt` (frases
+novas no estilo da gramática), `-cego2.txt` (gíria e expressão fora da gramática)
+e `-cego3.txt`. O cego2 **deixou de ser cego** quando o `giria.ts` foi escrito
+olhando os erros dele: hoje é teste de regressão das gírias. O cego3 foi escrito
+antes do `giria.ts` e nunca usado para ajustar nada; é o número honesto. Se um
+dia ele também for "gasto", escreva um cego4 antes de mexer.
+
+O `rede.py` treina, corta as linhas fracas (`--corte`; com 250 mil fica com todas), quantiza por
+produto e reaprende por cima, passa as matrizes para int8, calibra a
+temperatura e grava `rede.bin` + `paridade.json`. O `empacotar` confere que o
+TypeScript dá os mesmos logits que o PyTorch (falha se a diferença passar de
+0,05), mede e grava `rede.dat.ts`. Sem GPU também roda, só mais devagar.
+Opções: `--d`, `--camadas`, `--cabecas`, `--ffn`, `--epocas`, `--corte`.
+
+`node scripts/anima-cerebro/rede.mjs avaliar` mede a rede, o conjunto e o
+antigo nas frases reais e nos dois cegos, e o tempo por mensagem. Hoje:
+
+| | reais | cego | cego2 (gíria, regressão) | cego3 |
+| --- | --- | --- | --- | --- |
+| só o modelo antigo, antes da rede | 98,5% | 93,5% | 54,8% | — |
+| rede destilada, sem `giria.ts` | 99,6% | 96,3% | 66,7% | — |
+| **rede + antigo (o app), com `giria.ts` e vocabulário** | **98,9%** | **95,4%** | **94,6%** | **99,0%** |
+
+Parte das frases dos cegos sai literalmente da gramática (metade do cego, 39 de
+101 do cego3). Só nas que não saem: cego 90,7%, cego2 92,5%, cego3 98,4%. O
+cego3 e o `giria.ts` foram escritos pela mesma pessoa, então ele ainda é
+otimista; as frases de quem usa o app de verdade são o teste final.
+
+Assunto novo: a gramática em `papo.ts`, o grupo `## papo.<nome>` no cofre
+(`anima-falas.mjs abrir/fechar`) e os dois treinos.
+
+## Treinar o modelo antigo
+
+Na CPU (uns 25 s), avalia e grava `modelo.dat.ts`:
 
 ```bash
 node scripts/anima-cerebro/treinar.mjs treinar --por 400 --epocas 12
@@ -95,6 +173,27 @@ node scripts/anima-cerebro/treinar.mjs avaliar
 
 Mudou a gramática (`corpus.ts`) ou o cofre de falas? Treine de novo: o léxico
 do corretor vem dos dois.
+
+## Falas fora do chat (notificações)
+
+No computador, com a janela na bandeja ou outro app em foco, as falas espontâneas
+e do cérebro proativo (`tickFora` em `anima.svelte.ts`) viram notificação do
+sistema, a qualquer hora (não há mais silêncio noturno). Ela só respeita o
+"Saudade" (liga e desliga as notificações), o "fica quieta" pedido na conversa
+e para depois de 4 h sem você mexer no app.
+
+No Linux (`src-tauri/src/aviso.rs`) a notificação vai direto ao servidor de
+notificações pelo D-Bus, como as do sistema:
+
+- **urgência crítica**: passa pelo "não perturbe" do KDE e do GNOME;
+- **o rosto dela** com a expressão daquela fala (`lib/anima/retrato.ts`
+  desenha o mesmo SVG do widget num camafeu de 256 px; cache por expressão);
+- **Responder** na própria notificação (no KDE abre um campo de texto; a
+  resposta vai para ela e a resposta dela volta como notificação) e **Abrir**;
+- uma por vez: a fala nova substitui a anterior em vez de empilhar.
+
+Fora do Linux usa o plugin padrão; no Android o canal é de importância alta
+(aparece por cima, como mensagem de gente).
 
 ## Escrever falas novas
 
@@ -204,6 +303,38 @@ dos dois no quarto de casal, um recado quando o chat fica quieto, ou o que
 você pedir. Ela nunca quebra bloco para pôr placa; sem chão livre, não põe.
 Por conta própria, no máximo uma a cada 10 min. Toggle `tandenAnimaSigns`.
 
+**Melhor que você (ela é um robô).** Briga com os mobs hostis a até 10 blocos
+de você: anda até eles e bate com o dano de uma espada de ferro (nunca
+creeper, enderman, warden, ghast, phantom nem neutro calmo; "fica aqui" = só
+bate no que chegar perto). Cada mob dela e seu entra num placar
+("quem matou mais?"), e ela se gaba quando passa você. Fareja minério
+através da pedra ("acha diamante pra mim", "tem ferro aqui perto?",
+"fareja"): o mod varre 24 blocos para os lados, 24 para baixo e 12 para cima,
+solta uma trilha de luz de você até o bloco e ela fala o caminho do seu ponto
+de vista ("14 pra baixo e 6 pra esquerda", `rumoDe`). Avisa de que lado está
+o creeper e a lava (`ladoDe`), e um minuto antes de anoitecer se você está a
+mais de 48 blocos da cama. Toggle `tandenAnimaFight`; "não briga" / "me
+protege" no chat.
+
+**Brincadeiras.** Esconde-esconde ("se esconde"): ela some para um lugar a
+10–22 blocos fora da sua vista, agachada e sem o nome em cima; você acha
+chegando perto ou olhando para ela; "dica" toca um sino onde ela está (e ela
+diz quente/morno/frio); "desisto" ou 3 min e ela aparece atrás de você.
+"Eu me escondo, você procura": ela conta 15 s de costas e vai direto até você
+(ela sempre sabe onde você está). Pega-pega ("me pega"): conta 3 e corre
+atrás de você por 1 min; de dia é mais lenta que você correndo, de noite é
+mais rápida. Vitórias e derrotas dela vão para o placar.
+
+**No escuro (intensidade 2+).** De noite, embaixo da terra, no deep dark ou
+na floresta escura, quando o chat fica quieto, às vezes ela não fala nada:
+some e aparece parada atrás de você (ou a 18–26 blocos, num lugar à vista,
+nunca na sua frente), sem o nome, encarando. Quando você a pega olhando, toca
+um som de caverna e ela fala (`mine.flagrada.*`); se você não virar em 90 s,
+ela volta para o seu lado em silêncio e conta quanto tempo ficou lá. "Me
+assusta" pede isso de propósito. Falas com o rosto `vazia` viram sussurro no
+jogo (cinza, itálico, com som de caverna no seu ouvido), e dormindo sozinho
+você às vezes acorda com um bilhete do lado da cama.
+
 **O chat.** No singleplayer, tudo o que você escreve vai para ela; com mais
 gente no mundo, só o que cita "Ânima". `entenderMine` separa:
 
@@ -216,6 +347,11 @@ gente no mundo, só o que cita "Ânima". `entenderMine` separa:
 | recursos | "do que eu preciso?", "o que falta pegar?" | olha o inventário: comida, tocha (embaixo da terra), ferro, diamante, obsidiana (`faltaDe`) |
 | placa | "escreve uma placa dizendo Casa da Ânima", "faz uma placa" | `{t:"placa"}`; até 4 linhas de 15 letras (`linhasDePlaca`); sem texto, ela escolhe |
 | gato | "você gosta de gato?" | `mine.gato.conversa` (não gosta) |
+| brincadeira | "se esconde", "eu me escondo e você procura", "me pega", "dica", "desisto" | `{t:"acao"}` (`esconder`, `procurar`, `pegar`, `dica`, `desisto`); o resultado volta no evento `brincadeira`. Fora do jogo, "dica" vira ideia e "desisto" vira "vem cá" |
+| briga | "me protege", "não briga", "fica em paz" | `proteger` / `paz` |
+| faro | "acha diamante pra mim", "tem ferro aqui perto?", "fareja" | `{t:"farejar", alvo}`; ela fala quando volta o evento `faro` |
+| placar | "quem matou mais?", "placar" | `mine.placar.ganhando/perdendo/zero` |
+| espreitar | "me assusta" | `{t:"acao", acao:"espreitar", longe}`, em silêncio |
 | o resto | "me lembra de estudar amanhã às 10" | o cérebro de sempre (`pensar`), e a resposta volta para o chat do jogo |
 
 **Eventos do jogo** viram fala (`reagirMine`): entrou (primeira vez, saudade,
@@ -225,8 +361,19 @@ creeper do lado, dormiu, bateu nela, presente (flor, joia, comida, lixo),
 achou diamante, detrito antigo ou esmeralda, conquista (pelo título no idioma
 do jogo; `mine.conquista.<tema>` para diamante, Nether, End, dragão, domar,
 todos os gatos...), gato perto/carinho/domado, cama de casal achada, dormir
-junto, ferramenta quase quebrando e inventário cheio. Com o chat quieto por 7 a 12 min,
+junto, ferramenta quase quebrando e inventário cheio. E os novos: `matou` /
+`voceMatou` (placar; ela só comenta marcos de 25, quando passa ou é passada,
+e às vezes), `faro`, `brincadeira` (jogo + fase: comecou, achou, desistiu,
+dica, pegou, escapou), `flagrada` (visto ou não, segundos, longe),
+`anoitecendo`, `lava` e `creeper` com `dx/dz/yaw`. Com o chat quieto por 7 a 12 min,
 ela puxa assunto pelo que vê. O tempo no jogo conta como jogo (horas, rival,
 broncas de prova e de sono).
 
-Memória: `minecraft.sessoes/minutos/mortes/presentes`.
+Memória: `minecraft.sessoes/minutos/mortes/presentes`, e o placar:
+`abates` (dela), `abatesVoce`, `vitorias` e `derrotas` (dela, nas brincadeiras).
+
+Testes: `test/anima-minecraft.test.ts` (o novo) e o bloco Minecraft de
+`test/anima-cerebro.test.ts`. No mod, o autoteste do servidor também bate num
+zumbi até ele morrer e confere o evento `matou`.
+
+Outros jogos que ela pode jogar com você: [anima-jogos.md](anima-jogos.md).

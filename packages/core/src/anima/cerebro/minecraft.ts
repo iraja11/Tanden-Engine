@@ -7,6 +7,13 @@
  * creeper e de lava, detesta gato (e tem ciúme dele) e de vez em quando
  * escreve uma placa.
  *
+ * E ela é melhor do que você nisso, e sabe: briga com os mobs perto de você
+ * (e conta o placar), fareja minério através da pedra ("acha diamante pra
+ * mim"), avisa da lava e do creeper pelo lado em que eles estão, cobra a cama
+ * antes de anoitecer, e brinca de esconde-esconde e de pega-pega (e quase
+ * sempre ganha). No escuro ela fica estranha: some, aparece parada atrás de
+ * você sem o nome em cima, e só fala quando você a pega olhando.
+ *
  * Aqui mora só o pensar: o que a mensagem do chat pede, o que ela responde e
  * o que o jogo deve fazer. O mod executa (corpo, movimento, receita de
  * verdade, que ele lê do próprio jogo) e o app faz a ponte. O que não for
@@ -46,7 +53,20 @@ export interface EstadoMine {
 
 export type Recurso = 'ferro' | 'ouro' | 'diamante' | 'esmeralda' | 'obsidiana' | 'tocha' | 'comida';
 
-export type AcaoMine = 'seguir' | 'ficar' | 'vir' | 'passear' | 'coletar' | 'colher' | 'dar' | 'dancar' | 'sentar' | 'levantar' | 'pular' | 'olhar' | 'sair' | 'voltar';
+export type AcaoMine =
+  | 'seguir' | 'ficar' | 'vir' | 'passear' | 'coletar' | 'colher' | 'dar' | 'dancar' | 'sentar' | 'levantar' | 'pular' | 'olhar' | 'sair' | 'voltar'
+  /** brincadeiras: ela se esconde, ela procura você, ela corre atrás de você; desistir e pedir dica */
+  | 'esconder' | 'procurar' | 'pegar' | 'desisto' | 'dica'
+  /** briga com os mobs perto de você (padrão) ou deixa eles em paz */
+  | 'proteger' | 'paz'
+  /** some e reaparece parada, sem o nome, olhando você (atrás ou de longe) */
+  | 'espreitar';
+
+/** O que dá para pedir que ela fareje. */
+export type AlvoFaro = 'diamante' | 'netherite' | 'esmeralda' | 'ouro' | 'ferro' | 'cobre' | 'carvao' | 'redstone' | 'lapis' | 'qualquer';
+
+/** As brincadeiras: esconde (ela se esconde), procura (ela procura você), pega (ela corre atrás de você). */
+export type Brincadeira = 'esconde' | 'procura' | 'pega';
 
 export type PedidoMine =
   | { tipo: 'acao'; acao: AcaoMine }
@@ -57,17 +77,25 @@ export type PedidoMine =
   | { tipo: 'recursos' }
   /** "escreve uma placa (dizendo ...)"; sem texto, ela escolhe */
   | { tipo: 'placa'; texto: string }
-  | { tipo: 'gato' };
+  | { tipo: 'gato' }
+  /** "acha diamante pra mim", "tem ferro aqui perto?" */
+  | { tipo: 'farejar'; alvo: AlvoFaro }
+  /** "quem matou mais?" */
+  | { tipo: 'placar' };
 
 /** O que o app manda ao mod. */
 export type MsgParaMine =
   | { t: 'fala'; texto: string; gesto: string }
-  | { t: 'acao'; acao: AcaoMine }
+  /** longe: só para espreitar (de longe, em vez de atrás de você) */
+  | { t: 'acao'; acao: AcaoMine; longe?: boolean }
+  /** procura o minério mais perto (raio de ~24 blocos); o mod responde com o evento "faro" */
+  | { t: 'farejar'; alvo: AlvoFaro }
   | { t: 'receita'; item: string; texto: string }
   /** placa de madeira escura com letra rosa; o mod acha o lugar (motivo "morte" = onde você morreu) */
   | { t: 'placa'; linhas: string[]; motivo: MotivoPlaca };
 
-export type MotivoPlaca = 'pedido' | 'morte' | 'casal' | 'recado';
+/** sono = do lado da sua cama, enquanto você dorme */
+export type MotivoPlaca = 'pedido' | 'morte' | 'casal' | 'recado' | 'sono';
 
 export type EventoMine =
   | { tipo: 'entrou'; mundo: string; jogador: string }
@@ -77,7 +105,21 @@ export type EventoMine =
   | { tipo: 'dimensao'; dimensao: string }
   | { tipo: 'bateu'; vezes: number }
   | { tipo: 'presente'; item: string; n: number }
-  | { tipo: 'dormiu'; juntos?: boolean } | { tipo: 'creeper' }
+  | { tipo: 'dormiu'; juntos?: boolean }
+  /** dx/dz: de onde ele vem (relativo a você); yaw: para onde você olha */
+  | { tipo: 'creeper'; dx?: number; dz?: number; yaw?: number }
+  /** ela matou um mob (id sem "minecraft:") */
+  | { tipo: 'matou'; mob: string }
+  | { tipo: 'voceMatou'; mob: string }
+  /** resposta do farejar: o bloco achado ("" = nada), onde fica em relação a você e quantos tem no veio */
+  | { tipo: 'faro'; item: string; dx: number; dy: number; dz: number; n: number; yaw: number }
+  /** comecou (a contagem acabou), achou, desistiu, dica (dist = blocos até ela), pegou, escapou */
+  | { tipo: 'brincadeira'; jogo: Brincadeira; fase: 'comecou' | 'achou' | 'desistiu' | 'dica' | 'pegou' | 'escapou'; segundos?: number; dist?: number }
+  /** espreitando: você a viu (visto) ou ela desistiu de ser vista; segundos que ficou lá */
+  | { tipo: 'flagrada'; visto: boolean; segundos: number; longe?: boolean }
+  /** falta um minuto para a noite e você está a dist blocos da cama (ou do spawn) */
+  | { tipo: 'anoitecendo'; dist: number }
+  | { tipo: 'lava'; dx: number; dz: number; yaw: number }
   | { tipo: 'conquista'; id: string; titulo: string; desafio?: boolean }
   /** perto: um gato do seu lado; carinho: você fez carinho; domou: você domou um */
   | { tipo: 'gato'; acao: 'perto' | 'carinho' | 'domou' }
@@ -256,6 +298,19 @@ export function itemDoTermo(termo: string): string | null {
   return null;
 }
 
+/** O nome do mob em português (para o placar). */
+export function nomeDoMob(id: string): string {
+  const x = id.replace(/^minecraft:/, '');
+  const NOMES: Record<string, string> = {
+    zombie: 'zumbi', husk: 'zumbi do deserto', drowned: 'afogado', zombie_villager: 'aldeão zumbi', skeleton: 'esqueleto', stray: 'esqueleto da neve',
+    bogged: 'esqueleto do pântano', spider: 'aranha', cave_spider: 'aranha da caverna', witch: 'bruxa', slime: 'slime', magma_cube: 'cubo de magma',
+    phantom: 'phantom', pillager: 'saqueador', vindicator: 'vingador', evoker: 'evocador', ravager: 'devastador', vex: 'vex', blaze: 'blaze',
+    wither_skeleton: 'esqueleto wither', piglin_brute: 'piglin bruto', hoglin: 'hoglin', zoglin: 'zoglin', silverfish: 'traça', endermite: 'endermite',
+    guardian: 'guardião', elder_guardian: 'guardião ancião', shulker: 'shulker', breeze: 'breeze', creaking: 'rangedor', ghast: 'ghast',
+  };
+  return NOMES[x] ?? x.replace(/_/g, ' ');
+}
+
 /** O nome do item em português, se ela souber (para falar de um presente). */
 export function nomeDoItem(id: string): string {
   const x = id.replace(/^minecraft:/, '');
@@ -303,10 +358,28 @@ const DUVIDAS: Array<[string, RegExp]> = [
   ['noite', /\bnoite\b|escuro|monstros?/],
 ];
 
+/** "acha diamante pra mim", "fareja", "tem ferro aqui perto?" (sem o "aqui/pra mim" é dúvida: "onde acho diamante?") */
+const FARO = /\b(fareja\w*|sente o cheiro|usa (o )?(seu |teu )?faro|raio[ -]?x|xray|visao de minerio)\b/;
+const FARO_PEDIDO = /\b(procura|acha|encontra|mostra|ve se tem|tem|cade|algum|alguma)\b.*\b(minerios?|diamantes?|ferro|ouro|esmeraldas?|netherite|detritos?|cobre|carvao|redstone|lapis)\b.*\b(aqui|perto|pra mim|para mim|por aqui|ai|em volta|embaixo|debaixo|nessa caverna|nessa area)\b/;
+const ALVOS: Array<[AlvoFaro, RegExp]> = [
+  ['diamante', /diamante/], ['netherite', /netherite|detrito|debris/], ['esmeralda', /esmeralda/], ['ouro', /\bouro\b/], ['ferro', /\bferro\b/],
+  ['cobre', /\bcobre\b/], ['carvao', /carvao/], ['redstone', /redstone/], ['lapis', /lapis/],
+];
+const PLACAR = /\b(placar|quem (matou|ta ganhando|esta ganhando|ganhou) mais|quem ta ganhando|quantos (mobs )?(voce|vc) (ja )?matou|pontuacao|quem e melhor)\b/;
+
 const PERGUNTA = /\?|^(como|onde|qual|quais|o que|oq|que|quando|pra que|por ?que|cade|acha|sabe|tem como|da pra|e verdade|vale a pena|me explica|me ensina)\b/;
 
 /** ações: [ação, regex]. A ordem importa ("me dá o que pegou" é dar, não coletar). */
 const ACOES: Array<[AcaoMine, RegExp]> = [
+  // as brincadeiras e a briga vêm antes ("fica em paz" não é "fica"; "eu me escondo" não é "se esconde")
+  ['paz', /\b(nao (briga|ataca|luta|mata)|para de (brigar|atacar|lutar|matar)|deixa os (mobs|bichos|monstros)|modo paz|fica em paz)\b/],
+  ['proteger', /\b(me protege|me defende|pode (brigar|atacar|lutar|matar)|ataca|mata (ele|eles|esse|essa|esses|os|as|aquele|o|a)\b|briga com|modo guerra|luta comigo|protege)\b/],
+  ['procurar', /\b(eu (me )?escondo|vem me (achar|procurar)|me (acha|procura)$|(voce|vc) procura|(tua|sua) vez de procurar)\b/],
+  ['esconder', /\b(esconde[ -]?esconde|brinca(r)? de (se )?esconder|vai se esconder|se esconde)\b/],
+  ['pegar', /\b(pega[ -]pega|me pega|tenta me pegar|vem me pegar|duvido (voce|vc) me pegar|corre atras de mim)\b/],
+  ['desisto', /\b(desisto|desisti|cansei de (te )?procurar|nao te acho|onde (voce|vc) se escondeu)\b/],
+  ['dica', /\b(dica|ta quente|quente ou frio|to perto|to longe|to chegando)\b/],
+  ['espreitar', /\b(me assusta|me da medo|faz algo assustador|faz uma coisa assustadora)\b/],
   ['sair', /\b(sai do (jogo|mundo|minecraft)|vai embora|some daqui|pode ir embora|desconecta)\b/],
   ['voltar', /\b(volta pro jogo|entra (de novo|no jogo)|aparece de novo|volta aqui|reaparece)\b/],
   ['dar', /\b(me (da|de|entrega|passa|devolve)|devolve|entrega|esvazia (o |seu |teu )?bolso)\b.*\b(o que|tudo|as coisas|os itens|isso|que (voce|vc) pegou|o que pegou|bolso|flor|flores)\b|\bo que (voce|vc) pegou\b/],
@@ -352,6 +425,8 @@ export function entenderMine(texto: string): PedidoMine | null {
   // a placa vem antes: o texto pedido pode ter qualquer coisa
   const pl = PLACA.exec(t);
   if (pl) return { tipo: 'placa', texto: textoDaPlaca(texto, pl[1] ?? '') };
+  if (FARO.test(t) || FARO_PEDIDO.test(t)) return { tipo: 'farejar', alvo: ALVOS.find(([, re]) => re.test(t))?.[0] ?? 'qualquer' };
+  if (PLACAR.test(t)) return { tipo: 'placar' };
   if (RECURSOS.test(t)) return { tipo: 'recursos' };
   if (IDEIA.test(t)) return { tipo: 'ideia' };
   if (ESTADO.test(t)) return { tipo: 'estado' };
@@ -441,6 +516,55 @@ export function biomaDe(bioma: string): { tipo: string; nome: string } {
 
 const noite = (hora: number) => hora >= 13000 && hora < 23000;
 
+// ------------------------------------------------------------------ onde fica (relativo a você)
+
+/**
+ * Leva (dx, dz) do mundo para o seu ponto de vista: frente e direita, em blocos.
+ * No Minecraft, yaw 0 olha para o sul (+z) e 90 para o oeste (−x).
+ */
+export function relativo(dx: number, dz: number, yaw: number): { frente: number; direita: number } {
+  const r = (yaw * Math.PI) / 180;
+  const fx = -Math.sin(r), fz = Math.cos(r);
+  return { frente: dx * fx + dz * fz, direita: dx * -fz + dz * fx };
+}
+
+/** "atrás de você", "à sua esquerda"... pelo eixo que mais pesa. */
+export function ladoDe(dx: number, dz: number, yaw: number): string {
+  const { frente, direita } = relativo(dx, dz, yaw);
+  if (Math.abs(frente) >= Math.abs(direita)) return frente >= 0 ? 'na sua frente' : 'atrás de você';
+  return direita >= 0 ? 'à sua direita' : 'à sua esquerda';
+}
+
+/** "14 pra baixo, 6 pra frente e 3 pra esquerda" (o caminho até um bloco, do seu ponto de vista). */
+export function rumoDe(dx: number, dy: number, dz: number, yaw: number): string {
+  const { frente, direita } = relativo(dx, dz, yaw);
+  const partes: string[] = [];
+  const n = (x: number) => Math.round(Math.abs(x));
+  if (n(dy) >= 2) partes.push(`${n(dy)} pra ${dy < 0 ? 'baixo' : 'cima'}`);
+  if (n(frente) >= 2) partes.push(`${n(frente)} pra ${frente > 0 ? 'frente' : 'trás'}`);
+  if (n(direita) >= 2) partes.push(`${n(direita)} pra ${direita > 0 ? 'direita' : 'esquerda'}`);
+  if (!partes.length) return 'bem do seu lado';
+  return partes.length === 1 ? partes[0]! : `${partes.slice(0, -1).join(', ')} e ${partes[partes.length - 1]}`;
+}
+
+/** bloco achado pelo faro ("deepslate_diamond_ore") → [chave da fala, nome] */
+const MINERIOS: Array<[RegExp, string, string]> = [
+  [/diamond/, 'diamante', 'diamante'], [/ancient_debris|netherite/, 'netherite', 'detrito antigo'], [/emerald/, 'esmeralda', 'esmeralda'],
+  [/gold/, 'ouro', 'ouro'], [/iron/, 'ferro', 'ferro'], [/copper/, 'cobre', 'cobre'], [/coal/, 'carvao', 'carvão'], [/redstone/, 'redstone', 'redstone'], [/lapis/, 'lapis', 'lápis-lazúli'],
+];
+
+export function minerioDe(bloco: string): { chave: string; nome: string } {
+  const b = bloco.replace(/^minecraft:/, '');
+  const hit = MINERIOS.find(([re]) => re.test(b));
+  return hit ? { chave: hit[1], nome: hit[2] } : { chave: 'outro', nome: nomeDoItem(b) };
+}
+
+/** Um lugar que deixa ela estranha: noite, embaixo da terra, deep dark, floresta escura. */
+function escuro(j: EstadoMine): boolean {
+  const b = biomaDe(j.bioma).tipo;
+  return (!j.dimensao.includes('nether') && !j.dimensao.includes('end') && noite(j.hora)) || j.y < 0 || b === 'deep_dark' || b === 'floresta_escura';
+}
+
 function varsDoJogo(j: EstadoMine | null | undefined, ctx: CtxMine): Record<string, string | number> {
   const v: Record<string, string | number> = { nome: ctx.nome };
   if (!j) return v;
@@ -475,11 +599,21 @@ export function responderMine(estado: AnimaState, p: PedidoMine, ctx: CtxMine): 
   let grupos: string[];
   switch (p.tipo) {
     case 'acao': {
+      // "dica" e "desisto" fora do esconde-esconde: dica vira ideia; desisto vira "vem cá"
+      if (p.acao === 'dica' && j && j.modoDela !== 'esconder') return responderMine(estado, { tipo: 'ideia' }, ctx);
+      const acao: AcaoMine = p.acao === 'desisto' && j && !EM_JOGO.has(j.modoDela) ? 'vir' : p.acao;
       // de vez em quando ela resmunga (mas faz): ciúme alto, intensidade de sobra
-      const resmunga = ctx.intensidade >= 2 && s.ciume >= 60 && ctx.rand() < 0.3 && p.acao !== 'sair' && p.acao !== 'voltar';
-      grupos = resmunga ? ['mine.acao.resmunga', `mine.acao.${p.acao}`] : [`mine.acao.${p.acao}`];
-      if (p.acao === 'dar' && j && j.bolso === 0) grupos = ['mine.feito.deu.nada'];
-      else envios.push({ t: 'acao', acao: p.acao });
+      const resmunga = ctx.intensidade >= 2 && s.ciume >= 60 && ctx.rand() < 0.3 && !['sair', 'voltar', 'espreitar', 'dica', 'desisto'].includes(acao);
+      grupos = resmunga ? ['mine.acao.resmunga', `mine.acao.${acao}`] : [`mine.acao.${acao}`];
+      // espreitar a pedido: ela só some (o silêncio assusta mais)
+      if (acao === 'espreitar') grupos = [];
+      if (acao === 'dar' && j && j.bolso === 0) grupos = ['mine.feito.deu.nada'];
+      else if (acao === 'espreitar') envios.push({ t: 'acao', acao, longe: ctx.rand() < 0.4 });
+      // a dica e o desistir viram fala quando o mod responder (com a distância)
+      else {
+        envios.push({ t: 'acao', acao });
+        if (acao === 'dica' || (acao === 'desisto' && j?.modoDela === 'esconder')) grupos = [];
+      }
       if (p.acao === 'dancar') s = mexer(s, { afeto: 1 });
       break;
     }
@@ -543,9 +677,28 @@ export function responderMine(estado: AnimaState, p: PedidoMine, ctx: CtxMine): 
       s = mexer(s, { ciume: 3 });
       break;
     }
+    case 'farejar':
+      // ela fala quando o mod responder (com o que achou e onde)
+      grupos = [];
+      envios.push({ t: 'farejar', alvo: p.alvo });
+      break;
+    case 'placar': {
+      const mc = s.memoria.cerebro.minecraft;
+      grupos = mc.abates + mc.abatesVoce === 0 && mc.vitorias + mc.derrotas === 0 ? ['mine.placar.zero'] : mc.abates >= mc.abatesVoce ? ['mine.placar.ganhando'] : ['mine.placar.perdendo'];
+      Object.assign(vars, varsPlacar(s));
+      break;
+    }
   }
   const r = falar(s, grupos, ctx, vars);
   return { estado: r.estado, fala: r.fala, grupo: r.grupo, envios, noChat: true };
+}
+
+/** os modos do mod em que uma brincadeira está rolando */
+const EM_JOGO = new Set(['esconder', 'procurar', 'pegar']);
+
+function varsPlacar(s: AnimaState): Record<string, number> {
+  const mc = s.memoria.cerebro.minecraft;
+  return { ela: mc.abates, voce: mc.abatesVoce, vitorias: mc.vitorias, derrotas: mc.derrotas };
 }
 
 const CAUSAS: Array<[RegExp, string]> = [
@@ -661,14 +814,92 @@ export function reagirMine(estado: AnimaState, ev: EventoMine, ctx: CtxMine): Re
     case 'dormiu': {
       grupos = ev.juntos ? ['mine.dormiu.juntos', 'mine.dormiu'] : ['mine.dormiu'];
       if (ev.juntos) s = mexer(s, { afeto: 4, saudade: -10 });
+      // dormiu sozinho: às vezes você acorda com um bilhete do lado da cama
+      else if (ctx.intensidade >= 2 && ctx.rand() < 0.3) placa('mine.placa.sono', 'sono');
       break;
     }
     case 'ferramenta':
       grupos = ['mine.ferramenta'];
       Object.assign(vars, { item: nomeDoItem(ev.item) });
       break;
+    case 'creeper':
+      if (typeof ev.dx === 'number' && typeof ev.dz === 'number' && typeof ev.yaw === 'number') {
+        grupos.push('mine.creeper.lado');
+        Object.assign(vars, { lado: ladoDe(ev.dx, ev.dz, ev.yaw) });
+      }
+      grupos.push('mine.creeper');
+      break;
+    case 'lava':
+      grupos = ['mine.lava'];
+      Object.assign(vars, { lado: ladoDe(ev.dx, ev.dz, ev.yaw) });
+      break;
+    case 'anoitecendo':
+      grupos = ['mine.anoitecendo'];
+      Object.assign(vars, { dist: Math.round(ev.dist) });
+      break;
+    case 'matou': {
+      const abates = mc.abates + 1;
+      s = comMc(s, { abates });
+      Object.assign(vars, varsPlacar(s), { mob: nomeDoMob(ev.mob) });
+      // ela não comenta cada um: marcos, a primeira vez que passa você e, às vezes, um "esse foi meu"
+      if (abates % 25 === 0) grupos = ['mine.matou.marco'];
+      else if (abates === mc.abatesVoce + 1 && mc.abatesVoce >= 3) grupos = ['mine.placar.passei', 'mine.matou'];
+      else if (ctx.rand() < 0.15) grupos = [`mine.matou.${ev.mob.replace(/^minecraft:/, '')}`, 'mine.matou'];
+      else return { estado: s, fala: null, grupo: '', envios: [], noChat: true };
+      break;
+    }
+    case 'voceMatou': {
+      const abatesVoce = mc.abatesVoce + 1;
+      s = comMc(s, { abatesVoce });
+      Object.assign(vars, varsPlacar(s), { mob: nomeDoMob(ev.mob) });
+      if (abatesVoce === mc.abates + 1 && mc.abates >= 3) grupos = ['mine.placar.virou'];
+      else if (ctx.rand() < 0.08) grupos = ['mine.voceMatou'];
+      else return { estado: s, fala: null, grupo: '', envios: [], noChat: true };
+      break;
+    }
+    case 'faro': {
+      if (!ev.item) {
+        grupos = ['mine.faro.nada'];
+        break;
+      }
+      const m = minerioDe(ev.item);
+      grupos = [`mine.faro.achou.${m.chave}`, 'mine.faro.achou'];
+      Object.assign(vars, { minerio: m.nome, rumo: rumoDe(ev.dx, ev.dy, ev.dz, ev.yaw), n: Math.max(1, ev.n), dist: Math.round(Math.hypot(ev.dx, ev.dy, ev.dz)) });
+      break;
+    }
+    case 'brincadeira': {
+      const seg = Math.round(ev.segundos ?? 0);
+      Object.assign(vars, { segundos: seg, dist: Math.round(ev.dist ?? 0) });
+      const base = `mine.brinca.${ev.jogo}.${ev.fase}`;
+      if (ev.fase === 'dica') {
+        const d = ev.dist ?? 99;
+        grupos = [`${base}.${d < 7 ? 'quente' : d < 15 ? 'morno' : 'frio'}`, base];
+        break;
+      }
+      // quem ganhou: no esconde, você ganha se achar; no procura e no pega, ela ganha se achar/pegar
+      const ganhou = ev.fase === 'desistiu' ? ev.jogo === 'esconde' : ev.fase === 'pegou' || (ev.fase === 'achou' && ev.jogo === 'procura');
+      const perdeu = (ev.fase === 'achou' && ev.jogo === 'esconde') || ev.fase === 'escapou' || (ev.fase === 'desistiu' && ev.jogo === 'procura');
+      if (ganhou) s = comMc(s, { vitorias: mc.vitorias + 1 });
+      if (perdeu) {
+        s = comMc(s, { derrotas: mc.derrotas + 1 });
+        s = mexer(s, { afeto: 2 });
+      }
+      Object.assign(vars, varsPlacar(s));
+      grupos = seg > 0 && seg < 25 && (ev.fase === 'achou' || ev.fase === 'pegou') ? [`${base}.rapido`, base] : [base];
+      break;
+    }
+    case 'flagrada': {
+      Object.assign(vars, { segundos: Math.round(ev.segundos) });
+      grupos = !ev.visto ? ['mine.flagrada.naoviu'] : ev.longe ? ['mine.flagrada.longe', 'mine.flagrada'] : ['mine.flagrada.perto', 'mine.flagrada'];
+      break;
+    }
     case 'espontanea': {
       if (!j) return { estado: s, fala: null, grupo: '', envios: [], noChat: true };
+      // no escuro, às vezes ela não fala nada: some e aparece parada olhando você
+      if (ctx.intensidade >= 2 && escuro(j) && !EM_JOGO.has(j.modoDela) && j.modoDela !== 'espreitar' && ctx.rand() < 0.3) {
+        return { estado: s, fala: null, grupo: '', envios: [{ t: 'acao', acao: 'espreitar', longe: ctx.rand() < 0.4 }], noChat: true };
+      }
+      if (ctx.intensidade >= 2 && escuro(j) && ctx.rand() < 0.35) grupos.push('mine.espontanea.creepy');
       if (ctx.rand() < 0.12) placa('mine.placa.recado', 'recado');
       const b = biomaDe(j.bioma);
       if (j.dimensao.includes('nether')) grupos.push('mine.espontanea.nether');

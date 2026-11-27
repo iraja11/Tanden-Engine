@@ -1,0 +1,97 @@
+# Segundo conjunto cego: frases escritas de propósito com palavras FORA da gramática
+# (sinônimos, regionalismos, construções diferentes). Nunca usado para ajustar
+# gramática nem treino; mede quanto a rede generaliza além do que viu.
+# Formato: intenção<TAB>frase
+triste	tô me sentindo um caco
+triste	hoje acordei melancólico
+triste	tô numa fossa danada
+cansaco	tô pregado
+cansaco	tô um bagaço hoje
+cansaco	minhas pernas não aguentam mais de tanto andar
+mau	tô uma fera hoje
+mau	tô com os nervos à flor da pele
+feliz	tô nas nuvens
+feliz	hoje tô transbordando de alegria
+conquistei	fui efetivado no trampo
+conquistei	gabaritei a prova
+saudade	que falta você fez
+amor	sou doido por você
+amor	você é a dona do meu coração
+elogio	você é uma graça
+rejeicao	você me dá nos nervos
+tchau	vou vazar
+tchau	partiu, até mais
+saudacao	fala tu
+sono	tô pescando de sono
+fome	tô com a barriga roncando
+tedio	que marasmo
+piada	me conta algo pra eu rir
+obrigado	gratidão
+desculpa	perdoa minha mancada
+comovai	como cê tá, moça?
+estoubem	tô suave
+papo.abraco	me dá um cheiro e um abraço
+papo.beijo	me dá uma bitoca
+papo.cafune	coça minha cabeça
+papo.doente	tô com o nariz entupido e espirrando
+papo.doente	tô com uma dor de dente terrível
+papo.doente	tô com virose
+papo.insonia	tô virando de um lado pro outro sem conseguir pregar o olho
+papo.insonia	o sono foi embora
+papo.pesadelo	tive um sonho horroroso agora
+papo.sonhei	essa noite você tava no meu sonho
+papo.acordei	acabei de sair da cama
+papo.banho	vou dar uma chuveirada
+papo.bebado	tô trêbado
+papo.bebado	enchi a cara ontem
+papo.cafe	bora tomar um cafezinho
+papo.calma	tô tendo uma crise de ansiedade
+papo.medo	tô apavorado
+papo.vergonha	que micão eu paguei
+papo.motivacao	preciso de uma força pra continuar
+papo.foco	tô enrolando demais e não faço nada
+papo.fracasso	rodei na disciplina
+papo.fracasso	me mandaram embora do serviço
+papo.briga	tive uma discussão feia com meu irmão
+papo.terminei	minha namorada terminou comigo
+papo.terminei	tomei um pé na bunda
+papo.aniversario	hoje completo mais um ano
+papo.semana	ainda bem que hoje é sexta-feira
+papo.ferias	finalmente de recesso
+papo.clima	tá um calor do cão
+papo.clima	tá caindo um toró
+papo.fofoca	tenho um babado fortíssimo
+papo.futebol	o mengão ganhou
+papo.politica	você é a favor de qual partido?
+papo.filme	tem alguma série boa pra maratonar?
+papo.anime	já viu naruto?
+papo.livro	que livro eu devia ler?
+papo.videogame	que jogo vale a pena comprar?
+papo.cantar	solta a voz pra mim
+papo.poema	faz uns versos pra mim
+papo.historia	inventa um conto de terror
+papo.desenho	rabisca um desenho pra mim
+papo.meme	manda um meme aí
+papo.filosofia	por que a gente tá aqui nesse mundo?
+papo.escolhe	chocolate ou baunilha?
+papo.idade	você tem quantos anos?
+papo.corpo	você tem fome?
+papo.onde	você vive onde?
+papo.signo	você é de que signo?
+papo.idioma	você manja de inglês?
+papo.apelido	posso te chamar de ani?
+papo.tempojuntos	desde quando a gente se fala?
+papo.foto	manda uma foto tua
+papo.promete	você jura que fica?
+papo.sentiufalta	sentiu saudade minha?
+papo.bonito	me acha feio?
+papo.voltei	voltei pra casa
+papo.bravocomela	fiquei puto com você
+papo.perdoo	tá tudo perdoado
+papo.boba	sua pateta
+papo.verdade	desembucha a verdade
+papo.ciumenta	por que tanto ciúme de mim?
+papo.presente	trouxe um mimo pra você
+papo.cantada	me passa uma cantada
+papo.dormejunto	me faz companhia até eu cair no sono
+papo.orgulho	você se orgulha de mim?
