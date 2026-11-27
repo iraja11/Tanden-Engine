@@ -947,6 +947,18 @@ class Anima {
         if (extras.length) this.desfazer = () => { for (const x of extras) void engine.deleteNote(x); };
         return { ok: true };
       }
+      case 'grade': {
+        // a grade do semestre: cada aula vira um evento semanal até o fim do semestre
+        const feitas: string[] = [];
+        for (const input of a.aulas) {
+          const path = eventPath(input.title, input.date, (x) => engine.vault.has(x));
+          this.meus.add(path);
+          if (!(await agenda.save({ occ: null, input, target: TANDEN }))) return { ok: false, erro: agenda.error || 'a agenda não aceitou' };
+          feitas.push(path);
+        }
+        if (feitas.length) this.desfazer = () => { for (const x of feitas) void engine.deleteNote(x); };
+        return { ok: true, vars: { n: feitas.length } };
+      }
       case 'lembrete': {
         const linha = a.texto.endsWith('🖤') ? `${this.quandoLinha(a.at)} ${a.texto}` : a.linha;
         return reminders.add(linha) ? { ok: true } : { ok: false, erro: reminders.error };

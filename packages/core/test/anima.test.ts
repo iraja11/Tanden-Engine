@@ -47,6 +47,8 @@ describe('ânima: cofre', () => {
       'titulo', 'quando', 'opcoes', 'extra', 'formula', 'total', 'lado', 'mundo', 'erro', 'segundos', 'afeto', 'ciume', 'humor', 'expr', 'resultado', 'data',
       'idade', 'lista', 'tipo', 'periodo', 'assunto', 'horas', 'capitulo', 'coisa2', 'personagem', 'lugar', 'faccao', 'criatura', 'divindade', 'comando',
       'falta', 'meta', 'bebido', 'copos', 'campo', 'jogo', 'acorda', 'site', 'pagina',
+      // faculdade
+      'fim', 'grade', 'materia', 'faltas', 'curso',
       // música e Minecraft
       'artista', 'musica', 'album', 'vezes', 'faixas', 'jogador', 'vida', 'fome', 'bioma', 'y', 'item', 'mortes', 'sessoes', 'presentes', 'termo',
       'ela', 'voce', 'vitorias', 'derrotas', 'dist', 'minerio', 'rumo', 'mob', 'mobs', 'alvo', 'pegou', 'nenhum', 'pedidos',

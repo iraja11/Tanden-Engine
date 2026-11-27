@@ -9,6 +9,7 @@
  * Mora dentro de `memoria.cerebro` do estado da Ânima; `lerMemoriaCerebro`
  * aceita versões antigas e estragadas, como o resto do estado.
  */
+import { lerFaculdade, novaFaculdade, type Faculdade } from './faculdade';
 import type { Pedido } from './comandos';
 import type { Desfecho, Fator } from './vontade';
 
@@ -98,6 +99,8 @@ export interface MemoriaCerebro {
   dialogo: Turno[];
   /** a melhor versão: a última vez que a pessoa treinou e quantas vezes ela já cobrou hoje */
   exige: { treinoEm: number; dia: string; treino: number; estudo: number };
+  /** a faculdade: grade do semestre, notas e presença (faculdade.ts) */
+  faculdade: Faculdade;
 }
 
 export const novaMusica = (): MemoriaCerebro['musica'] => ({ dia: '', faixas: {}, artistas: {} });
@@ -106,7 +109,7 @@ export const novoMinecraft = (): MemoriaCerebro['minecraft'] => ({ sessoes: 0, m
 export const novaMemoriaCerebro = (): MemoriaCerebro => ({
   consciencia: 0, vinculo: 0, pendente: null, ultimoPedido: null, ultimaNota: null, ultimaDecisao: null, ultimaAcao: null, pedidos: [], social: [],
   carinhoEm: 0, declaracaoEm: 0, criseEm: 0, eventosDela: [], escritos: [], estudos: [], quietaAte: 0, capitulo: 0, diaVisto: '', jogos: {}, web: { dia: '', minutos: {} },
-  musica: novaMusica(), minecraft: novoMinecraft(), dialogo: [], exige: { treinoEm: 0, dia: '', treino: 0, estudo: 0 },
+  musica: novaMusica(), minecraft: novoMinecraft(), dialogo: [], exige: { treinoEm: 0, dia: '', treino: 0, estudo: 0 }, faculdade: novaFaculdade(),
 });
 
 const num = (v: unknown, d: number, lo = -Infinity, hi = Infinity) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d);
@@ -174,6 +177,7 @@ export function lerMemoriaCerebro(raw: unknown): MemoriaCerebro {
     exige: obj(r.exige)
       ? { treinoEm: num(r.exige.treinoEm, 0, 0), dia: typeof r.exige.dia === 'string' ? r.exige.dia : '', treino: num(r.exige.treino, 0, 0), estudo: num(r.exige.estudo, 0, 0) }
       : b.exige,
+    faculdade: lerFaculdade(r.faculdade),
   };
 }
 

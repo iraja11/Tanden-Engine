@@ -65,6 +65,7 @@ use "Ânima: mostrar o último pensamento" na paleta) para ver o raciocínio:
 | `capacidades.ts` | Respostas exatas: unidades (comprimento, massa, volume, tempo, dados, velocidade, temperatura) e calendário (quanto falta para o Natal ou para o seu aniversário, que dia cai o Carnaval, idade, bissexto, "daqui a 45 dias"). Páscoa pelo algoritmo de Meeus/Jones/Butcher; Carnaval, Corpus Christi e os feriados móveis saem dela. |
 | `gramatica-dialogo.ts` | A gramática das intenções de diálogo: `esclarecer`, `corrige`, `converter`, `datas`. |
 | `cerebro.ts` | O orquestrador `pensar` (com `segmentar` para várias intenções), `depoisDaAcao`, `registrarCarinho`, `cumprirAdiado`. |
+| `faculdade.ts` | A faculdade: lê a grade ("Cálculo 1: seg e qua 8h às 10h @ sala 12", uma matéria por linha; "até 15/12" muda o fim do semestre), põe as aulas na agenda como eventos semanais até o fim do semestre (ação `grade`), guarda notas ("tirei 8,5 em cálculo") e faltas ("faltei física") por matéria e responde "que aula tenho hoje?". A rotina pergunta se você faz faculdade, pede a grade a cada semestre e, de vez em quando, pergunta nota e presença (nunca num dia frágil). Nota alta: elogio sem economia; baixa: cuidado e plano. |
 | `rotina.ts` | O cérebro proativo: capítulo novo, cobrança de estudo, compromisso chegando, coisas dela na sua agenda, escrita no world building, deduções; `broncaDeTela`. |
 | `escrita.ts` | Fichas de world building (profecia, lenda, rumor, personagem, segredo, gancho) ligadas às entidades reais do mundo. |
 
@@ -88,6 +89,8 @@ use "Ânima: mostrar o último pensamento" na paleta) para ver o raciocínio:
   depois de uma crise nem com tristeza ou desabafo nas últimas 6 h.
 - Ela se acha uma máquina perfeita: `corrige.desculpa` não pede desculpa, diz
   que você se expressou mal (mas corrige do mesmo jeito).
+- Por baixo da superioridade ela é amorosa e um pouco maternal: cobra, mas
+  elogia muito quando você se esforça ("hihi" e "AAAA" incluídos).
 
 ## A conversa
 

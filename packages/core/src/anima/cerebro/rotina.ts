@@ -10,7 +10,9 @@
  *   4. pôr uma coisa dela na sua agenda, "porque sim" (no máximo 1 por semana)
  *   5. escrever no seu world building (no máximo a cada 3 dias)
  *   6. comentar algo que ela DEDUZIU (grafo), não só lembrou
- *   7. a sua melhor versão: dias demais sem treinar, ou muito lazer e nada de
+ *   7. a faculdade: pergunta se você faz, pede a grade a cada semestre e, de
+ *      vez em quando, pergunta das notas e da presença (faculdade.ts)
+ *   8. a sua melhor versão: dias demais sem treinar, ou muito lazer e nada de
  *      estudo hoje (lazer não é proibido; o estudo é que é cobrado). Nunca
  *      depois de uma crise nem com a conversa recente em tristeza.
  *
@@ -23,6 +25,7 @@ import { CAPITULOS, capitulo, crescer, diasJuntos } from './arco';
 import type { Acao, CtxCerebro, Pensamento } from './cerebro';
 import type { EventoPedido } from './comandos';
 import { escreverNoMundo, type GeneroEscrito } from './escrita';
+import { semestreVencido } from './faculdade';
 import { deducoes, montarGrafo } from './grafo';
 import type { MemoriaCerebro } from './memoria';
 import { sentido } from './semantica';
@@ -130,6 +133,32 @@ export function rotina(estado: AnimaState, ctx: CtxCerebro, poderes: Poderes = {
     }
   }
   if (ex !== mc.exige) mc = { ...mc, exige: ex };
+
+  // 2c. a faculdade: pergunta se faz, pede a grade a cada semestre, pergunta nota e presença de vez em quando
+  const fac = mc.faculdade;
+  if (hora >= 10 && hora < 22) {
+    const comFac = (f: typeof fac) => { mc = { ...mc, faculdade: f }; s = comMc(s, mc); };
+    if (fac.faz === null && now - fac.perguntouEm > 20 * D && diasJuntos(s, now) >= 1 && ctx.rand() < 0.25) {
+      comFac({ ...fac, perguntouEm: now });
+      return pronto(s, fala(['faculdade.pergunta']), null, ctx, 'rotina.faculdade', ['pergunto se faz faculdade']);
+    }
+    if (fac.faz && (!fac.materias.length || semestreVencido(fac, now)) && now - fac.pediuEm > 4 * D && ctx.rand() < 0.4) {
+      comFac({ ...fac, pediuEm: now });
+      const novo = fac.materias.length > 0;
+      return pronto(s, fala(novo ? ['faculdade.pede.novo', 'faculdade.pede'] : ['faculdade.pede']), null, ctx, 'rotina.faculdade', [novo ? 'semestre novo: peço a grade' : 'peço a grade']);
+    }
+    if (fac.faz && fac.materias.length && !fragil && !semestreVencido(fac, now)) {
+      const materia = fac.materias[Math.floor(ctx.rand() * fac.materias.length)]!.nome;
+      if (now - fac.notasEm > 8 * D && ctx.rand() < 0.25) {
+        comFac({ ...fac, notasEm: now });
+        return pronto(s, fala(['faculdade.notas'], { materia }), null, ctx, 'rotina.faculdade', [`pergunto das notas (${materia})`]);
+      }
+      if (now - fac.presencaEm > 6 * D && ctx.rand() < 0.25) {
+        comFac({ ...fac, presencaEm: now });
+        return pronto(s, fala(['faculdade.presenca'], { materia }), null, ctx, 'rotina.faculdade', [`pergunto da presença (${materia})`]);
+      }
+    }
+  }
 
   // 3. compromisso chegando
   for (const o of ctx.agenda ?? []) {

@@ -24,9 +24,11 @@ import {
   botoes, escolher, intencaoDe, lembrar, qualquer, responder, temperar,
   type AnimaCtx, type Fala, type Intencao, type OpcaoFala, type Reacao,
 } from '../motor';
+import type { EventInput } from '../../agenda/model';
 import { crescer } from './arco';
+import { aulasDoDia, aulasNaAgenda, faixaDaNota, fimDoSemestre, gradeEmTexto, juntarGrade, lerGrade, lerNota, lerPresenca, lerSeFaz, notaEmTexto, perguntaAulas, semestreVencido, type Faculdade } from './faculdade';
 import { converter, datas } from './capacidades';
-import { assuntoRecente, reintitular, registrarMensagem, ultimoDela } from './dialogo';
+import { assuntoRecente, mensagemAnterior, reintitular, registrarMensagem, ultimoDela } from './dialogo';
 import { fatoDoDito, seguimento } from './seguimento';
 import type { Modelo } from './classificador';
 import { chaveDoPedido, completarPedido, COMANDOS, entenderPedido, type ComandoId, type CtxPedido, type EventoPedido, type Pedido, type Travessura } from './comandos';
@@ -78,7 +80,9 @@ export type Acao =
   | { tipo: 'esconder' } | { tipo: 'dormir' } | { tipo: 'voltar' }
   | { tipo: 'mundo'; escrito: EscritoMundo }
   | { tipo: 'comando'; id: string; rotulo: string }
-  | { tipo: 'desfazer' };
+  | { tipo: 'desfazer' }
+  /** a grade do semestre: aulas semanais na agenda */
+  | { tipo: 'grade'; aulas: EventInput[] };
 
 export interface ResultadoAcao {
   ok: boolean;
@@ -557,6 +561,74 @@ function pensarUm(estado: AnimaState, msg: string, ctx: CtxCerebro): Pensamento 
     const st = f ? { ...lembrar(s, f), falou: ctx.now } : s;
     return { estado: st, fala: f, acao: null, intencao: rotulo, confianca: conf, decisao: null, pedido: null, aprendeu: null, traco };
   };
+
+  // 2a. a faculdade: grade, notas, faltas, "que aula tenho hoje?" (regras, antes dos comandos: uma grade parece pedido de agenda)
+  {
+    const fac = mc.faculdade;
+    const comFac = (f: Faculdade) => { s = comMc(s, { ...s.memoria.cerebro, faculdade: f }); };
+    // as variáveis sem valor ficam de fora (a fala que precisa delas não é sorteada)
+    const daFaculdade = (r: Pensamento): Pensamento => ({ ...r, estado: comMc(r.estado, reintitular(r.estado.memoria.cerebro, 'faculdade')), intencao: 'faculdade' });
+    const soComVars = (g: string[], v: Record<string, string | number | undefined>): Pensamento => daFaculdade(so(g, Object.fromEntries(Object.entries(v).filter((e): e is [string, string | number] => e[1] !== undefined))));
+    const ela = ultimoDela(mc, ctx.now, s.falou);
+    const ultimoG = ela?.ditos?.at(-1)?.g ?? '';
+    const dm = msg.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    // a grade do semestre
+    const ms = lerGrade(msg);
+    if (ms.length && (ms.length >= 2 || /\b(grade|aulas?|materias?|disciplinas?|semestre|periodo|faculdade)\b/.test(dm) || ultimoG.startsWith('faculdade.pede'))) {
+      const novo = semestreVencido(fac, ctx.now);
+      const fim = /\b(ate|termina|acaba|fim)\b/.test(dm) || novo ? fimDoSemestre(msg, ctx.now) : fac.fim!;
+      const materias = juntarGrade(fac.materias, ms, novo);
+      comFac({ ...fac, faz: true, materias, fim, inicio: novo ? new Date(ctx.now).toISOString().slice(0, 10) : fac.inicio, pediuEm: ctx.now });
+      traco.push(`faculdade: grade com ${ms.length} matéria(s) até ${fim}: ${gradeEmTexto(ms)}`);
+      const r = so(['faculdade.grade'], { n: ms.length, lista: ms.map((m) => m.nome).join(', '), fim: fim.split('-').reverse().slice(0, 2).join('/') });
+      return { ...daFaculdade(r), acao: { tipo: 'grade', aulas: aulasNaAgenda(ms, fim, ctx.now) } };
+    }
+    // "que aula eu tenho hoje?"
+    // "e amanhã?" logo depois de perguntar das aulas continua a pergunta
+    const antesFac = mensagemAnterior(s.memoria.cerebro, ctx.now, 5 * MIN)?.i === 'faculdade';
+    const pa = perguntaAulas(msg) ?? (antesFac && /^e (amanha|hoje)\??$/.test(dm.trim()) ? (dm.includes('amanha') ? 'amanha' : 'hoje') : null);
+    if (pa && (!rotulo.startsWith('cmd.') || rotulo === 'cmd.agenda_ver' || conf < 0.6) && fac.materias.length) {
+      if (pa === 'grade') return daFaculdade(so(['faculdade.mostra'], { grade: gradeEmTexto(fac.materias) }));
+      const d = new Date(ctx.now).getDay() + (pa === 'amanha' ? 1 : 0);
+      const lista = aulasDoDia(fac.materias, d % 7);
+      return daFaculdade(so(lista ? ['faculdade.hoje'] : ['faculdade.hoje.nada'], { lista, quando: pa === 'amanha' ? 'amanhã' : 'hoje' }));
+    }
+    // notas ("tirei 8,5 em cálculo")
+    const nt = lerNota(fac.materias, msg);
+    if (nt && (nt.materia || ultimoG.startsWith('faculdade.notas') || /\b(prova|p1|p2|p3|teste|trabalho|nota|semestre|faculdade|materia)\b/.test(dm))) {
+      const faixa = faixaDaNota(nt.v, nt.de);
+      if (nt.materia) comFac({ ...fac, faz: true, materias: fac.materias.map((m) => (m === nt.materia ? { ...m, notas: [...m.notas, { v: nt.v, de: nt.de, em: ctx.now }].slice(-20) } : m)), notasEm: ctx.now });
+      else comFac({ ...fac, notasEm: ctx.now });
+      traco.push(`faculdade: nota ${nt.v}/${nt.de} (${faixa})${nt.materia ? ` em ${nt.materia.nome}` : ''}`);
+      return soComVars([`faculdade.nota.${faixa}`], { nota: notaEmTexto(nt.v, nt.de), materia: nt.materia?.nome });
+    }
+    // presença ("faltei física", "fui em todas")
+    const pr0 = fac.materias.length || ultimoG.startsWith('faculdade.presenca') ? lerPresenca(fac.materias, msg) : null;
+    // "faltei no trabalho" não é falta na faculdade: sem matéria, só com aula/faculdade na frase ou respondendo a ela
+    const pr = pr0 && (pr0.materia || /\b(aulas?|faculdade|facul|universidade|curso)\b/.test(dm) || ultimoG.startsWith('faculdade.presenca')) ? pr0 : null;
+    if (pr) {
+      if (pr.falta) {
+        const faltas = (pr.materia?.faltas ?? 0) + 1;
+        if (pr.materia) comFac({ ...fac, materias: fac.materias.map((m) => (m === pr.materia ? { ...m, faltas } : m)), presencaEm: ctx.now });
+        else comFac({ ...fac, presencaEm: ctx.now });
+        traco.push(`faculdade: falta${pr.materia ? ` em ${pr.materia.nome} (${faltas})` : ''}`);
+        return soComVars(faltas >= 4 && pr.materia ? ['faculdade.falta.muito', 'faculdade.falta'] : ['faculdade.falta'], { materia: pr.materia?.nome, faltas });
+      }
+      comFac({ ...fac, presencaEm: ctx.now });
+      return soComVars(['faculdade.presenca.boa'], { materia: pr.materia?.nome });
+    }
+    // "faço faculdade de direito" / "não faço faculdade", ou o sim/não à pergunta dela
+    let faz = lerSeFaz(msg);
+    if (!faz && ultimoG.startsWith('faculdade.pergunta') && !ultimoG.startsWith('faculdade.pergunta.')) {
+      if (/^(sim|s|faco|aham|uhum|claro|to|tô|estou)\b/.test(dm) || rotulo === 'sim') faz = { faz: true, curso: null };
+      else if (/^(nao|n|nem|nunca)\b/.test(dm) || rotulo === 'nao') faz = { faz: false, curso: null };
+    }
+    if (faz) {
+      comFac({ ...fac, faz: faz.faz, curso: faz.curso ?? fac.curso, pediuEm: faz.faz ? ctx.now : fac.pediuEm });
+      traco.push(`faculdade: ${faz.faz ? `faz${faz.curso ? ` (${faz.curso})` : ''}` : 'não faz'}`);
+      return soComVars(faz.faz ? (fac.materias.length && !semestreVencido(fac, ctx.now) ? ['faculdade.sabe'] : ['faculdade.pede']) : ['faculdade.nao'], { curso: faz.curso ?? undefined });
+    }
+  }
 
   // 2b. a mensagem reage ao que ela acabou de dizer? ("ela quem?", "mais uma", "e você?", "eu nunca disse isso")
   if (!rotulo.startsWith('cmd.') || conf < 0.6) {
